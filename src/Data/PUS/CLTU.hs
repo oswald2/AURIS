@@ -5,6 +5,7 @@ module Data.PUS.CLTU
         CLTU
         , cltuPayLoad
         , encode
+        , decode 
     )
 where
 
@@ -15,9 +16,14 @@ import Data.ByteString.Builder
 import Data.Word
 import Data.Int
 import Data.Bits
+import Data.Text (Text)
 
 import Data.PUS.Config
 import Data.PUS.CLTUTable
+
+import qualified TextShow as TS
+import TextShow.Data.Integral
+
 
 
 -- The CLTU itself
@@ -44,6 +50,28 @@ encode cfg (CLTU pl) = toLazyByteString (mconcat [lazyByteString cltuHeader, enc
     where
         encodedFrame = encodeCodeBlocks cfg pl
         trailer = encodeCodeBlock (cltuTrailer (fromIntegral (cfgCltuBlockSize cfg - 1)))
+
+
+decode :: Config -> ByteString -> Either Text CLTU
+decode cfg pl = 
+    if cltuHeader `B.isPrefixOf` pl
+        then
+            let cbSize = cfgCltuBlockSize cfg
+                blocks = chunkedBy (fromIntegral cbSize) (B.drop (B.length cltuHeader) pl)
+
+                proc _ (Left err) = Left err
+                proc bs (Right cb) = 
+                    case checkCodeBlock cbSize bs of
+                        Left err -> Left err
+                        Right dataBlock -> Right (dataBlock : cb)
+                
+                checkedCBs = foldr proc (Right mempty) blocks
+            in
+            case checkedCBs of
+                Left err -> Left err
+                Right parts -> Right $ CLTU (toLazyByteString . mconcat . map lazyByteString $ parts)
+        else
+            Left "CLTU Header is missing"
 
 
 {-# INLINABLE encodeCodeBlocks #-}
@@ -84,6 +112,30 @@ cltuParity !block =
     result
         
 
+checkCodeBlock :: Word8 -> ByteString -> Either Text ByteString
+checkCodeBlock expectedLen block =
+    let len = B.length block
+        checkBlock = B.take (len - 1) block
+        parity = block `B.index` (len - 1)
+        calculatedParity = cltuParity checkBlock
+    in
+    if fromIntegral expectedLen /= len
+        then Left $ TS.toText (TS.fromText "CLTU block does not have the right length, expected: "
+            <> TS.showb expectedLen
+            <> TS.fromText " received: "
+            <> TS.showb len)
+        else
+            if calculatedParity == parity 
+            then Right checkBlock
+            else 
+                if B.all (== 0x55) checkBlock
+                    then Right checkBlock
+                    else 
+                        Left $ TS.toText (TS.fromText "Error: CLTU code block check failed, calculated: " 
+                        <> showbHex calculatedParity 
+                        <> TS.fromText " received: " 
+                        <> showbHex parity)
+
 
 -- | Chunk a @bs into list of smaller byte strings of no more than @n elements
 chunkedBy :: Int -> ByteString -> [ByteString]
@@ -92,3 +144,5 @@ chunkedBy n bs = if B.length bs == 0
   else case B.splitAt (fromIntegral n) bs of
     (as, zs) -> as : chunkedBy n zs
 {-# INLINABLE chunkedBy #-}    
+
+
