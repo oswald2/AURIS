@@ -24,6 +24,7 @@ module Data.PUS.Config
     )
 where
 
+import Control.Monad.IO.Class
 
 import Data.Word   
 import Data.Aeson
@@ -53,19 +54,19 @@ defaultConfig = Config {
     }
 
 -- | write the config as a serialized string to a file. Uses the Show class for serizalization
-writeConfigString :: Config -> FilePath -> IO ()
+writeConfigString :: MonadIO m => Config -> FilePath -> m ()
 writeConfigString cfg path = do 
-    Prelude.writeFile path (show cfg)
+    liftIO $ Prelude.writeFile path (show cfg)
 
 -- | write the config in JSON format to a file. Uses the aeson for conversion to/from JSON
-writeConfigJSON :: Config -> FilePath -> IO ()
-writeConfigJSON cfg path = encodeFile path cfg
+writeConfigJSON :: MonadIO m => Config -> FilePath -> m ()
+writeConfigJSON cfg path = liftIO $ encodeFile path cfg
 
 -- | Load a config from a file in String format (Show/Read instance) and return it. 
 -- | If there is an error on parsing, return 'Left error'
-loadConfigString :: FilePath -> IO (Either Text Config)
+loadConfigString :: MonadIO m => FilePath -> m (Either Text Config)
 loadConfigString path = do
-    content <- Prelude.readFile path
+    content <- liftIO $ Prelude.readFile path
     let res = reads content
     if Prelude.null res 
         then return  $ Left ("Could not parse config: " <> T.pack content)
@@ -73,9 +74,9 @@ loadConfigString path = do
 
 -- | Load a config from a file in JSON format and return it. 
 -- | If there is an error on parsing, return 'Left error'
-loadConfigJSON :: FilePath -> IO (Either Text Config)
+loadConfigJSON :: MonadIO m => FilePath -> m (Either Text Config)
 loadConfigJSON path = do
-    content <- B.readFile path
+    content <- liftIO $ B.readFile path
     case eitherDecode content of
         Left err -> return $ Left (T.pack err)
         Right cfg -> return $ Right cfg
