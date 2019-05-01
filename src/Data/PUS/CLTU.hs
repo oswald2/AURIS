@@ -3,6 +3,7 @@
 module Data.PUS.CLTU
     (
         CLTU
+        , cltuNew
         , cltuPayLoad
         , encode
         , decode 
@@ -28,13 +29,21 @@ import Data.PUS.Randomizer
 import qualified TextShow as TS
 import TextShow.Data.Integral
 
+import General.Chunks
+
 
 
 -- The CLTU itself
 data CLTU = CLTU {
+    -- | returns the actual binary payload data (mostly a TC transfer frame)
     cltuPayLoad :: ByteString
 }
 
+
+{-# INLINABLE cltuNew #-}
+-- | create a CLTU from a payload, which will mostly be a TC transfer frame
+cltuNew :: ByteString -> CLTU
+cltuNew = CLTU
 
 {-# INLINABLE cltuHeader #-}
 -- | The CLTU header 0xeb90
@@ -249,12 +258,5 @@ checkCodeBlockRandomized r expectedLen block =
 
 
 
--- | Chunk a @bs into list of smaller byte strings of no more than @n elements
-chunkedBy :: Int -> ByteString -> [ByteString]
-chunkedBy n bs = if B.length bs == 0
-  then []
-  else case B.splitAt (fromIntegral n) bs of
-    (as, zs) -> as : chunkedBy n zs
-{-# INLINABLE chunkedBy #-}    
 
 

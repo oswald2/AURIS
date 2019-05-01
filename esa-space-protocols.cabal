@@ -17,8 +17,15 @@ flag llvm
         build library with llvm
     default: False
 
+flag tests
+    description: Build test suite
+    default:     False
+
+
 library
     exposed-modules:
+        General.Chunks
+        General.Hexdump
         Data.PUS.Config
         Data.PUS.CLTU
         Data.PUS.CLTUTable
@@ -36,7 +43,9 @@ library
         array,
         hw-prim,
         text-show,
-        vector
+        vector,
+        hexdump,
+        formatting
     
     if flag(llvm)
         ghc-options: -O -Wall -Wcompat -Wincomplete-record-updates
@@ -46,3 +55,18 @@ library
         ghc-options: -O -Wall -Wcompat -Wincomplete-record-updates
                      -Wincomplete-uni-patterns -Wredundant-constraints
                      -funbox-strict-fields
+
+
+Executable TimeTest
+    if flag(tests)
+        Buildable: True
+        Build-Depends: 
+            esa-space-protocols
+            ,base
+            ,hedgehog
+
+    else
+        Buildable: False
+    Main-Is: CLTUTeset.hs
+    Hs-Source-Dirs: test
+    GHC-Options: -Wall -O
