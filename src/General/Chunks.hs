@@ -1,3 +1,14 @@
+{-|
+Module      : General.Chunks
+Description : Various functions to split data into chunks
+Copyright   : (c) Michael Oswald, 2019
+License     : BSD-3
+Maintainer  : michael.oswald@onikudaki.net
+Stability   : experimental
+Portability : POSIX
+
+This module provides some chunking functions for several data types as convenience
+-}
 module General.Chunks
     (
         chunkedBy

@@ -1,3 +1,14 @@
+{-|
+Module      : General.Hexdump
+Description : Functions for generating a hex-dump
+Copyright   : (c) Michael Oswald, 2019
+License     : BSD-3
+Maintainer  : michael.oswald@onikudaki.net
+Stability   : experimental
+Portability : POSIX
+
+This module provides functions for generating hex-dumps from various data structures (mostly ByteStrings)
+-}
 {-# LANGUAGE OverloadedStrings 
 #-}
 module General.Hexdump 

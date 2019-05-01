@@ -1,3 +1,15 @@
+{-|
+Module      : Data.PUS.Config
+Description : Configuration for the PUS functionality
+Copyright   : (c) Michael Oswald, 2019
+License     : BSD-3
+Maintainer  : michael.oswald@onikudaki.net
+Stability   : experimental
+Portability : POSIX
+
+This module contains the data structure for configuration. The configuration can currently be read and written from files in native Haskell 
+format (via Show class) or as JSON (via the aeson library)
+-}
 {-# LANGUAGE OverloadedStrings
     , DeriveGeneric 
 #-}

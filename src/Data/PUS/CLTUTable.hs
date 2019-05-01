@@ -1,3 +1,14 @@
+{-|
+Module      : Data.PUS.CLTUTable
+Description : Provides the lookup table for parity calculations
+Copyright   : (c) Michael Oswald, 2019
+License     : BSD-3
+Maintainer  : michael.oswald@onikudaki.net
+Stability   : experimental
+Portability : POSIX
+
+Provides the lookup table for parity calculations
+-}
 {-# LANGUAGE BangPatterns 
 #-}
 module Data.PUS.CLTUTable
@@ -12,13 +23,13 @@ import Data.Int
 import Data.Array.Unboxed
 import Data.Bits
 
-
-
 cltuArray :: UArray (Word8, Word8) Word8
 cltuArray = array ((0, 0), (127, 255)) assocList
 
 
 {-# INLINABLE cltuTable #-}
+-- | Gets a value out of a CLTU table. This is a pre-calculated table for the parity 
+-- calculations. It is only used internally in "Data.PUS.CLTU"
 cltuTable :: Word8 -> Word8 -> Word8
 cltuTable x y = cltuArray ! (x, y)
 

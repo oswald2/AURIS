@@ -1,3 +1,18 @@
+{-|
+Module      : Data.PUS.Randomizer
+Description : Randomizing functionality for CLTUs
+Copyright   : (c) Michael Oswald, 2019
+License     : BSD-3
+Maintainer  : michael.oswald@onikudaki.net
+Stability   : experimental
+Portability : POSIX
+
+This module provides the randomization functionality according to the ESA PUS standard. 
+This is a xor with a pre-defined array of values (which can be shifted) to distribute the 
+1's and 0's of the data in the transmission to the satellite more even.
+
+Note that not all missions use this.
+-}
 {-# LANGUAGE BangPatterns 
 #-}
 module Data.PUS.Randomizer
@@ -19,9 +34,9 @@ import qualified Data.ByteString.Lazy as B
 
 
 -- | The type for the Randomizer. A Randomizer does not exactyl random things. 
--- | It provides a sequence of bytes which, when xor'ed with the data byes of 
--- | a CLTU, provides a more evenly distribution of 1's and 0'es for 
--- | transmission to the satellite
+-- It provides a sequence of bytes which, when xor'ed with the data byes of 
+-- a CLTU, provides a more evenly distribution of 1's and 0'es for 
+-- transmission to the satellite
 newtype Randomizer = Randomizer (Vector Word8)
 
 
@@ -40,8 +55,8 @@ initialize start = Randomizer $ generate 8 f
             (d .&. start) `shiftR` i
 
 -- | gets the next byte from a randomizer. If peek is True, also 
--- | a new randomizer will be generated, otherwise the passed 
--- | randomizer will be returned.
+-- a new randomizer will be generated, otherwise the passed 
+-- randomizer will be returned.
 getNextByte :: Randomizer -> Bool -> (Randomizer, Word8)
 getNextByte (Randomizer rand) peek = 
     loop rand 0 7
@@ -82,8 +97,8 @@ getNextByte (Randomizer rand) peek =
 
 
 -- | This function performs the actual randomization of data bytes. @r is the start-randomizer,
--- | @peek indicates if the randomizer is also updated with values. The given ByteString is then
--- | converted and a new Randomizer as well as the converted ByteString are returned
+-- @peek indicates if the randomizer is also updated with values. The given ByteString is then
+-- converted and a new Randomizer as well as the converted ByteString are returned
 randomize :: Randomizer -> Bool -> ByteString -> (Randomizer, ByteString)
 randomize r peek = B.mapAccumL f r
     where f r1 x = let (r2, next) = getNextByte r1 peek in (r2, (x `xor` next))
