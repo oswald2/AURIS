@@ -45,7 +45,9 @@ library
         text-show,
         vector,
         hexdump,
-        formatting
+        formatting,
+        QuickCheck
+
     
     if flag(llvm)
         ghc-options: -O -Wall -Wcompat -Wincomplete-record-updates
@@ -57,16 +59,19 @@ library
                      -funbox-strict-fields
 
 
-Executable TimeTest
+Executable CLTUTest
     if flag(tests)
         Buildable: True
         Build-Depends: 
             esa-space-protocols
             ,base
+            ,bytestring
             ,hedgehog
+            ,hedgehog-quickcheck
+            ,QuickCheck
 
     else
         Buildable: False
-    Main-Is: CLTUTeset.hs
-    Hs-Source-Dirs: test
+    Main-Is: CLTUTest.hs
+    Hs-Source-Dirs: src/test
     GHC-Options: -Wall -O

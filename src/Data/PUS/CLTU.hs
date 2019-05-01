@@ -34,6 +34,7 @@ import Data.Int
 import Data.Bits
 import Data.Text (Text)
 import Data.List (mapAccumL)
+import qualified Data.Text as T
 
 import Data.PUS.Config
 import Data.PUS.CLTUTable
@@ -43,14 +44,19 @@ import qualified TextShow as TS
 import TextShow.Data.Integral
 
 import General.Chunks
-
+import General.Hexdump
 
 
 -- The CLTU itself
 data CLTU = CLTU {
     -- | returns the actual binary payload data (mostly a TC transfer frame)
     cltuPayLoad :: ByteString
-}
+} deriving Eq
+
+
+instance Show CLTU where
+    show (CLTU x) = "CLTU:\n" <> T.unpack (hexdump x)
+
 
 
 {-# INLINABLE cltuNew #-}
@@ -230,10 +236,10 @@ checkCodeBlock expectedLen block =
             <> TS.showb len)
         else
             if calculatedParity == parity 
-            then Right checkBlock
+            then Right (if B.all (== 0x55) checkBlock then B.empty else checkBlock)
             else 
                 if B.all (== 0x55) checkBlock
-                    then Right checkBlock
+                    then Right B.empty
                     else 
                         Left $ TS.toText (TS.fromText "Error: CLTU code block check failed, calculated: " 
                         <> showbHex calculatedParity 
@@ -262,7 +268,7 @@ checkCodeBlockRandomized r expectedLen block =
             then Right (randomize r False checkBlock)
             else 
                 if B.all (== 0x55) checkBlock
-                    then Right (r, checkBlock)
+                    then Right (r, B.empty)
                     else 
                         Left $ TS.toText (TS.fromText "Error: CLTU code block check failed, calculated: " 
                         <> showbHex calculatedParity 
