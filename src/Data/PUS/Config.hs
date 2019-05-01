@@ -25,6 +25,7 @@ import GHC.Generics
 data Config = Config {
     -- | The block size that is used to encode/decode the CLTU
     cfgCltuBlockSize :: Word8
+    , cfgRandomizerStartValue :: Word8
 } deriving (Eq, Read, Show, Generic)
 
 instance FromJSON Config
@@ -36,6 +37,7 @@ instance ToJSON Config where
 defaultConfig :: Config 
 defaultConfig = Config {
         cfgCltuBlockSize = 8
+        , cfgRandomizerStartValue = 0xFF
     }
 
 -- | write the config as a serialized string to a file. Uses the Show class for serizalization

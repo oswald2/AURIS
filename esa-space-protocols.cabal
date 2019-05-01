@@ -22,6 +22,7 @@ library
         Data.PUS.Config
         Data.PUS.CLTU
         Data.PUS.CLTUTable
+        Data.PUS.Randomizer
 
 
     hs-source-dirs: src
@@ -34,7 +35,8 @@ library
         text >=1.2.3.1 && <1.3,
         array,
         hw-prim,
-        text-show
+        text-show,
+        vector
     
     if flag(llvm)
         ghc-options: -O -Wall -Wcompat -Wincomplete-record-updates

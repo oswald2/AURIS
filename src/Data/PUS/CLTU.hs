@@ -6,6 +6,8 @@ module Data.PUS.CLTU
         , cltuPayLoad
         , encode
         , decode 
+        , encodeRandomized
+        , decodeRandomized
     )
 where
 
@@ -17,9 +19,11 @@ import Data.Word
 import Data.Int
 import Data.Bits
 import Data.Text (Text)
+import Data.List (mapAccumL)
 
 import Data.PUS.Config
 import Data.PUS.CLTUTable
+import Data.PUS.Randomizer
 
 import qualified TextShow as TS
 import TextShow.Data.Integral
@@ -42,16 +46,34 @@ cltuHeader = B.pack [0xeb, 0x90]
 cltuTrailer :: Int -> ByteString
 cltuTrailer n = B.replicate (fromIntegral n) 0x55
 
+
+{-# INLINABLE encode #-}
 -- | Encodes a CLTU into a ByteString suitable for sending via a transport protocol
 -- | Takes a config as some values of the CLTU ecoding can be specified per mission
 -- | (e.g. block length of the encoding)
 encode :: Config -> CLTU -> ByteString
-encode cfg (CLTU pl) = toLazyByteString (mconcat [lazyByteString cltuHeader, encodedFrame, trailer])
+encode cfg cltu = encodeGeneric cfg cltu encodeCodeBlocks
+
+
+{-# INLINABLE encodeRandomized #-}
+-- | Encodes a CLTU into a ByteString suitable for sending via a transport protocol,
+-- | but randomizes the data before
+-- | Takes a config as some values of the CLTU ecoding can be specified per mission
+-- | (e.g. block length of the encoding)
+encodeRandomized :: Config -> CLTU -> ByteString
+encodeRandomized cfg cltu = encodeGeneric cfg cltu encodeCodeBlocksRandomized
+
+{-# INLINABLE encodeGeneric #-}
+encodeGeneric :: Config -> CLTU -> (Config -> ByteString -> Builder) -> ByteString
+encodeGeneric cfg (CLTU pl) encoder = toLazyByteString (mconcat [lazyByteString cltuHeader, encodedFrame, trailer])
     where
-        encodedFrame = encodeCodeBlocks cfg pl
+        encodedFrame = encoder cfg pl
         trailer = encodeCodeBlock (cltuTrailer (fromIntegral (cfgCltuBlockSize cfg - 1)))
+        
 
-
+{-# INLINABLE decode #-}
+-- | Decodes incoming data into a CLTU. Returns either an error message or the decoded
+-- | CLTU itself.
 decode :: Config -> ByteString -> Either Text CLTU
 decode cfg pl = 
     if cltuHeader `B.isPrefixOf` pl
@@ -74,6 +96,32 @@ decode cfg pl =
             Left "CLTU Header is missing"
 
 
+{-# INLINABLE decodeRandomized #-}
+-- | Decodes incoming data into a CLTU. Returns either an error message or the decoded
+-- | CLTU itself.
+decodeRandomized :: Config -> ByteString -> Either Text CLTU
+decodeRandomized cfg pl = 
+    if cltuHeader `B.isPrefixOf` pl
+        then
+            let cbSize = cfgCltuBlockSize cfg
+                blocks = chunkedBy (fromIntegral cbSize) (B.drop (B.length cltuHeader) pl)
+                randomizer = initialize (cfgRandomizerStartValue cfg) 
+
+                proc _ [] acc = Right (reverse acc)
+                proc r (x : xs) acc = 
+                    case checkCodeBlockRandomized r cbSize x of
+                        Left err -> Left err
+                        Right (newR, block) -> proc newR xs (block : acc)
+
+            in
+            case proc randomizer blocks [] of
+                Left err -> Left err
+                Right parts -> Right $ CLTU (toLazyByteString . mconcat . map lazyByteString $ parts)
+        else
+            Left "CLTU Header is missing"
+            
+
+
 {-# INLINABLE encodeCodeBlocks #-}
 -- | Takes a ByteString as payload, splits it into CLTU code blocks according to 
 -- | the configuration, calculates the parity for the code blocks by possibly 
@@ -90,6 +138,24 @@ encodeCodeBlocks cfg pl =
     mconcat $ map (encodeCodeBlock . pad) blocks
 
 
+{-# INLINABLE encodeCodeBlocksRandomized #-}
+-- | Takes a ByteString as payload, splits it into CLTU code blocks according to 
+-- | the configuration, applies randomization, calculates the parity for the code blocks by possibly 
+-- | padding the last code block with the trailer and returns a builder
+-- | with the result
+encodeCodeBlocksRandomized :: Config -> ByteString -> Builder
+encodeCodeBlocksRandomized cfg pl = 
+    let cbSize = fromIntegral $ cfgCltuBlockSize cfg - 1
+        blocks = map pad $ chunkedBy cbSize pl
+        randomizer = initialize (cfgRandomizerStartValue cfg)
+        pad bs = 
+            let len = fromIntegral (B.length bs) in
+            if len < cbSize then B.append bs (cltuTrailer (cbSize - len)) else bs
+
+        (_, builderBlocks) = mapAccumL encodeCodeBlockRandomized randomizer blocks 
+    in
+    mconcat builderBlocks
+
 
 {-# INLINABLE encodeCodeBlock #-}
 -- | encodes a single CLTU code block. This function assumes that the given ByteString
@@ -97,6 +163,17 @@ encodeCodeBlocks cfg pl =
 encodeCodeBlock :: ByteString -> Builder
 encodeCodeBlock block = 
     lazyByteString block <> word8 (cltuParity block)
+
+
+{-# INLINABLE encodeCodeBlockRandomized #-}
+-- | encodes a single CLTU code block and applies randomization. This function assumes that the given ByteString
+-- | is already in the correct code block length - 1 (1 byte for parity will be added)
+encodeCodeBlockRandomized :: Randomizer -> ByteString -> (Randomizer, Builder)
+encodeCodeBlockRandomized r block = 
+    let (newR, rblock) = randomize r False block
+    in
+    (newR, lazyByteString rblock <> word8 (cltuParity rblock))
+    
 
 
 {-# INLINABLE cltuParity #-}
@@ -112,6 +189,11 @@ cltuParity !block =
     result
         
 
+
+{-# INLINABLE checkCodeBlock #-}
+-- | Checks a code block. First, it checks the length against the expected length,
+-- | then checks the parity. Returns either an error message or the data block without
+-- | the parity byte
 checkCodeBlock :: Word8 -> ByteString -> Either Text ByteString
 checkCodeBlock expectedLen block =
     let len = B.length block
@@ -135,6 +217,36 @@ checkCodeBlock expectedLen block =
                         <> showbHex calculatedParity 
                         <> TS.fromText " received: " 
                         <> showbHex parity)
+
+
+{-# INLINABLE checkCodeBlockRandomized #-}
+-- | Checks a code block. First, it checks the length against the expected length,
+-- | then checks the parity. Returns either an error message or the data block without
+-- | the parity byte
+checkCodeBlockRandomized :: Randomizer -> Word8 -> ByteString -> Either Text (Randomizer, ByteString)
+checkCodeBlockRandomized r expectedLen block =
+    let len = B.length block
+        checkBlock = B.take (len - 1) block
+        parity = block `B.index` (len - 1)
+        calculatedParity = cltuParity checkBlock
+    in
+    if fromIntegral expectedLen /= len
+        then Left $ TS.toText (TS.fromText "CLTU block does not have the right length, expected: "
+            <> TS.showb expectedLen
+            <> TS.fromText " received: "
+            <> TS.showb len)
+        else
+            if calculatedParity == parity 
+            then Right (randomize r False checkBlock)
+            else 
+                if B.all (== 0x55) checkBlock
+                    then Right (r, checkBlock)
+                    else 
+                        Left $ TS.toText (TS.fromText "Error: CLTU code block check failed, calculated: " 
+                        <> showbHex calculatedParity 
+                        <> TS.fromText " received: " 
+                        <> showbHex parity)
+
 
 
 -- | Chunk a @bs into list of smaller byte strings of no more than @n elements
