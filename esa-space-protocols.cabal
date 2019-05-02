@@ -46,7 +46,10 @@ library
         vector,
         hexdump,
         formatting,
-        QuickCheck
+        attoparsec,
+        attoparsec-binary,
+        conduit,
+        conduit-extra
 
     
     if flag(llvm)
