@@ -116,9 +116,10 @@ cltuParser cfg = do
         checkedCBs = foldr proc (Right mempty) codeBlocks
 
     case checkedCBs of
-        Left err -> fail (T.unpack err)
+        Left  err   -> fail (T.unpack err)
         Right parts -> do
-            let bs = ( BL.toStrict
+            let bs =
+                    ( BL.toStrict
                     . toLazyByteString
                     . mconcat
                     . map byteString
@@ -150,9 +151,10 @@ cltuRandomizedParser cfg = do
                 Right (newR, block) -> proc newR xs (block : acc)
 
     case proc randomizer codeBlocks [] of
-        Left err -> fail (T.unpack err)
+        Left  err   -> fail (T.unpack err)
         Right parts -> do
-            let bs = ( BL.toStrict
+            let bs =
+                    ( BL.toStrict
                     . toLazyByteString
                     . mconcat
                     . map byteString
