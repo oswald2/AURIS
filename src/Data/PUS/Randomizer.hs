@@ -28,8 +28,8 @@ where
 import Data.Vector.Unboxed
 import Data.Word
 import Data.Bits
-import Data.ByteString.Lazy (ByteString)
-import qualified Data.ByteString.Lazy as B
+import Data.ByteString (ByteString)
+import qualified Data.ByteString as B
 
 
 

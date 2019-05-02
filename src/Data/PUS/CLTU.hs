@@ -17,15 +17,12 @@ module Data.PUS.CLTU
     ( CLTU
     , cltuNew
     , cltuPayLoad
-
     , encode
     , decode
     , encodeRandomized
     , decodeRandomized
-    
     , cltuParser
     , cltuRandomizedParser
-    
     , cltuDecodeC
     , cltuDecodeRandomizedC
     , cltuEncodeC
@@ -36,11 +33,11 @@ where
 
 import           Control.Monad                  ( void )
 
-import           Data.ByteString.Lazy           ( ByteString )
-import qualified Data.ByteString.Lazy          as B
+import qualified Data.ByteString.Lazy          as BL
 import           Data.ByteString.Builder
+import           Data.ByteString                ( ByteString )
 import qualified Data.ByteString               as BS
-                                                ( ByteString )
+
 import           Data.Word
 import           Data.Int
 import           Data.Bits
@@ -69,12 +66,12 @@ import           Data.Conduit.Attoparsec
 -- The CLTU itself
 data CLTU = CLTU {
     -- | returns the actual binary payload data (mostly a TC transfer frame)
-    cltuPayLoad :: ByteString
+    cltuPayLoad :: BS.ByteString
 } deriving Eq
 
 
 instance Show CLTU where
-    show (CLTU x) = "CLTU:\n" <> T.unpack (hexdump x)
+    show (CLTU x) = "CLTU:\n" <> T.unpack (hexdumpBS x)
 
 
 
@@ -86,12 +83,12 @@ cltuNew = CLTU
 {-# INLINABLE cltuHeader #-}
 -- | The CLTU header 0xeb90
 cltuHeader :: ByteString
-cltuHeader = B.pack [0xeb, 0x90]
+cltuHeader = BS.pack [0xeb, 0x90]
 
 -- | The CLTU trailer 
 {-# INLINABLE cltuTrailer #-}
 cltuTrailer :: Int -> ByteString
-cltuTrailer n = B.replicate (fromIntegral n) 0x55
+cltuTrailer n = BS.replicate (fromIntegral n) 0x55
 
 
 
@@ -112,16 +109,23 @@ cltuParser cfg = do
 
     let proc _ (Left err) = Left err
         proc (bs, parity) (Right cb) =
-            case checkCodeBlockParity cbSize (B.fromStrict bs) parity of
+            case checkCodeBlockParity cbSize bs parity of
                 Left  err       -> Left err
                 Right dataBlock -> Right (dataBlock : cb)
 
         checkedCBs = foldr proc (Right mempty) codeBlocks
 
     case checkedCBs of
-        Left  err   -> fail (T.unpack err)
-        Right parts -> pure
-            $ CLTU (toLazyByteString . mconcat . map lazyByteString $ parts)
+        Left err -> fail (T.unpack err)
+        Right parts -> do
+            let bs = ( BL.toStrict
+                    . toLazyByteString
+                    . mconcat
+                    . map byteString
+                    $ parts
+                    )
+                (res, _) = BS.spanEnd (== 0x55) bs
+            pure (CLTU res)
 
 
 codeBlockParser :: Int -> Parser (BS.ByteString, Word8)
@@ -141,38 +145,53 @@ cltuRandomizedParser cfg = do
 
     let proc _ [] acc = Right (reverse acc)
         proc r ((x, parity) : xs) acc =
-            case
-                    checkCodeBlockRandomizedParity r
-                                                   cbSize
-                                                   (B.fromStrict x)
-                                                   parity
-                of
-                    Left  err           -> Left err
-                    Right (newR, block) -> proc newR xs (block : acc)
+            case checkCodeBlockRandomizedParity r cbSize x parity of
+                Left  err           -> Left err
+                Right (newR, block) -> proc newR xs (block : acc)
 
     case proc randomizer codeBlocks [] of
-        Left  err   -> fail (T.unpack err)
-        Right parts -> pure
-            $ CLTU (toLazyByteString . mconcat . map lazyByteString $ parts)
+        Left err -> fail (T.unpack err)
+        Right parts -> do
+            let bs = ( BL.toStrict
+                    . toLazyByteString
+                    . mconcat
+                    . map byteString
+                    $ parts
+                    )
+                (res, _) = BS.spanEnd (== 0x55) bs
+            pure (CLTU res)
 
 
 -- | A conduit for decoding CLTUs from a ByteString stream
-cltuDecodeC :: Monad m => Config -> ConduitT BS.ByteString (Either ParseError (PositionRange, CLTU)) m ()
+cltuDecodeC
+    :: Monad m
+    => Config
+    -> ConduitT
+           BS.ByteString
+           (Either ParseError (PositionRange, CLTU))
+           m
+           ()
 cltuDecodeC cfg = conduitParserEither (cltuParser cfg)
 
 -- | A conduit for decoding randomized CLTUs from a ByteString stream
-cltuDecodeRandomizedC :: Monad m => Config -> ConduitT BS.ByteString (Either ParseError (PositionRange, CLTU)) m ()
+cltuDecodeRandomizedC
+    :: Monad m
+    => Config
+    -> ConduitT
+           BS.ByteString
+           (Either ParseError (PositionRange, CLTU))
+           m
+           ()
 cltuDecodeRandomizedC cfg = conduitParserEither (cltuParser cfg)
 
 
 -- | A conduit for encoding a CLTU in a ByteString for transmission
 cltuEncodeC :: Monad m => Config -> ConduitT CLTU BS.ByteString m ()
-cltuEncodeC cfg = 
-    awaitForever $ \cltu -> pure (encode cfg cltu)
+cltuEncodeC cfg = awaitForever $ \cltu -> pure (encode cfg cltu)
 
 -- | A conduit for encoding a CLTU in a ByteString for transmission
 cltuEncodeRandomizedC :: Monad m => Config -> ConduitT CLTU BS.ByteString m ()
-cltuEncodeRandomizedC cfg = 
+cltuEncodeRandomizedC cfg =
     awaitForever $ \cltu -> pure (encodeRandomized cfg cltu)
 
 
@@ -195,8 +214,8 @@ encodeRandomized cfg cltu = encodeGeneric cfg cltu encodeCodeBlocksRandomized
 {-# INLINABLE encodeGeneric #-}
 encodeGeneric
     :: Config -> CLTU -> (Config -> ByteString -> Builder) -> ByteString
-encodeGeneric cfg (CLTU pl) encoder = toLazyByteString
-    (mconcat [lazyByteString cltuHeader, encodedFrame, trailer])
+encodeGeneric cfg (CLTU pl) encoder = BL.toStrict
+    $ toLazyByteString (mconcat [byteString cltuHeader, encodedFrame, trailer])
   where
     encodedFrame = encoder cfg pl
     trailer =
@@ -207,12 +226,12 @@ encodeGeneric cfg (CLTU pl) encoder = toLazyByteString
 -- | Decodes incoming data into a CLTU. Returns either an error message or the decoded
 -- CLTU itself.
 decode :: Config -> ByteString -> Either Text CLTU
-decode cfg pl = if cltuHeader `B.isPrefixOf` pl
+decode cfg pl = if cltuHeader `BS.isPrefixOf` pl
     then
         let
             cbSize = cfgCltuBlockSize cfg
-            blocks = chunkedBy (fromIntegral cbSize)
-                               (B.drop (B.length cltuHeader) pl)
+            blocks = chunkedByBS (fromIntegral cbSize)
+                                 (BS.drop (BS.length cltuHeader) pl)
 
             proc _  (Left  err) = Left err
             proc bs (Right cb ) = case checkCodeBlock cbSize bs of
@@ -226,9 +245,10 @@ decode cfg pl = if cltuHeader `B.isPrefixOf` pl
                 Right parts ->
                     Right
                         $ CLTU
-                              ( toLazyByteString
+                              ( BL.toStrict
+                              . toLazyByteString
                               . mconcat
-                              . map lazyByteString
+                              . map byteString
                               $ parts
                               )
     else Left "CLTU Header is missing"
@@ -238,12 +258,12 @@ decode cfg pl = if cltuHeader `B.isPrefixOf` pl
 -- | Decodes incoming data into a CLTU. Returns either an error message or the decoded
 -- CLTU itself.
 decodeRandomized :: Config -> ByteString -> Either Text CLTU
-decodeRandomized cfg pl = if cltuHeader `B.isPrefixOf` pl
+decodeRandomized cfg pl = if cltuHeader `BS.isPrefixOf` pl
     then
         let
             cbSize = cfgCltuBlockSize cfg
-            blocks = chunkedBy (fromIntegral cbSize)
-                               (B.drop (B.length cltuHeader) pl)
+            blocks = chunkedByBS (fromIntegral cbSize)
+                                 (BS.drop (BS.length cltuHeader) pl)
             randomizer = initialize (cfgRandomizerStartValue cfg)
 
             proc _ []       acc = Right (reverse acc)
@@ -256,9 +276,10 @@ decodeRandomized cfg pl = if cltuHeader `B.isPrefixOf` pl
                 Right parts ->
                     Right
                         $ CLTU
-                              ( toLazyByteString
+                              ( BL.toStrict
+                              . toLazyByteString
                               . mconcat
-                              . map lazyByteString
+                              . map byteString
                               $ parts
                               )
     else Left "CLTU Header is missing"
@@ -273,11 +294,11 @@ decodeRandomized cfg pl = if cltuHeader `B.isPrefixOf` pl
 encodeCodeBlocks :: Config -> ByteString -> Builder
 encodeCodeBlocks cfg pl =
     let cbSize = fromIntegral $ cfgCltuBlockSize cfg - 1
-        blocks = chunkedBy cbSize pl
+        blocks = chunkedByBS cbSize pl
         pad bs =
-                let len = fromIntegral (B.length bs)
+                let len = fromIntegral (BS.length bs)
                 in  if len < cbSize
-                        then B.append bs (cltuTrailer (cbSize - len))
+                        then BS.append bs (cltuTrailer (cbSize - len))
                         else bs
     in  mconcat $ map (encodeCodeBlock . pad) blocks
 
@@ -291,12 +312,12 @@ encodeCodeBlocksRandomized :: Config -> ByteString -> Builder
 encodeCodeBlocksRandomized cfg pl =
     let
         cbSize     = fromIntegral $ cfgCltuBlockSize cfg - 1
-        blocks     = map pad $ chunkedBy cbSize pl
+        blocks     = map pad $ chunkedByBS cbSize pl
         randomizer = initialize (cfgRandomizerStartValue cfg)
         pad bs =
-            let len = fromIntegral (B.length bs)
+            let len = fromIntegral (BS.length bs)
             in  if len < cbSize
-                    then B.append bs (cltuTrailer (cbSize - len))
+                    then BS.append bs (cltuTrailer (cbSize - len))
                     else bs
 
         (_, builderBlocks) =
@@ -309,7 +330,7 @@ encodeCodeBlocksRandomized cfg pl =
 -- | encodes a single CLTU code block. This function assumes that the given ByteString
 -- is already in the correct code block length - 1 (1 byte for parity will be added)
 encodeCodeBlock :: ByteString -> Builder
-encodeCodeBlock block = lazyByteString block <> word8 (cltuParity block)
+encodeCodeBlock block = byteString block <> word8 (cltuParity block)
 
 
 {-# INLINABLE encodeCodeBlockRandomized #-}
@@ -318,7 +339,7 @@ encodeCodeBlock block = lazyByteString block <> word8 (cltuParity block)
 encodeCodeBlockRandomized :: Randomizer -> ByteString -> (Randomizer, Builder)
 encodeCodeBlockRandomized r block =
     let (newR, rblock) = randomize r False block
-    in  (newR, lazyByteString rblock <> word8 (cltuParity rblock))
+    in  (newR, byteString rblock <> word8 (cltuParity rblock))
 
 
 
@@ -329,7 +350,7 @@ cltuParity :: ByteString -> Word8
 cltuParity !block =
     let proc :: Word8 -> Int32 -> Int32
         proc !octet !sreg = fromIntegral $ cltuTable (fromIntegral sreg) octet
-        sreg1   = B.foldr proc 0 block
+        sreg1   = BS.foldr proc 0 block
         !result = fromIntegral $ ((sreg1 `xor` 0xFF) `shiftL` 1) .&. 0xFE
     in  result
 
@@ -341,16 +362,16 @@ cltuParity !block =
 -- the parity byte
 checkCodeBlock :: Word8 -> ByteString -> Either Text ByteString
 checkCodeBlock expectedLen block =
-    let len              = B.length block
-        checkBlock       = B.take (len - 1) block
-        parity           = block `B.index` (len - 1)
+    let len        = BS.length block
+        checkBlock = BS.take (len - 1) block
+        parity     = block `BS.index` (len - 1)
     in  checkCodeBlockParity expectedLen checkBlock parity
 
 
 checkCodeBlockParity :: Word8 -> ByteString -> Word8 -> Either Text ByteString
 checkCodeBlockParity expectedLen checkBlock parity =
     let
-        len              = B.length checkBlock + 1
+        len              = BS.length checkBlock + 1
         calculatedParity = cltuParity checkBlock
     in
         if fromIntegral expectedLen /= len
@@ -364,12 +385,12 @@ checkCodeBlockParity expectedLen checkBlock parity =
             else if calculatedParity == parity
                 then
                     Right
-                        (if B.all (== 0x55) checkBlock
-                            then B.empty
+                        (if BS.all (== 0x55) checkBlock
+                            then BS.empty
                             else checkBlock
                         )
-                else if B.all (== 0x55) checkBlock
-                    then Right B.empty
+                else if BS.all (== 0x55) checkBlock
+                    then Right BS.empty
                     else Left $ TS.toText
                         (  TS.fromText
                               "Error: CLTU code block check failed, calculated: "
@@ -386,9 +407,9 @@ checkCodeBlockParity expectedLen checkBlock parity =
 checkCodeBlockRandomized
     :: Randomizer -> Word8 -> ByteString -> Either Text (Randomizer, ByteString)
 checkCodeBlockRandomized r expectedLen block =
-    let len              = B.length block
-        checkBlock       = B.take (len - 1) block
-        parity           = block `B.index` (len - 1)
+    let len        = BS.length block
+        checkBlock = BS.take (len - 1) block
+        parity     = block `BS.index` (len - 1)
     in  checkCodeBlockRandomizedParity r expectedLen checkBlock parity
 
 
@@ -400,7 +421,7 @@ checkCodeBlockRandomizedParity
     -> Either Text (Randomizer, ByteString)
 checkCodeBlockRandomizedParity r expectedLen checkBlock parity =
     let
-        len              = B.length checkBlock + 1
+        len              = BS.length checkBlock + 1
         calculatedParity = cltuParity checkBlock
     in
         if fromIntegral expectedLen /= len
@@ -413,8 +434,8 @@ checkCodeBlockRandomizedParity r expectedLen checkBlock parity =
                 )
             else if calculatedParity == parity
                 then Right (randomize r False checkBlock)
-                else if B.all (== 0x55) checkBlock
-                    then Right (r, B.empty)
+                else if BS.all (== 0x55) checkBlock
+                    then Right (r, BS.empty)
                     else Left $ TS.toText
                         (  TS.fromText
                               "Error: CLTU code block check failed, calculated: "
