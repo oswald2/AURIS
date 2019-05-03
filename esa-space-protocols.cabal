@@ -75,7 +75,7 @@ Executable CLTUTest
             ,bytestring
             ,hedgehog
             ,hedgehog-quickcheck
-            ,QuickCheck
+            ,inline-c
 
     else
         Buildable: False

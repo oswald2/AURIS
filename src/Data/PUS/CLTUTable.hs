@@ -14,6 +14,7 @@ Provides the lookup table for parity calculations
 module Data.PUS.CLTUTable
     (
         cltuTable
+        , codProcChar
     )
 where
 
@@ -45,7 +46,7 @@ codProcChar xvalw sregw =
             | otherwise = 
                 let !sreg1 = sreg `shiftL` 1
                     bit1 :: Int32
-                    !bit1 = if (sreg .&. 0x80) /= 0 then 1 else 0
+                    !bit1 = if (sreg1 .&. 0x80) /= 0 then 1 else 0
                     !bit2 = if (xval .&. mask) /= 0 then bit1 `xor` 1 else bit1
                     !sreg2 = if bit2 /= 0 then sreg1 `xor` 0x45 else sreg1
                 in
