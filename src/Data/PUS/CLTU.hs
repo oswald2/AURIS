@@ -30,6 +30,7 @@ where
 
 
 import           Control.Monad                  ( void )
+import           Control.Monad.State
 
 import qualified Data.ByteString.Lazy          as BL
 import           Data.ByteString.Builder
@@ -40,7 +41,6 @@ import           Data.Word
 import           Data.Int
 import           Data.Bits
 import           Data.Text                      ( Text )
-import           Data.List                      ( mapAccumL )
 import qualified Data.Text                     as T
 
 import           Data.PUS.Config
@@ -142,13 +142,14 @@ cltuRandomizedParser cfg = do
 
     codeBlocks <- A.many1 (codeBlockParser (fromIntegral dataLen))
 
-    let proc _ [] acc = Right (reverse acc)
-        proc r ((x, parity) : xs) acc =
-            case checkCodeBlockRandomizedParity r cbSize x parity of
-                Left  err           -> Left err
-                Right (newR, block) -> proc newR xs (block : acc)
+    let proc [] acc = pure (Right (reverse acc))
+        proc (block : rest) acc = do
+            chk <- checkCodeBlockRandomizedParity cbSize block
+            case chk of 
+                Left err -> pure (Left err)
+                Right dataBlock -> proc rest (dataBlock : acc)
 
-    case proc randomizer codeBlocks [] of
+    case evalState (proc codeBlocks [])  randomizer of
         Left  err   -> fail (T.unpack err)
         Right parts -> do
             let bs =
@@ -260,8 +261,8 @@ encodeCodeBlocksRandomized cfg pl =
                     then BS.append bs (cltuTrailer (cbSize - len))
                     else bs
 
-        (_, builderBlocks) =
-            mapAccumL encodeCodeBlockRandomized randomizer blocks
+        builderBlocks = evalState (mapM encodeCodeBlockRandomized blocks) randomizer
+
     in
         mconcat builderBlocks
 
@@ -276,10 +277,10 @@ encodeCodeBlock block = byteString block <> word8 (cltuParity block)
 {-# INLINABLE encodeCodeBlockRandomized #-}
 -- | encodes a single CLTU code block and applies randomization. This function assumes that the given ByteString
 -- is already in the correct code block length - 1 (1 byte for parity will be added)
-encodeCodeBlockRandomized :: Randomizer -> ByteString -> (Randomizer, Builder)
-encodeCodeBlockRandomized r block =
-    let (newR, rblock) = randomize r False block
-    in  (newR, byteString rblock <> word8 (cltuParity rblock))
+encodeCodeBlockRandomized :: ByteString -> State Randomizer Builder
+encodeCodeBlockRandomized block = do
+    rblock <- randomize False block
+    pure (byteString rblock <> word8 (cltuParity rblock))
 
 
 
@@ -337,35 +338,35 @@ checkCodeBlockParity expectedLen checkBlock parity =
 -- then checks the @parity. Returns either an error message or the d-randomized data block without
 -- the parity byte. 
 checkCodeBlockRandomizedParity
-    :: Randomizer
-    -> Word8
-    -> ByteString
-    -> Word8
-    -> Either Text (Randomizer, ByteString)
-checkCodeBlockRandomizedParity r expectedLen checkBlock parity =
+    :: Word8
+    -> (ByteString, Word8)
+    -> State Randomizer (Either Text ByteString)
+checkCodeBlockRandomizedParity expectedLen (checkBlock, parity) = do
     let
         len              = BS.length checkBlock + 1
-        calculatedParity = cltuParity checkBlock
-    in
-        if fromIntegral expectedLen /= len
-            then Left $ TS.toText
-                (  TS.fromText
-                      "CLTU block does not have the right length, expected: "
-                <> TS.showb expectedLen
-                <> TS.fromText " received: "
-                <> TS.showb len
-                )
-            else if calculatedParity == parity
-                then Right (randomize r False checkBlock)
-                else if BS.all (== 0x55) checkBlock
-                    then Right (r, BS.empty)
-                    else Left $ TS.toText
-                        (  TS.fromText
-                              "Error: CLTU code block check failed, calculated: "
-                        <> showbHex calculatedParity
-                        <> TS.fromText " received: "
-                        <> showbHex parity
-                        )
+        !calculatedParity = cltuParity checkBlock
+
+    if fromIntegral expectedLen /= len
+        then pure . Left $ TS.toText
+            (  TS.fromText
+                    "CLTU block does not have the right length, expected: "
+            <> TS.showb expectedLen
+            <> TS.fromText " received: "
+            <> TS.showb len
+            )
+        else if calculatedParity == parity
+            then do
+                res <- randomize False checkBlock
+                pure (Right res)
+            else if BS.all (== 0x55) checkBlock
+                then pure (Right BS.empty)
+                else pure . Left $ TS.toText
+                    (  TS.fromText
+                            "Error: CLTU code block check failed, calculated: "
+                    <> showbHex calculatedParity
+                    <> TS.fromText " received: "
+                    <> showbHex parity
+                    )
 
 
 

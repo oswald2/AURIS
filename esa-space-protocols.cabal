@@ -50,7 +50,9 @@ library
         attoparsec-binary,
         conduit,
         conduit-extra,
-        closed
+        closed,
+        rio,
+        mtl
 
     
     if flag(llvm)
