@@ -84,7 +84,7 @@ prop_codProcChar =
 tests :: IO Bool
 tests = checkParallel $$(discover)
 
-
+main :: IO Bool
 main = do
     tests
     
