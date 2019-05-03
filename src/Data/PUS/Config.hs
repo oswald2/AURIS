@@ -12,32 +12,41 @@ format (via Show class) or as JSON (via the aeson library)
 -}
 {-# LANGUAGE OverloadedStrings
     , DeriveGeneric 
+    , DataKinds
+    , TypeSynonymInstances
+    , FlexibleInstances
+    , GeneralizedNewtypeDeriving
 #-}
 module Data.PUS.Config
     (
-        Config(..)
-        , defaultConfig
-        , writeConfigString
-        , writeConfigJSON
-        , loadConfigString
-        , loadConfigJSON
+    -- | The config data type itself    
+      Config(..)
+    -- | Type for the CLTU code block size. Restricted to be 5 .. 8 
+    , CltuBlockSize(..)
+    , cltuBlockSizeAsWord8
+    , defaultConfig
+    , writeConfigString
+    , writeConfigJSON
+    , loadConfigString
+    , loadConfigJSON
     )
 where
 
-import Control.Monad.IO.Class
+import           Control.Monad.IO.Class
 
-import Data.Word   
-import Data.Aeson
-import Data.ByteString.Lazy as B
-import Data.Text (Text)
-import qualified Data.Text as T
+import           Data.Word
+import           Data.Aeson
+import           Data.ByteString.Lazy          as B
+import           Data.Text                      ( Text )
+import qualified Data.Text                     as T
 
-import GHC.Generics
+import           GHC.Generics
+
 
 -- | The configuration of the PUS functionality
 data Config = Config {
     -- | The block size that is used to encode/decode the CLTU
-    cfgCltuBlockSize :: Word8
+    cfgCltuBlockSize :: CltuBlockSize
     , cfgRandomizerStartValue :: Word8
 } deriving (Eq, Read, Show, Generic)
 
@@ -46,16 +55,36 @@ instance FromJSON Config
 instance ToJSON Config where
     toEncoding = genericToEncoding defaultOptions
 
+-- | Specifies the CLTU block size. Since there are only very few 
+-- values allowed (5,6,7,8), we do an enumeration
+data CltuBlockSize = 
+    CltuBS_5
+    | CltuBS_6
+    | CltuBS_7
+    | CltuBS_8
+    deriving (Eq, Enum, Show, Read, Generic)
+
+instance FromJSON CltuBlockSize    
+
+instance ToJSON CltuBlockSize where
+    toEncoding = genericToEncoding defaultOptions
+
+cltuBlockSizeAsWord8 :: CltuBlockSize -> Word8
+cltuBlockSizeAsWord8 CltuBS_5 = 5
+cltuBlockSizeAsWord8 CltuBS_6 = 6
+cltuBlockSizeAsWord8 CltuBS_7 = 7
+cltuBlockSizeAsWord8 CltuBS_8 = 8
+
+
 -- | a default configuration with typical values.
-defaultConfig :: Config 
-defaultConfig = Config {
-        cfgCltuBlockSize = 8
-        , cfgRandomizerStartValue = 0xFF
-    }
+defaultConfig :: Config
+defaultConfig = Config { cfgCltuBlockSize        = CltuBS_8
+                       , cfgRandomizerStartValue = 0xFF
+                       }
 
 -- | write the config as a serialized string to a file. Uses the Show class for serizalization
 writeConfigString :: MonadIO m => Config -> FilePath -> m ()
-writeConfigString cfg path = do 
+writeConfigString cfg path = do
     liftIO $ Prelude.writeFile path (show cfg)
 
 -- | write the config in JSON format to a file. Uses the aeson for conversion to/from JSON
@@ -68,8 +97,8 @@ loadConfigString :: MonadIO m => FilePath -> m (Either Text Config)
 loadConfigString path = do
     content <- liftIO $ Prelude.readFile path
     let res = reads content
-    if Prelude.null res 
-        then return  $ Left ("Could not parse config: " <> T.pack content)
+    if Prelude.null res
+        then return $ Left ("Could not parse config: " <> T.pack content)
         else return $ Right . fst . Prelude.head $ res
 
 -- | Load a config from a file in JSON format and return it. 
@@ -78,5 +107,5 @@ loadConfigJSON :: MonadIO m => FilePath -> m (Either Text Config)
 loadConfigJSON path = do
     content <- liftIO $ B.readFile path
     case eitherDecode content of
-        Left err -> return $ Left (T.pack err)
+        Left  err -> return $ Left (T.pack err)
         Right cfg -> return $ Right cfg

@@ -98,7 +98,7 @@ cltuHeaderParser = do
 -- | Attoparsec parser for a CLTU. 
 cltuParser :: Config -> Parser CLTU
 cltuParser cfg = do
-    let cbSize  = cfgCltuBlockSize cfg
+    let cbSize  = cltuBlockSizeAsWord8 (cfgCltuBlockSize cfg)
         dataLen = cbSize - 1
 
     cltuHeaderParser
@@ -134,7 +134,7 @@ codeBlockParser dataLen = (,) <$> A.take dataLen <*> A.anyWord8
 -- | Attoparsec parser for a randomized CLTU. 
 cltuRandomizedParser :: Config -> Parser CLTU
 cltuRandomizedParser cfg = do
-    let cbSize     = cfgCltuBlockSize cfg
+    let cbSize     = cltuBlockSizeAsWord8 (cfgCltuBlockSize cfg)
         dataLen    = cbSize - 1
         randomizer = initialize (cfgRandomizerStartValue cfg)
 
@@ -218,8 +218,10 @@ encodeGeneric cfg (CLTU pl) encoder = BL.toStrict
     $ toLazyByteString (mconcat [byteString cltuHeader, encodedFrame, trailer])
   where
     encodedFrame = encoder cfg pl
-    trailer =
-        encodeCodeBlock (cltuTrailer (fromIntegral (cfgCltuBlockSize cfg - 1)))
+    trailer      = encodeCodeBlock
+        (cltuTrailer
+            (fromIntegral (cltuBlockSizeAsWord8 (cfgCltuBlockSize cfg) - 1))
+        )
 
 
 
@@ -231,7 +233,7 @@ encodeGeneric cfg (CLTU pl) encoder = BL.toStrict
 -- with the result
 encodeCodeBlocks :: Config -> ByteString -> Builder
 encodeCodeBlocks cfg pl =
-    let cbSize = fromIntegral $ cfgCltuBlockSize cfg - 1
+    let cbSize = fromIntegral $ cltuBlockSizeAsWord8 (cfgCltuBlockSize cfg) - 1
         blocks = chunkedByBS cbSize pl
         pad bs =
                 let len = fromIntegral (BS.length bs)
@@ -249,8 +251,8 @@ encodeCodeBlocks cfg pl =
 encodeCodeBlocksRandomized :: Config -> ByteString -> Builder
 encodeCodeBlocksRandomized cfg pl =
     let
-        cbSize     = fromIntegral $ cfgCltuBlockSize cfg - 1
-        blocks     = map pad $ chunkedByBS cbSize pl
+        cbSize = fromIntegral $ cltuBlockSizeAsWord8 (cfgCltuBlockSize cfg) - 1
+        blocks = map pad $ chunkedByBS cbSize pl
         randomizer = initialize (cfgRandomizerStartValue cfg)
         pad bs =
             let len = fromIntegral (BS.length bs)
