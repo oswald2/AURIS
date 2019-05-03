@@ -5,3 +5,5 @@ dist-newstyle/
 dist/
 *~
 
+DefaultConfig.config
+DefaultConfig.json

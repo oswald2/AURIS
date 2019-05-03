@@ -12,7 +12,9 @@ basically an array of values which are xor'ed with the CLTU block data so that t
 0's and 1's is more even (better for transmission to the satellite).
 -}
 {-# LANGUAGE BangPatterns
-    , OverloadedStrings #-}
+    , OverloadedStrings 
+    , NoImplicitPrelude    
+#-}
 module Data.PUS.CLTU
     ( CLTU
     , cltuNew
@@ -28,17 +30,16 @@ module Data.PUS.CLTU
     )
 where
 
+import           RIO
 
 import           Control.Monad                  ( void )
-import           Control.Monad.State
+import           RIO.State
 
-import qualified Data.ByteString.Lazy          as BL
+import qualified RIO.ByteString.Lazy          as BL
 import           Data.ByteString.Builder
-import           Data.ByteString                ( ByteString )
-import qualified Data.ByteString               as BS
+import           RIO.ByteString                ( ByteString )
+import qualified RIO.ByteString               as BS
 
-import           Data.Word
-import           Data.Int
 import           Data.Bits
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
@@ -99,11 +100,11 @@ cltuHeaderParser = do
 cltuParser :: Config -> Parser CLTU
 cltuParser cfg = do
     let cbSize  = cltuBlockSizeAsWord8 (cfgCltuBlockSize cfg)
-        dataLen = cbSize - 1
+        dataLen = fromIntegral (cbSize - 1)
 
-    cltuHeaderParser
+    void $ A.manyTill (A.word8 0x55) cltuHeaderParser
 
-    codeBlocks <- A.many1 (codeBlockParser (fromIntegral dataLen))
+    codeBlocks <- A.manyTill' (codeBlockParser dataLen) (trailerParser dataLen)
 
     let proc _ (Left err) = Left err
         proc (bs, parity) (Right cb) =
@@ -130,26 +131,29 @@ cltuParser cfg = do
 codeBlockParser :: Int -> Parser (BS.ByteString, Word8)
 codeBlockParser dataLen = (,) <$> A.take dataLen <*> A.anyWord8
 
+trailerParser :: Int -> Parser Bool
+trailerParser dataLen = BS.all (== 0x55) <$> A.take dataLen
+
 
 -- | Attoparsec parser for a randomized CLTU. 
 cltuRandomizedParser :: Config -> Parser CLTU
 cltuRandomizedParser cfg = do
     let cbSize     = cltuBlockSizeAsWord8 (cfgCltuBlockSize cfg)
-        dataLen    = cbSize - 1
+        !dataLen   = fromIntegral (cbSize - 1)
         randomizer = initialize (cfgRandomizerStartValue cfg)
 
-    cltuHeaderParser
+    void $ A.manyTill (A.word8 0x55) cltuHeaderParser
 
-    codeBlocks <- A.many1 (codeBlockParser (fromIntegral dataLen))
+    codeBlocks <- A.manyTill' (codeBlockParser dataLen) (trailerParser dataLen)
 
-    let proc [] acc = pure (Right (reverse acc))
+    let proc []             acc = pure (Right (reverse acc))
         proc (block : rest) acc = do
             chk <- checkCodeBlockRandomizedParity cbSize block
-            case chk of 
-                Left err -> pure (Left err)
+            case chk of
+                Left  err       -> pure (Left err)
                 Right dataBlock -> proc rest (dataBlock : acc)
 
-    case evalState (proc codeBlocks [])  randomizer of
+    case evalState (proc codeBlocks []) randomizer of
         Left  err   -> fail (T.unpack err)
         Right parts -> do
             let bs =
@@ -261,8 +265,8 @@ encodeCodeBlocksRandomized cfg pl =
                     then BS.append bs (cltuTrailer (cbSize - len))
                     else bs
 
-        builderBlocks = evalState (mapM encodeCodeBlockRandomized blocks) randomizer
-
+        builderBlocks =
+            evalState (mapM encodeCodeBlockRandomized blocks) randomizer
     in
         mconcat builderBlocks
 
@@ -338,18 +342,14 @@ checkCodeBlockParity expectedLen checkBlock parity =
 -- then checks the @parity. Returns either an error message or the d-randomized data block without
 -- the parity byte. 
 checkCodeBlockRandomizedParity
-    :: Word8
-    -> (ByteString, Word8)
-    -> State Randomizer (Either Text ByteString)
+    :: Word8 -> (ByteString, Word8) -> State Randomizer (Either Text ByteString)
 checkCodeBlockRandomizedParity expectedLen (checkBlock, parity) = do
-    let
-        len              = BS.length checkBlock + 1
+    let len               = BS.length checkBlock + 1
         !calculatedParity = cltuParity checkBlock
 
     if fromIntegral expectedLen /= len
         then pure . Left $ TS.toText
-            (  TS.fromText
-                    "CLTU block does not have the right length, expected: "
+            (TS.fromText "CLTU block does not have the right length, expected: "
             <> TS.showb expectedLen
             <> TS.fromText " received: "
             <> TS.showb len
@@ -362,7 +362,7 @@ checkCodeBlockRandomizedParity expectedLen (checkBlock, parity) = do
                 then pure (Right BS.empty)
                 else pure . Left $ TS.toText
                     (  TS.fromText
-                            "Error: CLTU code block check failed, calculated: "
+                          "Error: CLTU code block check failed, calculated: "
                     <> showbHex calculatedParity
                     <> TS.fromText " received: "
                     <> showbHex parity

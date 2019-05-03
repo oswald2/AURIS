@@ -52,7 +52,8 @@ library
         conduit-extra,
         closed,
         rio,
-        mtl
+        mtl,
+        unliftio
 
     
     if flag(llvm)
@@ -79,5 +80,16 @@ Executable CLTUTest
     else
         Buildable: False
     Main-Is: CLTUTest.hs
+    Hs-Source-Dirs: src/test
+    GHC-Options: -Wall -O
+
+
+Executable WriteConfig
+    Build-Depends: 
+        esa-space-protocols
+        ,base
+        ,bytestring
+
+    Main-Is: WriteConfig.hs
     Hs-Source-Dirs: src/test
     GHC-Options: -Wall -O

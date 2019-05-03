@@ -27,7 +27,7 @@ where
 
 import RIO
 
-import Control.Monad.State
+import RIO.State
 
 import qualified Data.Vector.Unboxed as U
 import Data.Bits
