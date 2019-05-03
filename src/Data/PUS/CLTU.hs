@@ -18,9 +18,7 @@ module Data.PUS.CLTU
     , cltuNew
     , cltuPayLoad
     , encode
-    , decode
     , encodeRandomized
-    , decodeRandomized
     , cltuParser
     , cltuRandomizedParser
     , cltuDecodeC
@@ -224,68 +222,6 @@ encodeGeneric cfg (CLTU pl) encoder = BL.toStrict
         encodeCodeBlock (cltuTrailer (fromIntegral (cfgCltuBlockSize cfg - 1)))
 
 
-{-# INLINABLE decode #-}
--- | Decodes incoming data into a CLTU. Returns either an error message or the decoded
--- CLTU itself.
-decode :: Config -> ByteString -> Either Text CLTU
-decode cfg pl = if cltuHeader `BS.isPrefixOf` pl
-    then
-        let
-            cbSize = cfgCltuBlockSize cfg
-            blocks = chunkedByBS (fromIntegral cbSize)
-                                 (BS.drop (BS.length cltuHeader) pl)
-
-            proc _  (Left  err) = Left err
-            proc bs (Right cb ) = case checkCodeBlock cbSize bs of
-                Left  err       -> Left err
-                Right dataBlock -> Right (dataBlock : cb)
-
-            checkedCBs = foldr proc (Right mempty) blocks
-        in
-            case checkedCBs of
-                Left err -> Left err
-                Right parts ->
-                    Right
-                        $ CLTU
-                              ( BL.toStrict
-                              . toLazyByteString
-                              . mconcat
-                              . map byteString
-                              $ parts
-                              )
-    else Left "CLTU Header is missing"
-
-
-{-# INLINABLE decodeRandomized #-}
--- | Decodes incoming data into a CLTU. Returns either an error message or the decoded
--- CLTU itself.
-decodeRandomized :: Config -> ByteString -> Either Text CLTU
-decodeRandomized cfg pl = if cltuHeader `BS.isPrefixOf` pl
-    then
-        let
-            cbSize = cfgCltuBlockSize cfg
-            blocks = chunkedByBS (fromIntegral cbSize)
-                                 (BS.drop (BS.length cltuHeader) pl)
-            randomizer = initialize (cfgRandomizerStartValue cfg)
-
-            proc _ []       acc = Right (reverse acc)
-            proc r (x : xs) acc = case checkCodeBlockRandomized r cbSize x of
-                Left  err           -> Left err
-                Right (newR, block) -> proc newR xs (block : acc)
-        in
-            case proc randomizer blocks [] of
-                Left err -> Left err
-                Right parts ->
-                    Right
-                        $ CLTU
-                              ( BL.toStrict
-                              . toLazyByteString
-                              . mconcat
-                              . map byteString
-                              $ parts
-                              )
-    else Left "CLTU Header is missing"
-
 
 
 {-# INLINABLE encodeCodeBlocks #-}
@@ -358,18 +294,10 @@ cltuParity !block =
 
 
 
-{-# INLINABLE checkCodeBlock #-}
--- | Checks a code block. First, it checks the length against the expected length,
--- then checks the parity. Returns either an error message or the data block without
+{-# INLINABLE checkCodeBlockParity #-}
+-- | Checks a code block. First, it checks the length against the @expectedLen,
+-- then checks the @parity. Returns either an error message or the data block without
 -- the parity byte
-checkCodeBlock :: Word8 -> ByteString -> Either Text ByteString
-checkCodeBlock expectedLen block =
-    let len        = BS.length block
-        checkBlock = BS.take (len - 1) block
-        parity     = block `BS.index` (len - 1)
-    in  checkCodeBlockParity expectedLen checkBlock parity
-
-
 checkCodeBlockParity :: Word8 -> ByteString -> Word8 -> Either Text ByteString
 checkCodeBlockParity expectedLen checkBlock parity =
     let
@@ -402,19 +330,10 @@ checkCodeBlockParity expectedLen checkBlock parity =
                         )
 
 
-{-# INLINABLE checkCodeBlockRandomized #-}
--- | Checks a code block. First, it checks the length against the expected length,
--- then checks the parity. Returns either an error message or the data block without
--- the parity byte
-checkCodeBlockRandomized
-    :: Randomizer -> Word8 -> ByteString -> Either Text (Randomizer, ByteString)
-checkCodeBlockRandomized r expectedLen block =
-    let len        = BS.length block
-        checkBlock = BS.take (len - 1) block
-        parity     = block `BS.index` (len - 1)
-    in  checkCodeBlockRandomizedParity r expectedLen checkBlock parity
-
-
+{-# INLINABLE checkCodeBlockRandomizedParity #-}
+-- | Checks a code block. First, it checks the length against the @expectedLen,
+-- then checks the @parity. Returns either an error message or the d-randomized data block without
+-- the parity byte. 
 checkCodeBlockRandomizedParity
     :: Randomizer
     -> Word8
