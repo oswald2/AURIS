@@ -21,6 +21,10 @@ flag tests
     description: Build test suite
     default:     False
 
+flag bench
+    description: Build benchmarks
+    default:     False
+
 
 library
     exposed-modules:
@@ -66,6 +70,16 @@ library
                      -funbox-strict-fields
 
 
+Executable WriteConfig
+    Build-Depends: 
+        esa-space-protocols
+        ,base
+        ,bytestring
+
+    Main-Is: WriteConfig.hs
+    Hs-Source-Dirs: src/test
+    GHC-Options: -Wall -O
+
 Executable CLTUTest
     if flag(tests)
         Buildable: True
@@ -84,12 +98,20 @@ Executable CLTUTest
     GHC-Options: -Wall -O
 
 
-Executable WriteConfig
-    Build-Depends: 
-        esa-space-protocols
-        ,base
-        ,bytestring
+Executable CLTUPerf
+    if flag(bench)
+        Buildable: True
+        Build-Depends: 
+            esa-space-protocols
+            ,base
+            ,bytestring
+            ,inline-c
+            ,criterion
+            ,inline-c
 
-    Main-Is: WriteConfig.hs
-    Hs-Source-Dirs: src/test
+    else
+        Buildable: False
+    Main-Is: CLTUPerf.hs
+    Hs-Source-Dirs: src/bench
     GHC-Options: -Wall -O
+
