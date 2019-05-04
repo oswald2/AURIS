@@ -32,7 +32,7 @@ cltuArray = array ((0, 0), (127, 255)) assocList
 -- | Gets a value out of a CLTU table. This is a pre-calculated table for the parity 
 -- calculations. It is only used internally in "Data.PUS.CLTU"
 cltuTable :: Word8 -> Word8 -> Word8
-cltuTable x y = cltuArray ! (x, y)
+cltuTable sreg xval = cltuArray ! (sreg, xval)
 
 
 {-# INLINABLE codProcChar #-}

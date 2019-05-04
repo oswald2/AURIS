@@ -22,6 +22,12 @@ import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Gen.QuickCheck as Gen
 import qualified Hedgehog.Range as Range
 
+
+C.context (C.baseCtx <> C.bsCtx)
+
+C.include "CLTUcsrc.h"
+
+
 genCLTU :: Gen CLTU
 genCLTU =
     let len = Range.linear 8 65535
@@ -71,6 +77,32 @@ c_codProcChar xval sreg = do
     pure (fromIntegral x)
 
 
+c_initialise :: IO ()    
+c_initialise = do
+    [C.block| void { initialise(); } |]
+
+c_check :: B.ByteString -> IO Word8
+c_check bs = do
+    x <- [C.block|
+            unsigned char {
+                return check($bs-ptr:bs, $bs-len:bs);
+            }
+        |]
+    pure (fromIntegral x)
+
+c_lookup :: Word8 -> Word8 -> IO Word8
+c_lookup sreg xval = do
+    let hxval = fromIntegral xval
+        hsreg = fromIntegral sreg
+    x <- [C.block| unsigned char {
+            return lookup($(int hsreg), $(int hxval));
+            }
+        |]
+    pure (fromIntegral x)
+
+
+
+
 prop_codProcChar :: Property
 prop_codProcChar = 
     property $ do 
@@ -81,12 +113,39 @@ prop_codProcChar =
         let res = codProcChar xval sreg
         res === c_res
 
+prop_lookup :: Property
+prop_lookup = 
+    property $ do 
+        sreg <- forAll $ Gen.word8 (Range.constant 0 127)
+        xval <- forAll $ Gen.word8 (Range.constant 0 255)
+
+        c_res <- liftIO $ c_lookup sreg xval
+        let res = cltuTable sreg xval
+        res === c_res
+        
+
+
+
+prop_checkCB :: Property
+prop_checkCB = 
+    property $ do
+        bs <- forAll $ Gen.bytes (Range.constant 5 8)
+
+        c_chk <- liftIO $ c_check bs
+        let chk = cltuParity bs
+        chk === c_chk
+
+
+
+
+ 
 tests :: IO Bool
-tests = checkParallel $$(discover)
+tests = do
+    c_initialise
+    checkParallel $$(discover)
 
 main :: IO Bool
-main = do
-    tests
+main = tests
     
     -- let values = [(sreg, xval) | sreg <- [0..2], xval <- [0..2] ]
 

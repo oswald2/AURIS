@@ -27,6 +27,7 @@ module Data.PUS.CLTU
     , cltuDecodeRandomizedC
     , cltuEncodeC
     , cltuEncodeRandomizedC
+    , cltuParity
     )
 where
 
@@ -293,9 +294,9 @@ encodeCodeBlockRandomized block = do
 -- be of the specified code block length
 cltuParity :: ByteString -> Word8
 cltuParity !block =
-    let proc :: Word8 -> Int32 -> Int32
-        proc !octet !sreg = fromIntegral $ cltuTable (fromIntegral sreg) octet
-        sreg1   = BS.foldr proc 0 block
+    let proc :: Int32 -> Word8 -> Int32
+        proc !sreg !octet = fromIntegral $ cltuTable (fromIntegral sreg) octet
+        sreg1   = BS.foldl' proc 0 block
         !result = fromIntegral $ ((sreg1 `xor` 0xFF) `shiftL` 1) .&. 0xFE
     in  result
 

@@ -95,10 +95,12 @@ Executable CLTUTest
         Buildable: False
     Main-Is: CLTUTest.hs
     Hs-Source-Dirs: src/test
+    c-sources: src/test/CLTUcsrc.c
     GHC-Options: -Wall -O
 
 
 Executable CLTUPerf
+    type: exitcode-stdio-1.0
     if flag(bench)
         Buildable: True
         Build-Depends: 

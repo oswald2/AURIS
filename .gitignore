@@ -7,3 +7,6 @@ dist/
 
 DefaultConfig.config
 DefaultConfig.json
+.vscode/ipch/24699179e0f2fe2a/mmap_address.bin
+.vscode/ipch/24699179e0f2fe2a/CLTUcsrc.ipch
+.vscode/ipch/24698879e0f2eedf/mmap_address.bin
