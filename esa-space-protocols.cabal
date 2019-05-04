@@ -97,7 +97,8 @@ Executable CLTUTest
         Buildable: False
     Main-Is: CLTUTest.hs
     Hs-Source-Dirs: src/test
-    c-sources: src/test/CLTUcsrc.c
+    c-sources: src/csrc/CLTUcsrc.c
+    include-dirs: src/csrc
     GHC-Options: -Wall -O
 
 
@@ -117,5 +118,7 @@ Executable CLTUPerf
         Buildable: False
     Main-Is: CLTUPerf.hs
     Hs-Source-Dirs: src/bench
+    c-sources: src/csrc/CLTUcsrc.c
+    include-dirs: src/csrc
     GHC-Options: -Wall -O
 
