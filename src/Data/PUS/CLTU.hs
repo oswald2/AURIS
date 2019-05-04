@@ -28,6 +28,7 @@ module Data.PUS.CLTU
     , cltuEncodeC
     , cltuEncodeRandomizedC
     , cltuParity
+    , showEncodedCLTU
     )
 where
 
@@ -36,14 +37,18 @@ import           RIO
 import           Control.Monad                  ( void )
 import           RIO.State
 
-import qualified RIO.ByteString.Lazy          as BL
+import qualified RIO.ByteString.Lazy           as BL
 import           Data.ByteString.Builder
-import           RIO.ByteString                ( ByteString )
-import qualified RIO.ByteString               as BS
+import           RIO.ByteString                 ( ByteString )
+import qualified RIO.ByteString                as BS
 
 import           Data.Bits
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
+import qualified Data.Text.Lazy                as TL
+import qualified Data.Text.Lazy.Builder        as TB
+import           Data.List                     as L
+                                                ( intersperse )
 
 import           Data.PUS.Config
 import           Data.PUS.CLTUTable
@@ -67,13 +72,25 @@ import           Data.Conduit.Attoparsec
 data CLTU = CLTU {
     -- | returns the actual binary payload data (mostly a TC transfer frame)
     cltuPayLoad :: BS.ByteString
-} deriving Eq
+} deriving (Eq)
 
 
 instance Show CLTU where
-    show (CLTU x) = "CLTU:\n" <> T.unpack (hexdumpBS x)
+    show (CLTU x) = "CLTU:\n" <> T.unpack (hexdumpLineBS x)
 
-
+showEncodedCLTU :: Config -> ByteString -> Text
+showEncodedCLTU cfg bs = TL.toStrict . TB.toLazyText $ result
+  where
+    header  = TB.fromText (hexdumpLineBS (BS.take 2 bs))
+    chunksb = chunkedByBS
+        (fromIntegral (cltuBlockSizeAsWord8 (cfgCltuBlockSize cfg)))
+        (BS.drop 2 bs)
+    builders =
+        mconcat
+            . intersperse (TB.fromText " ")
+            . map (TB.fromText . hexdumpLineBS)
+            $ chunksb
+    result = header <> TB.singleton ' ' <> builders
 
 {-# INLINABLE cltuNew #-}
 -- | create a CLTU from a payload, which will mostly be a TC transfer frame
@@ -105,7 +122,7 @@ cltuParser cfg = do
 
     void $ A.manyTill (A.word8 0x55) cltuHeaderParser
 
-    codeBlocks <- A.manyTill' (codeBlockParser dataLen) (trailerParser dataLen)
+    codeBlocks <- codeBlockParser dataLen
 
     let proc _ (Left err) = Left err
         proc (bs, parity) (Right cb) =
@@ -129,11 +146,18 @@ cltuParser cfg = do
             pure (CLTU res)
 
 
-codeBlockParser :: Int -> Parser (BS.ByteString, Word8)
-codeBlockParser dataLen = (,) <$> A.take dataLen <*> A.anyWord8
 
-trailerParser :: Int -> Parser Bool
-trailerParser dataLen = BS.all (== 0x55) <$> A.take dataLen
+
+codeBlockParser :: Int -> Parser [(BS.ByteString, Word8)]
+codeBlockParser dataLen = go []
+  where
+    go acc = do
+        dat    <- A.take dataLen
+        parity <- A.anyWord8
+        if BS.all (== 0x55) dat
+            then pure (reverse acc)
+            else go ((dat, parity) : acc)
+
 
 
 -- | Attoparsec parser for a randomized CLTU. 
@@ -145,7 +169,7 @@ cltuRandomizedParser cfg = do
 
     void $ A.manyTill (A.word8 0x55) cltuHeaderParser
 
-    codeBlocks <- A.manyTill' (codeBlockParser dataLen) (trailerParser dataLen)
+    codeBlocks <- codeBlockParser dataLen
 
     let proc []             acc = pure (Right (reverse acc))
         proc (block : rest) acc = do
@@ -224,10 +248,8 @@ encodeGeneric cfg (CLTU pl) encoder = BL.toStrict
     $ toLazyByteString (mconcat [byteString cltuHeader, encodedFrame, trailer])
   where
     encodedFrame = encoder cfg pl
-    trailer      = encodeCodeBlock
-        (cltuTrailer
-            (fromIntegral (cltuBlockSizeAsWord8 (cfgCltuBlockSize cfg) - 1))
-        )
+    trailer      = byteString $ cltuTrailer
+        (fromIntegral (cltuBlockSizeAsWord8 (cfgCltuBlockSize cfg)))
 
 
 

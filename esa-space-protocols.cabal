@@ -90,6 +90,8 @@ Executable CLTUTest
             ,hedgehog
             ,hedgehog-quickcheck
             ,inline-c
+            ,attoparsec
+            ,text
 
     else
         Buildable: False

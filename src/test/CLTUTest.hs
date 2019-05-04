@@ -11,16 +11,20 @@ import Data.PUS.CLTUTable
 import Data.PUS.Config
 
 import Control.Monad.IO.Class
-import Control.Monad
 
 import qualified Data.ByteString as B
 import Data.Word
+import qualified Data.Text as T (unpack)
+import qualified Data.Text.IO as T 
 import qualified Language.C.Inline as C
+
+import qualified Data.Attoparsec.ByteString as A
 
 import           Hedgehog
 import qualified Hedgehog.Gen as Gen
-import qualified Hedgehog.Gen.QuickCheck as Gen
 import qualified Hedgehog.Range as Range
+
+import General.Hexdump
 
 
 C.context (C.baseCtx <> C.bsCtx)
@@ -36,15 +40,6 @@ genCLTU =
     lst
 
     
--- prop_loop :: Property
--- prop_loop = 
---     property $ do 
---         x <- forAll genCLTU
---         let e = encode defaultConfig x
---             d = decode defaultConfig e 
---         case d of 
---             Left err -> failure
---             Right x1 -> x === x1
 
 
 c_codProcChar :: Word8 -> Word8 -> IO Word8
@@ -136,7 +131,17 @@ prop_checkCB =
         chk === c_chk
 
 
-
+prop_loop :: Property
+prop_loop = 
+    property $ do 
+        x <- forAll genCLTU
+        let e = encode defaultConfig x
+            d = A.parse (cltuParser defaultConfig) e
+        annotate (T.unpack (showEncodedCLTU defaultConfig e))
+        case d of 
+            A.Fail _ _ _ -> failure
+            A.Partial _ -> failure
+            A.Done _ x1 -> x === x1
 
  
 tests :: IO Bool
@@ -145,12 +150,5 @@ tests = do
     checkParallel $$(discover)
 
 main :: IO Bool
-main = tests
-    
-    -- let values = [(sreg, xval) | sreg <- [0..2], xval <- [0..2] ]
-
-    -- forM_ values $ \v@(sreg, xval) -> do
-    --     c_res <- c_codProcChar xval sreg 
-    --     let res = codProcChar xval sreg
-
-    --     putStrLn $ show v <> ": C: " <> show c_res <> " Haskell: " <> show res
+main = do 
+    tests
