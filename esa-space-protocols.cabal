@@ -57,7 +57,8 @@ library
         closed,
         rio,
         mtl,
-        unliftio
+        unliftio,
+        parallel
 
     
     if flag(llvm)
@@ -120,5 +121,13 @@ Executable CLTUPerf
     Hs-Source-Dirs: src/bench
     c-sources: src/csrc/CLTUcsrc.c
     include-dirs: src/csrc
-    GHC-Options: -Wall -O
+    GHC-Options: 
+        -Wall 
+        -O2 
+        -threaded
+        -fprof-auto
+        -fexternal-interpreter    
+        -funbox-strict-fields    
+        -prof
+        "-with-rtsopts=-N -p -s -h -i0.1"
 

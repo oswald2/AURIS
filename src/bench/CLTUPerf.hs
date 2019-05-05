@@ -25,6 +25,11 @@ C.include "CLTUcsrc.h"
 
 
 
+
+c_initialise :: IO ()    
+c_initialise = do
+    [CU.block| void { initialise(); } |]
+
 c_codProcChar :: Word8 -> Word8 -> IO Word8
 c_codProcChar xval sreg = do
     let hxval = fromIntegral xval
@@ -67,7 +72,9 @@ c_check bs = do
 
 main :: IO ()
 main = do
+    c_initialise
     let e255 = encode Data.PUS.Config.defaultConfig (cltuNew $ BS.replicate 255 0x61)
+        e1024 = encode Data.PUS.Config.defaultConfig (cltuNew $ BS.replicate 1024 0x61)
     defaultMain
         [bgroup "codProcChar" [
             bench "c_codProcChar" $ whnfIO (c_codProcChar 65 233)
@@ -81,5 +88,7 @@ main = do
         bgroup "check" [
             bench "c_check 255" $ whnfIO (c_check e255)
             , bench "check 255" $ whnf cltuParity e255
+            ,bench "c_check 1024" $ whnfIO (c_check e1024)
+            , bench "check 1024" $ whnf cltuParity e1024
         ]
         ]

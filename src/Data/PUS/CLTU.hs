@@ -35,6 +35,7 @@ where
 import           RIO
 
 import           Control.Monad                  ( void )
+
 import           RIO.State
 
 import qualified RIO.ByteString.Lazy           as BL
@@ -268,8 +269,8 @@ encodeCodeBlocks cfg pl =
                 in  if len < cbSize
                         then BS.append bs (cltuTrailer (cbSize - len))
                         else bs
-    in  mconcat $ map (encodeCodeBlock . pad) blocks
-
+    in  
+    mconcat $ map (encodeCodeBlock . pad) blocks
 
 {-# INLINABLE encodeCodeBlocksRandomized #-}
 -- | Takes a ByteString as payload, splits it into CLTU code blocks according to 
@@ -318,9 +319,9 @@ cltuParity :: ByteString -> Word8
 cltuParity !block =
     let proc :: Int32 -> Word8 -> Int32
         proc !sreg !octet = fromIntegral $ cltuTable (fromIntegral sreg) octet
-        sreg1   = BS.foldl' proc 0 block
-        !result = fromIntegral $ ((sreg1 `xor` 0xFF) `shiftL` 1) .&. 0xFE
-    in  result
+        sreg1   = BS.foldl' ({-# SCC proc #-} proc) 0 block
+        !result = fromIntegral $ (({-# SCC sreg1 #-} sreg1 `xor` 0xFF) `shiftL` 1) .&. 0xFE
+    in  {-# SCC result #-} result
 
 
 
