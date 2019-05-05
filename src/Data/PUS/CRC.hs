@@ -2,7 +2,8 @@
     NoImplicitPrelude
 #-}
 module Data.PUS.CRC
-    ( crcCalc
+    ( CRC
+    , crcCalc
     , crcCalcBL
     , crcEncode
     , crcEncodeBS
@@ -60,11 +61,10 @@ crcEncodeBS :: CRC -> ByteString
 crcEncodeBS = BL.toStrict . crcEncodeBL
 
 crcEncodeAndAppendBS :: ByteString -> ByteString
-crcEncodeAndAppendBS bs = 
-    let c = crcCalc bs
+crcEncodeAndAppendBS bs =
+    let c       = crcCalc bs
         !encCrc = crcEncodeBS c
-    in
-    bs <> encCrc
+    in  bs <> encCrc
 
 
 {-# INLINABLE crcTable #-}
