@@ -18,23 +18,25 @@ flag llvm
     default: False
 
 flag tests
-    description: Build test suite
-    default:     False
+    description:
+        Build test suite
+    default: False
 
 flag bench
-    description: Build benchmarks
-    default:     False
-
+    description:
+        Build benchmarks
+    default: False
 
 library
     exposed-modules:
         General.Chunks
         General.Hexdump
         Data.PUS.Config
+        Data.PUS.CRC
         Data.PUS.CLTU
         Data.PUS.CLTUTable
         Data.PUS.Randomizer
-
+        Data.PUS.TCTransferFrame
 
     hs-source-dirs: src
     default-language: Haskell2010
@@ -44,22 +46,22 @@ library
         bytestring >=0.10.8.2 && <0.11,
         aeson >=1.4.3.0 && <1.5,
         text >=1.2.3.1 && <1.3,
-        array,
-        hw-prim,
-        text-show,
-        vector,
-        hexdump,
-        formatting,
-        attoparsec,
-        attoparsec-binary,
-        conduit,
-        conduit-extra,
-        closed,
-        rio,
-        mtl,
-        unliftio,
-        parallel
-
+        array >=0.5.3.0 && <0.6,
+        hw-prim >=0.6.2.23 && <0.7,
+        text-show >=3.8.2 && <3.9,
+        vector >=0.12.0.3 && <0.13,
+        hexdump ==0.1.*,
+        formatting >=6.3.7 && <6.4,
+        attoparsec >=0.13.2.2 && <0.14,
+        attoparsec-binary ==0.2.*,
+        conduit >=1.3.1.1 && <1.4,
+        conduit-extra >=1.3.1.1 && <1.4,
+        closed >=0.2.0.1 && <0.3,
+        rio >=0.1.9.2 && <0.2,
+        mtl >=2.2.2 && <2.3,
+        unliftio >=0.2.10 && <0.3,
+        parallel >=3.2.2.0 && <3.3,
+        lens
     
     if flag(llvm)
         ghc-options: -O -Wall -Wcompat -Wincomplete-record-updates
@@ -70,66 +72,56 @@ library
                      -Wincomplete-uni-patterns -Wredundant-constraints
                      -funbox-strict-fields
 
+executable WriteConfig
+    main-is: WriteConfig.hs
+    hs-source-dirs: src/test
+    ghc-options: -Wall -O
+    build-depends:
+        esa-space-protocols -any,
+        base >=4.12.0.0 && <4.13,
+        bytestring >=0.10.8.2 && <0.11
 
-Executable WriteConfig
-    Build-Depends: 
-        esa-space-protocols
-        ,base
-        ,bytestring
-
-    Main-Is: WriteConfig.hs
-    Hs-Source-Dirs: src/test
-    GHC-Options: -Wall -O
-
-Executable CLTUTest
+executable CLTUTest
+    main-is: CLTUTest.hs
+    c-sources:
+        src/csrc/CLTUcsrc.c
+    hs-source-dirs: src/test
+    include-dirs: src/csrc
+    ghc-options: -Wall -O
+    
     if flag(tests)
-        Buildable: True
-        Build-Depends: 
-            esa-space-protocols
-            ,base
-            ,bytestring
-            ,hedgehog
-            ,hedgehog-quickcheck
-            ,inline-c
-            ,attoparsec
-            ,text
-            ,mtl
-            ,vector
-
+        build-depends:
+            esa-space-protocols -any,
+            base -any,
+            bytestring -any,
+            hedgehog -any,
+            hedgehog-quickcheck -any,
+            inline-c -any,
+            attoparsec -any,
+            text -any,
+            mtl -any,
+            vector -any
     else
-        Buildable: False
-    Main-Is: CLTUTest.hs
-    Hs-Source-Dirs: src/test
-    c-sources: src/csrc/CLTUcsrc.c
+        buildable: False
+
+executable CLTUPerf
+    main-is: CLTUPerf.hs
+    c-sources:
+        src/csrc/CLTUcsrc.c
+    hs-source-dirs: src/bench
     include-dirs: src/csrc
-    GHC-Options: -Wall -O
-
-
-Executable CLTUPerf
-    type: exitcode-stdio-1.0
+    ghc-options: -Wall -O2 -funbox-strict-fields 
+    -- For profiling comment this line in:
+    --ghc-options: -Wall -O2 -threaded -fprof-auto -fexternal-interpreter
+    --            -funbox-strict-fields -prof "-with-rtsopts=-N -p -s -h -i0.1"
+    
     if flag(bench)
-        Buildable: True
-        Build-Depends: 
-            esa-space-protocols
-            ,base
-            ,bytestring
-            ,inline-c
-            ,criterion
-            ,inline-c
-
+        build-depends:
+            esa-space-protocols -any,
+            base -any,
+            bytestring -any,
+            inline-c -any,
+            criterion -any,
+            inline-c -any
     else
-        Buildable: False
-    Main-Is: CLTUPerf.hs
-    Hs-Source-Dirs: src/bench
-    c-sources: src/csrc/CLTUcsrc.c
-    include-dirs: src/csrc
-    GHC-Options: 
-        -Wall 
-        -O2 
-        -threaded
-        -fprof-auto
-        -fexternal-interpreter    
-        -funbox-strict-fields    
-        -prof
-        "-with-rtsopts=-N -p -s -h -i0.1"
-
+        buildable: False
