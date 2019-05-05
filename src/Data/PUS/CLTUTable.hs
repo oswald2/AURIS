@@ -30,11 +30,13 @@ cltuVector =
     let len = 128 * 256
         gen :: Int -> Word8
         gen x = 
-            let (sreg, xval) = x `quotRem` 128
+            let !xval = x `rem` 256
+                !sreg = (x - xval) `quot` 256
                 !byte = codProcChar xval sreg
             in byte
+        !v = V.generate len gen
     in
-    V.generate len gen
+    v
 
 
 {-# INLINABLE cltuTable #-}
@@ -42,7 +44,7 @@ cltuVector =
 -- calculations. It is only used internally in "Data.PUS.CLTU"
 cltuTable :: Word8 -> Word8 -> Word8
 cltuTable !sreg !xval = 
-    let !res = cltuVector V.! (fromIntegral sreg * 128 + fromIntegral xval)
+    let !res = cltuVector V.! (fromIntegral sreg * 256 + fromIntegral xval)
     in 
     res
 

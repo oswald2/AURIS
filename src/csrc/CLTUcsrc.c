@@ -3,6 +3,7 @@
 #include <stdio.h>
 
 static unsigned char m_sregVal[128][256];
+static int m_bits[8];
 
 unsigned char lookup(int sreg, int xval)
 {
@@ -81,3 +82,58 @@ unsigned char check(const unsigned char* const dataPtr,
     return (unsigned char)(sreg & 0xFE);  // append a 0
 }
 // =========================================================================
+
+
+void randomizerInitialise(unsigned char c)
+{
+    for(unsigned int i = 0 ; i < 8 ; i++)
+    {
+        unsigned char d = 1 << i;
+        m_bits[i] = (d&c) >> i;
+        //printf("i: %d m_bits[i]: %d\n", i, m_bits[i]);
+    }
+}
+
+
+unsigned char randomizerGetNextByteInSequence(int peek)
+{
+    //printf("C: peek: %d\n", peek);
+    unsigned int d = 0;
+
+    for(unsigned int i = 0; i < 8 ; i++)
+    {
+
+        int topBit = m_bits[0] ^ m_bits[1];
+        topBit ^= m_bits[2];
+        topBit ^= m_bits[3];
+        topBit ^= m_bits[4];
+        topBit ^= m_bits[6];
+
+        d <<= 1;
+        if(m_bits[0]) { d++; }
+
+        if(!peek)
+        {
+            m_bits[0] = m_bits[1];
+            m_bits[1] = m_bits[2];
+            m_bits[2] = m_bits[3];
+            m_bits[3] = m_bits[4];
+            m_bits[4] = m_bits[5];
+            m_bits[5] = m_bits[6];
+            m_bits[6] = m_bits[7];
+
+            m_bits[7] = topBit;
+        }
+
+        //printf("C: d=%d\n", d);
+    }
+    return d;
+}
+
+void randomize(const char* data, int dataLen, char* output)
+{
+    for(unsigned int i = 0; i < dataLen; ++i)
+    {
+        output[i] = data[i] ^ randomizerGetNextByteInSequence(0);
+    }
+}

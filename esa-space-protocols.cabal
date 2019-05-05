@@ -93,6 +93,8 @@ Executable CLTUTest
             ,inline-c
             ,attoparsec
             ,text
+            ,mtl
+            ,vector
 
     else
         Buildable: False

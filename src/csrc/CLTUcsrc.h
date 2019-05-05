@@ -12,4 +12,10 @@ unsigned char check(const unsigned char* const dataPtr,
 
 unsigned char lookup(int sreg, int xval);
 
+void randomizerInitialise(unsigned char c);
+
+unsigned char randomizerGetNextByteInSequence(int peek);
+
+void randomize(const char* data, int dataLen, char* output);
+
 #endif
