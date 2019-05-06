@@ -30,8 +30,9 @@ import qualified RIO.ByteString                as BS
 import qualified RIO.ByteString.Lazy           as BL
 
 import           Control.Lens                   ( makeLenses )
+import Control.PUS.TCFrameMonad
 
-import           Data.Word
+--import           Data.Word
 import           Data.Bits
 import           Data.Conduit
 import           Data.ByteString.Builder
@@ -58,7 +59,7 @@ data TCTransferFrame = TCTransferFrame {
     , _tcFrameLength :: !Word16
     , _tcFrameSeq :: !Word8
     , _tcFrameData :: BS.ByteString
-    }
+    } deriving (Eq, Show, Read)
 
 makeLenses ''TCTransferFrame
 
@@ -74,12 +75,12 @@ tcFrameHeaderLen :: Int
 tcFrameHeaderLen = 5
 
 {-# INLINABLE tcFrameEncode #-}
-tcFrameEncode :: TCTransferFrame -> ByteString
-tcFrameEncode frame =
+tcFrameEncode :: TCTransferFrame -> Word8 -> ByteString
+tcFrameEncode frame frameCnt =
     let newFrame = set
             tcFrameLength
-            (fromIntegral (tcFrameHeaderLen + (BS.length newPl)))
-            frame
+            (fromIntegral (tcFrameHeaderLen + (BS.length newPl))) $
+            set tcFrameSeq frameCnt frame
         pl       = frame ^. tcFrameData
         newPl    = if BS.null pl then BS.singleton 0 else pl
         encFrame = toLazyByteString $ tcFrameBuilder newFrame
@@ -98,8 +99,23 @@ tcFrameBuilder frame =
 
 -- | A conduit for encoding a TC Transfer Frame into a ByteString for transmission
 {-# INLINABLE tcFrameEncodeC #-}
-tcFrameEncodeC :: Monad m => ConduitT TCTransferFrame ByteString m ()
-tcFrameEncodeC = awaitForever $ \frame -> pure (tcFrameEncode frame)
+tcFrameEncodeC :: (Monad m, TCFrameMonad m) => ConduitT TCTransferFrame ByteString m ()
+tcFrameEncodeC = do
+    f <- await 
+    case f of 
+        Just frame -> do
+            case frame ^. tcFrameFlag of
+                FrameAD -> do
+                    yieldM $ tcFrameEncode frame <$> nextADCount
+                    tcFrameEncodeC
+                FrameBD -> do
+                    yieldM $ tcFrameEncode frame <$> nextBDCount
+                    tcFrameEncodeC
+                FrameBC -> do 
+                    yieldM $ tcFrameEncode frame <$> nextADCount
+                    tcFrameEncodeC
+                FrameIllegal -> tcFrameEncodeC
+        Nothing -> pure () 
 
 
 {-# INLINABLE packFlags #-}
