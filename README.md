@@ -7,6 +7,7 @@ Currently under heavy construction and creation.
 ## Current Features ##
 
  * CLTU encoding/decoding with TC randomization
+ * TC Transfer Frame encoding
  
  ## Building ##
  
