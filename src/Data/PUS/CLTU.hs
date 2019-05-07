@@ -73,7 +73,15 @@ import           Data.Conduit.Attoparsec
 data CLTU = CLTU {
     -- | returns the actual binary payload data (mostly a TC transfer frame)
     cltuPayLoad :: BS.ByteString
-} deriving (Eq)
+} 
+
+-- | The PUS Standard explicitly states, that filling bytes (0x55) may be 
+-- inserted at the end of a code block to pad the length. It also states
+-- that these padding bytes shall be removed on the next higher layer
+--
+-- So this makes an own Eq instance necessary, which ignores the fill bytes
+instance Eq CLTU where
+    CLTU bs1 == CLTU bs2 = all (== True) $ BS.zipWith (==) bs1 bs2
 
 
 instance Show CLTU where
@@ -143,8 +151,7 @@ cltuParser cfg = do
                     . map byteString
                     $ parts
                     )
-                (res, _) = BS.spanEnd (== 0x55) bs
-            pure (CLTU res)
+            pure (CLTU bs)
 
 
 
@@ -189,8 +196,7 @@ cltuRandomizedParser cfg = do
                     . map byteString
                     $ parts
                     )
-                (res, _) = BS.spanEnd (== 0x55) bs
-            pure (CLTU res)
+            pure (CLTU bs)
 
 
 -- | A conduit for decoding CLTUs from a ByteString stream
