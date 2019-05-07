@@ -7,7 +7,8 @@ Currently under heavy construction and creation.
 ## Current Features ##
 
  * CLTU encoding/decoding with TC randomization
- * TC Transfer Frame encoding
+ * TC Transfer Frame encoding/decoding
+ 
  
  ## Building ##
  
@@ -16,4 +17,4 @@ Currently under heavy construction and creation.
 
 There are also unit tests available (with `cabal new-configure --enable-tests`) and 
 also benchmarks (with `cabal new-configure --enable-benchmarks`).
-  
+
