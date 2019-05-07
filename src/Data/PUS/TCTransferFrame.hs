@@ -21,6 +21,8 @@ module Data.PUS.TCTransferFrame
     , tcFrameSeq
       -- | A conduit to encode TC Frames
     , tcFrameEncodeC
+    , encTcFrameSeq
+    , encTcFrameData
     )
 where
 
@@ -30,7 +32,7 @@ import qualified RIO.ByteString                as BS
 import qualified RIO.ByteString.Lazy           as BL
 
 import           Control.Lens                   ( makeLenses )
-import Control.PUS.TCFrameMonad
+import           Control.PUS.MonadPUSState
 
 --import           Data.Word
 import           Data.Bits
@@ -63,6 +65,15 @@ data TCTransferFrame = TCTransferFrame {
 
 makeLenses ''TCTransferFrame
 
+
+data EncodedTCFrame = EncodedTCFrame {
+    _encTcFrameSeq :: !Word8
+    , _encTcFrameData :: BS.ByteString
+    } deriving (Show, Read)
+
+makeLenses ''EncodedTCFrame
+
+
 -- | A TC directive for the on-board decoder
 data TCDirective =
     Unlock
@@ -75,47 +86,50 @@ tcFrameHeaderLen :: Int
 tcFrameHeaderLen = 5
 
 {-# INLINABLE tcFrameEncode #-}
-tcFrameEncode :: TCTransferFrame -> Word8 -> ByteString
+tcFrameEncode :: TCTransferFrame -> Word8 -> EncodedTCFrame
 tcFrameEncode frame frameCnt =
-    let newFrame = set
-            tcFrameLength
-            (fromIntegral (tcFrameHeaderLen + (BS.length newPl))) $
-            set tcFrameSeq frameCnt frame
+    let newFrame =
+                set tcFrameLength
+                    (fromIntegral (tcFrameHeaderLen + (BS.length newPl)))
+                    $ set tcFrameSeq frameCnt frame
         pl       = frame ^. tcFrameData
         newPl    = if BS.null pl then BS.singleton 0 else pl
         encFrame = toLazyByteString $ tcFrameBuilder newFrame
-    in  BL.toStrict $ encFrame <> crcEncodeBL (crcCalcBL encFrame)
+    in  EncodedTCFrame
+            (frame ^. tcFrameSeq)
+            (BL.toStrict $ encFrame <> crcEncodeBL (crcCalcBL encFrame))
 
 
 {-# INLINABLE tcFrameBuilder #-}
 tcFrameBuilder :: TCTransferFrame -> Builder
-tcFrameBuilder frame = 
+tcFrameBuilder frame =
     word16BE (packFlags frame)
-    <> word16BE (packLen frame)
-    <> word8 (frame ^. tcFrameSeq)
-    <> byteString (frame ^. tcFrameData)
+        <> word16BE (packLen frame)
+        <> word8 (frame ^. tcFrameSeq)
+        <> byteString (frame ^. tcFrameData)
 
 
 
 -- | A conduit for encoding a TC Transfer Frame into a ByteString for transmission
 {-# INLINABLE tcFrameEncodeC #-}
-tcFrameEncodeC :: (Monad m, TCFrameMonad m) => ConduitT TCTransferFrame ByteString m ()
+tcFrameEncodeC
+    :: (Monad m, MonadPUSState m) => ConduitT TCTransferFrame EncodedTCFrame m ()
 tcFrameEncodeC = do
-    f <- await 
-    case f of 
+    f <- await
+    case f of
         Just frame -> do
             case frame ^. tcFrameFlag of
                 FrameAD -> do
                     yieldM $ tcFrameEncode frame <$> nextADCount
                     tcFrameEncodeC
                 FrameBD -> do
-                    yieldM $ tcFrameEncode frame <$> nextBDCount
+                    yield $ tcFrameEncode frame 0
                     tcFrameEncodeC
-                FrameBC -> do 
-                    yieldM $ tcFrameEncode frame <$> nextADCount
+                FrameBC -> do
+                    yield $ tcFrameEncode frame 0
                     tcFrameEncodeC
                 FrameIllegal -> tcFrameEncodeC
-        Nothing -> pure () 
+        Nothing -> pure ()
 
 
 {-# INLINABLE packFlags #-}

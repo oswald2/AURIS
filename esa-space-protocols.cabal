@@ -31,8 +31,10 @@ library
     exposed-modules:
         General.Chunks
         General.Hexdump
-        Control.PUS.TCFrameMonad
+        Control.PUS.MonadPUSState
         Data.PUS.Config
+        Data.PUS.PUSState
+        Data.PUS.Events
         Data.PUS.CRC
         Data.PUS.CLTU
         Data.PUS.CLTUTable

@@ -13,6 +13,7 @@ Currently under heavy construction and creation.
  
  Currently, `cabal new-build` is used. It accepts the following flags:
   * `-f llvm`: build via LLVM
-  * `-f tests`: build tests
-  * `-f bench`: build the benchmarks
+
+There are also unit tests available (with `cabal new-configure --enable-tests`) and 
+also benchmarks (with `cabal new-configure --enable-benchmarks`).
   
