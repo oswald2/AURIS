@@ -8,7 +8,7 @@ module Main where
 import           Criterion.Main
 import qualified Language.C.Inline.Unsafe as CU
 import qualified Language.C.Inline as C
-import Foreign.C.Types
+--import Foreign.C.Types
 
 import Data.PUS.CLTUTable
 import Data.PUS.CLTU
