@@ -33,6 +33,7 @@ library
         General.Hexdump
         Control.PUS.MonadPUSState
         Data.PUS.Config
+        Data.PUS.Types
         Data.PUS.PUSState
         Data.PUS.Events
         Data.PUS.CRC
@@ -40,6 +41,15 @@ library
         Data.PUS.CLTUTable
         Data.PUS.Randomizer
         Data.PUS.TCTransferFrame
+        Data.PUS.TCRequest
+        Data.PUS.TCRequestEncoder
+        Data.PUS.TCPacket
+        Data.PUS.TCPacketEncoder
+        Data.PUS.PUSPacket
+        Data.PUS.PUSPacketEncoder
+        Data.PUS.COP1
+        Data.PUS.Segment
+
 
     hs-source-dirs: src
     default-language: Haskell2010
@@ -57,6 +67,7 @@ library
         formatting >=6.3.7 && <6.4,
         attoparsec >=0.13.2.2 && <0.14,
         attoparsec-binary ==0.2.*,
+        attoparsec-data,
         conduit >=1.3.1.1 && <1.4,
         conduit-extra >=1.3.1.1 && <1.4,
         closed >=0.2.0.1 && <0.3,
@@ -64,7 +75,8 @@ library
         mtl >=2.2.2 && <2.3,
         unliftio >=0.2.10 && <0.3,
         parallel >=3.2.2.0 && <3.3,
-        lens
+        lens,
+        binary
     
     if flag(llvm)
         ghc-options: -O -Wall -Wcompat -Wincomplete-record-updates

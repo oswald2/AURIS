@@ -42,12 +42,17 @@ import qualified Data.Text                     as T
 
 import           GHC.Generics
 
+import           Data.PUS.Types
+
+
 
 -- | The configuration of the PUS functionality
 data Config = Config {
     -- | The block size that is used to encode/decode the CLTU
     cfgCltuBlockSize :: CltuBlockSize
     , cfgRandomizerStartValue :: Word8
+    , cfgSCID :: SCID
+    , cfgVCIDs :: [VCID]
 } deriving (Eq, Read, Show, Generic)
 
 instance FromJSON Config
@@ -57,14 +62,14 @@ instance ToJSON Config where
 
 -- | Specifies the CLTU block size. Since there are only very few 
 -- values allowed (5,6,7,8), we do an enumeration
-data CltuBlockSize = 
+data CltuBlockSize =
     CltuBS_5
     | CltuBS_6
     | CltuBS_7
     | CltuBS_8
     deriving (Eq, Enum, Show, Read, Generic)
 
-instance FromJSON CltuBlockSize    
+instance FromJSON CltuBlockSize
 
 instance ToJSON CltuBlockSize where
     toEncoding = genericToEncoding defaultOptions
@@ -80,6 +85,8 @@ cltuBlockSizeAsWord8 CltuBS_8 = 8
 defaultConfig :: Config
 defaultConfig = Config { cfgCltuBlockSize        = CltuBS_8
                        , cfgRandomizerStartValue = 0xFF
+                       , cfgSCID = mkSCID 0
+                       , cfgVCIDs = [0, 1, 2, 3, 4, 5, 6]
                        }
 
 -- | write the config as a serialized string to a file. Uses the Show class for serizalization

@@ -21,7 +21,7 @@ import           Data.PUS.Events
 
 
 
-
+-- | This is the internal state of the PUS library. 
 data PUSState m = PUSState {
     _pusStADCounter :: !Word8
 
