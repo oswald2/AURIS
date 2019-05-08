@@ -31,10 +31,11 @@ library
     exposed-modules:
         General.Chunks
         General.Hexdump
-        Control.PUS.MonadPUSState
+        Control.PUS.Monads
         Data.PUS.Config
         Data.PUS.Types
         Data.PUS.PUSState
+        Data.PUS.GlobalState
         Data.PUS.Events
         Data.PUS.CRC
         Data.PUS.CLTU
@@ -76,7 +77,8 @@ library
         unliftio >=0.2.10 && <0.3,
         parallel >=3.2.2.0 && <3.3,
         lens,
-        binary
+        binary,
+        stm
     
     if flag(llvm)
         ghc-options: -O -Wall -Wcompat -Wincomplete-record-updates

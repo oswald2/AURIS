@@ -14,7 +14,7 @@ import GHC.Generics
 
 
 data TCPacket = TCPacket
-    deriving (Show, Read, Generic)
+    deriving (Eq, Show, Read, Generic)
 
 instance Binary TCPacket
 instance FromJSON TCPacket

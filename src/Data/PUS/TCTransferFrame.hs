@@ -39,9 +39,8 @@ import qualified RIO.ByteString.Lazy           as BL
 import qualified RIO.Text                      as T
 
 import           Control.Lens                   ( makeLenses )
-import           Control.PUS.MonadPUSState
+import           Control.PUS.Monads
 
---import           Data.Word
 import           Data.Bits
 import           Data.Conduit
 import           Data.ByteString.Builder
@@ -203,11 +202,11 @@ tcFrameEncodeC = do
 
 
 tcFrameDecodeC
-    :: (MonadPUSState m) => Config -> ConduitT ByteString TCTransferFrame m ()
-tcFrameDecodeC cfg = conduitParserEither tcFrameParser .| proc
+    :: (MonadPUSState m, MonadConfig m) => ConduitT ByteString TCTransferFrame m ()
+tcFrameDecodeC = conduitParserEither tcFrameParser .| proc
   where
     proc
-        :: (MonadPUSState m)
+        :: (MonadPUSState m, MonadConfig m)
         => ConduitT
                (Either ParseError (PositionRange, TCTransferFrame))
                TCTransferFrame
@@ -220,6 +219,7 @@ tcFrameDecodeC cfg = conduitParserEither tcFrameParser .| proc
                 lift $ raiseEvent (EVIllegalTCFrame msg)
                 proc
             Right (_, frame) -> do
+                cfg <- lift $ getConfig
                 case checkTCFrame cfg frame of
                     Left err -> do
                         lift $ raiseEvent (EVIllegalTCFrame err)

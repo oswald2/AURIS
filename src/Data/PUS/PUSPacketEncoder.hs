@@ -1,3 +1,9 @@
+{-# LANGUAGE OverloadedStrings
+    , BangPatterns
+    , GeneralizedNewtypeDeriving
+    , DeriveGeneric
+    , RecordWildCards
+#-}
 module Data.PUS.PUSPacketEncoder
 where
 
