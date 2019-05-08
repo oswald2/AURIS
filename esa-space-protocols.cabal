@@ -40,6 +40,7 @@ library
         Data.PUS.CRC
         Data.PUS.CLTU
         Data.PUS.CLTUTable
+        Data.PUS.CLCW
         Data.PUS.Randomizer
         Data.PUS.TCTransferFrame
         Data.PUS.TCRequest
@@ -48,7 +49,8 @@ library
         Data.PUS.TCPacketEncoder
         Data.PUS.PUSPacket
         Data.PUS.PUSPacketEncoder
-        Data.PUS.COP1
+        Data.PUS.FOP1
+        Data.PUS.FARM1
         Data.PUS.Segment
 
 

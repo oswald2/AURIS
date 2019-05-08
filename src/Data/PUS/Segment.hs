@@ -24,6 +24,7 @@ module Data.PUS.Segment
     , segHeaderBuilder
     , segHeaderParser
     , segBuilder
+    , segParser
     )
 where
 
@@ -128,11 +129,6 @@ data SegIDGroup2= SegmentContSetLAC
 data SegIDGroup3 = SegmentContChangeBlockA
       | SegmentContChangeBlockB
       deriving (Ord, Eq, Enum, Show)
-
-
-class Conversions a where
-    convertFrom :: Word8 -> a
-    convertTo :: a -> Word8
 
 
 -- data ControlSegment = Group1 {

@@ -11,6 +11,7 @@ module Data.PUS.TCTransferFrame
     , TCFrameFlag(..)
       -- | The TC directives
     , TCDirective(..)
+    , EncodedTCFrame
     , tcFrameHeaderLen
     , tcFrameEncode
     , tcFrameVersion
