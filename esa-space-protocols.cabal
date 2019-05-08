@@ -52,6 +52,7 @@ library
         Data.PUS.FOP1
         Data.PUS.FARM1
         Data.PUS.Segment
+        Data.PUS.Time
 
 
     hs-source-dirs: src

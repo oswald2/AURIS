@@ -17,6 +17,14 @@ module Data.PUS.Types
     , mapIDBuilder
     , mapIDParser
     , mapIDControl
+
+    , Flag
+    , toFlag
+    , fromFlag 
+
+    , Ready(..)
+    , Enable(..)
+    , OnOff(..)
     )
 where
 
@@ -91,3 +99,20 @@ mapIDParser = MAPID <$> A.anyWord8
 
 mapIDControl :: MAPID
 mapIDControl = MAPID 63
+
+
+
+data Ready = Ready
+data Enable = Enable
+data OnOff = OnOff
+
+
+newtype Flag a = MkFlag Bool
+
+toFlag :: t -> Bool -> Flag t
+toFlag _ = MkFlag
+
+fromFlag :: t -> Flag t -> Bool
+fromFlag _ (MkFlag b) = b 
+
+
