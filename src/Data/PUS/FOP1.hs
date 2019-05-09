@@ -59,7 +59,7 @@ data FOPState = FOPState {
   _fopBDout :: !Bool,
   _fopBCout :: !Bool,
   _fopNNR :: !Word8,
-  _fopT1Initial :: TimeSpan Seconds,
+  _fopT1Initial :: TimeSpan,
   _fopTimeoutType :: !TTType,
   _fopTransmissionLimit :: !Int,
   _fopTransmissionCount :: !Int,
@@ -82,7 +82,7 @@ initialFOPState = FOPState { _fopWaitFlag          = False
                            , _fopBDout             = False
                            , _fopBCout             = False
                            , _fopNNR               = 0
-                           , _fopT1Initial         = mkTimeSpan Seconds 5
+                           , _fopT1Initial         = toTimeSpan $ mkTimeSpan Seconds 5
                            , _fopTimeoutType       = TTAlert
                            , _fopTransmissionLimit = 5
                            , _fopTransmissionCount = 0
@@ -125,7 +125,14 @@ class FOPMachine m where
   -- | transitions from S1
   e8 :: State m Active -> m (State m RetransmitWithoutWait)
   e10 :: State m Active -> m (State m RetransmitWithoutWait)
-  e9 :: State m Active -> m (State m RetransmitWithWait)
-  e11 :: State m Active -> m (State m RetransmitWithWait)
   e29 :: State m Active -> m (State m Initial)
   s1Exception :: State m Active -> m (State m Initial)
+  -- | transitions from S2 
+  e9 :: E9State m -> m (State m RetransmitWithWait)
+  e11 :: E9State m -> m (State m RetransmitWithWait)
+
+
+
+  
+data E9State m = ActiveState (State m Active)
+      | RWOW (State m RetransmitWithoutWait)

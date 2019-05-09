@@ -20,3 +20,4 @@ perf.html
 .ghc.environment.x86_64-linux-8.6.4
 .bash_history
 .cabal
+.stack-work

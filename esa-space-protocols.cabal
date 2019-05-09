@@ -80,6 +80,7 @@ library
         , lens
         , binary
         , stm
+        , thyme
     
     if flag(llvm)
         ghc-options: -O -Wall -Wcompat -Wincomplete-record-updates
