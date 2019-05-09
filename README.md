@@ -9,7 +9,7 @@ Currently under heavy construction and creation.
  * CLTU encoding/decoding with TC randomization
  * TC Transfer Frame encoding/decoding
  
-Current work focuses on the command link. Goal is to have a conduit based pipeline of command encoding flowing from a command request -> TC packet -> PUS packet -> segments -> COP-1 -> TC transfer frames -> CLTU -> Transfer Protocol. Parts of this are already present, but currently not going through. Some code skeletons are available to lay out the types used (e.g. a module defining the data types and then a encoder which contains a conduit to transform the data type to the next layer).
+Current work focuses on the command link. Goal is to have a conduit based pipeline of command encoding flowing from a command request -> TC packet -> PUS packet -> segments -> COP-1 -> TC transfer frames -> CLTU -> Transfer Protocol. Parts of these are already present, but currently there is no complete pipeline. Some code skeletons are available to lay out the types used (e.g. a module defining the data types and then a encoder which contains a conduit to transform the data type to the next layer).
 
 Current focus is on the COP-1 state machine and the NCTRS protocol to have a first indication of successful transmissions in interworking with spacecraft simulators. 
  
@@ -44,9 +44,9 @@ Documentation can be built as usual with `cabal new-haddock`, though it is curre
 
 First, get all working.
  * Commanding independent of spacecraft definitions (MIB, CDM)
- * Telemetry independent of spacecraft definitions, so the basic layers
+ * Telemetry independent of spacecraft definitions, so the basic layers (packets)
  * Probably another library for MIB handling will be needed. Also, a general internal model should be present so that alternative representations (e.g. EGS-CCs CDM) can be used too.
- * Adding the MIB/data model to be able to send specific commands and extract TM
+ * Adding the MIB/data model to be able to send specific commands and extract TM (parameters)
  * Play around with parallel TM extraction and how to distribute parameters
  
 That's enough for the next weeks.
