@@ -30,6 +30,7 @@ where
 import RIO
 
 import RIO.State
+import Control.Monad.State
 
 import qualified Data.Vector.Unboxed as U
 import Data.Bits

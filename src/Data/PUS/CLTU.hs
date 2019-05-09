@@ -35,8 +35,7 @@ where
 import           RIO
 
 import           Control.Monad                  ( void )
-
-import           RIO.State
+import           Control.Monad.State
 
 import qualified RIO.ByteString.Lazy           as BL
 import           Data.ByteString.Builder
