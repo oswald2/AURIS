@@ -15,6 +15,12 @@ Current focus is on the COP-1 state machine and the NCTRS protocol to have a fir
  
  ## Building ##
  
+ ## Building with stack ##
+ 
+ You can use `stack` to build the project. Be aware, that by default the `llvm` flag is set in the `stack.yaml`. If you prefer the native code generator, just comment it out.
+ 
+ ## Building with Cabal ##
+ 
  Currently, `cabal new-build` is used. It accepts the following flags:
   * `-f llvm`: build via LLVM
 
