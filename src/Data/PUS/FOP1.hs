@@ -30,16 +30,15 @@ module Data.PUS.FOP1
 where
 
 import           RIO
-import           RIO.List
 
 import           Control.Lens                   ( makeLenses )
-import           Control.Lens.Setter
+--import           Control.Lens.Setter
 
-import qualified Data.ByteString.Lazy          as B
+--import qualified Data.ByteString.Lazy          as B
 
 import           Data.PUS.TCTransferFrame
-import           Data.PUS.CLCW
-import           Data.PUS.Types
+--import           Data.PUS.CLCW
+--import           Data.PUS.Types
 import           Data.PUS.Time
 
 
@@ -123,16 +122,43 @@ class FOPMachine m where
   e25 :: State m Initial -> m (State m InitialisingWithBC)
   e27 :: State m Initial -> m (State m InitialisingWithBC)
   -- | transitions from S1
-  e8 :: State m Active -> m (State m RetransmitWithoutWait)
-  e10 :: State m Active -> m (State m RetransmitWithoutWait)
-  e29 :: State m Active -> m (State m Initial)
+  e8 :: E8State m -> m (State m RetransmitWithoutWait)
+  e10 :: E10State m -> m (State m RetransmitWithoutWait)
   s1Exception :: State m Active -> m (State m Initial)
   -- | transitions from S2 
   e9 :: E9State m -> m (State m RetransmitWithWait)
   e11 :: E9State m -> m (State m RetransmitWithWait)
+  e2 :: E2State m -> m (State m Active)
+  e6 :: E6State m -> m (State m Active)
+  e29 :: E29State m -> m (State m Initial)
+  s2Exception :: State m RetransmitWithoutWait -> m (State m Initial)
+  -- | transitions from S3
 
 
 
-  
-data E9State m = ActiveState (State m Active)
-      | RWOW (State m RetransmitWithoutWait)
+data E9State m = E9ActiveState (State m Active)
+      | E9RetransmitWithoutWait (State m RetransmitWithoutWait)
+
+data E29State m =
+  E29ActiveState (State m Active)
+  | E29RetransmitWithoutWait (State m RetransmitWithoutWait)
+  | E29RetransmitWithWait (State m RetransmitWithWait)
+  | E29InitialisingWithoutBC (State m InitialisingWithoutBC)
+  | E29InitialisingWithBC (State m InitialisingWithBC)
+
+
+data E2State m = 
+  E2RetransmitWithoutWait (State m RetransmitWithoutWait)
+  | E2RetransmitWithWait (State m RetransmitWithWait)
+
+data E6State m = 
+    E6RetransmitWithoutWait (State m RetransmitWithoutWait)
+    | E6RetransmitWithWait (State m RetransmitWithWait)
+
+data E8State m =
+  E8Active (State m Active)
+  | E8RetransmitWithWait (State m RetransmitWithWait)
+
+data E10State m =
+    E10Active (State m Active)
+    | E10RetransmitWithWait (State m RetransmitWithWait)
