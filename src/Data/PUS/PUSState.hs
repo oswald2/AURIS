@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings 
+{-# LANGUAGE OverloadedStrings
     , TemplateHaskell
     , NoImplicitPrelude
     , BangPatterns
@@ -7,8 +7,6 @@ module Data.PUS.PUSState
     ( PUSState
     , defaultPUSState
     , newState
-    , pusStLogErr
-    , pusStRaiseEvent
     , nextADCounter
     )
 where
@@ -21,41 +19,31 @@ import           Data.PUS.Events
 
 
 
--- | This is the internal state of the PUS library. 
-data PUSState m = PUSState {
+-- | This is the internal state of the PUS library.
+data PUSState = PUSState {
     _pusStADCounter :: !Word8
-
-    , _pusStLogErr :: Text -> m ()
-    , _pusStRaiseEvent :: Event -> m ()
 }
 
 makeLenses ''PUSState
 
 
 
-newState :: Monad m =>
-    (Text -> m ())
-    -> (Event -> m ())
-    -> m (PUSState m)
-newState logErr raiseEvent = do
+newState :: Monad m => m PUSState
+newState = do
     let state = PUSState { _pusStADCounter  = 0
-                         , _pusStLogErr     = logErr
-                         , _pusStRaiseEvent = raiseEvent
                          }
     pure state
 
 
-defaultPUSState :: Monad m => m (PUSState m)
+defaultPUSState :: Monad m => m PUSState
 defaultPUSState = do
     let state = PUSState { _pusStADCounter  = 0
-                         , _pusStLogErr     = \_ -> pure ()
-                         , _pusStRaiseEvent = \_ -> pure ()
                          }
     pure state
 
 
 
-nextADCounter :: PUSState m -> (PUSState m, Word8)
+nextADCounter :: PUSState -> (PUSState, Word8)
 nextADCounter st =
     let cnt    = st ^. pusStADCounter
         !newSt = over pusStADCounter (+ 1) st

@@ -1,5 +1,5 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving
-    , BangPatterns 
+    , BangPatterns
     , NoImplicitPrelude
     , TemplateHaskell
     , OverloadedStrings
@@ -81,7 +81,7 @@ initialFOPState = FOPState { _fopWaitFlag          = False
                            , _fopBDout             = False
                            , _fopBCout             = False
                            , _fopNNR               = 0
-                           , _fopT1Initial         = toTimeSpan $ mkTimeSpan Seconds 5
+                           , _fopT1Initial = toTimeSpan $ mkTimeSpan Seconds 5
                            , _fopTimeoutType       = TTAlert
                            , _fopTransmissionLimit = 5
                            , _fopTransmissionCount = 0
@@ -125,16 +125,20 @@ class FOPMachine m where
   e8 :: E8State m -> m (State m RetransmitWithoutWait)
   e10 :: E10State m -> m (State m RetransmitWithoutWait)
   s1Exception :: State m Active -> m (State m Initial)
-  -- | transitions from S2 
+  -- | transitions from S2
   e9 :: E9State m -> m (State m RetransmitWithWait)
   e11 :: E9State m -> m (State m RetransmitWithWait)
   e2 :: E2State m -> m (State m Active)
   e6 :: E6State m -> m (State m Active)
   e29 :: E29State m -> m (State m Initial)
   s2Exception :: State m RetransmitWithoutWait -> m (State m Initial)
-  -- | transitions from S3
+
+  e1 :: E1State m -> m (State m Active)
 
 
+
+data E1State m = E1InitialisingWithoutBC (State m InitialisingWithoutBC)
+  | E1InitialisingWithBC (State m InitialisingWithBC)
 
 data E9State m = E9ActiveState (State m Active)
       | E9RetransmitWithoutWait (State m RetransmitWithoutWait)
@@ -147,11 +151,11 @@ data E29State m =
   | E29InitialisingWithBC (State m InitialisingWithBC)
 
 
-data E2State m = 
+data E2State m =
   E2RetransmitWithoutWait (State m RetransmitWithoutWait)
   | E2RetransmitWithWait (State m RetransmitWithWait)
 
-data E6State m = 
+data E6State m =
     E6RetransmitWithoutWait (State m RetransmitWithoutWait)
     | E6RetransmitWithWait (State m RetransmitWithWait)
 

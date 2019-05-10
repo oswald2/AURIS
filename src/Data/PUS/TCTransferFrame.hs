@@ -64,7 +64,7 @@ data TCFrameFlag =
     deriving (Eq, Ord, Enum, Show, Read)
 
 
--- | A TC Transfer Frame 
+-- | A TC Transfer Frame
 data TCTransferFrame = TCTransferFrame {
     _tcFrameVersion :: !Word8
     , _tcFrameFlag :: !TCFrameFlag
@@ -174,7 +174,7 @@ tcFrameParser = do
 -- | A conduit for encoding a TC Transfer Frame into a ByteString for transmission
 {-# INLINABLE tcFrameEncodeC #-}
 tcFrameEncodeC
-    :: (Monad m, MonadPUSState m)
+    :: (Monad m, MonadGlobalState m)
     => ConduitT TCTransferFrame EncodedTCFrame m ()
 tcFrameEncodeC = do
     f <- await
@@ -202,11 +202,11 @@ tcFrameEncodeC = do
 
 
 tcFrameDecodeC
-    :: (MonadPUSState m, MonadConfig m) => ConduitT ByteString TCTransferFrame m ()
+    :: (MonadPUSState m, MonadGlobalState m) => ConduitT ByteString TCTransferFrame m ()
 tcFrameDecodeC = conduitParserEither tcFrameParser .| proc
   where
     proc
-        :: (MonadPUSState m, MonadConfig m)
+        :: (MonadPUSState m, MonadGlobalState m)
         => ConduitT
                (Either ParseError (PositionRange, TCTransferFrame))
                TCTransferFrame

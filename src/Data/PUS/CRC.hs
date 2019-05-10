@@ -105,9 +105,7 @@ createVal !i !val !byte
     then createVal (i + 1) (val `xor` (valueArray `V.unsafeIndex` i)) byte
     else createVal (i + 1) val byte
   | otherwise = val
- where
-  valueArray = V.fromList
-    ([0x1021, 0x2042, 0x4084, 0x8108, 0x1231, 0x2462, 0x48c4, 0x9188] :: [ Word16
-      ]
-    )
+
+valueArray :: V.Vector Word16
+valueArray = V.fromList [0x1021, 0x2042, 0x4084, 0x8108, 0x1231, 0x2462, 0x48c4, 0x9188]
 
