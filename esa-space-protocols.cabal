@@ -52,6 +52,8 @@ library
         Data.PUS.FOP1
         Data.PUS.FARM1
         Data.PUS.Segment
+        Data.PUS.SegmentEncoder
+        Data.PUS.TCDirective
         Data.PUS.Time
 
 
@@ -59,30 +61,30 @@ library
     default-language: Haskell2010
     other-extensions: OverloadedStrings BangPatterns
     build-depends:
-        base 
-        , bytestring 
+        base
+        , bytestring
         , bytestring-strict-builder
-        , aeson 
-        , text 
-        , hw-prim 
-        , text-show 
+        , aeson
+        , text
+        , hw-prim
+        , text-show
         , vector
-        , formatting 
-        , attoparsec 
+        , formatting
+        , attoparsec
         , attoparsec-binary
         , attoparsec-data
-        , conduit 
+        , conduit
         , conduit-extra
-        , closed 
+        , closed
         , rio
-        , mtl 
+        , mtl
         , unliftio
         , parallel
         , lens
         , binary
         , stm
         , thyme
-    
+
     if flag(llvm)
         ghc-options: -O -Wall -Wcompat -Wincomplete-record-updates
                      -Wincomplete-uni-patterns -Wredundant-constraints
@@ -111,7 +113,7 @@ test-suite CLTUTest
     hs-source-dirs: src/test
     include-dirs: src/csrc
     ghc-options: -Wall -O
-    
+
     build-depends:
         esa-space-protocols -any,
         base -any,
@@ -134,11 +136,11 @@ benchmark CLTUPerf
         src/csrc/CLTUcsrc.c
     hs-source-dirs: src/bench
     include-dirs: src/csrc
-    ghc-options: -Wall -O2 -funbox-strict-fields 
+    ghc-options: -Wall -O2 -funbox-strict-fields
     -- For profiling comment this line in:
     --ghc-options: -Wall -O2 -threaded -fprof-auto -fexternal-interpreter
     --            -funbox-strict-fields -prof "-with-rtsopts=-N -p -s -h -i0.1"
-    
+
     build-depends:
         esa-space-protocols -any,
         base -any,

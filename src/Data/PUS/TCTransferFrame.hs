@@ -10,7 +10,6 @@ module Data.PUS.TCTransferFrame
       -- | Header Flags
     , TCFrameFlag(..)
       -- | The TC directives
-    , TCDirective(..)
     , EncodedTCFrame
     , tcFrameHeaderLen
     , tcFrameEncode
@@ -25,8 +24,6 @@ module Data.PUS.TCTransferFrame
     , tcFrameDecodeC
     , encTcFrameSeq
     , encTcFrameData
-    , directiveBuilder
-    , directiveParser
     , checkTCFrame
     , tcFrameParser
 
@@ -202,11 +199,11 @@ tcFrameEncodeC = do
 
 
 tcFrameDecodeC
-    :: (MonadPUSState m, MonadGlobalState m) => ConduitT ByteString TCTransferFrame m ()
+    :: (MonadGlobalState m) => ConduitT ByteString TCTransferFrame m ()
 tcFrameDecodeC = conduitParserEither tcFrameParser .| proc
   where
     proc
-        :: (MonadPUSState m, MonadGlobalState m)
+        :: (MonadGlobalState m)
         => ConduitT
                (Either ParseError (PositionRange, TCTransferFrame))
                TCTransferFrame
@@ -271,21 +268,3 @@ packLen frame =
 
 
 
-{-# INLINABLE directiveBuilder #-}
-directiveBuilder :: TCDirective -> Builder
-directiveBuilder DNop        = mempty
-directiveBuilder Unlock      = word8 0
-directiveBuilder (SetVR val) = word8 0x82 <> word8 0 <> word8 val
-
-
-
-directiveParser :: Parser TCDirective
-directiveParser = do
-    b <- A.anyWord8
-    case b of
-        0    -> return Unlock
-        0x82 -> do
-            _   <- A.anyWord8
-            val <- A.anyWord8
-            return (SetVR val)
-        _ -> return DNop

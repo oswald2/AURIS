@@ -1,4 +1,4 @@
-{-# LANGUAGE 
+{-# LANGUAGE
     DeriveGeneric
     , GeneralizedNewtypeDeriving
 #-}
@@ -17,14 +17,15 @@ module Data.PUS.Types
     , mapIDBuilder
     , mapIDParser
     , mapIDControl
-
     , Flag
     , toFlag
-    , fromFlag 
-
+    , fromFlag
     , Ready(..)
     , Enable(..)
     , OnOff(..)
+    , RequestID
+    , getRqstID
+    , mkRqstID
     )
 where
 
@@ -36,6 +37,7 @@ import           Data.Attoparsec.ByteString     ( Parser )
 import qualified Data.Attoparsec.ByteString    as A
 import qualified Data.Attoparsec.Binary        as A
 import           Data.Bits
+import           Data.Int
 
 import           GHC.Generics
 
@@ -108,11 +110,23 @@ data OnOff = OnOff
 
 
 newtype Flag a = MkFlag Bool
+    deriving (Eq, Ord, Show, Read, Generic)
 
 toFlag :: t -> Bool -> Flag t
 toFlag _ = MkFlag
 
 fromFlag :: t -> Flag t -> Bool
-fromFlag _ (MkFlag b) = b 
+fromFlag _ (MkFlag b) = b
 
 
+
+newtype RequestID = RequestID { getRqstID :: Int64 }
+    deriving (Eq, Ord, Num, Show, Read, Generic)
+
+mkRqstID :: Int64 -> RequestID
+mkRqstID = RequestID
+
+instance Binary RequestID
+instance FromJSON RequestID
+instance ToJSON RequestID where
+    toEncoding = genericToEncoding defaultOptions

@@ -9,9 +9,11 @@
 module Data.PUS.Segment
     ( TCSegment
     , mkTCSegments
+    , encodeSegments
     , SegmentHeader(..)
     --, SegmentTrailer(..)
     , SegFlags(..)
+    , EncodedSegment(..)
     , segMapID
     , segFlags
     , segData
@@ -25,6 +27,12 @@ module Data.PUS.Segment
     , segHeaderParser
     , segBuilder
     , segParser
+
+    , encSegSegment
+    , encSegFlag
+    , encSeqSegNr
+    , encSeqRequest
+
     )
 where
 
@@ -47,9 +55,14 @@ import           Data.List.NonEmpty             ( NonEmpty(..)
 import qualified Data.List.NonEmpty            as L
 
 import           Data.PUS.Types
+import           Data.PUS.TCRequest
 
 import           General.Chunks
 
+
+
+segMaxDataLen :: Int
+segMaxDataLen = 248
 
 
 data SegFlags = SegmentFirst
@@ -79,22 +92,17 @@ data TCSegment = TCSegment {
     -- , _segTrailer :: Maybe SegmentTrailer
     } deriving (Eq, Show, Read)
 
-
 makeLenses ''TCSegment
 
+data EncodedSegment = EncodedSegment {
+        _encSegSegment :: ByteString
+        , _encSegFlag :: SegFlags
+        , _encSeqSegNr :: Word32
+        , _encSeqRequest :: TCRequest
+    }
 
--- mkTCSegments :: SegmentHeader -> ByteString -> Maybe SegmentTrailer -> Either Text TCSegment
--- mkTCSegments hdr pl t@(Just trailer) = 
---     let trailerLen = segTrailerLen trailer
---         plLen = B.length pl
---     in
---     if plLen + trailerLen <= segMaxDataLen 
---         then Right (TCSegment hdr pl t)
---         else Left "TC Segment: payload is too long"
--- mkTCSegment hdr pl Nothing = 
---     if B.length pl <= segMaxDataLen
---         then Right (TCSegment hdr pl Nothing)
---         else Left "TC Segment: payload is too long"
+makeLenses ''EncodedSegment
+
 
 mkTCSegments :: MAPID -> ByteString -> NonEmpty TCSegment
 mkTCSegments mapid payload
@@ -115,6 +123,13 @@ mkTCSegments mapid payload
     = TCSegment (SegmentHeader SegmentStandalone mapid) payload :| []
 
 
+encodeSegments :: TCRequest -> NonEmpty TCSegment -> NonEmpty EncodedSegment
+encodeSegments req segments = L.zipWith f segments (L.fromList [1..])
+    where
+        f segment i =
+            let encSeg = builderBytes $ segBuilder segment
+            in
+            EncodedSegment encSeg (segment ^. segHeader . segFlags) i req
 
 
 data SegIDGroup1 = SegmentContDummy
@@ -145,8 +160,6 @@ data SegIDGroup3 = SegmentContChangeBlockA
 --     }
 --     deriving (Show)
 
-segMaxDataLen :: Int
-segMaxDataLen = 248
 
 
 isControlCommand :: SegmentHeader -> Bool
