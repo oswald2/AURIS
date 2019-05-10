@@ -12,7 +12,7 @@ module Data.PUS.Segment
     , encodeSegments
     , SegmentHeader(..)
     --, SegmentTrailer(..)
-    , SegFlags(..)
+    , Data.PUS.SegmentationFlags.SegmentationFlags(..)
     , EncodedSegment(..)
     , segMapID
     , segFlags
@@ -27,12 +27,10 @@ module Data.PUS.Segment
     , segHeaderParser
     , segBuilder
     , segParser
-
     , encSegSegment
     , encSegFlag
     , encSeqSegNr
     , encSeqRequest
-
     )
 where
 
@@ -56,6 +54,7 @@ import qualified Data.List.NonEmpty            as L
 
 import           Data.PUS.Types
 import           Data.PUS.TCRequest
+import           Data.PUS.SegmentationFlags
 
 import           General.Chunks
 
@@ -65,14 +64,9 @@ segMaxDataLen :: Int
 segMaxDataLen = 248
 
 
-data SegFlags = SegmentFirst
-    | SegmentContinue
-    | SegmentLast
-    | SegmentStandalone
-    deriving (Ord, Eq, Enum, Show, Read)
 
 data SegmentHeader = SegmentHeader {
-        _segFlags :: !SegFlags
+        _segFlags :: !SegmentationFlags
         , _segMapID :: !MAPID
     } deriving (Eq, Show, Read)
 
@@ -96,7 +90,7 @@ makeLenses ''TCSegment
 
 data EncodedSegment = EncodedSegment {
         _encSegSegment :: ByteString
-        , _encSegFlag :: SegFlags
+        , _encSegFlag :: SegmentationFlags
         , _encSeqSegNr :: Word32
         , _encSeqRequest :: TCRequest
     }
@@ -124,12 +118,11 @@ mkTCSegments mapid payload
 
 
 encodeSegments :: TCRequest -> NonEmpty TCSegment -> NonEmpty EncodedSegment
-encodeSegments req segments = L.zipWith f segments (L.fromList [1..])
-    where
-        f segment i =
-            let encSeg = builderBytes $ segBuilder segment
-            in
-            EncodedSegment encSeg (segment ^. segHeader . segFlags) i req
+encodeSegments req segments = L.zipWith f segments (L.fromList [1 ..])
+  where
+    f segment i =
+        let encSeg = builderBytes $ segBuilder segment
+        in  EncodedSegment encSeg (segment ^. segHeader . segFlags) i req
 
 
 data SegIDGroup1 = SegmentContDummy

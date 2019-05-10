@@ -12,13 +12,10 @@ where
 
 import           RIO
 
-import           GHC.Generics
-
 import           Control.Lens                   ( makeLenses )
 
 import           Data.Binary
 import           Data.Aeson
-import           Data.Int
 
 import           Data.PUS.Types
 

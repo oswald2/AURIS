@@ -32,7 +32,7 @@ where
 
 import           Data.Binary
 import           Data.Aeson
-import           Data.ByteString.Builder
+import           ByteString.StrictBuilder
 import           Data.Attoparsec.ByteString     ( Parser )
 import qualified Data.Attoparsec.ByteString    as A
 import qualified Data.Attoparsec.Binary        as A
@@ -130,3 +130,7 @@ instance Binary RequestID
 instance FromJSON RequestID
 instance ToJSON RequestID where
     toEncoding = genericToEncoding defaultOptions
+
+
+
+-- | provide

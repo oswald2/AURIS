@@ -37,7 +37,7 @@ import           Control.Lens                   ( makeLenses )
 --import qualified Data.ByteString.Lazy          as B
 
 import           Data.PUS.TCTransferFrame
---import           Data.PUS.CLCW
+import           Data.PUS.CLCW
 import           Data.PUS.Types
 import           Data.PUS.Time
 import           Data.PUS.TCDirective
@@ -103,7 +103,11 @@ data COP1Directive =
   | InitADWithSetVR  TCDirective
 
 
-data COP1Input = COP1Segment EncodedSegment
+data COP1Input =
+  COP1Segment EncodedSegment
+  | COP1Directive TCDirective
+  | COP1CLCW CLCW
+
 
 
 -- | S1
@@ -130,6 +134,24 @@ class FOPMachine m where
   initADWithUnlock :: State m Initial -> m (State m InitialisingWithBC)
   initADWithSetVR :: State m Initial -> m (State m InitialisingWithBC)
 
+
+newtype FOPMachineT m a = FOPTMachineT { runFOPMachineT :: m a }
+  deriving (Functor, Monad, Applicative, MonadIO)
+
+
+data FOPMachineState s where
+  Active :: FOPMachineState Active
+  RetransmitWithoutWait :: FOPMachineState RetransmitWithoutWait
+  RetransmitWithWait :: FOPMachineState RetransmitWithWait
+  InitialisingWithoutBC :: FOPMachineState InitialisingWithoutBC
+  InitialisingWithBC :: FOPMachineState InitialisingWithBC
+  Initial :: FOPMachineState Initial
+
+
+instance (MonadIO m) => FOPMachine (FOPMachineT m) where
+  type State (FOPMachineT m) = FOPMachineState
+
+  initial = return Initial
 
 --initialize :: (FOPMachine m, MonadGlobalState m) =>
 

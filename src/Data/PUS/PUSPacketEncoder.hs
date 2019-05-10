@@ -23,7 +23,7 @@ import           Control.Lens                   ( makeLenses )
 import           Data.Conduit
 
 import           Data.PUS.PUSPacket
-import           Data.PUS.Segment
+--import           Data.PUS.Segment
 import           Data.PUS.TCPacketEncoder
 import           Data.PUS.TCRequest
 

@@ -34,6 +34,7 @@ library
         Control.PUS.Monads
         Data.PUS.Config
         Data.PUS.Types
+        Data.PUS.APID
         Data.PUS.PUSState
         Data.PUS.GlobalState
         Data.PUS.Events
@@ -53,6 +54,7 @@ library
         Data.PUS.FARM1
         Data.PUS.Segment
         Data.PUS.SegmentEncoder
+        Data.PUS.SegmentationFlags
         Data.PUS.TCDirective
         Data.PUS.Time
 

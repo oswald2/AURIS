@@ -18,7 +18,7 @@ where
 
 import           RIO
 
-import           UnliftIO.STM
+import           UnliftIO.STM                   ( )
 
 import           Data.PUS.Config
 import           Data.PUS.PUSState
