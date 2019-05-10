@@ -8,10 +8,11 @@ Currently under heavy construction and creation.
 
  * CLTU encoding/decoding with TC randomization
  * TC Transfer Frame encoding/decoding
+ * TC Segment encoding/decoding and segmenting a PUS Packet into TC Segments. Basic functions for assembling a packet out of segments is also available
  
 Current work focuses on the command link. Goal is to have a conduit based pipeline of command encoding flowing from a command request -> TC packet -> PUS packet -> segments -> COP-1 -> TC transfer frames -> CLTU -> Transfer Protocol. Parts of these are already present, but currently there is no complete pipeline. Some code skeletons are available to lay out the types used (e.g. a module defining the data types and then a encoder which contains a conduit to transform the data type to the next layer).
 
-Current focus is on the COP-1 state machine and the NCTRS protocol to have a first indication of successful transmissions in interworking with spacecraft simulators. 
+Current focus is on the COP-1 state machine and the NCTRS protocol to have a first indication of successful transmissions in interworking with spacecraft simulators. Also EDEN and C&C support will be added soon.
  
  ## Building ##
  
