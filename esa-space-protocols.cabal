@@ -61,6 +61,7 @@ library
     build-depends:
         base 
         , bytestring 
+        , bytestring-strict-builder
         , aeson 
         , text 
         , hw-prim 

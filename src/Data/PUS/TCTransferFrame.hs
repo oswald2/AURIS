@@ -34,9 +34,8 @@ module Data.PUS.TCTransferFrame
 where
 
 
-import           RIO
+import           RIO hiding (Builder)
 import qualified RIO.ByteString                as BS
-import qualified RIO.ByteString.Lazy           as BL
 import qualified RIO.Text                      as T
 
 import           Control.Lens                   ( makeLenses )
@@ -44,7 +43,7 @@ import           Control.PUS.Monads
 
 import           Data.Bits
 import           Data.Conduit
-import           Data.ByteString.Builder
+import           ByteString.StrictBuilder
 import           Data.Attoparsec.ByteString     ( Parser )
 import qualified Data.Attoparsec.ByteString    as A
 import qualified Data.Attoparsec.Binary        as A
@@ -134,10 +133,10 @@ tcFrameEncode frame frameCnt =
                     $ set tcFrameSeq frameCnt frame
         pl       = frame ^. tcFrameData
         newPl    = if BS.null pl then BS.singleton 0 else pl
-        encFrame = toLazyByteString $ tcFrameBuilder newFrame
+        encFrame = builderBytes $ tcFrameBuilder newFrame
     in  EncodedTCFrame
             (frame ^. tcFrameSeq)
-            (BL.toStrict $ encFrame <> crcEncodeBL (crcCalcBL encFrame))
+            (encFrame <> crcEncodeBS (crcCalc encFrame))
 
 
 {-# INLINABLE tcFrameBuilder #-}
@@ -146,7 +145,7 @@ tcFrameBuilder frame =
     word16BE (packFlags frame)
         <> word16BE (packLen frame)
         <> word8 (frame ^. tcFrameSeq)
-        <> byteString (frame ^. tcFrameData)
+        <> bytes (frame ^. tcFrameData)
 
 
 tcFrameParser :: Parser TCTransferFrame

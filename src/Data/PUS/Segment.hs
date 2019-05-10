@@ -29,7 +29,7 @@ module Data.PUS.Segment
 where
 
 
-import           RIO
+import           RIO                     hiding ( Builder )
 import qualified RIO.ByteString                as B
 import           RIO.List.Partial               ( head
                                                 , tail
@@ -37,7 +37,7 @@ import           RIO.List.Partial               ( head
 
 import           Control.Lens                   ( makeLenses )
 
-import           Data.ByteString.Builder
+import           ByteString.StrictBuilder
 import           Data.Bits
 import           Data.Attoparsec.ByteString     ( Parser )
 import qualified Data.Attoparsec.ByteString    as A
@@ -102,11 +102,11 @@ mkTCSegments mapid payload
     = let
           chnks = chunkedByBS segMaxDataLen payload
           go :: [ByteString] -> NonEmpty TCSegment
-          go [] = undefined 
+          go []  = undefined
           go [x] = L.fromList [TCSegment (SegmentHeader SegmentLast mapid) x]
           go (x : xs) =
               TCSegment (SegmentHeader SegmentContinue mapid) x <| go xs
-          firstSeg   = head chnks
+          firstSeg = head chnks
           segments = TCSegment (SegmentHeader SegmentFirst mapid) firstSeg
               <| go (tail chnks)
       in
@@ -192,10 +192,10 @@ segHeaderParser = do
 
 
 segBuilder :: TCSegment -> Builder
-segBuilder (TCSegment hdr pl) = segHeaderBuilder hdr <> byteString pl
+segBuilder (TCSegment hdr pl) = segHeaderBuilder hdr <> bytes pl
 
 segParser :: Parser TCSegment
 segParser = do
     hdr <- segHeaderParser
-    pl <- A.takeByteString
+    pl  <- A.takeByteString
     pure (TCSegment hdr pl)

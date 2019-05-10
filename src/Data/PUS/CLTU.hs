@@ -32,15 +32,14 @@ module Data.PUS.CLTU
     )
 where
 
-import           RIO
+import           RIO                     hiding ( Builder )
+import           RIO.ByteString                 ( ByteString )
+import qualified RIO.ByteString                as BS
 
 import           Control.Monad                  ( void )
 import           Control.Monad.State
 
-import qualified RIO.ByteString.Lazy           as BL
-import           Data.ByteString.Builder
-import           RIO.ByteString                 ( ByteString )
-import qualified RIO.ByteString                as BS
+import           ByteString.StrictBuilder
 
 import           Data.Bits
 import           Data.Text                      ( Text )
@@ -72,7 +71,7 @@ import           Data.Conduit.Attoparsec
 data CLTU = CLTU {
     -- | returns the actual binary payload data (mostly a TC transfer frame)
     cltuPayLoad :: BS.ByteString
-} 
+}
 
 -- | The PUS Standard explicitly states, that filling bytes (0x55) may be 
 -- inserted at the end of a code block to pad the length. It also states
@@ -143,11 +142,12 @@ cltuParser cfg = do
     case checkedCBs of
         Left  err   -> fail (T.unpack err)
         Right parts -> do
-            let bs =
-                    ( BL.toStrict
-                    . toLazyByteString
+            let
+                bs =
+                    ( 
+                      builderBytes  
                     . mconcat
-                    . map byteString
+                    . map bytes
                     $ parts
                     )
             pure (CLTU bs)
@@ -188,11 +188,12 @@ cltuRandomizedParser cfg = do
     case evalState (proc codeBlocks []) randomizer of
         Left  err   -> fail (T.unpack err)
         Right parts -> do
-            let bs =
-                    ( BL.toStrict
-                    . toLazyByteString
+            let
+                bs =
+                    ( 
+                    builderBytes 
                     . mconcat
-                    . map byteString
+                    . map bytes
                     $ parts
                     )
             pure (CLTU bs)
@@ -250,11 +251,10 @@ encodeRandomized cfg cltu = encodeGeneric cfg cltu encodeCodeBlocksRandomized
 {-# INLINABLE encodeGeneric #-}
 encodeGeneric
     :: Config -> CLTU -> (Config -> ByteString -> Builder) -> ByteString
-encodeGeneric cfg (CLTU pl) encoder = BL.toStrict
-    $ toLazyByteString (mconcat [byteString cltuHeader, encodedFrame, trailer])
+encodeGeneric cfg (CLTU pl) encoder = builderBytes $ mconcat [bytes cltuHeader, encodedFrame, trailer]
   where
     encodedFrame = encoder cfg pl
-    trailer      = byteString $ cltuTrailer
+    trailer      = bytes $ cltuTrailer
         (fromIntegral (cltuBlockSizeAsWord8 (cfgCltuBlockSize cfg)))
 
 
@@ -274,8 +274,7 @@ encodeCodeBlocks cfg pl =
                 in  if len < cbSize
                         then BS.append bs (cltuTrailer (cbSize - len))
                         else bs
-    in  
-    mconcat $ map (encodeCodeBlock . pad) blocks
+    in  mconcat $ map (encodeCodeBlock . pad) blocks
 
 {-# INLINABLE encodeCodeBlocksRandomized #-}
 -- | Takes a ByteString as payload, splits it into CLTU code blocks according to 
@@ -304,7 +303,7 @@ encodeCodeBlocksRandomized cfg pl =
 -- | encodes a single CLTU code block. This function assumes that the given ByteString
 -- is already in the correct code block length - 1 (1 byte for parity will be added)
 encodeCodeBlock :: ByteString -> Builder
-encodeCodeBlock block = byteString block <> word8 (cltuParity block)
+encodeCodeBlock block = bytes block <> word8 (cltuParity block)
 
 
 {-# INLINABLE encodeCodeBlockRandomized #-}
@@ -313,7 +312,7 @@ encodeCodeBlock block = byteString block <> word8 (cltuParity block)
 encodeCodeBlockRandomized :: ByteString -> State Randomizer Builder
 encodeCodeBlockRandomized block = do
     rblock <- randomize False block
-    pure (byteString rblock <> word8 (cltuParity rblock))
+    pure (bytes rblock <> word8 (cltuParity rblock))
 
 
 
@@ -322,11 +321,16 @@ encodeCodeBlockRandomized block = do
 -- be of the specified code block length
 cltuParity :: ByteString -> Word8
 cltuParity !block =
-    let proc :: Int32 -> Word8 -> Int32
+    let
+        proc :: Int32 -> Word8 -> Int32
         proc !sreg !octet = fromIntegral $ cltuTable (fromIntegral sreg) octet
-        sreg1   = BS.foldl' ({-# SCC proc #-} proc) 0 block
-        !result = fromIntegral $ (({-# SCC sreg1 #-} sreg1 `xor` 0xFF) `shiftL` 1) .&. 0xFE
-    in  {-# SCC result #-} result
+        sreg1 = BS.foldl' ({-# SCC proc #-} proc) 0 block
+        !result =
+            fromIntegral
+                $   (({-# SCC sreg1 #-} sreg1 `xor` 0xFF) `shiftL` 1)
+                .&. 0xFE
+    in
+        {-# SCC result #-} result
 
 
 

@@ -40,7 +40,8 @@ import qualified RIO.Text                      as T
 import           Control.Lens                   ( makeLenses )
 
 import           Data.Bits
-import           Data.ByteString.Lazy.Builder  as B
+--import           Data.ByteString.Lazy.Builder  as B
+import ByteString.StrictBuilder as B
 import           Data.Attoparsec.ByteString     ( Parser )
 import qualified Data.Attoparsec.Binary        as A
 
@@ -169,7 +170,7 @@ unpackValues v =
 
 
 
-clcwBuilder :: CLCW -> Builder
+clcwBuilder :: CLCW -> B.Builder
 clcwBuilder clcw = word32BE $ packValues clcw
 
 clcwParser :: Parser CLCW

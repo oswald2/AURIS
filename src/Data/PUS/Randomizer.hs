@@ -30,11 +30,12 @@ where
 import RIO
 
 import RIO.State
+import RIO.ByteString
+
 import Control.Monad.State
 
 import qualified Data.Vector.Unboxed as U
 import Data.Bits
-import RIO.ByteString
 
 
 -- | The type for the Randomizer. A Randomizer does not exactyl random things. 
