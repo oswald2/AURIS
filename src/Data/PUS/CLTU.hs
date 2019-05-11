@@ -39,7 +39,7 @@ import qualified RIO.ByteString                as BS
 
 import           Control.Monad                  ( void )
 import           Control.Monad.State
-import           Control.PUS.Monads
+import           Control.PUS.Classes
 
 import           ByteString.StrictBuilder
 
@@ -207,41 +207,33 @@ cltuRandomizedParser cfg = do
 
 -- | A conduit for decoding CLTUs from a ByteString stream
 cltuDecodeC
-    :: MonadConfig m
-    => ConduitT
-           BS.ByteString
-           (Either ParseError (PositionRange, CLTU))
-           m
-           ()
+    :: (MonadReader env m , HasConfig env) =>
+    ConduitT BS.ByteString (Either ParseError (PositionRange, CLTU)) m ()
 cltuDecodeC = do
-    cfg <- lift $ getConfig
+    cfg <- view getConfig
     conduitParserEither (cltuParser cfg)
 
 -- | A conduit for decoding randomized CLTUs from a ByteString stream
 cltuDecodeRandomizedC
-    :: MonadConfig m
-    => ConduitT
-           BS.ByteString
-           (Either ParseError (PositionRange, CLTU))
-           m
-           ()
+    :: (MonadReader env m , HasConfig env) =>
+    ConduitT BS.ByteString (Either ParseError (PositionRange, CLTU)) m ()
 cltuDecodeRandomizedC = do
-    cfg <- lift $ getConfig
+    cfg <- view getConfig
     conduitParserEither (cltuParser cfg)
 
 
 -- | A conduit for encoding a CLTU in a ByteString for transmission
-cltuEncodeC :: (MonadConfig m) => ConduitT CLTU EncodedCLTU m ()
+cltuEncodeC :: (MonadReader env m , HasConfig env) => ConduitT CLTU EncodedCLTU m ()
 cltuEncodeC =
     awaitForever $ \cltu -> do
-        cfg <- lift $ getConfig
+        cfg <- view getConfig
         pure (EncodedCLTU $ encode cfg cltu)
 
 -- | A conduit for encoding a CLTU in a ByteString for transmission
-cltuEncodeRandomizedC :: (MonadConfig m) => ConduitT CLTU EncodedCLTU m ()
+cltuEncodeRandomizedC :: (MonadReader env m , HasConfig env) => ConduitT CLTU EncodedCLTU m ()
 cltuEncodeRandomizedC =
     awaitForever $ \cltu -> do
-        cfg <- lift $ getConfig
+        cfg <- view getConfig
         pure (EncodedCLTU $ encodeRandomized cfg cltu)
 
 

@@ -3,6 +3,7 @@
     , GeneralizedNewtypeDeriving
     , DeriveGeneric
     , RecordWildCards
+    , FlexibleInstances
 #-}
 module Main
 where
@@ -19,7 +20,7 @@ import Data.Conduit.Network
 
 import UnliftIO.Async
 
-import Control.PUS.Monads
+import Control.PUS.Classes
 
 import Data.PUS.TCTransferFrame
 import Data.PUS.TCTransferFrameEncoder
@@ -35,6 +36,21 @@ transferFrames :: [TCTransferFrame]
 transferFrames = []
 
 
+-- class Monad m => MonadConfig m where
+--     getConfig :: m (Config)
+
+
+-- class Monad m => MonadPUSState m where
+--     getPUSState :: m PUSState
+--     withPUSState :: (PUSState -> PUSState, a) -> m a
+--     withPUSState_ :: (PUSState -> PUSState) -> m ()
+--     nextADCount :: m Word8
+
+
+-- class (Monad m, MonadConfig m, MonadPUSState m) => MonadGlobalState m where
+--     getGlobalState :: m (GlobalState m)
+
+
 
 main :: IO ()
 main = do
@@ -46,7 +62,7 @@ main = do
         let chain :: (MonadGlobalState m) => ConduitT () ByteString m ()
             chain = sourceList transferFrames .| tcFrameEncodeC .| tcFrameToCltuC .| cltuEncodeC .| cltuToNcduC .| encodeTcNcduC
 
-        runGeneralTCPClient (clientSettings 10000 "localhost") $ \app-> _
-            -- void $ concurrently
-            --     (appSink app)
-            --     (appSource app .| stdoutC)
+        runGeneralTCPClient (clientSettings 10000 "localhost") $ \app->
+            void $ concurrently
+                (runConduitRes (chain .| appSink app))
+                (runConduitRes (appSource app .| stdoutC))

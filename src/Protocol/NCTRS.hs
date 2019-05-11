@@ -77,7 +77,6 @@ module Protocol.NCTRS
     , encodeTcNcduC
     , encodeTmNcduC
     , encodeAdminNcduC
-
     , ncduAdminMsgTcEstablished
     , ncduAdminMsgTcClosed
     , ncduAdminMsgTcAborted
@@ -99,7 +98,7 @@ import qualified RIO.Text                      as T
 import           Control.Lens                   ( makeLenses )
 import           Control.Lens.Setter
 
-import           Control.PUS.Monads
+import           Control.PUS.Classes
 
 import qualified Data.ByteString.Char8         as BC
 import           Data.Attoparsec.ByteString     ( Parser )
@@ -111,6 +110,7 @@ import           Data.Conduit.Attoparsec
 
 import           Data.PUS.Types
 import           Data.PUS.Events
+import           Data.PUS.GlobalState
 
 import           Protocol.Classes
 
@@ -347,53 +347,59 @@ instance Packet NcduTcDu where
         hdrLength @NcduTcHeader + packetLength _ncduTcData
 
 
-receiveTcNcduC :: (MonadGlobalState m) => ConduitT ByteString NcduTcDu m ()
+receiveTcNcduC
+    :: (MonadIO m, MonadReader env m, HasGlobalState env)
+    => ConduitT ByteString NcduTcDu m ()
 receiveTcNcduC = conduitParserEither ncduTcParser .| sink
-    where
-        sink = do
-            x <- await
-            case x of
-                Just tc ->
-                    case tc  of
-                        Left err -> do
-                            lift $ raiseEvent $ EV_NCDUParseError (T.pack (errorMessage err))
-                            sink
-                        Right (_, tc') -> do
-                            yield tc'
-                            sink
-                Nothing -> pure ()
+  where
+    sink = do
+        x <- await
+        case x of
+            Just tc -> case tc of
+                Left err -> do
+                    st <- ask
+                    liftIO $ raiseEvent st $ EV_NCDUParseError (T.pack (errorMessage err))
+                    sink
+                Right (_, tc') -> do
+                    yield tc'
+                    sink
+            Nothing -> pure ()
 
-receiveTmNcduC :: (MonadGlobalState m) => ConduitT ByteString NcduTmDu m ()
+receiveTmNcduC
+    :: (MonadIO m, MonadReader env m, HasGlobalState env)
+    => ConduitT ByteString NcduTmDu m ()
 receiveTmNcduC = conduitParserEither ncduTmParser .| sink
-    where
-        sink = do
-            x <- await
-            case x of
-                Just tc ->
-                    case tc  of
-                        Left err -> do
-                            lift $ raiseEvent $ EV_NCDUParseError (T.pack (errorMessage err))
-                            sink
-                        Right (_, tc') -> do
-                            yield tc'
-                            sink
-                Nothing -> pure ()
+  where
+    sink = do
+        x <- await
+        case x of
+            Just tc -> case tc of
+                Left err -> do
+                    st <- ask
+                    liftIO $ raiseEvent st $ EV_NCDUParseError (T.pack (errorMessage err))
+                    sink
+                Right (_, tc') -> do
+                    yield tc'
+                    sink
+            Nothing -> pure ()
 
-receiveAdminNcduC :: (MonadGlobalState m) => ConduitT ByteString NcduAdminMessage m ()
+receiveAdminNcduC
+    :: (MonadIO m, MonadReader env m, HasGlobalState env)
+    => ConduitT ByteString NcduAdminMessage m ()
 receiveAdminNcduC = conduitParserEither ncduAdminMessageParser .| sink
-    where
-        sink = do
-            x <- await
-            case x of
-                Just tc ->
-                    case tc  of
-                        Left err -> do
-                            lift $ raiseEvent $ EV_NCDUParseError (T.pack (errorMessage err))
-                            sink
-                        Right (_, tc') -> do
-                            yield tc'
-                            sink
-                Nothing -> pure ()
+  where
+    sink = do
+        x <- await
+        case x of
+            Just tc -> case tc of
+                Left err -> do
+                    st <- ask
+                    liftIO $ raiseEvent st $ EV_NCDUParseError (T.pack (errorMessage err))
+                    sink
+                Right (_, tc') -> do
+                    yield tc'
+                    sink
+            Nothing -> pure ()
 
 
 encodeTcNcduC :: (Monad m) => ConduitT NcduTcDu ByteString m ()
@@ -520,7 +526,7 @@ convertType NCDU_NIS_TE_TYPE      = 30
 convertType NCDU_NIS_TE_RES_TYPE  = 31
 convertType NCDU_TC_FRAME_TYPE    = 50
 convertType NCDU_FRAME_RES_TYPE   = 51
-convertType NCDU_ILLEGAL_TYPE     = error "Cannot encode NCDU with illegal type"
+convertType NCDU_ILLEGAL_TYPE     = 0xFFFF
 
 
 convertToType :: Word16 -> NcduHeaderType

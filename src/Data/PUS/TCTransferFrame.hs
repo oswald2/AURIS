@@ -26,17 +26,16 @@ module Data.PUS.TCTransferFrame
     , encTcFrameData
     , checkTCFrame
     , tcFrameParser
-
     )
 where
 
 
-import           RIO hiding (Builder)
+import           RIO                     hiding ( Builder )
 import qualified RIO.ByteString                as BS
 import qualified RIO.Text                      as T
 
 import           Control.Lens                   ( makeLenses )
-import           Control.PUS.Monads
+import           Control.PUS.Classes
 
 import           Data.Bits
 import           Data.Conduit
@@ -50,6 +49,7 @@ import           Data.PUS.CRC
 import           Data.PUS.Config
 import           Data.PUS.Types
 import           Data.PUS.Events
+import           Data.PUS.GlobalState
 
 -- | indicates, which type this TC Frame is. AD/BD specifies the protocol mode
 -- (AD = sequence controlled, BD = expedited), BC is a directive (see 'TCDirective')
@@ -131,9 +131,8 @@ tcFrameEncode frame frameCnt =
         pl       = frame ^. tcFrameData
         newPl    = if BS.null pl then BS.singleton 0 else pl
         encFrame = builderBytes $ tcFrameBuilder newFrame
-    in  EncodedTCFrame
-            (frame ^. tcFrameSeq)
-            (encFrame <> crcEncodeBS (crcCalc encFrame))
+    in  EncodedTCFrame (frame ^. tcFrameSeq)
+                       (encFrame <> crcEncodeBS (crcCalc encFrame))
 
 
 {-# INLINABLE tcFrameBuilder #-}
@@ -171,7 +170,7 @@ tcFrameParser = do
 -- | A conduit for encoding a TC Transfer Frame into a ByteString for transmission
 {-# INLINABLE tcFrameEncodeC #-}
 tcFrameEncodeC
-    :: (Monad m, MonadGlobalState m)
+    :: (MonadIO m, MonadReader env m, HasGlobalState env)
     => ConduitT TCTransferFrame EncodedTCFrame m ()
 tcFrameEncodeC = do
     f <- await
@@ -179,7 +178,9 @@ tcFrameEncodeC = do
         Just frame -> do
             case frame ^. tcFrameFlag of
                 FrameAD -> do
-                    yieldM $ tcFrameEncode frame <$> nextADCount
+                    st <- view appStateG
+                    cnt <- liftIO . atomically $ nextADCount st
+                    yield (tcFrameEncode frame cnt)
                     tcFrameEncodeC
                 FrameBD -> do
                     yield $ tcFrameEncode frame 0
@@ -188,38 +189,34 @@ tcFrameEncodeC = do
                     yield $ tcFrameEncode frame 0
                     tcFrameEncodeC
                 FrameIllegal -> do
-                    lift
-                        $ raiseEvent
-                              (EV_IllegalTCFrame
-                                  "Illegal Frame on encode, frame discarded"
-                              )
+                    st <- ask
+                    liftIO
+                        $ raiseEvent st
+                        $ (EV_IllegalTCFrame
+                              "Illegal Frame on encode, frame discarded"
+                          )
                     tcFrameEncodeC
         Nothing -> pure ()
 
 
 
 tcFrameDecodeC
-    :: (MonadGlobalState m) => ConduitT ByteString TCTransferFrame m ()
+    :: (MonadIO m, MonadReader env m, HasGlobalState env)
+    => ConduitT ByteString TCTransferFrame m ()
 tcFrameDecodeC = conduitParserEither tcFrameParser .| proc
   where
-    proc
-        :: (MonadGlobalState m)
-        => ConduitT
-               (Either ParseError (PositionRange, TCTransferFrame))
-               TCTransferFrame
-               m
-               ()
     proc = awaitForever $ \x -> do
+        st <- ask
         case x of
             Left err -> do
                 let msg = T.pack (errorMessage err)
-                lift $ raiseEvent (EV_IllegalTCFrame msg)
+                liftIO $ raiseEvent st (EV_IllegalTCFrame msg)
                 proc
             Right (_, frame) -> do
-                cfg <- lift $ getConfig
+                cfg <- view getConfig
                 case checkTCFrame cfg frame of
                     Left err -> do
-                        lift $ raiseEvent (EV_IllegalTCFrame err)
+                        liftIO $ raiseEvent st (EV_IllegalTCFrame err)
                         proc
                     Right () -> do
                         yield frame

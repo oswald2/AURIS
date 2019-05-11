@@ -7,7 +7,7 @@ module Data.PUS.PUSState
     ( PUSState
     , defaultPUSState
     , newState
-    , nextADCounter
+    , nextADCnt
     )
 where
 
@@ -41,8 +41,8 @@ defaultPUSState = do
 
 
 
-nextADCounter :: PUSState -> (PUSState, Word8)
-nextADCounter st =
+nextADCnt :: PUSState -> (PUSState, Word8)
+nextADCnt st =
     let cnt    = st ^. pusStADCounter
         !newSt = over pusStADCounter (+ 1) st
     in  (newSt, cnt)
