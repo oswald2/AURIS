@@ -52,4 +52,3 @@ newGlobalState cfg logErr raiseEvent = do
     pure state
 
 
-

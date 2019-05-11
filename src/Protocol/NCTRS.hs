@@ -9,11 +9,11 @@
 #-}
 module Protocol.NCTRS
     ( NcduHeaderType(..)
-    , NcduTcHeader
+    , NcduTcHeader(..)
     , ncduPktSize
     , ncduType
     , ncduScID
-    , NcduTcCltuHeader
+    , NcduTcCltuHeader(..)
     , ncduTcCltuTransType
     , ncduTcCltuSeqCnt
     , ncduTcCltuVcID
@@ -24,7 +24,7 @@ module Protocol.NCTRS
     , ncduTcCltuLatestProdTimeFlag
     , ncduTcCltuLatestProdTime
     , ncduTcCltuDelay
-    , NcduTcPktHeader
+    , NcduTcPktHeader(..)
     , ncduTcPktTransType
     , ncduTcPktSeqCnt
     , ncduTcPktVcID
@@ -39,11 +39,11 @@ module Protocol.NCTRS
     , ncduTmERT
     , ncduTmSeqFlag
     , ncduTmQualityFlag
-    , NcduTmDu
+    , NcduTmDu(..)
     , ncduTmHeader
     , ncduTmData
     , NcduTcCltuRespAck(..)
-    , NcduTcCltuResponse
+    , NcduTcCltuResponse(..)
     , ncduCltuRespTime
     , ncduCltuRespTransType
     , ncduCltuRespGsID
@@ -55,7 +55,7 @@ module Protocol.NCTRS
     , ncduCltuLastCLCW
     , NcduAdminMessageType(..)
     , NcduAdminMessageSeverity(..)
-    , NcduAdminMessage
+    , NcduAdminMessage(..)
     , ncduAdmLength
     , ncduAdmTime
     , ncduAdmType
@@ -68,7 +68,7 @@ module Protocol.NCTRS
     , ncduTcCltuHdr
     , ncduTcCltuData
     , ncduTcCltuResp
-    , NcduTcDu
+    , NcduTcDu(..)
     , ncduTcHdr
     , ncduTcData
     , receiveTcNcduC

@@ -7,16 +7,17 @@ Maintainer  : michael.oswald@onikudaki.net
 Stability   : experimental
 Portability : POSIX
 
-This module is used for encoding and decoding to and from CLTU's. A TC Randomizer can be used, which is 
-basically an array of values which are xor'ed with the CLTU block data so that the distribution of 
+This module is used for encoding and decoding to and from CLTU's. A TC Randomizer can be used, which is
+basically an array of values which are xor'ed with the CLTU block data so that the distribution of
 0's and 1's is more even (better for transmission to the satellite).
 -}
 {-# LANGUAGE BangPatterns
-    , OverloadedStrings 
-    , NoImplicitPrelude    
+    , OverloadedStrings
+    , NoImplicitPrelude
 #-}
 module Data.PUS.CLTU
     ( CLTU
+    , EncodedCLTU(..)
     , cltuNew
     , cltuPayLoad
     , encode
@@ -38,6 +39,7 @@ import qualified RIO.ByteString                as BS
 
 import           Control.Monad                  ( void )
 import           Control.Monad.State
+import           Control.PUS.Monads
 
 import           ByteString.StrictBuilder
 
@@ -73,7 +75,11 @@ data CLTU = CLTU {
     cltuPayLoad :: BS.ByteString
 }
 
--- | The PUS Standard explicitly states, that filling bytes (0x55) may be 
+data EncodedCLTU = EncodedCLTU {
+    cltuEncoded :: BS.ByteString
+}
+
+-- | The PUS Standard explicitly states, that filling bytes (0x55) may be
 -- inserted at the end of a code block to pad the length. It also states
 -- that these padding bytes shall be removed on the next higher layer
 --
@@ -109,7 +115,7 @@ cltuNew = CLTU
 cltuHeader :: ByteString
 cltuHeader = BS.pack [0xeb, 0x90]
 
--- | The CLTU trailer 
+-- | The CLTU trailer
 {-# INLINABLE cltuTrailer #-}
 cltuTrailer :: Int -> ByteString
 cltuTrailer n = BS.replicate (fromIntegral n) 0x55
@@ -121,7 +127,7 @@ cltuHeaderParser = do
     void $ A.word8 0xEB
     void $ A.word8 0x90
 
--- | Attoparsec parser for a CLTU. 
+-- | Attoparsec parser for a CLTU.
 cltuParser :: Config -> Parser CLTU
 cltuParser cfg = do
     let cbSize  = cltuBlockSizeAsWord8 (cfgCltuBlockSize cfg)
@@ -144,8 +150,8 @@ cltuParser cfg = do
         Right parts -> do
             let
                 bs =
-                    ( 
-                      builderBytes  
+                    (
+                      builderBytes
                     . mconcat
                     . map bytes
                     $ parts
@@ -167,7 +173,7 @@ codeBlockParser dataLen = go []
 
 
 
--- | Attoparsec parser for a randomized CLTU. 
+-- | Attoparsec parser for a randomized CLTU.
 cltuRandomizedParser :: Config -> Parser CLTU
 cltuRandomizedParser cfg = do
     let cbSize     = cltuBlockSizeAsWord8 (cfgCltuBlockSize cfg)
@@ -190,8 +196,8 @@ cltuRandomizedParser cfg = do
         Right parts -> do
             let
                 bs =
-                    ( 
-                    builderBytes 
+                    (
+                    builderBytes
                     . mconcat
                     . map bytes
                     $ parts
@@ -201,35 +207,42 @@ cltuRandomizedParser cfg = do
 
 -- | A conduit for decoding CLTUs from a ByteString stream
 cltuDecodeC
-    :: Monad m
-    => Config
-    -> ConduitT
+    :: MonadConfig m
+    => ConduitT
            BS.ByteString
            (Either ParseError (PositionRange, CLTU))
            m
            ()
-cltuDecodeC cfg = conduitParserEither (cltuParser cfg)
+cltuDecodeC = do
+    cfg <- lift $ getConfig
+    conduitParserEither (cltuParser cfg)
 
 -- | A conduit for decoding randomized CLTUs from a ByteString stream
 cltuDecodeRandomizedC
-    :: Monad m
-    => Config
-    -> ConduitT
+    :: MonadConfig m
+    => ConduitT
            BS.ByteString
            (Either ParseError (PositionRange, CLTU))
            m
            ()
-cltuDecodeRandomizedC cfg = conduitParserEither (cltuParser cfg)
+cltuDecodeRandomizedC = do
+    cfg <- lift $ getConfig
+    conduitParserEither (cltuParser cfg)
 
 
 -- | A conduit for encoding a CLTU in a ByteString for transmission
-cltuEncodeC :: Monad m => Config -> ConduitT CLTU BS.ByteString m ()
-cltuEncodeC cfg = awaitForever $ \cltu -> pure (encode cfg cltu)
+cltuEncodeC :: (MonadConfig m) => ConduitT CLTU EncodedCLTU m ()
+cltuEncodeC =
+    awaitForever $ \cltu -> do
+        cfg <- lift $ getConfig
+        pure (EncodedCLTU $ encode cfg cltu)
 
 -- | A conduit for encoding a CLTU in a ByteString for transmission
-cltuEncodeRandomizedC :: Monad m => Config -> ConduitT CLTU BS.ByteString m ()
-cltuEncodeRandomizedC cfg =
-    awaitForever $ \cltu -> pure (encodeRandomized cfg cltu)
+cltuEncodeRandomizedC :: (MonadConfig m) => ConduitT CLTU EncodedCLTU m ()
+cltuEncodeRandomizedC =
+    awaitForever $ \cltu -> do
+        cfg <- lift $ getConfig
+        pure (EncodedCLTU $ encodeRandomized cfg cltu)
 
 
 {-# INLINABLE encode #-}
@@ -261,8 +274,8 @@ encodeGeneric cfg (CLTU pl) encoder = builderBytes $ mconcat [bytes cltuHeader, 
 
 
 {-# INLINABLE encodeCodeBlocks #-}
--- | Takes a ByteString as payload, splits it into CLTU code blocks according to 
--- the configuration, calculates the parity for the code blocks by possibly 
+-- | Takes a ByteString as payload, splits it into CLTU code blocks according to
+-- the configuration, calculates the parity for the code blocks by possibly
 -- padding the last code block with the trailer and returns a builder
 -- with the result
 encodeCodeBlocks :: Config -> ByteString -> Builder
@@ -277,8 +290,8 @@ encodeCodeBlocks cfg pl =
     in  mconcat $ map (encodeCodeBlock . pad) blocks
 
 {-# INLINABLE encodeCodeBlocksRandomized #-}
--- | Takes a ByteString as payload, splits it into CLTU code blocks according to 
--- the configuration, applies randomization, calculates the parity for the code blocks by possibly 
+-- | Takes a ByteString as payload, splits it into CLTU code blocks according to
+-- the configuration, applies randomization, calculates the parity for the code blocks by possibly
 -- padding the last code block with the trailer and returns a builder
 -- with the result
 encodeCodeBlocksRandomized :: Config -> ByteString -> Builder
@@ -373,7 +386,7 @@ checkCodeBlockParity expectedLen checkBlock parity =
 {-# INLINABLE checkCodeBlockRandomizedParity #-}
 -- | Checks a code block. First, it checks the length against the @expectedLen,
 -- then checks the @parity. Returns either an error message or the d-randomized data block without
--- the parity byte. 
+-- the parity byte.
 checkCodeBlockRandomizedParity
     :: Word8 -> (ByteString, Word8) -> State Randomizer (Either Text ByteString)
 checkCodeBlockRandomizedParity expectedLen (checkBlock, parity) = do
