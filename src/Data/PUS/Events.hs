@@ -10,7 +10,7 @@ Portability : POSIX
 
 Contains just the Events, which can be raised by the library
 |-}
-{-# LANGUAGE 
+{-# LANGUAGE
     OverloadedStrings
     , DeriveGeneric
 #-}
@@ -27,8 +27,9 @@ import Data.Aeson
 import RIO.Text (Text)
 
 
-data Event = 
-    EVIllegalTCFrame Text
+data Event =
+      EV_IllegalTCFrame Text
+    | EV_NCDUParseError Text
     deriving (Eq, Show, Read, Generic)
 
 instance Binary Event
@@ -36,4 +37,4 @@ instance Binary Event
 instance ToJSON Event where
     toEncoding = genericToEncoding defaultOptions
 
-instance FromJSON Event 
+instance FromJSON Event

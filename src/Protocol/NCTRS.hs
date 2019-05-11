@@ -71,6 +71,20 @@ module Protocol.NCTRS
     , NcduTcDu
     , ncduTcHdr
     , ncduTcData
+    , receiveTcNcduC
+    , receiveTmNcduC
+    , receiveAdminNcduC
+    , encodeTcNcduC
+    , encodeTmNcduC
+    , encodeAdminNcduC
+
+    , ncduAdminMsgTcEstablished
+    , ncduAdminMsgTcClosed
+    , ncduAdminMsgTcAborted
+    , ncduAdminMsgTcAbortedFromGS
+    , ncduAdminMsgTcADavailable
+    , ncduAdminMsgTmTMFLOW
+    , ncduAdminMsgTmNO_TMFLOW
     )
 where
 
@@ -80,17 +94,23 @@ import           Prelude                        ( toEnum )
 
 import qualified RIO.ByteString                as B
 import           RIO.List                       ( intersperse )
+import qualified RIO.Text                      as T
 
 import           Control.Lens                   ( makeLenses )
 import           Control.Lens.Setter
+
+import           Control.PUS.Monads
 
 import qualified Data.ByteString.Char8         as BC
 import           Data.Attoparsec.ByteString     ( Parser )
 import qualified Data.Attoparsec.ByteString    as A
 import qualified Data.Attoparsec.Binary        as A
 import           ByteString.StrictBuilder
+import           Data.Conduit
+import           Data.Conduit.Attoparsec
 
 import           Data.PUS.Types
+import           Data.PUS.Events
 
 import           Protocol.Classes
 
@@ -127,14 +147,14 @@ hdrLen = 4 + 2 + 2
 cltuSecHdrLen :: Word32
 cltuSecHdrLen = 4 + 4 + 8 + 4 + 8 + 4 + 1 + 4 + 1 + 1
 
-cltuHdrLen :: Word32
-cltuHdrLen = hdrLen + cltuSecHdrLen
+-- cltuHdrLen :: Word32
+-- cltuHdrLen = hdrLen + cltuSecHdrLen
 
 cltuRespLen :: Word32
 cltuRespLen = 8 + 3 + 4 + 3 + 4 + 4
 
-cltuRespHdrLen :: Word32
-cltuRespHdrLen = hdrLen + cltuRespLen
+-- cltuRespHdrLen :: Word32
+-- cltuRespHdrLen = hdrLen + cltuRespLen
 
 pktHdrLen :: Word32
 pktHdrLen = 7
@@ -218,7 +238,7 @@ data NcduTmStreamType =
 
 data NcduTmDuHeader = NcduTmDuHeader {
     _ncduTmSize :: !Word32,
-    _ncduTmScID :: !Word16,
+    _ncduTmScID :: !SCID,
     _ncduTmDataStreamType :: !NcduTmStreamType,
     _ncduTmVcID :: !VCID,
     _ncduTmGsID :: !Word16,
@@ -327,6 +347,71 @@ instance Packet NcduTcDu where
         hdrLength @NcduTcHeader + packetLength _ncduTcData
 
 
+receiveTcNcduC :: (MonadGlobalState m) => ConduitT ByteString NcduTcDu m ()
+receiveTcNcduC = conduitParserEither ncduTcParser .| sink
+    where
+        sink = do
+            x <- await
+            case x of
+                Just tc ->
+                    case tc  of
+                        Left err -> do
+                            lift $ raiseEvent $ EV_NCDUParseError (T.pack (errorMessage err))
+                            sink
+                        Right (_, tc') -> do
+                            yield tc'
+                            sink
+                Nothing -> pure ()
+
+receiveTmNcduC :: (MonadGlobalState m) => ConduitT ByteString NcduTmDu m ()
+receiveTmNcduC = conduitParserEither ncduTmParser .| sink
+    where
+        sink = do
+            x <- await
+            case x of
+                Just tc ->
+                    case tc  of
+                        Left err -> do
+                            lift $ raiseEvent $ EV_NCDUParseError (T.pack (errorMessage err))
+                            sink
+                        Right (_, tc') -> do
+                            yield tc'
+                            sink
+                Nothing -> pure ()
+
+receiveAdminNcduC :: (MonadGlobalState m) => ConduitT ByteString NcduAdminMessage m ()
+receiveAdminNcduC = conduitParserEither ncduAdminMessageParser .| sink
+    where
+        sink = do
+            x <- await
+            case x of
+                Just tc ->
+                    case tc  of
+                        Left err -> do
+                            lift $ raiseEvent $ EV_NCDUParseError (T.pack (errorMessage err))
+                            sink
+                        Right (_, tc') -> do
+                            yield tc'
+                            sink
+                Nothing -> pure ()
+
+
+encodeTcNcduC :: (Monad m) => ConduitT NcduTcDu ByteString m ()
+encodeTcNcduC = awaitForever $ \du -> do
+    let enc = builderBytes (ncduTcDuBuilder du)
+    pure enc
+
+encodeTmNcduC :: (Monad m) => ConduitT NcduTmDu ByteString m ()
+encodeTmNcduC = awaitForever $ \du -> do
+    let enc = builderBytes (ncduTmDuBuilder du)
+    pure enc
+
+encodeAdminNcduC :: (Monad m) => ConduitT NcduAdminMessage ByteString m ()
+encodeAdminNcduC = awaitForever $ \du -> do
+    let enc = builderBytes (ncduAdminMessageBuilder du)
+    pure enc
+
+
 ncduTcHeaderParser :: Parser NcduTcHeader
 ncduTcHeaderParser = do
     len  <- A.anyWord32be
@@ -399,7 +484,7 @@ ncduTcParser = do
 ncduTmHeaderParser :: Parser NcduTmDuHeader
 ncduTmHeaderParser = do
     size       <- A.anyWord32be
-    scid       <- A.anyWord16be
+    scid       <- scidParser
     streamType <- ncduStreamTypeParser
     vcID       <- vcidParser
     gsID       <- A.anyWord16be
@@ -555,7 +640,7 @@ ncduTcDataBuilder (NcduTcDuCltuRespData cresp) =
 ncduTmDuHeaderBuilder :: NcduTmDuHeader -> Builder
 ncduTmDuHeaderBuilder x =
     word32BE (_ncduTmSize x)
-        <> word16BE (_ncduTmScID x)
+        <> scidBuilder (_ncduTmScID x)
         <> ncduTmStreamTypeBuilder (_ncduTmDataStreamType x)
         <> vcidBuilder (_ncduTmVcID x)
         <> word16BE (_ncduTmGsID x)
@@ -563,30 +648,11 @@ ncduTmDuHeaderBuilder x =
         <> word8 (_ncduTmSeqFlag x)
         <> word8 (_ncduTmQualityFlag x)
 
-ncduTmDuHeaderParser :: Parser NcduTmDuHeader
-ncduTmDuHeaderParser =
-    NcduTmDuHeader
-        <$> A.anyWord32be
-        <*> A.anyWord16be
-        <*> ncduTmStreamTypeParser
-        <*> vcidParser
-        <*> A.anyWord16be
-        <*> A.anyWord64be
-        <*> A.anyWord8
-        <*> A.anyWord8
-
 ncduTmDuBuilder :: NcduTmDu -> Builder
 ncduTmDuBuilder x =
     let size   = packetLength x
         newHdr = _ncduTmHeader x & ncduTmSize .~ size
     in  ncduTmDuHeaderBuilder newHdr <> bytes (_ncduTmData x)
-
-ncduTmDuParser :: Parser NcduTmDu
-ncduTmDuParser = do
-    hdr <- ncduTmDuHeaderParser
-    let payloadLen = _ncduTmSize hdr - tmHdrLen
-    payload <- A.take (fromIntegral payloadLen)
-    return $! NcduTmDu hdr payload
 
 
 convertTmStreamType :: NcduTmStreamType -> Word8
