@@ -15,8 +15,6 @@ import           RIO
 
 import           Control.Lens                   ( makeLenses )
 
-import           Data.PUS.Events
-
 
 
 -- | This is the internal state of the PUS library.

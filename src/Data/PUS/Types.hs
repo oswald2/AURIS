@@ -26,6 +26,9 @@ module Data.PUS.Types
     , RequestID
     , getRqstID
     , mkRqstID
+    , TransmissionMode(..)
+    , transmissionModeBuilder
+    , transmissionModeParser
     )
 where
 
@@ -133,4 +136,22 @@ instance ToJSON RequestID where
 
 
 
--- | provide
+data TransmissionMode = AD | BD
+    deriving (Eq, Ord, Enum, Show, Read, Generic)
+
+instance Binary TransmissionMode
+instance FromJSON TransmissionMode
+instance ToJSON TransmissionMode where
+    toEncoding = genericToEncoding defaultOptions
+
+transmissionModeBuilder :: TransmissionMode -> Builder
+transmissionModeBuilder AD = word8 0
+transmissionModeBuilder BD = word8 1
+
+transmissionModeParser :: Parser TransmissionMode
+transmissionModeParser = do
+    val <- A.anyWord8
+    case val of
+        0 -> pure AD
+        _ -> pure BD
+

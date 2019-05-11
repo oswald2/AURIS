@@ -31,6 +31,7 @@ library
     exposed-modules:
         General.Chunks
         General.Hexdump
+        General.Padding
         Control.PUS.Monads
         Data.PUS.Config
         Data.PUS.Types
@@ -57,6 +58,9 @@ library
         Data.PUS.SegmentationFlags
         Data.PUS.TCDirective
         Data.PUS.Time
+        Protocol.Classes
+        Protocol.NCTRS
+
 
 
     hs-source-dirs: src
