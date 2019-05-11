@@ -33,6 +33,7 @@ where
 import           RIO                     hiding ( Builder )
 import qualified RIO.ByteString                as BS
 import qualified RIO.Text                      as T
+import qualified Data.Text.IO as T
 
 import           Control.Lens                   ( makeLenses )
 import           Control.PUS.Classes
@@ -176,6 +177,7 @@ tcFrameEncodeC = do
     f <- await
     case f of
         Just frame -> do
+            liftIO $ T.putStrLn $ "Got Frame: " <> T.pack (show frame)
             case frame ^. tcFrameFlag of
                 FrameAD -> do
                     st <- view appStateG
@@ -186,7 +188,9 @@ tcFrameEncodeC = do
                     yield $ tcFrameEncode frame 0
                     tcFrameEncodeC
                 FrameBC -> do
-                    yield $ tcFrameEncode frame 0
+                    st <- view appStateG
+                    cnt <- liftIO . atomically $ nextADCount st
+                    yield $ tcFrameEncode frame cnt
                     tcFrameEncodeC
                 FrameIllegal -> do
                     st <- ask

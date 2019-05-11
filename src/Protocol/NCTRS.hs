@@ -94,6 +94,7 @@ import           Prelude                        ( toEnum )
 import qualified RIO.ByteString                as B
 import           RIO.List                       ( intersperse )
 import qualified RIO.Text                      as T
+import qualified Data.Text.IO as T
 
 import           Control.Lens                   ( makeLenses )
 import           Control.Lens.Setter
@@ -115,6 +116,7 @@ import           Data.PUS.GlobalState
 import           Protocol.Classes
 
 import           General.Padding
+import General.Hexdump
 
 
 
@@ -325,7 +327,7 @@ data NcduTcData =
         _ncduTcCltuData :: !ByteString}
     | NcduTcDuCltuRespData {
         _ncduTcCltuResp :: !NcduTcCltuResponse}
-    deriving (Show)
+    deriving (Show, Read)
 makeLenses ''NcduTcData
 
 instance Packet NcduTcData where
@@ -339,7 +341,7 @@ instance Packet NcduTcData where
 data NcduTcDu = NcduTcDu {
     _ncduTcHdr :: !NcduTcHeader,
     _ncduTcData :: NcduTcData
-    }
+    } deriving (Show, Read)
 makeLenses ''NcduTcDu
 
 instance Packet NcduTcDu where
@@ -402,9 +404,10 @@ receiveAdminNcduC = conduitParserEither ncduAdminMessageParser .| sink
             Nothing -> pure ()
 
 
-encodeTcNcduC :: (Monad m) => ConduitT NcduTcDu ByteString m ()
+encodeTcNcduC :: (MonadIO m, Monad m) => ConduitT NcduTcDu ByteString m ()
 encodeTcNcduC = awaitForever $ \du -> do
     let enc = builderBytes (ncduTcDuBuilder du)
+    liftIO $ T.putStrLn $ "Encoded NCDU: " <> T.pack (show du) <> ": " <> hexdumpBS enc
     pure enc
 
 encodeTmNcduC :: (Monad m) => ConduitT NcduTmDu ByteString m ()

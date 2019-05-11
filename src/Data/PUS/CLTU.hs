@@ -36,7 +36,7 @@ where
 import           RIO                     hiding ( Builder )
 import           RIO.ByteString                 ( ByteString )
 import qualified RIO.ByteString                as BS
-
+import qualified Data.Text.IO as T
 import           Control.Monad                  ( void )
 import           Control.Monad.State
 import           Control.PUS.Classes
@@ -77,7 +77,7 @@ data CLTU = CLTU {
 
 data EncodedCLTU = EncodedCLTU {
     cltuEncoded :: BS.ByteString
-}
+} deriving (Show, Read)
 
 -- | The PUS Standard explicitly states, that filling bytes (0x55) may be
 -- inserted at the end of a code block to pad the length. It also states
@@ -118,7 +118,7 @@ cltuHeader = BS.pack [0xeb, 0x90]
 -- | The CLTU trailer
 {-# INLINABLE cltuTrailer #-}
 cltuTrailer :: Int -> ByteString
-cltuTrailer n = BS.replicate (fromIntegral n) 0x55
+cltuTrailer n = BS.replicate n 0x55
 
 
 
@@ -223,11 +223,13 @@ cltuDecodeRandomizedC = do
 
 
 -- | A conduit for encoding a CLTU in a ByteString for transmission
-cltuEncodeC :: (MonadReader env m , HasConfig env) => ConduitT CLTU EncodedCLTU m ()
+cltuEncodeC :: (MonadIO m, MonadReader env m , HasConfig env) => ConduitT CLTU EncodedCLTU m ()
 cltuEncodeC =
     awaitForever $ \cltu -> do
         cfg <- view getConfig
-        pure (EncodedCLTU $ encode cfg cltu)
+        let enc = EncodedCLTU $ encode cfg cltu
+        liftIO $ T.putStrLn $ "Encoded CLTU: " <> T.pack (show enc)
+        pure enc
 
 -- | A conduit for encoding a CLTU in a ByteString for transmission
 cltuEncodeRandomizedC :: (MonadReader env m , HasConfig env) => ConduitT CLTU EncodedCLTU m ()
@@ -275,7 +277,7 @@ encodeCodeBlocks cfg pl =
     let cbSize = fromIntegral $ cltuBlockSizeAsWord8 (cfgCltuBlockSize cfg) - 1
         blocks = chunkedByBS cbSize pl
         pad bs =
-                let len = fromIntegral (BS.length bs)
+                let len = BS.length bs
                 in  if len < cbSize
                         then BS.append bs (cltuTrailer (cbSize - len))
                         else bs
@@ -293,7 +295,7 @@ encodeCodeBlocksRandomized cfg pl =
         blocks = map pad $ chunkedByBS cbSize pl
         randomizer = initialize (cfgRandomizerStartValue cfg)
         pad bs =
-            let len = fromIntegral (BS.length bs)
+            let len = BS.length bs
             in  if len < cbSize
                     then BS.append bs (cltuTrailer (cbSize - len))
                     else bs

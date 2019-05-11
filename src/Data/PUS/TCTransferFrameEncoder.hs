@@ -19,7 +19,7 @@ import Data.PUS.TCTransferFrame
 import Data.PUS.CLTU
 
 
-tcFrameToCltuC :: (Monad m) => ConduitT EncodedTCFrame CLTU m ()
+tcFrameToCltuC :: (MonadIO m) => ConduitT EncodedTCFrame CLTU m ()
 tcFrameToCltuC = awaitForever $ \frame ->
     pure $ cltuNew (frame ^. encTcFrameData)
 
