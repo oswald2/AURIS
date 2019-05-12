@@ -404,21 +404,21 @@ receiveAdminNcduC = conduitParserEither ncduAdminMessageParser .| sink
             Nothing -> pure ()
 
 
-encodeTcNcduC :: (MonadIO m, Monad m) => ConduitT NcduTcDu ByteString m ()
+encodeTcNcduC :: (MonadIO m, MonadReader env m, HasLogFunc env) => ConduitT NcduTcDu ByteString m ()
 encodeTcNcduC = awaitForever $ \du -> do
     let enc = builderBytes (ncduTcDuBuilder du)
-    liftIO $ T.putStrLn $ "Encoded NCDU: " <> T.pack (show du) <> ": " <> hexdumpBS enc
-    pure enc
+    logDebug $ "Encoded NCDU: " <> displayShow du <> ":\n" <> display (hexdumpBS enc)
+    yield enc
 
 encodeTmNcduC :: (Monad m) => ConduitT NcduTmDu ByteString m ()
 encodeTmNcduC = awaitForever $ \du -> do
     let enc = builderBytes (ncduTmDuBuilder du)
-    pure enc
+    yield enc
 
 encodeAdminNcduC :: (Monad m) => ConduitT NcduAdminMessage ByteString m ()
 encodeAdminNcduC = awaitForever $ \du -> do
     let enc = builderBytes (ncduAdminMessageBuilder du)
-    pure enc
+    yield enc
 
 
 ncduTcHeaderParser :: Parser NcduTcHeader

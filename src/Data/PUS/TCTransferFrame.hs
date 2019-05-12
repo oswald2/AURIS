@@ -33,9 +33,8 @@ where
 import           RIO                     hiding ( Builder )
 import qualified RIO.ByteString                as BS
 import qualified RIO.Text                      as T
-import qualified Data.Text.IO as T
 
-import           Control.Lens                   ( makeLenses )
+import           Control.Lens                   ( makeLenses, (.~) )
 import           Control.PUS.Classes
 
 import           Data.Bits
@@ -51,6 +50,7 @@ import           Data.PUS.Config
 import           Data.PUS.Types
 import           Data.PUS.Events
 import           Data.PUS.GlobalState
+
 
 -- | indicates, which type this TC Frame is. AD/BD specifies the protocol mode
 -- (AD = sequence controlled, BD = expedited), BC is a directive (see 'TCDirective')
@@ -125,10 +125,10 @@ checkTCFrame cfg frame =
 {-# INLINABLE tcFrameEncode #-}
 tcFrameEncode :: TCTransferFrame -> Word8 -> EncodedTCFrame
 tcFrameEncode frame frameCnt =
-    let newFrame =
-                set tcFrameLength
-                    (fromIntegral (tcFrameHeaderLen + (BS.length newPl)))
-                    $ set tcFrameSeq frameCnt frame
+    let newFrame = frame & tcFrameLength .~
+                    -- frame length is complete frame (header + data + CRC - 1)
+                    (fromIntegral (tcFrameHeaderLen + (BS.length newPl) + crcLen - 1))
+                    & tcFrameSeq .~ frameCnt
         pl       = frame ^. tcFrameData
         newPl    = if BS.null pl then BS.singleton 0 else pl
         encFrame = builderBytes $ tcFrameBuilder newFrame
@@ -147,23 +147,37 @@ tcFrameBuilder frame =
 
 tcFrameParser :: Parser TCTransferFrame
 tcFrameParser = do
-    flags <- A.anyWord16be
-    vc    <- A.anyWord8
-    len   <- A.anyWord8
-    seqf  <- A.anyWord8
+    (dat, (frame, crc)) <- A.match tcFrameParser'
+    -- now also check the CRC
+    let enc           = BS.take (BS.length dat - crcLen) dat
+        calculatedCRC = crcCalc enc
+    if crc /= calculatedCRC
+        then
+            fail ("TC Transfer Frame: CRC does not match: received: "
+                <> show crc
+                <> ", calculated: "
+                <> show calculatedCRC)
+        else pure frame
+  where
+    tcFrameParser' = do
+        flags <- A.anyWord16be
+        vc    <- A.anyWord8
+        len   <- A.anyWord8
+        seqf  <- A.anyWord8
 
-    let (vers, fl, scid) = unpackFlags flags
-        vcid             = mkVCID (vc `shiftR` 2)
-        len1 :: Word16
-        !len1 = (fromIntegral (vc .&. 0x03)) `shiftL` 8
-        len2 :: Word16
-        !len2    = fromIntegral len
-        !length1 = (len1 .|. len2)
-        !length2 = length1 + 1
+        let (vers, fl, scid) = unpackFlags flags
+            vcid             = mkVCID (vc `shiftR` 2)
+            len1 :: Word16
+            !len1 = (fromIntegral (vc .&. 0x03)) `shiftL` 8
+            len2 :: Word16
+            !len2    = fromIntegral len
+            !length1 = (len1 .|. len2)
+            !length2 = length1 + 1
 
-    pl <- A.take (fromIntegral length2)
+        pl  <- A.take (fromIntegral length2 - crcLen)
+        crc <- crcParser
 
-    pure (TCTransferFrame vers fl scid vcid length1 seqf pl)
+        pure ((TCTransferFrame vers fl scid vcid length1 seqf pl), crc)
 
 
 
@@ -171,16 +185,16 @@ tcFrameParser = do
 -- | A conduit for encoding a TC Transfer Frame into a ByteString for transmission
 {-# INLINABLE tcFrameEncodeC #-}
 tcFrameEncodeC
-    :: (MonadIO m, MonadReader env m, HasGlobalState env)
+    :: (MonadIO m, MonadReader env m, HasGlobalState env, HasLogFunc env)
     => ConduitT TCTransferFrame EncodedTCFrame m ()
 tcFrameEncodeC = do
     f <- await
     case f of
         Just frame -> do
-            liftIO $ T.putStrLn $ "Got Frame: " <> T.pack (show frame)
+            logDebug $ "Got Frame: " <> displayShow frame
             case frame ^. tcFrameFlag of
                 FrameAD -> do
-                    st <- view appStateG
+                    st  <- view appStateG
                     cnt <- liftIO . atomically $ nextADCount st
                     yield (tcFrameEncode frame cnt)
                     tcFrameEncodeC
@@ -188,7 +202,7 @@ tcFrameEncodeC = do
                     yield $ tcFrameEncode frame 0
                     tcFrameEncodeC
                 FrameBC -> do
-                    st <- view appStateG
+                    st  <- view appStateG
                     cnt <- liftIO . atomically $ nextADCount st
                     yield $ tcFrameEncode frame cnt
                     tcFrameEncodeC
@@ -258,13 +272,10 @@ unpackFlags i = (vers, fl, scid)
 {-# INLINABLE packLen #-}
 packLen :: TCTransferFrame -> Word16
 packLen frame =
-    let !len  = frame ^. tcFrameLength
-        !vcid = getVCID (frame ^. tcFrameVCID)
-        !result =
-                (fromIntegral vcid)
-                    `shiftL` 2
-                    .|.      ((len .&. 0x300) `shiftR` 8)
-                    .|.      (len .&. 0xFF)
+    let !len = frame ^. tcFrameLength
+        vcid :: Word16
+        !vcid   = fromIntegral $ getVCID (frame ^. tcFrameVCID)
+        !result = vcid `shiftL` 10 .|. (len .&. 0x3FF)
     in  result
 
 

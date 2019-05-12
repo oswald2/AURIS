@@ -7,20 +7,23 @@ Maintainer  : michael.oswald@onikudaki.net
 Stability   : experimental
 Portability : POSIX
 
-This module is used for calculating and appending a CRC value to 
+This module is used for calculating and appending a CRC value to
 ByteStrings.
 -}
-{-# LANGUAGE BangPatterns,
-    NoImplicitPrelude
+{-# LANGUAGE BangPatterns
+    , NoImplicitPrelude
+    , GeneralizedNewtypeDeriving
 #-}
 module Data.PUS.CRC
   ( CRC
+  , crcLen
   , crcCalc
   , crcCalcBL
   , crcEncode
   , crcEncodeBS
   , crcEncodeBL
   , crcEncodeAndAppendBS
+  , crcParser
   )
 where
 
@@ -29,15 +32,33 @@ import qualified RIO.ByteString                as BS
 import qualified RIO.ByteString.Lazy           as BL
 import           ByteString.StrictBuilder
 
+import           Data.Attoparsec.ByteString     ( Parser )
+import qualified Data.Attoparsec.Binary        as A
+
+
 import           Data.Bits
 import qualified Data.Vector.Unboxed           as V
+
+import           Numeric
 
 
 -- | The CRC type
 newtype CRC = CRC Word16
+  deriving (Eq)
+
+instance Show CRC where
+  show (CRC x) = showHex x "0x"
+
+-- | Construct a CRC type from a 16 bit word.
+mkCRC :: Word16 -> CRC
+mkCRC = CRC
+
+-- | The CRC length in Bytes
+crcLen :: Int
+crcLen = 2
 
 
--- | Calculates the CRC for the given strict 'ByteString' 
+-- | Calculates the CRC for the given strict 'ByteString'
 {-# INLINABLE crcCalc #-}
 crcCalc :: ByteString -> CRC
 crcCalc = CRC . BS.foldl' newst 0xFFFF
@@ -52,7 +73,7 @@ crcCalc = CRC . BS.foldl' newst 0xFFFF
 
 
 
--- | Calculates the CRC for the given lazy 'ByteString' 
+-- | Calculates the CRC for the given lazy 'ByteString'
 {-# INLINABLE crcCalcBL #-}
 crcCalcBL :: BL.ByteString -> CRC
 crcCalcBL = CRC . BL.foldl' newst 0xFFFF
@@ -107,5 +128,8 @@ createVal !i !val !byte
   | otherwise = val
 
 valueArray :: V.Vector Word16
-valueArray = V.fromList [0x1021, 0x2042, 0x4084, 0x8108, 0x1231, 0x2462, 0x48c4, 0x9188]
+valueArray =
+  V.fromList [0x1021, 0x2042, 0x4084, 0x8108, 0x1231, 0x2462, 0x48c4, 0x9188]
 
+crcParser :: Parser CRC
+crcParser = CRC <$> A.anyWord16be

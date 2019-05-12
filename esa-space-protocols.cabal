@@ -53,6 +53,7 @@ library
         Data.PUS.TCPacketEncoder
         Data.PUS.PUSPacket
         Data.PUS.PUSPacketEncoder
+        Data.PUS.PUSDfh
         Data.PUS.FOP1
         Data.PUS.FARM1
         Data.PUS.Segment

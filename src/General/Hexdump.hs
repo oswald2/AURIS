@@ -9,10 +9,10 @@ Portability : POSIX
 
 This module provides functions for generating hex-dumps from various data structures (mostly ByteStrings)
 -}
-{-# LANGUAGE OverloadedStrings 
+{-# LANGUAGE OverloadedStrings
 #-}
 module General.Hexdump
-    ( 
+    (
       hexdump
     , hexdumpBS
     , hexdumpLineBS
@@ -114,5 +114,7 @@ hexdumpLineBS :: BS.ByteString -> Text
 hexdumpLineBS =
     toText
         . mconcat
+        . mconcat
+        . chunksIntersperse 4 [(fromLazyText " ")]
         . map (fromLazyText . format (left 2 '0' %. hex))
         . BS.unpack

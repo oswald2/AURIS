@@ -29,6 +29,14 @@ module Data.PUS.Types
     , TransmissionMode(..)
     , transmissionModeBuilder
     , transmissionModeParser
+    , PUSType
+    , mkPUSType
+    , PUSSubType
+    , mkPUSSubType
+    , pusTypeBuilder
+    , pusSubTypeBuilder
+    , pusTypeParser
+    , pusSubTypeParser
     )
 where
 
@@ -155,3 +163,39 @@ transmissionModeParser = do
         0 -> pure AD
         _ -> pure BD
 
+
+newtype PUSType = PUSType Word8
+    deriving (Eq, Ord, Show, Read, Generic)
+
+mkPUSType :: Word8 -> PUSType
+mkPUSType = PUSType
+
+newtype PUSSubType = PUSSubType Word8
+    deriving (Eq, Ord, Show, Read, Generic)
+
+mkPUSSubType :: Word8 -> PUSSubType
+mkPUSSubType = PUSSubType
+
+pusTypeBuilder :: PUSType -> Builder
+pusTypeBuilder (PUSType x) = word8 x
+
+pusSubTypeBuilder :: PUSSubType -> Builder
+pusSubTypeBuilder (PUSSubType x) = word8 x
+
+pusTypeParser :: Parser PUSType
+pusTypeParser = PUSType <$> A.anyWord8
+
+pusSubTypeParser :: Parser PUSSubType
+pusSubTypeParser = PUSSubType <$> A.anyWord8
+
+
+
+instance Binary PUSType
+instance FromJSON PUSType
+instance ToJSON PUSType where
+    toEncoding = genericToEncoding defaultOptions
+
+instance Binary PUSSubType
+instance FromJSON PUSSubType
+instance ToJSON PUSSubType where
+    toEncoding = genericToEncoding defaultOptions

@@ -36,7 +36,7 @@ where
 import           RIO                     hiding ( Builder )
 import           RIO.ByteString                 ( ByteString )
 import qualified RIO.ByteString                as BS
-import qualified Data.Text.IO as T
+
 import           Control.Monad                  ( void )
 import           Control.Monad.State
 import           Control.PUS.Classes
@@ -77,7 +77,7 @@ data CLTU = CLTU {
 
 data EncodedCLTU = EncodedCLTU {
     cltuEncoded :: BS.ByteString
-} deriving (Show, Read)
+}
 
 -- | The PUS Standard explicitly states, that filling bytes (0x55) may be
 -- inserted at the end of a code block to pad the length. It also states
@@ -91,8 +91,9 @@ instance Eq CLTU where
 instance Show CLTU where
     show (CLTU x) = "CLTU:\n" <> T.unpack (hexdumpLineBS x)
 
-showEncodedCLTU :: Config -> ByteString -> Text
-showEncodedCLTU cfg bs = TL.toStrict . TB.toLazyText $ result
+
+showEncodedCLTU :: Config -> EncodedCLTU -> Text
+showEncodedCLTU cfg (EncodedCLTU bs) = TL.toStrict . TB.toLazyText $ result
   where
     header  = TB.fromText (hexdumpLineBS (BS.take 2 bs))
     chunksb = chunkedByBS
@@ -223,20 +224,23 @@ cltuDecodeRandomizedC = do
 
 
 -- | A conduit for encoding a CLTU in a ByteString for transmission
-cltuEncodeC :: (MonadIO m, MonadReader env m , HasConfig env) => ConduitT CLTU EncodedCLTU m ()
-cltuEncodeC =
-    awaitForever $ \cltu -> do
+cltuEncodeC :: (MonadIO m, MonadReader env m , HasConfig env, HasLogFunc env) => ConduitT CLTU EncodedCLTU m ()
+cltuEncodeC = awaitForever $ \cltu -> do
         cfg <- view getConfig
         let enc = EncodedCLTU $ encode cfg cltu
-        liftIO $ T.putStrLn $ "Encoded CLTU: " <> T.pack (show enc)
-        pure enc
+        logDebug $ "Encoded CLTU: " <> display (showEncodedCLTU cfg enc)
+        yield enc
+
+
 
 -- | A conduit for encoding a CLTU in a ByteString for transmission
-cltuEncodeRandomizedC :: (MonadReader env m , HasConfig env) => ConduitT CLTU EncodedCLTU m ()
+cltuEncodeRandomizedC :: (MonadIO m, MonadReader env m , HasConfig env, HasLogFunc env) => ConduitT CLTU EncodedCLTU m ()
 cltuEncodeRandomizedC =
     awaitForever $ \cltu -> do
         cfg <- view getConfig
-        pure (EncodedCLTU $ encodeRandomized cfg cltu)
+        let enc = EncodedCLTU $ encodeRandomized cfg cltu
+        logDebug $ "Encoded Randomized CLTU: " <> display (showEncodedCLTU cfg enc)
+        yield enc
 
 
 {-# INLINABLE encode #-}

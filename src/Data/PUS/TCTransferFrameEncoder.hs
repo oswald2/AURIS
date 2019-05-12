@@ -13,13 +13,15 @@ where
 
 import RIO
 
-import Data.Conduit
+import Conduit
 
 import Data.PUS.TCTransferFrame
 import Data.PUS.CLTU
 
 
-tcFrameToCltuC :: (MonadIO m) => ConduitT EncodedTCFrame CLTU m ()
-tcFrameToCltuC = awaitForever $ \frame ->
-    pure $ cltuNew (frame ^. encTcFrameData)
+tcFrameToCltuC :: (MonadIO m, MonadReader env m, HasLogFunc env) => ConduitT EncodedTCFrame CLTU m ()
+tcFrameToCltuC = awaitForever $ \frame -> do
+    let new = cltuNew (frame ^. encTcFrameData)
+    logDebug $ "New CLTU: " <> displayShow new
+    yield new
 

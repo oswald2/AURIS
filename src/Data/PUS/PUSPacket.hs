@@ -8,6 +8,7 @@ module Data.PUS.PUSPacket
     ( PUSPacket
     , encodePUSPacket
     , pusHdr
+    , pusDfh
     , pusData
     , pusHdrPktID
     , pusHdrTcVersion
@@ -34,7 +35,7 @@ import           Data.Aeson
 --import           Data.PUS.Types
 import           Data.PUS.APID
 import           Data.PUS.SegmentationFlags
-
+import           Data.PUS.PUSDfh
 
 
 
@@ -71,14 +72,14 @@ instance ToJSON PUSHeader where
 
 data PUSPacket = PUSPacket {
     _pusHdr :: PUSHeader,
-    -- _pusDfh :: PUSSecondaryHeader,
+    _pusDfh :: DFH,
     -- _pusPIs :: Maybe (TMPIVal, TMPIVal),
     _pusData :: ByteString
-    } deriving (Show, Read, Generic)
+    } deriving (Show, Generic)
 
 makeLenses ''PUSPacket
 
-instance Binary PUSPacket
+--instance Binary PUSPacket
 --instance FromJSON PUSPacket
 -- instance ToJSON PUSPacket where
 --     toEncoding = genericToEncoding defaultOptions

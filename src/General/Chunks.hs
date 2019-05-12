@@ -14,6 +14,7 @@ module General.Chunks
         chunkedBy
         , chunkedByBS
         , chunks
+        , chunksIntersperse
     )
 where
 
@@ -29,22 +30,38 @@ chunkedBy n bs = if B.length bs == 0
   then []
   else case B.splitAt (fromIntegral n) bs of
     (as, zs) -> as : chunkedBy n zs
-{-# INLINABLE chunkedBy #-}    
+{-# INLINABLE chunkedBy #-}
 
 -- | Chunk a @bs into list of smaller byte strings of no more than @n elements
 chunkedByBS :: Int -> BS.ByteString -> [BS.ByteString]
 chunkedByBS n bs = if BS.length bs == 0
   then []
-  else case BS.splitAt (fromIntegral n) bs of
+  else case BS.splitAt n bs of
     (as, zs) -> as : chunkedByBS n zs
-{-# INLINABLE chunkedByBS #-}    
+{-# INLINABLE chunkedByBS #-}
 
 
 
 -- | divides a list into chunks of sice @n. Last chunk my be smaller
+{-# INLINABLE chunks #-}
 chunks :: Int -> [a] -> [[a]]
-chunks _ [] = []
-chunks n xs =
-    let (bef, aft) = splitAt n xs
-    in
-    bef : chunks n aft
+chunks = go
+    where
+      go _ [] = []
+      go n xs =
+        let (bef, aft) = splitAt n xs
+        in
+        bef : chunks n aft
+
+
+-- | divides a list into chunks of size @n, then adds @is as a separator
+-- to the next chunk
+{-# INLINABLE chunksIntersperse #-}
+chunksIntersperse :: Int -> [a] -> [a] -> [[a]]
+chunksIntersperse = go
+  where
+    go _ _ [] = []
+    go n is xs =
+      let (bef, aft) = splitAt n xs
+      in
+      bef : is : chunksIntersperse n is aft

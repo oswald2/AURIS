@@ -54,7 +54,8 @@ import           GHC.Conc.Sync
 
 transferFrames :: [TCTransferFrame]
 transferFrames = [TCTransferFrame 0 FrameBD (mkSCID 0) (mkVCID 0) 0 0 (B.replicate 8 0xAA)
-            , TCTransferFrame 0 FrameBD (mkSCID 0) (mkVCID 0) 0 0 (B.replicate 8 0xBB)]
+            , TCTransferFrame 0 FrameBD (mkSCID 0) (mkVCID 0) 0 1 (B.replicate 8 0xBB)
+            ]
 
 
 
@@ -63,12 +64,15 @@ main = do
     np <- getNumProcessors
     setNumCapabilities np
 
-    state <- newGlobalState defaultConfig T.putStrLn (\ev -> T.putStrLn ("Event: " <> T.pack (show ev)))
+    defLogOptions <- logOptionsHandle stdout True
+    let logOptions = setLogMinLevel LevelDebug defLogOptions
+    withLogFunc logOptions $ \logFunc -> do
+        state <- newGlobalState defaultConfig logFunc (\ev -> T.putStrLn ("Event: " <> T.pack (show ev)))
 
-    runRIO state $ do
-        let chain = sourceList transferFrames .| tcFrameEncodeC .| tcFrameToCltuC .| cltuEncodeC .| cltuToNcduC .| encodeTcNcduC
+        runRIO state $ do
+            let chain = sourceList transferFrames .| tcFrameEncodeC .| tcFrameToCltuC .| cltuEncodeRandomizedC .| cltuToNcduC .| encodeTcNcduC
 
-        runGeneralTCPClient (clientSettings 32111 "localhost") $ \app->
-            void $ concurrently
-                (runConduitRes (chain .| appSink app))
-                (runConduitRes (appSource app .| stdoutC))
+            runGeneralTCPClient (clientSettings 32111 "localhost") $ \app->
+                void $ concurrently
+                    (runConduitRes (chain .| appSink app))
+                    (runConduitRes (appSource app .| stdoutC))
