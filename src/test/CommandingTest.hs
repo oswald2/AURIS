@@ -5,28 +5,27 @@
     , RecordWildCards
     , FlexibleInstances
 #-}
-module Main
-where
+module Main where
 
 
-import RIO
-import qualified Data.ByteString as B
-import qualified RIO.Text as T
-import qualified Data.Text.IO as T
+import           RIO
+import qualified Data.ByteString               as B
+import qualified RIO.Text                      as T
+import qualified Data.Text.IO                  as T
 
-import Conduit
-import Data.Conduit.List
-import Data.Conduit.Network
+import           Conduit
+import           Data.Conduit.List
+import           Data.Conduit.Network
 
-import Data.PUS.TCTransferFrame
-import Data.PUS.TCTransferFrameEncoder
-import Data.PUS.CLTU
-import Data.PUS.CLTUEncoder
-import Data.PUS.GlobalState
-import Data.PUS.Config
-import Data.PUS.Types
+import           Data.PUS.TCTransferFrame
+import           Data.PUS.TCTransferFrameEncoder
+import           Data.PUS.CLTU
+import           Data.PUS.CLTUEncoder
+import           Data.PUS.GlobalState
+import           Data.PUS.Config
+import           Data.PUS.Types
 
-import Protocol.NCTRS
+import           Protocol.NCTRS
 
 import           GHC.Conc.Sync
 
@@ -53,9 +52,10 @@ import           GHC.Conc.Sync
 
 
 transferFrames :: [TCTransferFrame]
-transferFrames = [TCTransferFrame 0 FrameBD (mkSCID 0) (mkVCID 0) 0 0 (B.replicate 8 0xAA)
-            , TCTransferFrame 0 FrameBD (mkSCID 0) (mkVCID 0) 0 1 (B.replicate 8 0xBB)
-            ]
+transferFrames =
+    [ TCTransferFrame 0 FrameBD (mkSCID 0) (mkVCID 0) 0 0 (B.replicate 8 0xAA)
+    , TCTransferFrame 0 FrameBD (mkSCID 0) (mkVCID 0) 0 1 (B.replicate 8 0xBB)
+    ]
 
 
 
@@ -67,12 +67,21 @@ main = do
     defLogOptions <- logOptionsHandle stdout True
     let logOptions = setLogMinLevel LevelDebug defLogOptions
     withLogFunc logOptions $ \logFunc -> do
-        state <- newGlobalState defaultConfig logFunc (\ev -> T.putStrLn ("Event: " <> T.pack (show ev)))
+        state <- newGlobalState
+            defaultConfig
+            logFunc
+            (\ev -> T.putStrLn ("Event: " <> T.pack (show ev)))
 
         runRIO state $ do
-            let chain = sourceList transferFrames .| tcFrameEncodeC .| tcFrameToCltuC .| cltuEncodeRandomizedC .| cltuToNcduC .| encodeTcNcduC
+            let chain =
+                    sourceList transferFrames
+                        .| tcFrameEncodeC
+                        .| tcFrameToCltuC
+                        .| cltuEncodeRandomizedC
+                        .| cltuToNcduC
+                        .| encodeTcNcduC
 
-            runGeneralTCPClient (clientSettings 32111 "localhost") $ \app->
+            runGeneralTCPClient (clientSettings 32111 "localhost") $ \app ->
                 void $ concurrently
                     (runConduitRes (chain .| appSink app))
                     (runConduitRes (appSource app .| stdoutC))

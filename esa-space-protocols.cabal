@@ -130,7 +130,6 @@ test-suite CLTUTest
         base -any,
         bytestring -any,
         hedgehog -any,
-        hedgehog-quickcheck -any,
         inline-c -any,
         attoparsec -any,
         text -any,

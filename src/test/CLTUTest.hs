@@ -167,7 +167,7 @@ prop_loop =
         x <- forAll genCLTU
         let e = encode defaultConfig x
             d = A.parse (cltuParser defaultConfig) e
-        annotate (T.unpack (showEncodedCLTU defaultConfig e))
+        annotate (T.unpack (showEncodedCLTU defaultConfig (EncodedCLTU e)))
         case d of 
             A.Fail _ _ _ -> failure
             A.Partial _ -> failure

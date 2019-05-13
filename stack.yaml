@@ -48,9 +48,9 @@ extra-deps:
 
 
 # Override default flag values for local packages and extra-deps
-flags:
-  esa-space-protocols:
-    llvm: true
+# flags:
+#   esa-space-protocols:
+#     llvm: true
 
 # Extra package databases containing global packages
 # extra-package-dbs: []
