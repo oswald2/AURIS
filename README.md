@@ -12,13 +12,17 @@ Currently under heavy construction and creation.
  
 Current work focuses on the command link. Goal is to have a conduit based pipeline of command encoding flowing from a command request -> TC packet -> PUS packet -> segments -> COP-1 -> TC transfer frames -> CLTU -> Transfer Protocol. Parts of these are already present, but currently there is no complete pipeline. Some code skeletons are available to lay out the types used (e.g. a module defining the data types and then a encoder which contains a conduit to transform the data type to the next layer).
 
-Current focus is on the COP-1 state machine and the NCTRS protocol to have a first indication of successful transmissions in interworking with spacecraft simulators. Also EDEN and C&C support will be added soon.
+Encoding from TC-Transfer Frame and sending via NCTRS protocol already works.
  
  ## Building ##
  
  ### Building with stack ###
  
- You can use `stack` to build the project. Be aware, that by default the `llvm` flag is set in the `stack.yaml`. If you prefer the native code generator, just comment it out.
+ You can use `stack` to build the project. To enable the llvm build, specify:
+  * --flag esa-space-protocols:llvm
+ 
+ `stack test` builds and runs the tests, `stack bench` builds and runs the benchmarks.
+ 
  
  ### Building with Cabal ###
  
@@ -49,5 +53,7 @@ First, get all working.
  * Probably another library for MIB handling will be needed. Also, a general internal model should be present so that alternative representations (e.g. EGS-CCs CDM) can be used too.
  * Adding the MIB/data model to be able to send specific commands and extract TM (parameters)
  * Play around with parallel TM extraction and how to distribute parameters
+ * Definition of interfaces
+ * Some user interfaces
  
 That's enough for the next weeks.
