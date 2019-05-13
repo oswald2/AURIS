@@ -37,6 +37,10 @@ module Data.PUS.Types
     , pusSubTypeBuilder
     , pusTypeParser
     , pusSubTypeParser
+    , SSC
+    , getSSC
+    , mkSSC
+    , nextSSC
     )
 where
 
@@ -199,3 +203,20 @@ instance Binary PUSSubType
 instance FromJSON PUSSubType
 instance ToJSON PUSSubType where
     toEncoding = genericToEncoding defaultOptions
+
+
+newtype SSC = SSC { getSSC :: Word16 }
+    deriving (Eq, Ord, Num, Show, Read, Generic)
+
+mkSSC :: Word16 -> SSC
+mkSSC = SSC
+
+nextSSC :: SSC -> SSC
+nextSSC (SSC x) = SSC (x + 1)
+
+instance Binary SSC
+instance FromJSON SSC
+instance ToJSON SSC where
+    toEncoding = genericToEncoding defaultOptions
+
+

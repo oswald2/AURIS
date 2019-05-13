@@ -26,21 +26,21 @@ clip width content =
 
 leftPadded :: Word8 -> Int -> ByteString -> ByteString
 leftPadded pad width content =
-    B.replicate (fromIntegral width - B.length content') pad <> content'
-    where content' = clip (fromIntegral width) content
+    B.replicate (width - B.length content') pad <> content'
+    where content' = clip width content
 
 rightPadded :: Word8 -> Int -> ByteString -> ByteString
 rightPadded pad width content =
-    content' <> B.replicate (fromIntegral width - B.length content') pad
-    where content' = clip (fromIntegral width) content
+    content' <> B.replicate (width - B.length content') pad
+    where content' = clip width content
 
 leftPaddedC :: Char -> Int -> ByteString -> ByteString
 leftPaddedC pad width content =
-    BC.replicate (fromIntegral width - B.length content') pad <> content'
-    where content' = clip (fromIntegral width) content
+    BC.replicate (width - B.length content') pad <> content'
+    where content' = clip width content
 
 rightPaddedC :: Char -> Int -> ByteString -> ByteString
 rightPaddedC pad width content =
-    content' <> BC.replicate (fromIntegral width - B.length content') pad
-    where content' = clip (fromIntegral width) content
+    content' <> BC.replicate (width - B.length content') pad
+    where content' = clip width content
 

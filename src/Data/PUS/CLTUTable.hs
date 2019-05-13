@@ -54,7 +54,7 @@ cltuTable !sreg !xval =
 -- in tests and benchmarks
 codProcChar :: Int -> Int -> Word8
 codProcChar !xvalw !sregw =
-    loop 0x80 (fromIntegral xvalw) (fromIntegral sregw)
+    loop 0x80 xvalw sregw
     where 
         loop :: Int -> Int -> Int -> Word8
         loop !mask !xval !sreg 

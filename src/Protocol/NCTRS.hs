@@ -94,7 +94,6 @@ import           Prelude                        ( toEnum )
 import qualified RIO.ByteString                as B
 import           RIO.List                       ( intersperse )
 import qualified RIO.Text                      as T
-import qualified Data.Text.IO as T
 
 import           Control.Lens                   ( makeLenses )
 import           Control.Lens.Setter
@@ -111,7 +110,6 @@ import           Data.Conduit.Attoparsec
 
 import           Data.PUS.Types
 import           Data.PUS.Events
-import           Data.PUS.GlobalState
 
 import           Protocol.Classes
 
@@ -586,7 +584,7 @@ convertToCltuRespAck x = case x of
     _ -> NCDU_CLTU_RESP_REJECT
 
 msgCalcPayloadLen :: NcduTcHeader -> Word32
-msgCalcPayloadLen hdr = fromIntegral (_ncduPktSize hdr) - hdrLen
+msgCalcPayloadLen hdr = (_ncduPktSize hdr) - hdrLen
 
 
 

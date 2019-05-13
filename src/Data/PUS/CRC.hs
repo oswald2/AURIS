@@ -16,6 +16,7 @@ ByteStrings.
 #-}
 module Data.PUS.CRC
   ( CRC
+  , mkCRC
   , crcLen
   , crcCalc
   , crcCalcBL

@@ -61,6 +61,7 @@ library
         Data.PUS.SegmentationFlags
         Data.PUS.TCDirective
         Data.PUS.Time
+        Data.PUS.Parameter
         Protocol.Classes
         Protocol.NCTRS
 
@@ -95,6 +96,7 @@ library
         , binary
         , stm
         , thyme
+        , vector-binary-instances
 
     if flag(llvm)
         ghc-options: -O -Wall -Wcompat -Widentities -Wincomplete-record-updates

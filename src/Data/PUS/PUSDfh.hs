@@ -9,8 +9,7 @@
     , TemplateHaskell
 #-}
 module Data.PUS.PUSDfh
-    ( DFH
-    , PUSDfh(..)
+    (  DataFieldHeader(..)
     , stdType
     , stdSubType
     , stdSrcID
@@ -18,96 +17,74 @@ module Data.PUS.PUSDfh
     , stdFlagStartExec
     , stdFlagProgressExec
     , stdFlagExecComp
+    , dfhParser
+    , dfhBuilder
+    , pusType 
+    , pusSubType 
+    , pusSrcID
+    , pusAckFlags
     )
 where
 
 
 import           RIO                     hiding ( Builder )
 
-import           Control.Lens                   ( makeLenses
-                                                , (.~)
-                                                )
+import           Control.Lens                   ( makeLenses )
 import           Data.Attoparsec.ByteString     ( Parser )
 import qualified Data.Attoparsec.ByteString    as A
 import           Data.Bits
 import           ByteString.StrictBuilder
-import           Data.Binary
-import           Data.Aeson
+import           Data.Vector (Vector)
+import qualified Data.Vector as V
 
 import           Data.PUS.Types
+import           Data.PUS.Parameter
 
 
--- | Secondary PUS headers are mission specific. Therefore we create
--- an existential type which adheres to this class.
-class PUSDfh a where
-    dfhBuilder :: a -> Builder
-    dfhParser :: Parser a
-    dfhType :: a -> PUSType
-    dfhSetType :: a -> PUSType -> a
-    dfhSubType :: a -> PUSSubType
-    dfhSetSubType :: a -> PUSSubType -> a
-
--- | This is the existential type. It can contain any data structure,
--- which adheres to the 'PUSDfh' class
-data DFH = forall a. (PUSDfh a, Show a) => DFH a
-
-instance Show DFH where
-    show (DFH x) = show x
 
 
-instance PUSDfh DFH where
-    dfhBuilder (DFH x) = dfhBuilder x
-    dfhParser = dfhParser
-    dfhType (DFH x) = dfhType x
-    dfhSetType (DFH x) t = DFH (dfhSetType x t)
-    dfhSubType (DFH x) = dfhSubType x
-    dfhSetSubType (DFH x) st = DFH (dfhSetSubType x st)
+
+data DataFieldHeader = 
+    PUSEmptyHeader
+    | PUSStdHeader {
+        _stdType :: PUSType
+        , _stdSubType :: PUSSubType
+        , _stdSrcID :: !Word8
+        , _stdFlagAcceptance :: !Bool
+        , _stdFlagStartExec :: !Bool
+        , _stdFlagProgressExec :: !Bool
+        , _stdFlagExecComp :: !Bool
+        }
+    | PUSFreeHeader (Vector Parameter)
+    deriving (Eq, Show, Read, Generic)
+makeLenses ''DataFieldHeader
 
 
-data PUSEmptyDfh = PUSEmptyDfh
-    deriving (Show, Read, Generic)
+pusType :: DataFieldHeader -> PUSType
+pusType PUSEmptyHeader = mkPUSType 0
+pusType PUSStdHeader {..} = _stdType
+pusType (PUSFreeHeader _v) = mkPUSType 0
 
-instance Binary PUSEmptyDfh
-instance FromJSON PUSEmptyDfh
-instance ToJSON PUSEmptyDfh where
-    toEncoding = genericToEncoding defaultOptions
+pusSubType :: DataFieldHeader -> PUSSubType
+pusSubType PUSEmptyHeader = mkPUSSubType 0
+pusSubType PUSStdHeader {..} = _stdSubType
+pusSubType (PUSFreeHeader _v) = mkPUSSubType 0
 
-instance PUSDfh PUSEmptyDfh where
-    dfhBuilder _ = mempty
-    dfhParser = pure PUSEmptyDfh
-    dfhType _ = mkPUSType 0
-    dfhSubType _ = mkPUSSubType 0
-    dfhSetType x _ = x
-    dfhSetSubType x _ = x
+pusSrcID :: DataFieldHeader -> Word8
+pusSrcID PUSEmptyHeader = 0
+pusSrcID PUSStdHeader {..} = _stdSrcID
+pusSrcID (PUSFreeHeader _v) = 0
 
-
-data PUSStdHeader = PUSStdHeader {
-    _stdType :: PUSType
-    , _stdSubType :: PUSSubType
-    , _stdSrcID :: !Word8
-    , _stdFlagAcceptance :: !Bool
-    , _stdFlagStartExec :: !Bool
-    , _stdFlagProgressExec :: !Bool
-    , _stdFlagExecComp :: !Bool
-} deriving (Show, Read, Generic)
-makeLenses ''PUSStdHeader
-
-instance PUSDfh PUSStdHeader where
-    dfhBuilder = stdBuilder
-    dfhParser  = stdParser
-    dfhType    = _stdType
-    dfhSubType = _stdSubType
-    dfhSetType x t = x & stdType .~ t
-    dfhSetSubType x t = x & stdSubType .~ t
-
-instance Binary PUSStdHeader
-instance FromJSON PUSStdHeader
-instance ToJSON PUSStdHeader where
-    toEncoding = genericToEncoding defaultOptions
+pusAckFlags :: DataFieldHeader -> (Bool, Bool, Bool, Bool)
+pusAckFlags PUSEmptyHeader = (True, False, False, True)
+pusAckFlags PUSStdHeader {..} = (_stdFlagAcceptance, _stdFlagStartExec, 
+    _stdFlagProgressExec, _stdFlagExecComp)
+pusAckFlags (PUSFreeHeader _v) = (True, False, False, True)
 
 
-stdBuilder :: PUSStdHeader -> Builder
-stdBuilder x =
+dfhBuilder :: DataFieldHeader -> Builder
+dfhBuilder PUSEmptyHeader = mempty
+dfhBuilder x@PUSStdHeader {} =
     let b1 = 0x10 .|. if _stdFlagAcceptance x
             then 0x01
             else 0x00 .|. if _stdFlagStartExec x
@@ -119,9 +96,13 @@ stdBuilder x =
             <> pusTypeBuilder (_stdType x)
             <> pusSubTypeBuilder (_stdSubType x)
             <> word8 (_stdSrcID x)
+-- TODO: implement the free header when the parameters are implemented
+dfhBuilder (PUSFreeHeader _v) =  mempty
 
-stdParser :: Parser PUSStdHeader
-stdParser = do
+
+dfhParser :: DataFieldHeader -> Parser DataFieldHeader
+dfhParser PUSEmptyHeader = pure PUSEmptyHeader
+dfhParser PUSStdHeader {} = do
     b1 <- A.anyWord8
     t  <- pusTypeParser
     st <- pusSubTypeParser
@@ -141,4 +122,4 @@ stdParser = do
                            }
 
     pure hdr
-
+dfhParser PUSFreeHeader {} = pure (PUSFreeHeader V.empty)
