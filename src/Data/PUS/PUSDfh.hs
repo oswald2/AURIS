@@ -23,6 +23,7 @@ module Data.PUS.PUSDfh
     , pusSubType 
     , pusSrcID
     , pusAckFlags
+    , dfhLength
     )
 where
 
@@ -55,6 +56,7 @@ data DataFieldHeader =
         , _stdFlagProgressExec :: !Bool
         , _stdFlagExecComp :: !Bool
         }
+    -- TODO: implementation of free header
     | PUSFreeHeader (Vector Parameter)
     deriving (Eq, Show, Read, Generic)
 makeLenses ''DataFieldHeader
@@ -80,6 +82,12 @@ pusAckFlags PUSEmptyHeader = (True, False, False, True)
 pusAckFlags PUSStdHeader {..} = (_stdFlagAcceptance, _stdFlagStartExec, 
     _stdFlagProgressExec, _stdFlagExecComp)
 pusAckFlags (PUSFreeHeader _v) = (True, False, False, True)
+
+
+dfhLength :: DataFieldHeader -> Int
+dfhLength PUSEmptyHeader = 0
+dfhLength PUSStdHeader {} = 4
+dfhLength (PUSFreeHeader _v) = 0
 
 
 dfhBuilder :: DataFieldHeader -> Builder

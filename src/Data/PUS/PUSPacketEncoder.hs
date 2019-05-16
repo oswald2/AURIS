@@ -11,7 +11,8 @@ module Data.PUS.PUSPacketEncoder
         EncodedPUSPacket
         , encPktEncoded
         , encPktRequest
-        , pusPktEncoderC
+        , pusPacketEncoderC
+        , tcPktToEncPUSC
     )
 where
 
@@ -37,10 +38,15 @@ makeLenses ''EncodedPUSPacket
 
 
 
+pusPacketEncoderC :: Monad m => ConduitT (PUSPacket, TCRequest) EncodedPUSPacket m ()
+pusPacketEncoderC = awaitForever $ \(pkt, rqst) -> do
+    let enc = encodePUSPacket pkt
+    yield (EncodedPUSPacket enc rqst)
 
-pusPktEncoderC :: Monad m => ConduitT EncodedTCPacket EncodedPUSPacket m ()
-pusPktEncoderC = awaitForever $ \encTC -> do
+
+tcPktToEncPUSC :: Monad m => ConduitT EncodedTCPacket EncodedPUSPacket m ()
+tcPktToEncPUSC = awaitForever $ \encTC -> do
     let enc = encodePUSPacket (encTC ^. encTcPUSPacket)
-    pure (EncodedPUSPacket enc (encTC ^. encTcRequest))
+    yield (EncodedPUSPacket enc (encTC ^. encTcRequest))
 
 

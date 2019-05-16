@@ -30,7 +30,7 @@ module Data.PUS.Segment
     , encSegSegment
     , encSegFlag
     , encSeqSegNr
-    , encSeqRequest
+    , encSegRequest
     )
 where
 
@@ -92,9 +92,8 @@ data EncodedSegment = EncodedSegment {
         _encSegSegment :: ByteString
         , _encSegFlag :: SegmentationFlags
         , _encSeqSegNr :: Word32
-        , _encSeqRequest :: TCRequest
+        , _encSegRequest :: TCRequest
     }
-
 makeLenses ''EncodedSegment
 
 

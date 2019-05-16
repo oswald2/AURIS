@@ -45,6 +45,7 @@ extra-deps:
 - attoparsec-data-1.0.4.1
 - closed-0.2.0.1
 - attoparsec-time-1
+- bytestring-to-vector-0.3.0.1
 
 
 # Override default flag values for local packages and extra-deps

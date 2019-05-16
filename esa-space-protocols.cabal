@@ -32,6 +32,7 @@ library
         General.Chunks
         General.Hexdump
         General.Padding
+        General.SetBitField
         Control.PUS.Classes
         Data.PUS.Config
         Data.PUS.Types
@@ -97,6 +98,7 @@ library
         , stm
         , thyme
         , vector-binary-instances
+        , bytestring-to-vector
 
     if flag(llvm)
         ghc-options: -O -Wall -Wcompat -Widentities -Wincomplete-record-updates

@@ -169,13 +169,13 @@ transmissionModeParser = do
 
 
 newtype PUSType = PUSType Word8
-    deriving (Eq, Ord, Show, Read, Generic)
+    deriving (Eq, Ord, Num, Show, Read, Generic)
 
 mkPUSType :: Word8 -> PUSType
 mkPUSType = PUSType
 
 newtype PUSSubType = PUSSubType Word8
-    deriving (Eq, Ord, Show, Read, Generic)
+    deriving (Eq, Ord, Num, Show, Read, Generic)
 
 mkPUSSubType :: Word8 -> PUSSubType
 mkPUSSubType = PUSSubType

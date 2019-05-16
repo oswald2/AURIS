@@ -4,9 +4,12 @@
     , TemplateHaskell
 #-}
 module Data.PUS.TCRequest
-    ( TCRequest
+    ( TCRequest(..)
     , tcReqRequestID
     , tcReqMAPID
+    , tcReqSCID
+    , tcReqVCID
+
     )
 where
 
@@ -23,6 +26,8 @@ import           Data.PUS.Types
 data TCRequest = TCRequest {
     _tcReqRequestID :: RequestID
     , _tcReqMAPID :: MAPID
+    , _tcReqSCID :: SCID
+    , _tcReqVCID :: VCID
     }
     deriving (Eq, Show, Read, Generic)
 

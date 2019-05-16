@@ -24,38 +24,64 @@ import           Data.PUS.CLTUEncoder
 import           Data.PUS.GlobalState
 import           Data.PUS.Config
 import           Data.PUS.Types
+import           Data.PUS.PUSPacket
+import           Data.PUS.PUSDfh
+import           Data.PUS.PUSPacketEncoder
+import           Data.PUS.SegmentEncoder
+import           Data.PUS.SegmentationFlags
+import           Data.PUS.APID
+import           Data.PUS.TCRequest
 
 import           Protocol.NCTRS
 
 import           GHC.Conc.Sync
 
 
--- data TCFrameFlag =
---     FrameAD
---     | FrameBD
---     | FrameBC
---     | FrameIllegal
---     deriving (Eq, Ord, Enum, Show, Read)
+-- transferFrames :: [TCTransferFrame]
+-- transferFrames =
+--     [ TCTransferFrame 0 FrameBD (mkSCID 0) (mkVCID 0) 0 0 (B.replicate 8 0xAA)
+--     , TCTransferFrame 0 FrameBD (mkSCID 0) (mkVCID 0) 0 1 (B.replicate 8 0xBB)
+--     ]
+
+-- data PUSHeader = PUSHeader {
+--     _pusHdrPktID :: !Word16,
+--     _pusHdrTcVersion :: !Word8,
+--     _pusHdrType ::  !PUSPacketType,
+--     _pusHdrDfhFlag :: !Bool,
+--     _pusHdrTcApid :: !APID,
+--     _pusHdrSeqFlags :: !SegmentationFlags,
+--     _pusHdrTcSsc :: !SSC,
+--     _pusHdrSeqCtrl :: !Word16,
+--     _pusHdrTcLength :: !Word16
+--     } deriving(Show, Read, Generic)
+
+-- data PUSPacket = PUSPacket {
+--     _pusHdr :: !PUSHeader,
+--     _pusDfh :: !DataFieldHeader,
+--     _pusPIs :: Maybe (TMPIVal, TMPIVal),
+--     _pusData :: !ByteString
+--     } deriving (Show, Generic)
+
+-- | PUSStdHeader {
+--     _stdType :: PUSType
+--     , _stdSubType :: PUSSubType
+--     , _stdSrcID :: !Word8
+--     , _stdFlagAcceptance :: !Bool
+--     , _stdFlagStartExec :: !Bool
+--     , _stdFlagProgressExec :: !Bool
+--     , _stdFlagExecComp :: !Bool
+--     }
 
 
--- -- | A TC Transfer Frame
--- data TCTransferFrame = TCTransferFrame {
---     _tcFrameVersion :: !Word8
---     , _tcFrameFlag :: !TCFrameFlag
---     , _tcFrameSCID :: !SCID
---     , _tcFrameVCID :: !VCID
---     , _tcFrameLength :: !Word16
---     , _tcFrameSeq :: !Word8
---     , _tcFrameData :: BS.ByteString
---     } deriving (Eq, Show, Read)
+
+pkt1 = PUSPacket (PUSHeader 0 0 PUSTC True (APID 256) SegmentStandalone (mkSSC 0) 0 0)
+                 (PUSStdHeader 3 25 0 True True False True) Nothing
+                 (B.pack [0..10])
 
 
+pusPackets = [(pkt1, TCRequest 0 0 (mkSCID 533) (mkVCID 1))]
 
-transferFrames :: [TCTransferFrame]
-transferFrames =
-    [ TCTransferFrame 0 FrameBD (mkSCID 0) (mkVCID 0) 0 0 (B.replicate 8 0xAA)
-    , TCTransferFrame 0 FrameBD (mkSCID 0) (mkVCID 0) 0 1 (B.replicate 8 0xBB)
-    ]
+
 
 
 
@@ -74,14 +100,19 @@ main = do
 
         runRIO state $ do
             let chain =
-                    sourceList transferFrames
+                    sourceList pusPackets
+                        .| pusPacketEncoderC
+                        .| tcSegmentEncoderC
+                        .| tcSegmentToTransferFrame
                         .| tcFrameEncodeC
                         .| tcFrameToCltuC
                         .| cltuEncodeRandomizedC
                         .| cltuToNcduC
                         .| encodeTcNcduC
 
+                showConduit = awaitForever $ \ncdu -> liftIO (print ncdu)
+
             runGeneralTCPClient (clientSettings 32111 "localhost") $ \app ->
                 void $ concurrently
                     (runConduitRes (chain .| appSink app))
-                    (runConduitRes (appSource app .| stdoutC))
+                    (runConduitRes (appSource app .| receiveTcNcduC .| showConduit))

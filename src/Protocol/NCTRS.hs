@@ -678,31 +678,31 @@ convertTmStreamType x = case x of
     NCDU_TM_BADFRAME_OFFLINE  -> 11
     NCDU_TM_UNKNOWN_VALUE     -> 255
 
-convertToTmStreamType :: Word8 -> NcduTmStreamType
-convertToTmStreamType x = case x of
-    0  -> NCDU_TM_SLC_TIMELY
-    1  -> NCDU_TM_MC_TIMELY
-    2  -> NCDU_TM_VC_TIMELY
-    3  -> NCDU_TM_BADFRAME_TIMELY
-    4  -> NCDU_TM_SLC_COMPLETE
-    5  -> NCDU_TM_MC_COMPLETE
-    6  -> NCDU_TM_VC_COMPLETE
-    7  -> NCDU_TM_BADFRAME_COMPLETE
-    8  -> NCDU_TM_SLC_OFFLINE
-    9  -> NCDU_TM_MC_OFFLINE
-    10 -> NCDU_TM_VC_OFFLINE
-    11 -> NCDU_TM_BADFRAME_OFFLINE
-    _  -> NCDU_TM_UNKNOWN_VALUE
+-- convertToTmStreamType :: Word8 -> NcduTmStreamType
+-- convertToTmStreamType x = case x of
+--     0  -> NCDU_TM_SLC_TIMELY
+--     1  -> NCDU_TM_MC_TIMELY
+--     2  -> NCDU_TM_VC_TIMELY
+--     3  -> NCDU_TM_BADFRAME_TIMELY
+--     4  -> NCDU_TM_SLC_COMPLETE
+--     5  -> NCDU_TM_MC_COMPLETE
+--     6  -> NCDU_TM_VC_COMPLETE
+--     7  -> NCDU_TM_BADFRAME_COMPLETE
+--     8  -> NCDU_TM_SLC_OFFLINE
+--     9  -> NCDU_TM_MC_OFFLINE
+--     10 -> NCDU_TM_VC_OFFLINE
+--     11 -> NCDU_TM_BADFRAME_OFFLINE
+--     _  -> NCDU_TM_UNKNOWN_VALUE
 
 
-ncduDirectiveTypeBuilder :: NcduDirectiveType -> Builder
-ncduDirectiveTypeBuilder NCDU_UNLOCK_DIRTYPE = word8 2
-ncduDirectiveTypeBuilder NCDU_SETVR_DIRTYPE  = word8 3
-ncduDirectiveTypeBuilder NCDU_ADTER_DIRTYPE  = word8 4
+-- ncduDirectiveTypeBuilder :: NcduDirectiveType -> Builder
+-- ncduDirectiveTypeBuilder NCDU_UNLOCK_DIRTYPE = word8 2
+-- ncduDirectiveTypeBuilder NCDU_SETVR_DIRTYPE  = word8 3
+-- ncduDirectiveTypeBuilder NCDU_ADTER_DIRTYPE  = word8 4
 
 
-ncduTmStreamTypeParser :: Parser NcduTmStreamType
-ncduTmStreamTypeParser = convertToTmStreamType <$> A.anyWord8
+-- ncduTmStreamTypeParser :: Parser NcduTmStreamType
+-- ncduTmStreamTypeParser = convertToTmStreamType <$> A.anyWord8
 
 ncduTmStreamTypeBuilder :: NcduTmStreamType -> Builder
 ncduTmStreamTypeBuilder x = word8 (convertTmStreamType x)
