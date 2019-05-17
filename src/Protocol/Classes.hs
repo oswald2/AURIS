@@ -9,11 +9,13 @@ module Protocol.Classes
     (
         Header(..)
         , Packet(..)
+        , module Protocol.SizeOf
     )
 where
 
 import Data.Word
 
+import Protocol.SizeOf
 
 
 class Header a where

@@ -63,6 +63,9 @@ library
         Data.PUS.TCDirective
         Data.PUS.Time
         Data.PUS.Parameter
+        Data.PUS.EncTime
+        Data.PUS.MissionSpecific.Definitions
+        Protocol.SizeOf
         Protocol.Classes
         Protocol.NCTRS
 

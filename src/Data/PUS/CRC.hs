@@ -40,6 +40,8 @@ import qualified Data.Attoparsec.Binary        as A
 import           Data.Bits
 import qualified Data.Vector.Unboxed           as V
 
+import Protocol.SizeOf
+
 import           Numeric
 
 
@@ -58,6 +60,8 @@ mkCRC = CRC
 crcLen :: Int
 crcLen = 2
 
+instance SizeOf CRC where
+  sizeof _ = crcLen
 
 -- | Calculates the CRC for the given strict 'ByteString'
 {-# INLINABLE crcCalc #-}

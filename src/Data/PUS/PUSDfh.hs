@@ -43,8 +43,20 @@ module Data.PUS.PUSDfh
     , pusType 
     , pusSubType 
     , pusSrcID
+    , pusDestID
     , pusAckFlags
     , dfhLength
+    , stdTmVersion
+    , stdTmType
+    , stdTmSubType
+    , stdTmDestinationID
+    , stdTmOBTime 
+    , stdFrFlagAcceptance 
+    , stdFrFlagStartExec 
+    , stdFrFlagProgressExec
+    , stdFrFlagExecComp  
+    , stdFrFreeHdr
+
     )
 where
 
@@ -61,8 +73,9 @@ import qualified Data.Vector as V
 
 import           Data.PUS.Types
 import           Data.PUS.Parameter
+import           Data.PUS.EncTime
 
-
+import Protocol.SizeOf
 
 
 -- | Data Structure for the data field header of a PUS packet
@@ -71,7 +84,7 @@ data DataFieldHeader =
     PUSEmptyHeader
     -- | A std header defined according to the PUS standard. Most missions will
     -- be fine with this.
-    | PUSStdHeader {
+    | PUSTCStdHeader {
         _stdType :: PUSType
         , _stdSubType :: PUSSubType
         , _stdSrcID :: !Word8
@@ -80,47 +93,80 @@ data DataFieldHeader =
         , _stdFlagProgressExec :: !Bool
         , _stdFlagExecComp :: !Bool
         }
+    | PUSTMStdHeader {
+        _stdTmVersion :: !Word8
+        , _stdTmType :: !PUSType
+        , _stdTmSubType :: !PUSSubType
+        , _stdTmDestinationID :: !Word8
+        , _stdTmOBTime :: !CUCTime
+        }
     -- TODO: implementation of free header
-    | PUSFreeHeader (Vector Parameter)
+    | PUSFreeHeader { 
+        _stdFrFlagAcceptance :: !Bool
+        , _stdFrFlagStartExec :: !Bool
+        , _stdFrFlagProgressExec :: !Bool
+        , _stdFrFlagExecComp :: !Bool
+        , _stdFrFreeHdr :: Vector Parameter
+    }
     deriving (Eq, Show, Read, Generic)
 makeLenses ''DataFieldHeader
 
 -- | returns the type of the header
 pusType :: DataFieldHeader -> PUSType
 pusType PUSEmptyHeader = mkPUSType 0
-pusType PUSStdHeader {..} = _stdType
-pusType (PUSFreeHeader _v) = mkPUSType 0
+pusType PUSTCStdHeader {..} = _stdType
+pusType PUSTMStdHeader {..} = _stdTmType
+pusType PUSFreeHeader {} = mkPUSType 0
 
 -- | returns the sub type of the header
 pusSubType :: DataFieldHeader -> PUSSubType
 pusSubType PUSEmptyHeader = mkPUSSubType 0
-pusSubType PUSStdHeader {..} = _stdSubType
-pusSubType (PUSFreeHeader _v) = mkPUSSubType 0
+pusSubType PUSTCStdHeader {..} = _stdSubType
+pusSubType PUSTMStdHeader {..} = _stdTmSubType
+pusSubType PUSFreeHeader {..} = mkPUSSubType 0
 
 -- | returns the source ID of the header 
 pusSrcID :: DataFieldHeader -> Word8
 pusSrcID PUSEmptyHeader = 0
-pusSrcID PUSStdHeader {..} = _stdSrcID
-pusSrcID (PUSFreeHeader _v) = 0
+pusSrcID PUSTCStdHeader {..} = _stdSrcID
+pusSrcID PUSTMStdHeader {..} = _stdTmDestinationID
+pusSrcID PUSFreeHeader {..} = 0
+
+-- | returns the destination ID of the TM header 
+pusDestID :: DataFieldHeader -> Word8
+pusDestID PUSEmptyHeader = 0
+pusDestID PUSTCStdHeader {..} = _stdSrcID
+pusDestID PUSTMStdHeader {..} = _stdTmDestinationID
+pusDestID PUSFreeHeader {} = 0
+
 
 -- | returns the requested verification stages for the TC
 pusAckFlags :: DataFieldHeader -> (Bool, Bool, Bool, Bool)
 pusAckFlags PUSEmptyHeader = (True, False, False, True)
-pusAckFlags PUSStdHeader {..} = (_stdFlagAcceptance, _stdFlagStartExec, 
+pusAckFlags PUSTCStdHeader {..} = (_stdFlagAcceptance, _stdFlagStartExec, 
     _stdFlagProgressExec, _stdFlagExecComp)
-pusAckFlags (PUSFreeHeader _v) = (True, False, False, True)
+pusAckFlags PUSTMStdHeader {} = (False, False, False, False)
+pusAckFlags PUSFreeHeader {..} = (_stdFrFlagAcceptance, _stdFrFlagStartExec, 
+    _stdFrFlagProgressExec, _stdFrFlagExecComp)
+
+
+
 
 -- | returns the length of the data field header when encoded in bytes
 dfhLength :: DataFieldHeader -> Int
 dfhLength PUSEmptyHeader = 0
-dfhLength PUSStdHeader {} = 4
-dfhLength (PUSFreeHeader _v) = 0
+dfhLength PUSTCStdHeader {} = 4
+dfhLength PUSTMStdHeader {} = 10
+dfhLength PUSFreeHeader {} = 0
+
+instance SizeOf DataFieldHeader where
+    sizeof = dfhLength
 
 
 -- | A builder for the data field header
 dfhBuilder :: DataFieldHeader -> Builder
 dfhBuilder PUSEmptyHeader = mempty
-dfhBuilder x@PUSStdHeader {} =
+dfhBuilder x@PUSTCStdHeader {} =
     let b1 = 0x10 .|. if _stdFlagAcceptance x
             then 0x01
             else 0x00 .|. if _stdFlagStartExec x
@@ -132,15 +178,23 @@ dfhBuilder x@PUSStdHeader {} =
             <> pusTypeBuilder (_stdType x)
             <> pusSubTypeBuilder (_stdSubType x)
             <> word8 (_stdSrcID x)
+dfhBuilder x@PUSTMStdHeader {} = 
+    word8 ((((_stdTmVersion x) .&. 0x07) `shiftL` 4))
+    <> pusTypeBuilder (_stdTmType x)
+    <> pusSubTypeBuilder (_stdTmSubType x)
+    <> word8 (_stdTmDestinationID x)
+    <> cucTimeBuilder (_stdTmOBTime x)
 -- TODO: implement the free header when the parameters are implemented
-dfhBuilder (PUSFreeHeader _v) =  mempty
+dfhBuilder PUSFreeHeader {} =  mempty
+
+
 
 -- | Parser for the data field header. In order to distinguish which 
 -- header is used, it needs an example header for the structure to be
 -- able to parse it
 dfhParser :: DataFieldHeader -> Parser DataFieldHeader
 dfhParser PUSEmptyHeader = pure PUSEmptyHeader
-dfhParser PUSStdHeader {} = do
+dfhParser PUSTCStdHeader {} = do
     b1 <- A.anyWord8
     t  <- pusTypeParser
     st <- pusSubTypeParser
@@ -150,7 +204,7 @@ dfhParser PUSStdHeader {} = do
         fs  = b1 .&. 0x02 /= 0
         fp  = b1 .&. 0x04 /= 0
         fe  = b1 .&. 0x08 /= 0
-        hdr = PUSStdHeader { _stdType             = t
+        hdr = PUSTCStdHeader { _stdType             = t
                            , _stdSubType          = st
                            , _stdSrcID            = si
                            , _stdFlagAcceptance   = fa
@@ -160,4 +214,13 @@ dfhParser PUSStdHeader {} = do
                            }
 
     pure hdr
-dfhParser PUSFreeHeader {} = pure (PUSFreeHeader V.empty)
+dfhParser PUSTMStdHeader {} = do
+    vers <- A.anyWord8
+    tp   <- A.anyWord8
+    st   <- A.anyWord8
+    si   <- A.anyWord8
+    obt  <- cucTimeParser nullCUCTime
+    let vers' = (vers .&. 0x70) `shiftR` 4
+    return $! PUSTMStdHeader vers' (mkPUSType tp) (mkPUSSubType st) si obt
+
+dfhParser PUSFreeHeader {} = pure (PUSFreeHeader True True False True V.empty)
