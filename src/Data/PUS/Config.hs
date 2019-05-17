@@ -50,8 +50,11 @@ import           Data.PUS.Types
 data Config = Config {
     -- | The block size that is used to encode/decode the CLTU
     cfgCltuBlockSize :: CltuBlockSize
+    -- | The start value of the randomizer used for standard ESA TC randomization
     , cfgRandomizerStartValue :: Word8
+    -- | The spacecraft ID used
     , cfgSCID :: SCID
+    -- | A list of available virtual channels.
     , cfgVCIDs :: [VCID]
 } deriving (Eq, Read, Show, Generic)
 

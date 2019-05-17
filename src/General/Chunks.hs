@@ -24,7 +24,7 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as B
 
 
--- | Chunk a @bs into list of smaller byte strings of no more than @n elements
+-- | Chunk a @bs@ into list of smaller byte strings of no more than @n elements
 chunkedBy :: Int -> ByteString -> [ByteString]
 chunkedBy n bs = if B.length bs == 0
   then []
@@ -32,7 +32,7 @@ chunkedBy n bs = if B.length bs == 0
     (as, zs) -> as : chunkedBy n zs
 {-# INLINABLE chunkedBy #-}
 
--- | Chunk a @bs into list of smaller byte strings of no more than @n elements
+-- | Chunk a @bs@ into list of smaller byte strings of no more than @n elements
 chunkedByBS :: Int -> BS.ByteString -> [BS.ByteString]
 chunkedByBS n bs = if BS.length bs == 0
   then []
@@ -42,7 +42,7 @@ chunkedByBS n bs = if BS.length bs == 0
 
 
 
--- | divides a list into chunks of sice @n. Last chunk my be smaller
+-- | divides a list into chunks of sice @n@. Last chunk my be smaller
 {-# INLINABLE chunks #-}
 chunks :: Int -> [a] -> [[a]]
 chunks = go
@@ -54,7 +54,7 @@ chunks = go
         bef : chunks n aft
 
 
--- | divides a list into chunks of size @n, then adds @is as a separator
+-- | divides a list into chunks of size @n@, then adds @is as a separator
 -- to the next chunk
 {-# INLINABLE chunksIntersperse #-}
 chunksIntersperse :: Int -> [a] -> [a] -> [[a]]

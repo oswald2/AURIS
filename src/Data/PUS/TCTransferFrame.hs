@@ -210,7 +210,7 @@ tcFrameEncodeC = do
                     st <- ask
                     liftIO
                         $ raiseEvent st
-                        $ (EV_IllegalTCFrame
+                        $ (EV_IllegalTCFrame EVAAlarms
                               "Illegal Frame on encode, frame discarded"
                           )
                     tcFrameEncodeC
@@ -228,13 +228,13 @@ tcFrameDecodeC = conduitParserEither tcFrameParser .| proc
         case x of
             Left err -> do
                 let msg = T.pack (errorMessage err)
-                liftIO $ raiseEvent st (EV_IllegalTCFrame msg)
+                liftIO $ raiseEvent st (EV_IllegalTCFrame EVAAlarms msg)
                 proc
             Right (_, frame) -> do
                 cfg <- view getConfig
                 case checkTCFrame cfg frame of
                     Left err -> do
-                        liftIO $ raiseEvent st (EV_IllegalTCFrame err)
+                        liftIO $ raiseEvent st (EV_IllegalTCFrame EVAAlarms err)
                         proc
                     Right () -> do
                         yield frame

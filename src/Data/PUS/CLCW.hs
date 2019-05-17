@@ -1,3 +1,17 @@
+{-|
+Module      : Data.PUS.CLCW
+Description : Data type for the command link control word
+Copyright   : (c) Michael Oswald, 2019
+License     : BSD-3
+Maintainer  : michael.oswald@onikudaki.net
+Stability   : experimental
+Portability : POSIX
+
+This module is about the CLCW data type. The CLCW is downlinked with
+TM transfer frames (it is also called OCF, operational control field)
+and is used as a state representation of the spacecraft internal FARM-1 
+state machine on the receiving side of the COP-1 protocol. 
+|-}
 {-# LANGUAGE OverloadedStrings
     , BangPatterns
     , GeneralizedNewtypeDeriving
@@ -49,7 +63,7 @@ import           Data.PUS.Types
 
 import           Formatting
 
-
+-- | The CLCW data type itself
 data CLCW = CLCW {
   _clcwType :: !Bool,
   _clcwVersion :: {-# UNPACK #-} !Word8,
@@ -72,7 +86,7 @@ instance Display CLCW where
     textDisplay x =
         T.pack (show x) <> sformat (left 8 '0' %. hex % ": ") (packValues x)
 
-
+-- | Performs a validity check of the CLCW itself
 {-# INLINABLE checkCLCW #-}
 checkCLCW :: CLCW -> Either Text Bool
 checkCLCW v =
@@ -92,20 +106,24 @@ checkCLCW v =
             True  -> Right True
             False -> Left $ T.unlines [ err | (True, err) <- zip test msg ]
 
-
+-- | smart constructor for the CLCW
 {-# INLINABLE createCLCW #-}
 createCLCW
     :: VCID -> Word8 -> Bool -> Bool -> Bool -> Bool -> Bool -> Word8 -> CLCW
 createCLCW vcid vr noRF noBitlock lock waitf retrans bcount =
     CLCW False 0 0 1 vcid noRF noBitlock lock waitf retrans bcount False vr
 
+-- | a default value for the CLCW
 {-# INLINABLE defaultCLCW #-}
 defaultCLCW :: CLCW
 defaultCLCW = createCLCW 0 0 False False False False False 0
 
+-- | Specifies the length of an encoded CLCW value in Bytes
 clcwLen :: Int
 clcwLen = 4
 
+-- | Performs the bit fiddling to get the resulting Word32 value from 
+-- a CLCW. Used in encoding the CLCW for transmission
 {-# INLINABLE packValues #-}
 packValues :: CLCW -> Word32
 packValues v =
@@ -138,6 +156,7 @@ packValues v =
                     .|. val
     in  result
 
+-- | The opposite of 'packValues'. Creates a CLCW from a Word32
 {-# INLINABLE unpackValues #-}
 unpackValues :: Word32 -> CLCW
 unpackValues v =
@@ -169,10 +188,11 @@ unpackValues v =
              val
 
 
-
+-- | A builder for the CLCW
 clcwBuilder :: CLCW -> B.Builder
 clcwBuilder clcw = word32BE $ packValues clcw
 
+-- | A attoparsec parser for the CLCW
 clcwParser :: Parser CLCW
 clcwParser = do
     val <- A.anyWord32be

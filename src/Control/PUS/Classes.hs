@@ -1,3 +1,15 @@
+{-|
+Module      : Control.PUS.Classes
+Description : Various classes for config- and state-handling within RIO
+Copyright   : (c) Michael Oswald, 2019
+License     : BSD-3
+Maintainer  : michael.oswald@onikudaki.net
+Stability   : experimental
+Portability : POSIX
+
+This module contains classes with the HasX pattern to have finer gained 
+access control to IO functions. Used within the encoding conduits.
+|-}
 {-# LANGUAGE
     NoImplicitPrelude
     , MultiParamTypeClasses
@@ -27,14 +39,15 @@ import           Data.PUS.Config
 import           Data.PUS.Events
 import           Data.PUS.GlobalState
 
-
+-- | This class specifies how to get a configuration
 class HasConfig env where
     getConfig :: Getter env Config
 
-
+-- | Class for getting the application state
 class HasPUSState env where
     appStateG :: Getter env AppState
 
+-- | Class for accessing the global state
 class (HasConfig env, HasPUSState env) => HasGlobalState env where
     raiseEvent :: env -> Event -> IO ()
 

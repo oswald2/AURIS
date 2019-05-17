@@ -17,6 +17,7 @@ Contains just the Events, which can be raised by the library
 module Data.PUS.Events
     (
         Event(..)
+        , EventArea(..)
     )
 where
 
@@ -26,10 +27,23 @@ import Data.Binary
 import Data.Aeson
 import RIO.Text (Text)
 
+-- | An event area. An application can register on certain event Areas in
+-- order to not get flooded with all kinds of events
+data EventArea =
+    EVACommanding
+    | EVAAlarms
+    | EVATelemetry
+    deriving (Eq, Ord, Enum, Show, Read, Generic)
 
+instance Binary EventArea
+instance FromJSON EventArea
+instance ToJSON EventArea where
+    toEncoding = genericToEncoding defaultOptions
+
+-- | The events themselves
 data Event =
-      EV_IllegalTCFrame Text
-    | EV_NCDUParseError Text
+      EV_IllegalTCFrame EventArea Text
+    | EV_NCDUParseError EventArea Text
     deriving (Eq, Show, Read, Generic)
 
 instance Binary Event

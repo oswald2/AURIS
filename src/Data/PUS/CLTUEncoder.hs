@@ -1,3 +1,14 @@
+{-|
+Module      : Data.PUS.CLTUEncoder
+Description : Provides a conduit for translating a CLTU into a NCDU 
+Copyright   : (c) Michael Oswald, 2019
+License     : BSD-3
+Maintainer  : michael.oswald@onikudaki.net
+Stability   : experimental
+Portability : POSIX
+
+Provides a conduit for translating a CLTU into a NCDU for transmission via NCTRS protocol
+|-}
 {-# LANGUAGE OverloadedStrings
     , BangPatterns
     , GeneralizedNewtypeDeriving
