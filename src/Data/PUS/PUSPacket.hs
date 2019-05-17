@@ -25,9 +25,9 @@ module Data.PUS.PUSPacket
     , pusHdrTcSsc
     , pusHdrSeqCtrl
     , pusHdrTcLength
-    , tmpiValue 
+    , tmpiValue
     , tmpiOffset
-    , tmpiWidth 
+    , tmpiWidth
     , pusPktHdrBuilder
     , pusPktHdrParser
     )
@@ -38,7 +38,7 @@ import           RIO hiding (Builder)
 import qualified RIO.ByteString as B
 import qualified RIO.Vector.Storable as V
 import qualified RIO.Vector.Storable.Unsafe as V (unsafeFreeze)
-import           Data.Vector.Storable.ByteString 
+import           Data.Vector.Storable.ByteString
 
 import           Control.Lens                   ( makeLenses, (.~) )
 import           Control.Monad.ST
@@ -134,7 +134,7 @@ encodePktWithoutCRC pkt useCRC =
         encHdr = pusPktHdrBuilder (newPkt ^. pusHdr)
         encDfh = dfhBuilder (newPkt ^. pusDfh)
         payload = newPkt ^. pusData
-        !pl    = builderBytes $ case newPkt ^. pusHdr ^. pusHdrDfhFlag of
+        !pl    = builderBytes $ case newPkt ^. pusHdr . pusHdrDfhFlag of
             True  -> encHdr <> encDfh <> bytes payload
             False -> encHdr <> bytes payload
     in  applied pkt pl
@@ -164,9 +164,9 @@ pusPktCalcLen pkt useCRC =
 pusPktUpdateLen :: PUSPacket -> Bool -> PUSPacket
 pusPktUpdateLen pkt useCRC =
     let newLen = pusPktCalcLen pkt useCRC
-    in  
+    in
     pkt & pusHdr . pusHdrTcLength .~ newLen
-    
+
 
 
 -- | sets the PI1 and PI2 values in a already encoded packet. This has
@@ -227,7 +227,7 @@ pusPktHdrParser = do
 
 
 packPktID :: Word8 -> PUSPacketType -> Bool -> APID -> Word16
-packPktID !vers !tp !dfh !(APID apid) =
+packPktID !vers !tp !dfh (APID apid) =
     let versShifted = fromIntegral vers `shiftL` 13
         typeShifted = case tp of
             PUSTM -> 0x0000
@@ -272,4 +272,3 @@ unpackSeqFlags seg = (fl, mkSSC (seg .&. 0x3FFF))
         _      -> SegmentStandalone
 
 
-        
