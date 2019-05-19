@@ -7,7 +7,10 @@
     , TypeFamilies
 #-}
 module Data.PUS.FOP1
-    ()
+    (
+      cop1Conduit
+      , fop1Program
+    )
 where
 
 import           RIO
@@ -41,18 +44,6 @@ import           Protocol.ProtocolInterfaces
 _checkSlidingWinWidth :: Word8 -> Bool
 _checkSlidingWinWidth w = (2 < w) && (w < 254) && even w
 
-
-data COP1Directive =
-  InitADWithoutCLCW
-  | InitADWithCLCW
-  | InitADWithUnlock TCDirective
-  | InitADWithSetVR  TCDirective
-
-
-data COP1Input =
-  COP1Segment EncodedSegment
-  | COP1Directive TCDirective
-  | COP1CLCW CLCW
 
 
 
@@ -97,14 +88,31 @@ data FOPMachineState s where
 instance (MonadIO m) => FOPMachine (FOPMachineT m) where
   type State (FOPMachineT m) = FOPMachineState
 
-  initial = return Initial
+  initial = pure Initial
 
 
-fop1Program :: (Monad m, FOPMachine m) => m ()
-fop1Program = do
+fop1Program :: (MonadIO m, FOPMachine m) => TMVar EncodedSegment -> COP1Queue -> m ()
+fop1Program segBuffer cop1Queue = do
     initial
+    inp <- liftIO $ readInput cop1Queue
+    case inp of
+      COP1Dir dir -> processDirective dir
+      COP1CLCW clcw -> pure ()
+
     pure ()
 
+processDirective InitADWithoutCLCW = pure ()
+processDirective InitADWithCLCW = pure ()
+processDirective (InitADWithUnlock dir) = pure ()
+processDirective (InitADWithSetVR dir) = pure ()
+
+
+readSegment :: (MonadIO m) => TMVar EncodedSegment -> m EncodedSegment
+readSegment var = atomically $ takeTMVar var
+
+
+readInput :: (MonadIO m) => COP1Queue -> m COP1Input
+readInput chan = atomically $ readTBQueue chan
 
 
 

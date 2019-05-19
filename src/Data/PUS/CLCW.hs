@@ -22,7 +22,6 @@ state machine on the receiving side of the COP-1 protocol.
 #-}
 module Data.PUS.CLCW
     ( CLCW(..)
-    , CLCWChan
     , createCLCW
     , packValues
     , unpackValues
@@ -86,10 +85,6 @@ instance Display CLCW where
     textDisplay x =
         T.pack (show x) <> sformat (left 8 '0' %. hex % ": ") (packValues x)
 
-
--- | a channel for transmitting the CLCW from the packetizer to the
--- FOP-1 layer
-type CLCWChan = TBQueue CLCW
 
 
 -- | Performs a validity check of the CLCW itself

@@ -89,10 +89,10 @@ data TCSegment = TCSegment {
 makeLenses ''TCSegment
 
 data EncodedSegment = EncodedSegment {
-        _encSegSegment :: ByteString
-        , _encSegFlag :: SegmentationFlags
-        , _encSeqSegNr :: Word32
-        , _encSegRequest :: TCRequest
+        _encSegSegment :: !ByteString
+        , _encSegFlag :: !SegmentationFlags
+        , _encSeqSegNr :: !Word32
+        , _encSegRequest :: !TCRequest
     } deriving (Show, Read)
 makeLenses ''EncodedSegment
 

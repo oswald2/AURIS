@@ -30,6 +30,10 @@ module Data.PUS.COP1Types
     , fopTransmissionCount
     , fopSuspendState
     , fopSlidingWinWidth
+
+    , COP1Directive(..)
+    , COP1Input(..)
+    , COP1Queue
     )
 where
 
@@ -41,6 +45,8 @@ import           Control.Lens                   ( makeLenses )
 import           Data.PUS.Types
 import           Data.PUS.Segment
 import           Data.PUS.Time
+import           Data.PUS.TCDirective
+import           Data.PUS.CLCW
 
 
 data TTType = TTAlert | TTSuspend
@@ -91,3 +97,20 @@ initialFOPState = FOPState
     , _fopSuspendState      = 0
     , _fopSlidingWinWidth   = 10
     }
+
+
+
+data COP1Directive =
+    InitADWithoutCLCW
+    | InitADWithCLCW
+    | InitADWithUnlock TCDirective
+    | InitADWithSetVR  TCDirective
+
+
+data COP1Input =
+    COP1Dir COP1Directive
+    | COP1CLCW CLCW
+
+
+
+type COP1Queue = TBQueue COP1Input
