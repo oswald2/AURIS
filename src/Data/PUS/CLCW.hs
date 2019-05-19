@@ -9,8 +9,8 @@ Portability : POSIX
 
 This module is about the CLCW data type. The CLCW is downlinked with
 TM transfer frames (it is also called OCF, operational control field)
-and is used as a state representation of the spacecraft internal FARM-1 
-state machine on the receiving side of the COP-1 protocol. 
+and is used as a state representation of the spacecraft internal FARM-1
+state machine on the receiving side of the COP-1 protocol.
 |-}
 {-# LANGUAGE OverloadedStrings
     , BangPatterns
@@ -22,6 +22,7 @@ state machine on the receiving side of the COP-1 protocol.
 #-}
 module Data.PUS.CLCW
     ( CLCW(..)
+    , CLCWChan
     , createCLCW
     , packValues
     , unpackValues
@@ -44,7 +45,7 @@ module Data.PUS.CLCW
     , clcwBCounter
     , clcwReportType
     , clcwReportVal
-  
+
     )
 where
 
@@ -79,12 +80,17 @@ data CLCW = CLCW {
   _clcwReportType :: !Bool,
   _clcwReportVal :: {-# UNPACK #-} !Word8
   } deriving (Read, Show)
-
 makeLenses ''CLCW
 
 instance Display CLCW where
     textDisplay x =
         T.pack (show x) <> sformat (left 8 '0' %. hex % ": ") (packValues x)
+
+
+-- | a channel for transmitting the CLCW from the packetizer to the
+-- FOP-1 layer
+type CLCWChan = TBQueue CLCW
+
 
 -- | Performs a validity check of the CLCW itself
 {-# INLINABLE checkCLCW #-}
@@ -122,7 +128,7 @@ defaultCLCW = createCLCW 0 0 False False False False False 0
 clcwLen :: Int
 clcwLen = 4
 
--- | Performs the bit fiddling to get the resulting Word32 value from 
+-- | Performs the bit fiddling to get the resulting Word32 value from
 -- a CLCW. Used in encoding the CLCW for transmission
 {-# INLINABLE packValues #-}
 packValues :: CLCW -> Word32

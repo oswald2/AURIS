@@ -12,18 +12,19 @@
 #-}
 module Protocol.Switcher
     ( ProtocolChannels
+    , NCTRSChan
     , prChNCTRS
     , prChCnC
     , prChEDEN
     , protocolSwitcherC
     , createProtocolChannels
+
     )
 where
 
 import           RIO
 
 import           Conduit
-import           Data.Conduit.TQueue
 
 import           Control.Lens                   ( makeLenses )
 
@@ -31,8 +32,12 @@ import           Protocol.ProtocolInterfaces
 
 
 
+type NCTRSChan a = TBQueue (ProtocolPacket a)
+
+
+
 data ProtocolChannels a = ProtocolChannels {
-   _prChNCTRS :: TBQueue (ProtocolPacket a)
+   _prChNCTRS :: NCTRSChan a
    , _prChCnC :: TBQueue (ProtocolPacket a)
    , _prChEDEN :: TBQueue (ProtocolPacket a)
    }

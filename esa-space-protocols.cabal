@@ -55,6 +55,7 @@ library
         Data.PUS.PUSPacket
         Data.PUS.PUSPacketEncoder
         Data.PUS.PUSDfh
+        Data.PUS.COP1Types
         Data.PUS.FOP1
         Data.PUS.FARM1
         Data.PUS.Segment
