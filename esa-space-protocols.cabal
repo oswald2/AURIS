@@ -69,7 +69,7 @@ library
         Protocol.Classes
         Protocol.NCTRS
         Protocol.ProtocolInterfaces
-
+        Protocol.Switcher
 
 
     hs-source-dirs: src
@@ -100,7 +100,7 @@ library
         , parallel
         , lens
         , binary
-        , stm
+        , stm-conduit
         , thyme
         , vector-binary-instances
         , bytestring-to-vector
