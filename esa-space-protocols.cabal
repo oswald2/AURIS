@@ -68,6 +68,7 @@ library
         Protocol.SizeOf
         Protocol.Classes
         Protocol.NCTRS
+        Protocol.ProtocolInterfaces
 
 
 
@@ -82,6 +83,7 @@ library
         , bytestring-strict-builder
         , aeson
         , text
+        , text-builder
         , hw-prim
         , text-show
         , vector

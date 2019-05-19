@@ -1,10 +1,29 @@
+{-# LANGUAGE OverloadedStrings
+    , BangPatterns
+    , GeneralizedNewtypeDeriving
+    , DeriveGeneric
+    , RecordWildCards
+    , NoImplicitPrelude
+    , BinaryLiterals
+    , NumericUnderscores
+    , FlexibleInstances
+    , GADTs
+    , ExistentialQuantification
+    , TemplateHaskell
+#-}
 module Data.PUS.MissionSpecific.Definitions
 (
     PUSMissionSpecific(..)
     , defaultMissionSpecific
+    , pmsTCDataFieldHeader
+    , pmsTMDataFieldHeader
+
 )
 where
 
+import RIO
+
+import Control.Lens (makeLenses)
 
 import Data.PUS.PUSDfh
 import Data.PUS.EncTime
@@ -16,7 +35,7 @@ data PUSMissionSpecific = PUSMissionSpecific {
     _pmsTCDataFieldHeader :: DataFieldHeader
     , _pmsTMDataFieldHeader :: DataFieldHeader
 }
-
+makeLenses ''PUSMissionSpecific
 
 -- | a default value for PUS compliant missions
 defaultMissionSpecific :: PUSMissionSpecific

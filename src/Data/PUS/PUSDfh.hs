@@ -7,14 +7,14 @@ Maintainer  : michael.oswald@onikudaki.net
 Stability   : experimental
 Portability : POSIX
 
-Most PUS Packets contain a secondary header, the data field header. This 
+Most PUS Packets contain a secondary header, the data field header. This
 module provides data types and functions to handle the data field header.
 Since the header is often mission specific, several constructors are provided.
  * 'PUSEmptyHeader' is exactly that, not secondary header will be generated
  * 'PUSStdHeader' is the standard header from the PUS standard
- * 'PUSFreeHeader' is a secondary header which can be freely defined as a 
+ * 'PUSFreeHeader' is a secondary header which can be freely defined as a
    Vector of Parameters (analog to a TC or TM packet), but it has to provide
-   3 parameters to be PUS compliant: all three parameters with type Word8 named "Type", 
+   3 parameters to be PUS compliant: all three parameters with type Word8 named "Type",
    "SubType" and "SourceID". The other parameters can be set completely free.
 
 /Note: free headers are currently not implemented/
@@ -40,8 +40,8 @@ module Data.PUS.PUSDfh
     , stdFlagExecComp
     , dfhParser
     , dfhBuilder
-    , pusType 
-    , pusSubType 
+    , pusType
+    , pusSubType
     , pusSrcID
     , pusDestID
     , pusAckFlags
@@ -50,12 +50,23 @@ module Data.PUS.PUSDfh
     , stdTmType
     , stdTmSubType
     , stdTmDestinationID
-    , stdTmOBTime 
-    , stdFrFlagAcceptance 
-    , stdFrFlagStartExec 
+    , stdTmOBTime
+    , stdFrFlagAcceptance
+    , stdFrFlagStartExec
     , stdFrFlagProgressExec
-    , stdFrFlagExecComp  
+    , stdFrFlagExecComp
     , stdFrFreeHdr
+    , cncTcCrcFlags
+    , cncTcAcceptance
+    , cncTcStart
+    , cncTcProgress
+    , cncTcCompletion
+    , cncTcType
+    , cncTcSubType
+    , cncTcSourceID
+
+    , defaultTCHeader
+    , defaultCnCTCHeader
 
     )
 where
@@ -79,7 +90,7 @@ import Protocol.SizeOf
 
 
 -- | Data Structure for the data field header of a PUS packet
-data DataFieldHeader = 
+data DataFieldHeader =
     -- | An empty header. Will not be encoded and decoded and returns size 0
     PUSEmptyHeader
     -- | A std header defined according to the PUS standard. Most missions will
@@ -100,8 +111,18 @@ data DataFieldHeader =
         , _stdTmDestinationID :: !Word8
         , _stdTmOBTime :: !CUCTime
         }
+    | PUSCnCTCHeader {
+        _cncTcCrcFlags :: !Word8
+        , _cncTcAcceptance :: !Bool
+        , _cncTcStart :: !Bool
+        , _cncTcProgress :: !Bool
+        , _cncTcCompletion :: !Bool
+        , _cncTcType :: !PUSType
+        , _cncTcSubType :: !PUSSubType
+        , _cncTcSourceID :: !Word8
+    }
     -- TODO: implementation of free header
-    | PUSFreeHeader { 
+    | PUSFreeHeader {
         _stdFrFlagAcceptance :: !Bool
         , _stdFrFlagStartExec :: !Bool
         , _stdFrFlagProgressExec :: !Bool
@@ -111,11 +132,20 @@ data DataFieldHeader =
     deriving (Eq, Show, Read, Generic)
 makeLenses ''DataFieldHeader
 
+
+defaultTCHeader :: DataFieldHeader
+defaultTCHeader = PUSTCStdHeader 0 0 0 False False False False
+
+defaultCnCTCHeader :: DataFieldHeader
+defaultCnCTCHeader = PUSCnCTCHeader 0 False False False False 0 0 0
+
+
 -- | returns the type of the header
 pusType :: DataFieldHeader -> PUSType
 pusType PUSEmptyHeader = mkPUSType 0
 pusType PUSTCStdHeader {..} = _stdType
 pusType PUSTMStdHeader {..} = _stdTmType
+pusType PUSCnCTCHeader {..} = _cncTcType
 pusType PUSFreeHeader {} = mkPUSType 0
 
 -- | returns the sub type of the header
@@ -123,30 +153,34 @@ pusSubType :: DataFieldHeader -> PUSSubType
 pusSubType PUSEmptyHeader = mkPUSSubType 0
 pusSubType PUSTCStdHeader {..} = _stdSubType
 pusSubType PUSTMStdHeader {..} = _stdTmSubType
+pusSubType PUSCnCTCHeader {..} = _cncTcSubType
 pusSubType PUSFreeHeader {..} = mkPUSSubType 0
 
--- | returns the source ID of the header 
+-- | returns the source ID of the header
 pusSrcID :: DataFieldHeader -> Word8
 pusSrcID PUSEmptyHeader = 0
 pusSrcID PUSTCStdHeader {..} = _stdSrcID
 pusSrcID PUSTMStdHeader {..} = _stdTmDestinationID
+pusSrcID PUSCnCTCHeader {..} = _cncTcSourceID
 pusSrcID PUSFreeHeader {..} = 0
 
--- | returns the destination ID of the TM header 
+-- | returns the destination ID of the TM header
 pusDestID :: DataFieldHeader -> Word8
 pusDestID PUSEmptyHeader = 0
 pusDestID PUSTCStdHeader {..} = _stdSrcID
 pusDestID PUSTMStdHeader {..} = _stdTmDestinationID
+pusDestID PUSCnCTCHeader {..} = _cncTcSourceID
 pusDestID PUSFreeHeader {} = 0
 
 
 -- | returns the requested verification stages for the TC
 pusAckFlags :: DataFieldHeader -> (Bool, Bool, Bool, Bool)
 pusAckFlags PUSEmptyHeader = (True, False, False, True)
-pusAckFlags PUSTCStdHeader {..} = (_stdFlagAcceptance, _stdFlagStartExec, 
+pusAckFlags PUSTCStdHeader {..} = (_stdFlagAcceptance, _stdFlagStartExec,
     _stdFlagProgressExec, _stdFlagExecComp)
 pusAckFlags PUSTMStdHeader {} = (False, False, False, False)
-pusAckFlags PUSFreeHeader {..} = (_stdFrFlagAcceptance, _stdFrFlagStartExec, 
+pusAckFlags PUSCnCTCHeader {} = (False, False, False, False)
+pusAckFlags PUSFreeHeader {..} = (_stdFrFlagAcceptance, _stdFrFlagStartExec,
     _stdFrFlagProgressExec, _stdFrFlagExecComp)
 
 
@@ -157,6 +191,7 @@ dfhLength :: DataFieldHeader -> Int
 dfhLength PUSEmptyHeader = 0
 dfhLength PUSTCStdHeader {} = 4
 dfhLength PUSTMStdHeader {} = 10
+dfhLength PUSCnCTCHeader {} = 4
 dfhLength PUSFreeHeader {} = 0
 
 instance SizeOf DataFieldHeader where
@@ -178,18 +213,31 @@ dfhBuilder x@PUSTCStdHeader {} =
             <> pusTypeBuilder (_stdType x)
             <> pusSubTypeBuilder (_stdSubType x)
             <> word8 (_stdSrcID x)
-dfhBuilder x@PUSTMStdHeader {} = 
+dfhBuilder x@PUSTMStdHeader {} =
     word8 ((((_stdTmVersion x) .&. 0x07) `shiftL` 4))
     <> pusTypeBuilder (_stdTmType x)
     <> pusSubTypeBuilder (_stdTmSubType x)
     <> word8 (_stdTmDestinationID x)
     <> cucTimeBuilder (_stdTmOBTime x)
+dfhBuilder x@PUSCnCTCHeader{} =
+    word8 ((((_cncTcCrcFlags x) .&. 0x07) `shiftL` 4) .|. ackFlags)
+        <> pusTypeBuilder (_cncTcType x)
+        <> pusSubTypeBuilder (_cncTcSubType x)
+        <> word8 (_cncTcSourceID x)
+    where
+    ackFlags = if _cncTcAcceptance x
+        then 0x01
+        else 0 .|. if _cncTcStart x
+            then 0x02
+            else 0 .|. if _cncTcProgress x
+                then 0x40
+                else 0 .|. if _cncTcCompletion x then 0x08 else 0
 -- TODO: implement the free header when the parameters are implemented
 dfhBuilder PUSFreeHeader {} =  mempty
 
 
 
--- | Parser for the data field header. In order to distinguish which 
+-- | Parser for the data field header. In order to distinguish which
 -- header is used, it needs an example header for the structure to be
 -- able to parse it
 dfhParser :: DataFieldHeader -> Parser DataFieldHeader
@@ -222,5 +270,24 @@ dfhParser PUSTMStdHeader {} = do
     obt  <- cucTimeParser nullCUCTime
     let vers' = (vers .&. 0x70) `shiftR` 4
     return $! PUSTMStdHeader vers' (mkPUSType tp) (mkPUSSubType st) si obt
+
+dfhParser PUSCnCTCHeader {} = do
+    val <- A.anyWord8
+    tp  <- A.anyWord8
+    st  <- A.anyWord8
+    si  <- A.anyWord8
+    let crcfl = (val `shiftR` 4) .&. 0x07
+        comp  = (val .&. 0x08) /= 0
+        acc   = (val .&. 0x01) /= 0
+        sta   = (val .&. 0x02) /= 0
+        pro   = (val .&. 0x40) /= 0
+    return $! PUSCnCTCHeader crcfl
+                        acc
+                        sta
+                        pro
+                        comp
+                        (mkPUSType tp)
+                        (mkPUSSubType st)
+                        si
 
 dfhParser PUSFreeHeader {} = pure (PUSFreeHeader True True False True V.empty)
