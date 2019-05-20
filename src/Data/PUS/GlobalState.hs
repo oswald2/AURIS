@@ -27,6 +27,7 @@ module Data.PUS.GlobalState
     , FOP1State
     , glsConfig
     , glsState
+    , glsFOP1
     , glsLogFunc
     , glsRaiseEvent
     , newGlobalState
@@ -92,6 +93,7 @@ nextADCount st = do
     let (newSt, cnt) = nextADCnt state
     writeTVar st newSt
     pure cnt
+
 
 -- | Instance of the logging function for the global state
 instance HasLogFunc GlobalState where

@@ -69,8 +69,8 @@ _fopBCout :: Flag Ready,
 _fopNNR :: !Word8,
 _fopT1Initial :: TimeSpan,
 _fopTimeoutType :: !TTType,
-_fopTransmissionLimit :: !Int,
-_fopTransmissionCount :: !Int,
+_fopTransmissionLimit :: !Word8,
+_fopTransmissionCount :: !Word8,
 _fopSuspendState :: !Int,
 _fopSlidingWinWidth :: !Word8
 } deriving (Show, Read)
@@ -105,6 +105,13 @@ data COP1Directive =
     | InitADWithCLCW
     | InitADWithUnlock TCDirective
     | InitADWithSetVR  TCDirective
+    | TerminateAD
+    | ResumeAD
+    | SetVS !Word8
+    | SetFOPSlidingWindowWidth !Word8
+    | SetT1Initial TimeSpan
+    | SetTransmissionLimit !Word8
+    | SetTimeoutType TTType
 
 
 data COP1Input =

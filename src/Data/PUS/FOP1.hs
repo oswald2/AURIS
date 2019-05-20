@@ -5,11 +5,11 @@
     , OverloadedStrings
     , GADTs
     , TypeFamilies
+    , ConstrainedClassMethods
 #-}
 module Data.PUS.FOP1
-    (
-      cop1Conduit
-      , fop1Program
+    ( cop1Conduit
+    , fop1Program
     )
 where
 
@@ -18,7 +18,9 @@ import           RIO
 import           Conduit
 import           Data.Conduit.TQueue
 
-import           Control.Lens                   ( makeLenses )
+import           Control.Lens                   ( makeLenses
+                                                , (.~)
+                                                )
 --import           Control.Lens.Setter
 
 import           UnliftIO.STM
@@ -34,6 +36,7 @@ import           Data.PUS.Types
 import           Data.PUS.Time
 import           Data.PUS.TCDirective
 import           Data.PUS.Segment
+import           Data.PUS.GlobalState
 
 import           Protocol.Switcher
 import           Protocol.ProtocolInterfaces
@@ -66,13 +69,13 @@ class FOPMachine m where
   type State m :: * -> *
   initial :: m (State m Initial)
 
-  initADWithoutCLCW :: State m Initial -> m (State m Active)
+  initADWithoutCLCW :: (MonadIO m, MonadReader env m, HasFOPState env) => State m Initial -> m (State m Active)
   initADWithCLCW :: State m Initial -> m (State m InitialisingWithoutBC)
   initADWithUnlock :: State m Initial -> m (State m InitialisingWithBC)
   initADWithSetVR :: State m Initial -> m (State m InitialisingWithBC)
 
 
-newtype FOPMachineT m a = FOPTMachineT { runFOPMachineT :: m a }
+newtype FOPMachineT env m a = FOPTMachineT { runFOPMachineT :: m a }
   deriving (Functor, Monad, Applicative, MonadIO)
 
 
@@ -85,26 +88,45 @@ data FOPMachineState s where
   Initial :: FOPMachineState Initial
 
 
-instance (MonadIO m) => FOPMachine (FOPMachineT m) where
-  type State (FOPMachineT m) = FOPMachineState
+instance (MonadIO m, MonadReader env m, HasFOPState env) => FOPMachine (FOPMachineT env m) where
+    type State (FOPMachineT env m) = FOPMachineState
 
-  initial = pure Initial
+    initial = pure Initial
+
+    initADWithoutCLCW st = do
+        st <- view fopStateG
+        atomically $
+          modifyTVar' st (\state -> state & fopWaitFlag .~ False & fopLockoutFlag .~ False & fopRetransmitFlag .~ False
+            & fopWaitQueue .~ [] & fopSentQueue .~ [] & fopToBeRetransmitted .~ False
+            & fopADout .~ toFlag Ready True
+            & fopBDout .~ toFlag Ready True
+            & fopBCout .~ toFlag Ready True
+            & fopTransmissionCount .~ 0)
+        pure Active
 
 
-fop1Program :: (MonadIO m, FOPMachine m) => TMVar EncodedSegment -> COP1Queue -> m ()
+
+
+fop1Program
+    :: (MonadIO m, MonadReader env m, FOPMachine m)
+    => TMVar EncodedSegment
+    -> COP1Queue
+    -> m ()
 fop1Program segBuffer cop1Queue = do
-    initial
+    st  <- initial
     inp <- liftIO $ readInput cop1Queue
     case inp of
-      COP1Dir dir -> processDirective dir
-      COP1CLCW clcw -> pure ()
+        COP1Dir dir -> do
+            newState <- processDirective st dir
+            pure ()
+        COP1CLCW clcw -> pure ()
 
     pure ()
-
-processDirective InitADWithoutCLCW = pure ()
-processDirective InitADWithCLCW = pure ()
-processDirective (InitADWithUnlock dir) = pure ()
-processDirective (InitADWithSetVR dir) = pure ()
+  where
+    processDirective st InitADWithoutCLCW      = initADWithoutCLCW st
+    processDirective st InitADWithCLCW         = pure ()
+    processDirective st (InitADWithUnlock dir) = pure ()
+    processDirective st (InitADWithSetVR  dir) = pure ()
 
 
 readSegment :: (MonadIO m) => TMVar EncodedSegment -> m EncodedSegment

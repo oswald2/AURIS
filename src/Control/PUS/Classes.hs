@@ -7,7 +7,7 @@ Maintainer  : michael.oswald@onikudaki.net
 Stability   : experimental
 Portability : POSIX
 
-This module contains classes with the HasX pattern to have finer gained 
+This module contains classes with the HasX pattern to have finer gained
 access control to IO functions. Used within the encoding conduits.
 |-}
 {-# LANGUAGE
@@ -19,6 +19,7 @@ module Control.PUS.Classes
     ( HasConfig(..)
     , HasPUSState(..)
     , HasGlobalState(..)
+    , HasFOPState(..)
     -- , getConfig
     -- , getGlobalState
     -- , getPUSState
@@ -47,9 +48,14 @@ class HasConfig env where
 class HasPUSState env where
     appStateG :: Getter env AppState
 
+-- | Class for getting the FOP1 State
+class HasFOPState env where
+    fopStateG :: Getter env FOP1State
+
 -- | Class for accessing the global state
-class (HasConfig env, HasPUSState env) => HasGlobalState env where
+class (HasConfig env, HasPUSState env, HasFOPState env) => HasGlobalState env where
     raiseEvent :: env -> Event -> IO ()
+
 
 
 instance HasConfig GlobalState where
@@ -57,6 +63,9 @@ instance HasConfig GlobalState where
 
 instance HasPUSState GlobalState where
     appStateG = to glsState
+
+instance HasFOPState GlobalState where
+    fopStateG = to glsFOP1
 
 instance HasGlobalState GlobalState where
     raiseEvent state event = glsRaiseEvent state event
