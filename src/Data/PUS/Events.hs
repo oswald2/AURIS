@@ -13,42 +13,74 @@ Contains just the Events, which can be raised by the library
 {-# LANGUAGE
     OverloadedStrings
     , DeriveGeneric
+    , NoImplicitPrelude
 #-}
 module Data.PUS.Events
-    (
-        Event(..)
-        , EventArea(..)
+    ( Event(..)
+    , EventCommanding(..)
+    , EventTelemetry(..)
+    , EventAlarm(..)
+    , EventCOP1(..)
     )
 where
 
-import GHC.Generics
 
-import Data.Binary
-import Data.Aeson
-import RIO.Text (Text)
+import           RIO
 
--- | An event area. An application can register on certain event Areas in
--- order to not get flooded with all kinds of events
-data EventArea =
-    EVACommanding
-    | EVAAlarms
-    | EVATelemetry
-    deriving (Eq, Ord, Enum, Show, Read, Generic)
+import           Data.Binary
+import           Data.Aeson
 
-instance Binary EventArea
-instance FromJSON EventArea
-instance ToJSON EventArea where
-    toEncoding = genericToEncoding defaultOptions
+import           Data.PUS.Types
+
+
 
 -- | The events themselves
-data Event =
-      EV_IllegalTCFrame EventArea Text
-    | EV_NCDUParseError EventArea Text
+data Event = EVCommanding EventCommanding
+    | EVAlarms EventAlarm
+    | EVTelemetry EventTelemetry
+    | EVCOP1 EventCOP1
     deriving (Eq, Show, Read, Generic)
 
 instance Binary Event
-
+instance FromJSON Event
 instance ToJSON Event where
     toEncoding = genericToEncoding defaultOptions
 
-instance FromJSON Event
+
+data EventCommanding = CommandEvent
+    deriving (Eq, Show, Read, Generic)
+
+instance Binary EventCommanding
+instance FromJSON EventCommanding
+instance ToJSON EventCommanding where
+    toEncoding = genericToEncoding defaultOptions
+
+data EventTelemetry = TelemetryEvent
+    deriving (Eq, Show, Read, Generic)
+
+instance Binary EventTelemetry
+instance FromJSON EventTelemetry
+instance ToJSON EventTelemetry where
+    toEncoding = genericToEncoding defaultOptions
+
+
+data EventAlarm =
+    EV_IllegalTCFrame Text
+    | EV_NCDUParseError Text
+    deriving (Eq, Show, Read, Generic)
+
+instance Binary EventAlarm
+instance FromJSON EventAlarm
+instance ToJSON EventAlarm where
+    toEncoding = genericToEncoding defaultOptions
+
+data EventCOP1 =
+    EV_ADInitializedWithoutCLCW VCID
+    | EV_ADInitWaitingCLCW VCID
+    deriving (Eq, Show, Read, Generic)
+
+
+instance Binary EventCOP1
+instance FromJSON EventCOP1
+instance ToJSON EventCOP1 where
+    toEncoding = genericToEncoding defaultOptions

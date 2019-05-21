@@ -14,6 +14,7 @@ access control to IO functions. Used within the encoding conduits.
     NoImplicitPrelude
     , MultiParamTypeClasses
     , FlexibleInstances
+    , RankNTypes
 #-}
 module Control.PUS.Classes
     ( HasConfig(..)
@@ -33,11 +34,13 @@ where
 import           RIO                     hiding ( to
                                                 , view
                                                 )
+import qualified RIO.HashMap.Partial           as HM
 
 import           Control.Lens.Getter
 
 import           Data.PUS.Config
 import           Data.PUS.Events
+import           Data.PUS.Types
 import           Data.PUS.GlobalState
 
 -- | This class specifies how to get a configuration
@@ -50,7 +53,8 @@ class HasPUSState env where
 
 -- | Class for getting the FOP1 State
 class HasFOPState env where
-    fopStateG :: Getter env FOP1State
+    copStateG :: Getter env COP1State
+    fopStateG :: VCID -> env -> FOP1State
 
 -- | Class for accessing the global state
 class (HasConfig env, HasPUSState env, HasFOPState env) => HasGlobalState env where
@@ -65,7 +69,8 @@ instance HasPUSState GlobalState where
     appStateG = to glsState
 
 instance HasFOPState GlobalState where
-    fopStateG = to glsFOP1
+    copStateG = to glsFOP1
+    fopStateG vcid env = (glsFOP1 env) HM.! vcid
 
 instance HasGlobalState GlobalState where
     raiseEvent state event = glsRaiseEvent state event

@@ -358,7 +358,7 @@ receiveTcNcduC = conduitParserEither ncduTcParser .| sink
             Just tc -> case tc of
                 Left err -> do
                     st <- ask
-                    liftIO $ raiseEvent st $ EV_NCDUParseError EVAAlarms (T.pack (errorMessage err))
+                    liftIO $ raiseEvent st $ EVAlarms (EV_NCDUParseError (T.pack (errorMessage err)))
                     sink
                 Right (_, tc') -> do
                     yield tc'
@@ -376,7 +376,7 @@ receiveTmNcduC = conduitParserEither ncduTmParser .| sink
             Just tc -> case tc of
                 Left err -> do
                     st <- ask
-                    liftIO $ raiseEvent st $ EV_NCDUParseError EVAAlarms (T.pack (errorMessage err))
+                    liftIO $ raiseEvent st $ EVAlarms (EV_NCDUParseError (T.pack (errorMessage err)))
                     sink
                 Right (_, tc') -> do
                     yield tc'
@@ -394,7 +394,7 @@ receiveAdminNcduC = conduitParserEither ncduAdminMessageParser .| sink
             Just tc -> case tc of
                 Left err -> do
                     st <- ask
-                    liftIO $ raiseEvent st $ EV_NCDUParseError EVAAlarms (T.pack (errorMessage err))
+                    liftIO $ raiseEvent st $ EVAlarms (EV_NCDUParseError (T.pack (errorMessage err)))
                     sink
                 Right (_, tc') -> do
                     yield tc'

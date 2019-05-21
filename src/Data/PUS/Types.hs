@@ -1,6 +1,7 @@
 {-# LANGUAGE
     DeriveGeneric
     , GeneralizedNewtypeDeriving
+    , NoImplicitPrelude
 #-}
 module Data.PUS.Types
     ( VCID(..)
@@ -45,6 +46,8 @@ module Data.PUS.Types
 where
 
 
+import           RIO hiding (Builder)
+
 import           Data.Binary
 import           Data.Aeson
 import           ByteString.StrictBuilder
@@ -52,9 +55,6 @@ import           Data.Attoparsec.ByteString     ( Parser )
 import qualified Data.Attoparsec.ByteString    as A
 import qualified Data.Attoparsec.Binary        as A
 import           Data.Bits
-import           Data.Int
-
-import           GHC.Generics
 
 
 
@@ -68,6 +68,7 @@ instance Binary VCID
 instance FromJSON VCID
 instance ToJSON VCID where
     toEncoding = genericToEncoding defaultOptions
+instance Hashable VCID
 
 vcidBuilder :: VCID -> Builder
 vcidBuilder (VCID x) = word8 x

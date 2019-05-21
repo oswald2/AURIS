@@ -25,6 +25,7 @@ module Data.PUS.GlobalState
     ( GlobalState
     , AppState
     , FOP1State
+    , COP1State
     , glsConfig
     , glsState
     , glsFOP1
@@ -39,6 +40,7 @@ where
 import           RIO                     hiding ( to
                                                 , view
                                                 )
+import qualified RIO.HashMap                   as HM
 
 import           UnliftIO.STM                   ( )
 
@@ -46,7 +48,7 @@ import           Data.PUS.Config
 import           Data.PUS.PUSState
 import           Data.PUS.Events
 import           Data.PUS.COP1Types
-
+import           Data.PUS.Types
 
 -- | The AppState is just a type alias
 type AppState = TVar PUSState
@@ -54,7 +56,7 @@ type AppState = TVar PUSState
 -- | The state of the FOP1 machine
 type FOP1State = TVar FOPState
 
-
+type COP1State = HashMap VCID FOP1State
 
 -- | The 'GlobalState' contains the configuration, several TVars to
 -- transient state and some functions which must be provided by the
@@ -62,7 +64,7 @@ type FOP1State = TVar FOPState
 data GlobalState = GlobalState {
     glsConfig :: !Config
     , glsState :: !AppState
-    , glsFOP1 :: !FOP1State
+    , glsFOP1 :: COP1State
 
     , glsRaiseEvent :: Event -> IO ()
     , glsLogFunc :: !LogFunc
@@ -73,9 +75,13 @@ data GlobalState = GlobalState {
 -- function to report events to the application
 newGlobalState :: Config -> LogFunc -> (Event -> IO ()) -> IO GlobalState
 newGlobalState cfg logErr raiseEvent = do
-    st <- defaultPUSState
-    tv <- newTVarIO st
-    fop1 <- newTVarIO initialFOPState
+    st   <- defaultPUSState
+    tv   <- newTVarIO st
+    -- fop1 <- sequence $ map (\vcid -> (vcid, newTVarIO (initialFOPState vcid)) (cfgVCIDs cfg)
+    let vcids = (cfgVCIDs cfg)
+    fopTVars <- mapM (newTVarIO . initialFOPState) vcids
+    let fop1 = HM.fromList $ zip vcids fopTVars
+
     let state = GlobalState
             { glsConfig     = cfg
             , glsState      = tv

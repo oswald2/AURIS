@@ -7,11 +7,11 @@ Maintainer  : michael.oswald@onikudaki.net
 Stability   : experimental
 Portability : POSIX
 
-This module contains the data structure for configuration. The configuration can currently be read and written from files in native Haskell 
+This module contains the data structure for configuration. The configuration can currently be read and written from files in native Haskell
 format (via Show class) or as JSON (via the aeson library)
 -}
 {-# LANGUAGE OverloadedStrings
-    , DeriveGeneric 
+    , DeriveGeneric
     , DataKinds
     , TypeSynonymInstances
     , FlexibleInstances
@@ -19,9 +19,9 @@ format (via Show class) or as JSON (via the aeson library)
 #-}
 module Data.PUS.Config
     (
-    -- | The config data type itself    
+    -- | The config data type itself
       Config(..)
-    -- | Type for the CLTU code block size. Restricted to be 5 .. 8 
+    -- | Type for the CLTU code block size. Restricted to be 5 .. 8
     , CltuBlockSize(..)
     , cltuBlockSizeAsWord8
     , defaultConfig
@@ -63,7 +63,7 @@ instance FromJSON Config
 instance ToJSON Config where
     toEncoding = genericToEncoding defaultOptions
 
--- | Specifies the CLTU block size. Since there are only very few 
+-- | Specifies the CLTU block size. Since there are only very few
 -- values allowed (5,6,7,8), we do an enumeration
 data CltuBlockSize =
     CltuBS_5
@@ -89,7 +89,7 @@ defaultConfig :: Config
 defaultConfig = Config { cfgCltuBlockSize        = CltuBS_8
                        , cfgRandomizerStartValue = 0xFF
                        , cfgSCID = mkSCID 0
-                       , cfgVCIDs = [0, 1, 2, 3, 4, 5, 6]
+                       , cfgVCIDs = [0, 1]
                        }
 
 -- | write the config as a serialized string to a file. Uses the Show class for serizalization
@@ -101,7 +101,7 @@ writeConfigString cfg path = do
 writeConfigJSON :: MonadIO m => Config -> FilePath -> m ()
 writeConfigJSON cfg path = liftIO $ encodeFile path cfg
 
--- | Load a config from a file in String format (Show/Read instance) and return it. 
+-- | Load a config from a file in String format (Show/Read instance) and return it.
 -- | If there is an error on parsing, return 'Left error'
 loadConfigString :: MonadIO m => FilePath -> m (Either Text Config)
 loadConfigString path = do
@@ -111,7 +111,7 @@ loadConfigString path = do
         then return $ Left ("Could not parse config: " <> T.pack content)
         else return $ Right . fst . Prelude.head $ res
 
--- | Load a config from a file in JSON format and return it. 
+-- | Load a config from a file in JSON format and return it.
 -- | If there is an error on parsing, return 'Left error'
 loadConfigJSON :: MonadIO m => FilePath -> m (Either Text Config)
 loadConfigJSON path = do

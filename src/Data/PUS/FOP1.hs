@@ -14,29 +14,26 @@ module Data.PUS.FOP1
 where
 
 import           RIO
+import qualified RIO.Seq                       as S
 
 import           Conduit
 import           Data.Conduit.TQueue
 
-import           Control.Lens                   ( makeLenses
-                                                , (.~)
-                                                )
---import           Control.Lens.Setter
+import           Control.Lens                   ( (.~) )
 
-import           UnliftIO.STM
-
---import qualified Data.ByteString.Lazy          as B
+--import           UnliftIO.STM
 
 import           Control.PUS.Classes
 
 import           Data.PUS.COP1Types
-import           Data.PUS.TCTransferFrame
-import           Data.PUS.CLCW
+--import           Data.PUS.TCTransferFrame
+--import           Data.PUS.CLCW
 import           Data.PUS.Types
-import           Data.PUS.Time
-import           Data.PUS.TCDirective
+--import           Data.PUS.Time
+--import           Data.PUS.TCDirective
 import           Data.PUS.Segment
-import           Data.PUS.GlobalState
+--import           Data.PUS.GlobalState
+import           Data.PUS.Events
 
 import           Protocol.Switcher
 import           Protocol.ProtocolInterfaces
@@ -69,8 +66,8 @@ class FOPMachine m where
   type State m :: * -> *
   initial :: m (State m Initial)
 
-  initADWithoutCLCW :: (MonadIO m, MonadReader env m, HasFOPState env) => State m Initial -> m (State m Active)
-  initADWithCLCW :: State m Initial -> m (State m InitialisingWithoutBC)
+  initADWithoutCLCW :: (MonadIO m, MonadReader env m, HasFOPState env) => VCID -> State m Initial -> m (State m Active)
+  initADWithCLCW :: (MonadIO m, MonadReader env m, HasFOPState env) => VCID -> State m Initial -> m (State m InitialisingWithoutBC)
   initADWithUnlock :: State m Initial -> m (State m InitialisingWithBC)
   initADWithSetVR :: State m Initial -> m (State m InitialisingWithBC)
 
@@ -93,40 +90,89 @@ instance (MonadIO m, MonadReader env m, HasFOPState env) => FOPMachine (FOPMachi
 
     initial = pure Initial
 
-    initADWithoutCLCW st = do
-        st <- view fopStateG
+    initADWithoutCLCW vcid _ = do
+        st <- fopStateG vcid <$> ask
+        atomically $
+            modifyTVar' st (\state -> state & fopWaitFlag .~ False & fopLockoutFlag .~ False & fopRetransmitFlag .~ False
+                & fopSentQueue .~ S.empty & fopToBeRetransmitted .~ False
+                & fopADout .~ toFlag Ready True
+                & fopBDout .~ toFlag Ready True
+                & fopBCout .~ toFlag Ready True
+                & fopTransmissionCount .~ 0)
+        pure Active
+
+    initADWithCLCW vcid _ = do
+        st <- fopStateG vcid <$> ask
         atomically $
           modifyTVar' st (\state -> state & fopWaitFlag .~ False & fopLockoutFlag .~ False & fopRetransmitFlag .~ False
-            & fopWaitQueue .~ [] & fopSentQueue .~ [] & fopToBeRetransmitted .~ False
+            & fopSentQueue .~ S.empty & fopToBeRetransmitted .~ False
             & fopADout .~ toFlag Ready True
             & fopBDout .~ toFlag Ready True
             & fopBCout .~ toFlag Ready True
             & fopTransmissionCount .~ 0)
-        pure Active
-
-
+        pure InitialisingWithoutBC
 
 
 fop1Program
-    :: (MonadIO m, MonadReader env m, FOPMachine m)
-    => TMVar EncodedSegment
+    :: (MonadIO m, MonadReader env m, HasGlobalState env, FOPMachine m)
+    => VCID
+    -> MVar EncodedSegment
     -> COP1Queue
     -> m ()
-fop1Program segBuffer cop1Queue = do
-    st  <- initial
+fop1Program vcid segBuffer cop1Queue = do
+    st <- initial
+    stateInactive vcid st cop1Queue
+
+
+stateInactive
+    :: (MonadIO m, MonadReader env m, HasGlobalState env, FOPMachine m)
+    => VCID
+    -> State m Initial
+    -> COP1Queue
+    -> m ()
+stateInactive vcid st cop1Queue = do
     inp <- liftIO $ readInput cop1Queue
     case inp of
-        COP1Dir dir -> do
-            newState <- processDirective st dir
-            pure ()
+        COP1Dir dir -> case dir of
+            InitADWithoutCLCW -> do
+                newst <- initADWithoutCLCW vcid st
+                env   <- ask
+                liftIO $ raiseEvent env $ EVCOP1
+                    (EV_ADInitializedWithoutCLCW vcid)
+                -- go to next state
+                stateActive vcid newst
+            InitADWithCLCW -> do
+                newst <- initADWithCLCW vcid st
+                env   <- ask
+                liftIO $ raiseEvent env $ EVCOP1 (EV_ADInitWaitingCLCW vcid)
+                stateInitialisingWithoutBC vcid newst
+                pure ()
         COP1CLCW clcw -> pure ()
-
     pure ()
-  where
-    processDirective st InitADWithoutCLCW      = initADWithoutCLCW st
-    processDirective st InitADWithCLCW         = pure ()
-    processDirective st (InitADWithUnlock dir) = pure ()
-    processDirective st (InitADWithSetVR  dir) = pure ()
+
+
+stateActive vcid st = do
+    pure ()
+
+
+-- | S2
+stateRetransmitWithoutWait vcid st = do
+    pure ()
+
+
+    -- | S3
+stateRetransmitWithWait vcid st = do
+    pure ()
+
+
+    -- | S4
+stateInitialisingWithoutBC vcid st = do
+    pure ()
+
+
+    -- | S5
+stateInitialisingWithBC vcid st = do
+    pure ()
 
 
 readSegment :: (MonadIO m) => TMVar EncodedSegment -> m EncodedSegment

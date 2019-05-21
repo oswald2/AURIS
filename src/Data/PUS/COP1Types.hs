@@ -13,11 +13,11 @@
 module Data.PUS.COP1Types
     ( FOPState
     , initialFOPState
+    , fopVCID
     , fopWaitFlag
     , fopLockoutFlag
     , fopRetransmitFlag
     , fopVS
-    , fopWaitQueue
     , fopSentQueue
     , fopToBeRetransmitted
     , fopADout
@@ -30,7 +30,6 @@ module Data.PUS.COP1Types
     , fopTransmissionCount
     , fopSuspendState
     , fopSlidingWinWidth
-
     , COP1Directive(..)
     , COP1Input(..)
     , COP1Queue
@@ -39,6 +38,7 @@ where
 
 
 import           RIO
+import           RIO.Seq
 
 import           Control.Lens                   ( makeLenses )
 
@@ -56,12 +56,12 @@ data TTType = TTAlert | TTSuspend
 
 
 data FOPState = FOPState {
+_fopVCID :: !VCID,
 _fopWaitFlag :: !Bool,
 _fopLockoutFlag :: !Bool,
 _fopRetransmitFlag :: !Bool,
 _fopVS :: !Word8,
-_fopWaitQueue :: ![EncodedSegment],
-_fopSentQueue :: ![EncodedSegment],
+_fopSentQueue :: Seq EncodedSegment,
 _fopToBeRetransmitted :: !Bool,
 _fopADout :: Flag Ready,
 _fopBDout :: Flag Ready,
@@ -77,14 +77,14 @@ _fopSlidingWinWidth :: !Word8
 makeLenses ''FOPState
 
 
-initialFOPState :: FOPState
-initialFOPState = FOPState
-    { _fopWaitFlag          = False
+initialFOPState :: VCID -> FOPState
+initialFOPState vcid = FOPState
+    { _fopVCID              = vcid
+    , _fopWaitFlag          = False
     , _fopLockoutFlag       = False
     , _fopRetransmitFlag    = False
     , _fopVS                = 0
-    , _fopWaitQueue         = []
-    , _fopSentQueue         = []
+    , _fopSentQueue         = empty
     , _fopToBeRetransmitted = False
     , _fopADout             = toFlag Ready True
     , _fopBDout             = toFlag Ready True
