@@ -105,6 +105,7 @@ library
         , thyme
         , vector-binary-instances
         , bytestring-to-vector
+        , timer-wheel
 
     if flag(llvm)
         ghc-options: -O -Wall -Wcompat -Widentities -Wincomplete-record-updates

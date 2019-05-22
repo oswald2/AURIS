@@ -18,8 +18,10 @@ import qualified RIO.Seq                       as S
 
 import           Conduit
 import           Data.Conduit.TQueue
-
-import           Control.Lens                   ( (.~) )
+import           Data.TimerWheel
+import           Control.Lens                   ( makeLenses
+                                                , (.~)
+                                                )
 
 --import           UnliftIO.STM
 
@@ -32,12 +34,20 @@ import           Data.PUS.Types
 --import           Data.PUS.Time
 --import           Data.PUS.TCDirective
 import           Data.PUS.Segment
---import           Data.PUS.GlobalState
+import           Data.PUS.GlobalState
 import           Data.PUS.Events
 
 import           Protocol.Switcher
 import           Protocol.ProtocolInterfaces
 
+
+data FOPData = FOPData {
+    _fvcid :: VCID
+    , _fwaitQueue :: TMVar EncodedSegment
+    , _fcop1Queue :: COP1Queue
+    , _ftimerWheel :: TimerWheel
+    }
+makeLenses ''FOPData
 
 
 
@@ -66,8 +76,8 @@ class FOPMachine m where
   type State m :: * -> *
   initial :: m (State m Initial)
 
-  initADWithoutCLCW :: (MonadIO m, MonadReader env m, HasFOPState env) => VCID -> State m Initial -> m (State m Active)
-  initADWithCLCW :: (MonadIO m, MonadReader env m, HasFOPState env) => VCID -> State m Initial -> m (State m InitialisingWithoutBC)
+  initADWithoutCLCW :: (MonadIO m, MonadReader env m, HasFOPState env) => FOPData -> State m Initial -> m (State m Active)
+  initADWithCLCW :: (MonadIO m, MonadReader env m, HasFOPState env) => FOPData -> State m Initial -> m (State m InitialisingWithoutBC)
   initADWithUnlock :: State m Initial -> m (State m InitialisingWithBC)
   initADWithSetVR :: State m Initial -> m (State m InitialisingWithBC)
 
@@ -90,88 +100,117 @@ instance (MonadIO m, MonadReader env m, HasFOPState env) => FOPMachine (FOPMachi
 
     initial = pure Initial
 
-    initADWithoutCLCW vcid _ = do
-        st <- fopStateG vcid <$> ask
-        atomically $
-            modifyTVar' st (\state -> state & fopWaitFlag .~ False & fopLockoutFlag .~ False & fopRetransmitFlag .~ False
-                & fopSentQueue .~ S.empty & fopToBeRetransmitted .~ False
-                & fopADout .~ toFlag Ready True
-                & fopBDout .~ toFlag Ready True
-                & fopBCout .~ toFlag Ready True
-                & fopTransmissionCount .~ 0)
+    initADWithoutCLCW fopData _ = do
+        st <- fopStateG (fopData ^. fvcid) <$> ask
+        atomically $ initializeAD st fopData
         pure Active
 
-    initADWithCLCW vcid _ = do
-        st <- fopStateG vcid <$> ask
-        atomically $
-          modifyTVar' st (\state -> state & fopWaitFlag .~ False & fopLockoutFlag .~ False & fopRetransmitFlag .~ False
-            & fopSentQueue .~ S.empty & fopToBeRetransmitted .~ False
-            & fopADout .~ toFlag Ready True
-            & fopBDout .~ toFlag Ready True
-            & fopBCout .~ toFlag Ready True
-            & fopTransmissionCount .~ 0)
+    initADWithCLCW fopData _ = do
+        st <- fopStateG (fopData ^. fvcid) <$> ask
+        atomically $ initializeAD st fopData
         pure InitialisingWithoutBC
 
 
+-- | initializes the AD mode. In case the wait queue is purged, the segment
+-- is returned
+initializeAD :: FOP1State -> FOPData -> STM (Maybe EncodedSegment)
+initializeAD st fopData = do
+    modifyTVar'
+        st
+        (\state ->
+            state
+                &  fopWaitFlag
+                .~ False
+                &  fopLockoutFlag
+                .~ False
+                &  fopRetransmitFlag
+                .~ False
+                &  fopSentQueue
+                .~ S.empty
+                &  fopToBeRetransmitted
+                .~ False
+                &  fopADout
+                .~ toFlag Ready True
+                &  fopBDout
+                .~ toFlag Ready True
+                &  fopBCout
+                .~ toFlag Ready True
+                &  fopTransmissionCount
+                .~ 0
+        )
+    -- also purge the wait queue
+    let clearWaitQueue = do
+            tc <- tryTakeTMVar (fopData ^. fwaitQueue)
+            case tc of
+                Nothing -> pure Nothing
+                Just seg ->
+                    case seg ^. encSegFlag of
+                        SegmentStandalone -> pure (Just seg)
+                        SegmentLast -> pure (Just seg)
+                        -- in case we are in the middle of a transmission
+                        -- of more segments, throw them all away.
+                        _ -> clearWaitQueue
+    clearWaitQueue
+
+
+-- | this is the whole state machine of the FOP-1 starting point
 fop1Program
     :: (MonadIO m, MonadReader env m, HasGlobalState env, FOPMachine m)
-    => VCID
-    -> MVar EncodedSegment
-    -> COP1Queue
+    => FOPData
     -> m ()
-fop1Program vcid segBuffer cop1Queue = do
+fop1Program fopData = do
     st <- initial
-    stateInactive vcid st cop1Queue
+    stateInactive fopData st
 
 
 stateInactive
     :: (MonadIO m, MonadReader env m, HasGlobalState env, FOPMachine m)
-    => VCID
+    => FOPData
     -> State m Initial
-    -> COP1Queue
     -> m ()
-stateInactive vcid st cop1Queue = do
-    inp <- liftIO $ readInput cop1Queue
+stateInactive fopData st = do
+    inp <- liftIO $ readInput (fopData ^. fcop1Queue)
     case inp of
         COP1Dir dir -> case dir of
             InitADWithoutCLCW -> do
-                newst <- initADWithoutCLCW vcid st
+                newst <- initADWithoutCLCW fopData st
                 env   <- ask
                 liftIO $ raiseEvent env $ EVCOP1
-                    (EV_ADInitializedWithoutCLCW vcid)
+                    (EV_ADInitializedWithoutCLCW (fopData ^. fvcid))
                 -- go to next state
-                stateActive vcid newst
+                stateActive fopData newst
             InitADWithCLCW -> do
-                newst <- initADWithCLCW vcid st
+                newst <- initADWithCLCW fopData st
                 env   <- ask
-                liftIO $ raiseEvent env $ EVCOP1 (EV_ADInitWaitingCLCW vcid)
-                stateInitialisingWithoutBC vcid newst
+                liftIO $ raiseEvent env $ EVCOP1 (EV_ADInitWaitingCLCW (fopData ^. fvcid))
+                stateInitialisingWithoutBC fopData newst
                 pure ()
+            _ -> pure ()
         COP1CLCW clcw -> pure ()
     pure ()
 
 
-stateActive vcid st = do
+stateActive fopData st = do
     pure ()
 
 
 -- | S2
-stateRetransmitWithoutWait vcid st = do
+stateRetransmitWithoutWait fopData st = do
     pure ()
 
 
     -- | S3
-stateRetransmitWithWait vcid st = do
+stateRetransmitWithWait fopData st = do
     pure ()
 
 
     -- | S4
-stateInitialisingWithoutBC vcid st = do
+stateInitialisingWithoutBC fopData st = do
     pure ()
 
 
     -- | S5
-stateInitialisingWithBC vcid st = do
+stateInitialisingWithBC fopData st = do
     pure ()
 
 
