@@ -188,8 +188,9 @@ stateInactive fopData st = do
                 env   <- ask
                 liftIO $ raiseEvent env $ EVCOP1 (EV_ADInitWaitingCLCW (fopData ^. fvcid))
                 stateInitialisingWithoutBC fopData newst
-            _ -> pure ()
-        COP1CLCW clcw -> pure ()
+            _ -> stateInactive fopData st
+        COP1CLCW clcw -> stateInactive fopData st
+        COP1TimeoutCLCW -> stateInactive fopData st
     pure ()
 
 
@@ -208,7 +209,20 @@ stateRetransmitWithWait fopData st = do
 
 
     -- | S4
+stateInitialisingWithoutBC
+    :: (MonadIO m, MonadReader env m, HasGlobalState env)
+    => FOPData
+    -> State m InitialisingWithoutBC
+    -> m ()
 stateInitialisingWithoutBC fopData st = do
+    env <- ask
+    let st = fopStateG (fopData ^. fvcid) env
+    fopState <- liftIO $ atomically $ readTVar st
+
+    let timerWheel = fopData ^. ftimerWheel
+        timeout = fopState ^. fopT1Initial
+
+    cancel <- liftIO $ register timeout (notifyTimeoutInitCLCW fopData) timerWheel
     pure ()
 
 
@@ -223,6 +237,12 @@ readSegment var = atomically $ takeTMVar var
 
 readInput :: (MonadIO m) => COP1Queue -> m COP1Input
 readInput chan = atomically $ readTBQueue chan
+
+
+notifyTimeoutInitCLCW :: FOPData -> IO ()
+notifyTimeoutInitCLCW fopData =
+    atomically $ do writeTBQueue (fopData ^. fcop1Queue) COP1TimeoutCLCW
+
 
 
 
