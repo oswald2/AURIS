@@ -184,7 +184,6 @@ stateInactive fopData st = do
                 env   <- ask
                 liftIO $ raiseEvent env $ EVCOP1 (EV_ADInitWaitingCLCW (fopData ^. fvcid))
                 stateInitialisingWithoutBC fopData newst
-                pure ()
             _ -> pure ()
         COP1CLCW clcw -> pure ()
     pure ()

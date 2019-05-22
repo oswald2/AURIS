@@ -106,6 +106,7 @@ library
         , vector-binary-instances
         , bytestring-to-vector
         , timer-wheel
+        , base64-bytestring-type
 
     if flag(llvm)
         ghc-options: -O -Wall -Wcompat -Widentities -Wincomplete-record-updates

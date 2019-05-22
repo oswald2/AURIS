@@ -44,7 +44,10 @@ import           RIO.List.Partial               ( head
 import           Control.Lens                   ( makeLenses )
 
 import           ByteString.StrictBuilder
+import           Data.Binary
+import           Data.Aeson
 import           Data.Bits
+import           Data.ByteString.Base64.Type
 import           Data.Attoparsec.ByteString     ( Parser )
 import qualified Data.Attoparsec.ByteString    as A
 import           Data.List.NonEmpty             ( NonEmpty(..)
@@ -85,7 +88,6 @@ data TCSegment = TCSegment {
     , _segData :: !ByteString
     -- , _segTrailer :: Maybe SegmentTrailer
     } deriving (Eq, Show, Read)
-
 makeLenses ''TCSegment
 
 data EncodedSegment = EncodedSegment {
@@ -93,8 +95,28 @@ data EncodedSegment = EncodedSegment {
         , _encSegFlag :: !SegmentationFlags
         , _encSeqSegNr :: !Word32
         , _encSegRequest :: !TCRequest
-    } deriving (Show, Read)
+    } deriving (Eq, Show, Read, Generic)
 makeLenses ''EncodedSegment
+
+instance Binary EncodedSegment
+
+instance ToJSON EncodedSegment where
+    toJSON r = object [ "encSegSegment" .= makeByteString64 (_encSegSegment r)
+                , "encSegFlag" .= _encSegFlag r
+                , "encSeqSegNr" .= _encSeqSegNr r
+                , "encSegRequest" .= _encSegRequest r
+            ]
+    toEncoding r = pairs ("encSegSegment" .= makeByteString64 (_encSegSegment r)
+                        <> "encSegFlag" .= _encSegFlag r
+                        <> "encSeqSegNr" .= _encSeqSegNr r
+                        <> "encSegRequest" .= _encSegRequest r)
+
+instance FromJSON EncodedSegment where
+    parseJSON = withObject "EncodedSegment" $ \v ->
+        EncodedSegment <$> (getByteString64 <$> v .: "encSegSegment")
+                       <*> v .: "encSegFlag"
+                       <*> v .: "encSeqSegNr"
+                       <*> v .: "encSegRequest"
 
 
 mkTCSegments :: MAPID -> ByteString -> NonEmpty TCSegment
