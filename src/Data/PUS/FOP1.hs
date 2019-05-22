@@ -44,7 +44,7 @@ import           Protocol.ProtocolInterfaces
 data FOPData = FOPData {
     _fvcid :: VCID
     , _fwaitQueue :: TMVar EncodedSegment
-    , _fcop1Queue :: COP1Queue
+    , _fcop1Queue :: COP1Queues
     , _ftimerWheel :: TimerWheel
     }
 makeLenses ''FOPData
@@ -173,25 +173,28 @@ stateInactive
     -> State m Initial
     -> m ()
 stateInactive fopData st = do
-    inp <- liftIO $ readInput (fopData ^. fcop1Queue)
+    inp <- liftIO $ atomically $ readCOP1Queue (fopData ^. fvcid) (fopData ^. fcop1Queue)
     case inp of
-        COP1Dir dir -> case dir of
-            InitADWithoutCLCW -> do
-                newst <- initADWithoutCLCW fopData st
-                env   <- ask
-                liftIO $ raiseEvent env $ EVCOP1
-                    (EV_ADInitializedWithoutCLCW (fopData ^. fvcid))
-                -- go to next state
-                stateActive fopData newst
-            InitADWithCLCW -> do
-                newst <- initADWithCLCW fopData st
-                env   <- ask
-                liftIO $ raiseEvent env $ EVCOP1 (EV_ADInitWaitingCLCW (fopData ^. fvcid))
-                stateInitialisingWithoutBC fopData newst
-            _ -> stateInactive fopData st
-        COP1CLCW clcw -> stateInactive fopData st
-        COP1TimeoutCLCW -> stateInactive fopData st
-    pure ()
+        Nothing -> stateInactive fopData st
+        Just inp' -> do
+            case inp' of
+                COP1Dir dir -> case dir of
+                    InitADWithoutCLCW -> do
+                        newst <- initADWithoutCLCW fopData st
+                        env   <- ask
+                        liftIO $ raiseEvent env $ EVCOP1
+                            (EV_ADInitializedWithoutCLCW (fopData ^. fvcid))
+                        -- go to next state
+                        stateActive fopData newst
+                    InitADWithCLCW -> do
+                        newst <- initADWithCLCW fopData st
+                        env   <- ask
+                        liftIO $ raiseEvent env $ EVCOP1 (EV_ADInitWaitingCLCW (fopData ^. fvcid))
+                        stateInitialisingWithoutBC fopData newst
+                    _ -> stateInactive fopData st
+                COP1CLCW clcw -> stateInactive fopData st
+                COP1TimeoutCLCW -> stateInactive fopData st
+            pure ()
 
 
 stateActive fopData st = do
@@ -241,7 +244,7 @@ readInput chan = atomically $ readTBQueue chan
 
 notifyTimeoutInitCLCW :: FOPData -> IO ()
 notifyTimeoutInitCLCW fopData =
-    atomically $ do writeTBQueue (fopData ^. fcop1Queue) COP1TimeoutCLCW
+    atomically $ sendCOP1Queue (fopData ^. fvcid) (fopData ^. fcop1Queue) COP1TimeoutCLCW
 
 
 
