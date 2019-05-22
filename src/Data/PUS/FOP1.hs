@@ -77,7 +77,7 @@ class FOPMachine m where
   initial :: m (State m Initial)
 
   initADWithoutCLCW :: (MonadIO m, MonadReader env m, HasFOPState env) => FOPData -> State m Initial -> m (State m Active)
-  initADWithCLCW :: (MonadIO m, MonadReader env m, HasFOPState env) => FOPData -> State m Initial -> m (State m InitialisingWithoutBC)
+  initADWithCLCW :: (MonadIO m, MonadReader env m, HasGlobalState env) => FOPData -> State m Initial -> m (State m InitialisingWithoutBC)
   initADWithUnlock :: State m Initial -> m (State m InitialisingWithBC)
   initADWithSetVR :: State m Initial -> m (State m InitialisingWithBC)
 
@@ -95,7 +95,7 @@ data FOPMachineState s where
   Initial :: FOPMachineState Initial
 
 
-instance (MonadIO m, MonadReader env m, HasFOPState env) => FOPMachine (FOPMachineT env m) where
+instance (MonadIO m, MonadReader env m, HasGlobalState env) => FOPMachine (FOPMachineT env m) where
     type State (FOPMachineT env m) = FOPMachineState
 
     initial = pure Initial
@@ -106,8 +106,12 @@ instance (MonadIO m, MonadReader env m, HasFOPState env) => FOPMachine (FOPMachi
         pure Active
 
     initADWithCLCW fopData _ = do
-        st <- fopStateG (fopData ^. fvcid) <$> ask
-        atomically $ initializeAD st fopData
+        env <- ask
+        let st = fopStateG (fopData ^. fvcid) env
+        res <- atomically $ initializeAD st fopData
+        case res of
+            Nothing -> pure ()
+            Just seg -> liftIO $ raiseEvent env $ EVCOP1 (EV_ADPurgedWaitQueue (fopData ^. fvcid) seg)
         pure InitialisingWithoutBC
 
 
