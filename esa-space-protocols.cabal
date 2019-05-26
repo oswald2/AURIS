@@ -65,9 +65,10 @@ library
         Data.PUS.Time
         Data.PUS.Parameter
         Data.PUS.EncTime
+        Data.PUS.TMFrame
+        Data.PUS.TMFrameDfh
         Data.PUS.MissionSpecific.Definitions
         Protocol.SizeOf
-        Protocol.Classes
         Protocol.NCTRS
         Protocol.ProtocolInterfaces
         Protocol.Switcher

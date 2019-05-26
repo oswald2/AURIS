@@ -68,7 +68,7 @@ import           Data.PUS.CRC
 import           Data.PUS.MissionSpecific.Definitions
 
 import           Protocol.ProtocolInterfaces
-import           Protocol.Classes
+import           Protocol.SizeOf
 
 import           General.SetBitField
 
@@ -110,8 +110,8 @@ instance FromJSON PUSHeader
 instance ToJSON PUSHeader where
     toEncoding = genericToEncoding defaultOptions
 
-instance Header PUSHeader where
-    hdrLength = 6
+instance FixedSize PUSHeader where
+    fixedSizeOf = 6
 
 
 data PUSPacket = PUSPacket {
@@ -122,8 +122,8 @@ data PUSPacket = PUSPacket {
     } deriving (Show, Generic)
 makeLenses ''PUSPacket
 
-instance Packet PUSPacket where
-    packetLength x = hdrLength @PUSHeader + fromIntegral (sizeof (_pusDfh x)) + fromIntegral (B.length (_pusData x))
+instance SizeOf PUSPacket where
+    sizeof x = fixedSizeOf @PUSHeader + sizeof (_pusDfh x) + B.length (_pusData x)
 
 
 
@@ -313,7 +313,7 @@ decodePktMissionSpecific
     -> ProtocolInterface
     -> Either Text (ProtocolPacket PUSPacket)
 decodePktMissionSpecific pkt missionSpecific commIF
-    | B.length pkt < fromIntegral (hdrLength @PUSHeader) + crcLen = Left
+    | B.length pkt < fixedSizeOf @PUSHeader + fixedSizeOf @CRC = Left
         "PUS Packet is too short"
     | otherwise = case crcCheck pkt of
         Left  err -> Left err

@@ -111,7 +111,7 @@ import           Data.Conduit.Attoparsec
 import           Data.PUS.Types
 import           Data.PUS.Events
 
-import           Protocol.Classes
+import           Protocol.SizeOf
 
 import           General.Padding
 import General.Hexdump
@@ -141,28 +141,28 @@ data NcduHeaderType =
 
 
 
-hdrLen :: Word32
+hdrLen :: Int
 hdrLen = 4 + 2 + 2
 
-cltuSecHdrLen :: Word32
+cltuSecHdrLen :: Int
 cltuSecHdrLen = 4 + 4 + 8 + 4 + 8 + 4 + 1 + 4 + 1 + 1
 
 -- cltuHdrLen :: Word32
 -- cltuHdrLen = hdrLen + cltuSecHdrLen
 
-cltuRespLen :: Word32
+cltuRespLen :: Int
 cltuRespLen = 8 + 3 + 4 + 3 + 4 + 4
 
 -- cltuRespHdrLen :: Word32
 -- cltuRespHdrLen = hdrLen + cltuRespLen
 
-pktHdrLen :: Word32
+pktHdrLen :: Int
 pktHdrLen = 7
 
-tmHdrLen :: Word32
+tmHdrLen :: Int
 tmHdrLen = 4 + 2 + 1 + 1 + 2 + 8 + 1 + 1
 
-admMessageHdrLen :: Word32
+admMessageHdrLen :: Int
 admMessageHdrLen = 4 + 8 + 2 + 2 + 4
 
 
@@ -174,8 +174,8 @@ data NcduTcHeader = NcduTcHeader {
     } deriving (Show, Read)
 makeLenses ''NcduTcHeader
 
-instance Header NcduTcHeader where
-    hdrLength = hdrLen
+instance FixedSize NcduTcHeader where
+    fixedSizeOf = hdrLen
 
 
 data NcduTcCltuHeader = NcduTcCltuHeader {
@@ -193,8 +193,8 @@ data NcduTcCltuHeader = NcduTcCltuHeader {
     deriving (Show, Read)
 makeLenses ''NcduTcCltuHeader
 
-instance Header NcduTcCltuHeader where
-    hdrLength = cltuSecHdrLen
+instance FixedSize NcduTcCltuHeader where
+    fixedSizeOf = cltuSecHdrLen
 
 
 data NcduDirectiveType =
@@ -213,8 +213,8 @@ data NcduTcPktHeader = NcduTcPktHeader {
     deriving (Show, Read)
 makeLenses ''NcduTcPktHeader
 
-instance Header NcduTcPktHeader where
-    hdrLength = pktHdrLen
+instance FixedSize NcduTcPktHeader where
+    fixedSizeOf = pktHdrLen
 
 
 
@@ -248,8 +248,8 @@ data NcduTmDuHeader = NcduTmDuHeader {
     } deriving (Show, Read)
 makeLenses ''NcduTmDuHeader
 
-instance Header NcduTmDuHeader where
-    hdrLength = tmHdrLen
+instance FixedSize NcduTmDuHeader where
+    fixedSizeOf = tmHdrLen
 
 
 data NcduTmDu = NcduTmDu {
@@ -258,9 +258,9 @@ data NcduTmDu = NcduTmDu {
 } deriving (Show, Read)
 makeLenses ''NcduTmDu
 
-instance Packet NcduTmDu where
-    packetLength NcduTmDu {..} =
-        fromIntegral (B.length _ncduTmData) + hdrLength @NcduTmDuHeader
+instance SizeOf NcduTmDu where
+    sizeof NcduTmDu {..} =
+        B.length _ncduTmData + fixedSizeOf @NcduTmDuHeader
 
 
 data NcduTcCltuRespAck =
@@ -287,8 +287,8 @@ data NcduTcCltuResponse = NcduTcCltuResponse {
     } deriving (Show, Read)
 makeLenses ''NcduTcCltuResponse
 
-instance Packet NcduTcCltuResponse where
-    packetLength _ = cltuRespLen
+instance FixedSize NcduTcCltuResponse where
+    fixedSizeOf = cltuRespLen
 
 
 data NcduAdminMessageType = NCDU_ADM_TM | NCDU_ADM_TC deriving (Ord, Eq, Enum, Show, Read)
@@ -311,9 +311,9 @@ data NcduAdminMessage = NcduAdminMessage {
     } deriving (Show, Read)
 makeLenses ''NcduAdminMessage
 
-instance Packet NcduAdminMessage where
-    packetLength NcduAdminMessage {..} =
-        fromIntegral (B.length _ncduAdmMsg) + admMessageHdrLen
+instance SizeOf NcduAdminMessage where
+    sizeof NcduAdminMessage {..} =
+        B.length _ncduAdmMsg + admMessageHdrLen
 
 
 data NcduTcData =
@@ -328,12 +328,12 @@ data NcduTcData =
     deriving (Show, Read)
 makeLenses ''NcduTcData
 
-instance Packet NcduTcData where
-    packetLength NcduTcDuPktData {..} =
-        fromIntegral (B.length _ncduTcPktData) + hdrLength @NcduTcPktHeader
-    packetLength NcduTcDuCltuData {..} =
-        fromIntegral (B.length _ncduTcCltuData) + hdrLength @NcduTcCltuHeader
-    packetLength NcduTcDuCltuRespData {..} = packetLength _ncduTcCltuResp
+instance SizeOf NcduTcData where
+    sizeof NcduTcDuPktData {..} =
+        B.length _ncduTcPktData + fixedSizeOf @NcduTcPktHeader
+    sizeof NcduTcDuCltuData {..} =
+        B.length _ncduTcCltuData + fixedSizeOf @NcduTcCltuHeader
+    sizeof NcduTcDuCltuRespData {..} = fixedSizeOf @NcduTcCltuResponse
 
 
 data NcduTcDu = NcduTcDu {
@@ -342,9 +342,9 @@ data NcduTcDu = NcduTcDu {
     } deriving (Show, Read)
 makeLenses ''NcduTcDu
 
-instance Packet NcduTcDu where
-    packetLength NcduTcDu {..} =
-        hdrLength @NcduTcHeader + packetLength _ncduTcData
+instance SizeOf NcduTcDu where
+    sizeof NcduTcDu {..} =
+        fixedSizeOf @NcduTcHeader + sizeof _ncduTcData
 
 
 receiveTcNcduC
@@ -475,16 +475,16 @@ ncduTcParser = do
     dat <- case _ncduType hdr of
         NCDU_TC_CLTU_TYPE -> do
             chdr <- ncduTcCltuHeaderParser
-            payl <- A.take $ fromIntegral (len - cltuSecHdrLen)
+            payl <- A.take (len - cltuSecHdrLen)
             pure $ NcduTcDuCltuData chdr payl
         NCDU_CLTU_RES_TYPE -> NcduTcDuCltuRespData <$> ncduTcCltuResponseParser
         NCDU_TC_FRAME_TYPE -> do
             chdr <- ncduTcCltuHeaderParser
-            payl <- A.take $ fromIntegral (len - cltuSecHdrLen)
+            payl <- A.take (len - cltuSecHdrLen)
             pure $ NcduTcDuCltuData chdr payl
         _ -> do
             phdr <- ncduTcPktHeaderParser
-            payl <- A.take $ fromIntegral (len - pktHdrLen)
+            payl <- A.take (len - pktHdrLen)
             pure $ NcduTcDuPktData phdr payl
     pure (NcduTcDu hdr dat)
 
@@ -505,8 +505,8 @@ ncduStreamTypeParser = toEnum . fromIntegral <$> A.anyWord8
 ncduTmParser :: Parser NcduTmDu
 ncduTmParser = do
     hdr <- ncduTmHeaderParser
-    let len = _ncduTmSize hdr - hdrLength @NcduTmDuHeader
-    dat <- A.take $ fromIntegral len
+    let len = fromIntegral (_ncduTmSize hdr) - fixedSizeOf @NcduTmDuHeader
+    dat <- A.take len
     return $! NcduTmDu hdr dat
 
 
@@ -583,8 +583,8 @@ convertToCltuRespAck x = case x of
     9 -> NCDU_CLTU_RESP_REJECT
     _ -> NCDU_CLTU_RESP_REJECT
 
-msgCalcPayloadLen :: NcduTcHeader -> Word32
-msgCalcPayloadLen hdr = (_ncduPktSize hdr) - hdrLen
+msgCalcPayloadLen :: NcduTcHeader -> Int
+msgCalcPayloadLen hdr = fromIntegral (_ncduPktSize hdr) - hdrLen
 
 
 
@@ -631,7 +631,7 @@ ncduTcCltuResponseBuilder x =
 
 ncduTcDuBuilder :: NcduTcDu -> Builder
 ncduTcDuBuilder x@(NcduTcDu hdr dat) =
-    let size   = packetLength x
+    let size   = fromIntegral (sizeof x)
         newHdr = hdr & ncduPktSize .~ size
     in  ncduTcHeaderBuilder newHdr <> ncduTcDataBuilder dat
 
@@ -657,7 +657,7 @@ ncduTmDuHeaderBuilder x =
 
 ncduTmDuBuilder :: NcduTmDu -> Builder
 ncduTmDuBuilder x =
-    let size   = packetLength x
+    let size   = fromIntegral (sizeof x)
         newHdr = _ncduTmHeader x & ncduTmSize .~ size
     in  ncduTmDuHeaderBuilder newHdr <> bytes (_ncduTmData x)
 
@@ -741,7 +741,7 @@ ncduAdminMessageSeverityParser = do
 
 ncduAdminMessageBuilder :: NcduAdminMessage -> Builder
 ncduAdminMessageBuilder x =
-    let size   = packetLength x
+    let size   = fromIntegral (sizeof x)
         newLen = 1 + size
     in  word32BE (newLen)
             <> word64BE (_ncduAdmTime x)
@@ -758,7 +758,7 @@ ncduAdminMessageParser = do
     tp   <- ncduAdminMessageTypeParser
     sv   <- ncduAdminMessageSeverityParser
     ev   <- A.anyWord32be
-    payl <- A.take (fromIntegral (l - admMessageHdrLen))
+    payl <- A.take (fromIntegral l - admMessageHdrLen)
     return $ NcduAdminMessage l t tp sv ev payl
 
 

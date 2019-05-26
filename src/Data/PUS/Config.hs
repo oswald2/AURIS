@@ -56,6 +56,12 @@ data Config = Config {
     , cfgSCID :: SCID
     -- | A list of available virtual channels.
     , cfgVCIDs :: [VCID]
+    -- | The maximum TM Frame length. This length is used in parsing
+    -- the frame data, so it needs to be accurate. Default is by
+    -- PUS Standard a value 1152 (1024 bytes data)
+    , cfgMaxTMFrameLen :: Word16
+    -- | Indicates, if a TM frame does contain a CRC value
+    , cfgTMFrameHasCRC :: Bool
 } deriving (Eq, Read, Show, Generic)
 
 instance FromJSON Config
@@ -90,6 +96,7 @@ defaultConfig = Config { cfgCltuBlockSize        = CltuBS_8
                        , cfgRandomizerStartValue = 0xFF
                        , cfgSCID = mkSCID 0
                        , cfgVCIDs = [0, 1]
+                       , cfgMaxTMFrameLen = 1152
                        }
 
 -- | write the config as a serialized string to a file. Uses the Show class for serizalization

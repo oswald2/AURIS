@@ -30,7 +30,6 @@ module Data.PUS.CLCW
     , clcwLen
     , clcwBuilder
     , clcwParser
-
     , clcwType
     , clcwVersion
     , clcwStatus
@@ -44,7 +43,6 @@ module Data.PUS.CLCW
     , clcwBCounter
     , clcwReportType
     , clcwReportVal
-
     )
 where
 
@@ -55,11 +53,13 @@ import           Control.Lens                   ( makeLenses )
 
 import           Data.Bits
 --import           Data.ByteString.Lazy.Builder  as B
-import ByteString.StrictBuilder as B
+import           ByteString.StrictBuilder      as B
 import           Data.Attoparsec.ByteString     ( Parser )
 import qualified Data.Attoparsec.Binary        as A
 
 import           Data.PUS.Types
+
+import           Protocol.SizeOf
 
 import           Formatting
 
@@ -122,6 +122,9 @@ defaultCLCW = createCLCW 0 0 False False False False False 0
 -- | Specifies the length of an encoded CLCW value in Bytes
 clcwLen :: Int
 clcwLen = 4
+
+instance FixedSize CLCW where
+    fixedSizeOf = 4
 
 -- | Performs the bit fiddling to get the resulting Word32 value from
 -- a CLCW. Used in encoding the CLCW for transmission
