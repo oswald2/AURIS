@@ -3,7 +3,7 @@
 #-}
 module Data.PUS.TMFrameDfh
     (
-        TMFrameDataFieldHeader
+        TMFrameDataFieldHeader(..)
         , tmFrameDfhLength
     )
 where

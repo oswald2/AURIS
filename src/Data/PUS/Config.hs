@@ -97,6 +97,7 @@ defaultConfig = Config { cfgCltuBlockSize        = CltuBS_8
                        , cfgSCID = mkSCID 0
                        , cfgVCIDs = [0, 1]
                        , cfgMaxTMFrameLen = 1152
+                       , cfgTMFrameHasCRC = True
                        }
 
 -- | write the config as a serialized string to a file. Uses the Show class for serizalization

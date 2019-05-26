@@ -35,19 +35,25 @@ module Data.PUS.TMFrame
     , tmFrameGetPrevAndRest
     , decodeFrame
     , tmFrameAppendCRC
+    , tmFrameEncodeC
+    , tmFrameDecodeC
     )
 where
 
 
 import           RIO                     hiding ( Builder )
 import qualified RIO.ByteString                as B
+import qualified RIO.Text as T
 
 import           Control.Lens                   ( makeLenses )
+import Conduit
+import Control.PUS.Classes
 
 import           Data.Attoparsec.ByteString     ( Parser )
 import qualified Data.Attoparsec.ByteString    as A
 import qualified Data.Attoparsec.Binary        as A
 import           Data.Bits
+import           Data.Conduit.Attoparsec
 
 import           ByteString.StrictBuilder
 
@@ -57,6 +63,7 @@ import           Data.PUS.Types
 import           Data.PUS.Config
 import           Data.PUS.MissionSpecific.Definitions
 import           Data.PUS.TMFrameDfh
+import           Data.PUS.Events
 
 import           Protocol.SizeOf
 
@@ -213,6 +220,46 @@ decodeFrame :: Config -> ByteString -> Either String TMFrame
 decodeFrame cfg input = A.parseOnly (tmFrameParser cfg) input
 
 
+tmFrameEncodeC :: (MonadReader env m, HasConfig env) => ConduitT TMFrame ByteString m ()
+tmFrameEncodeC = awaitForever $ \frame -> do
+    cfg <- view getConfig
+    let enc = builderBytes (tmFrameBuilder frame)
+        result = tmFrameAppendCRC cfg enc
+    yield result
+
+
+tmFrameDecodeC :: (MonadIO m, MonadReader env m, HasGlobalState env) => ConduitT ByteString TMFrame m ()
+tmFrameDecodeC = do
+    cfg <- view getConfig
+    conduitParserEither (A.match (tmFrameParser cfg)) .| proc cfg
+    where
+        proc cfg = awaitForever $ \x -> do
+            st <- ask
+            case x of
+                Left err -> do
+                    let msg = T.pack (errorMessage err)
+                    liftIO $ raiseEvent st (EVAlarms (EV_IllegalTMFrame msg))
+                    proc cfg
+                Right (_, (bs, frame)) -> do
+                    case checkFrame cfg bs of
+                        Left err -> do
+                            liftIO $ raiseEvent st (EVAlarms (EV_IllegalTMFrame err))
+                            proc cfg
+                        Right () -> do
+                            yield frame
+                            proc cfg
+
+checkFrame :: Config -> ByteString -> Either Text ()
+checkFrame cfg bs = 
+    if cfgTMFrameHasCRC cfg 
+        then 
+            case crcCheck bs of 
+                Left err -> Left err
+                Right _ -> Right () 
+        else Right ()
+    
+
+
 
 tmFrameHeaderBuilder :: TMFrameHeader -> Builder
 tmFrameHeaderBuilder hdr =
@@ -270,6 +317,8 @@ tmFrameAppendCRC :: Config -> ByteString -> ByteString
 tmFrameAppendCRC config encFrame = if (cfgTMFrameHasCRC config)
     then crcEncodeAndAppendBS encFrame
     else encFrame
+
+
 
 -- {-# INLINABLE calcHdrLengths #-}
 -- calcHdrLengths :: Config -> Int -> Int

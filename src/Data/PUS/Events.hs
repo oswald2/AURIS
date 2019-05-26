@@ -67,6 +67,7 @@ instance ToJSON EventTelemetry where
 
 data EventAlarm =
     EV_IllegalTCFrame Text
+    | EV_IllegalTMFrame Text
     | EV_NCDUParseError Text
     deriving (Eq, Show, Read, Generic)
 
