@@ -34,6 +34,7 @@ module Data.PUS.PUSPacket
     , tmpiWidth
     , pusPktHdrBuilder
     , pusPktHdrParser
+    , pusPktParser
     )
 where
 

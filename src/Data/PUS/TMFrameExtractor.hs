@@ -14,14 +14,16 @@ import qualified RIO.ByteString as B
 import qualified Data.IntMap.Strict as M
 
 import           Conduit
+import Data.Conduit.Attoparsec
 
 import Control.PUS.Classes
 
 import           Data.PUS.TMFrame
 import           Data.PUS.PUSPacket
 import           Data.PUS.Types
+import           Data.PUS.PUSPacket
 
-
+import Protocol.ProtocolInterfaces
 
 -- type VCMap = M.IntMap ByteString
 
@@ -37,3 +39,7 @@ extractPktFromTMFramesC = awaitForever $ \frame -> do
     if B.null prev then yield prev else yield rest
 
 
+pusPacketDecodeC :: ProtocolInterface -> ConduitT ByteString (Either ParseError (PositionRange, PUSPacket)) m ()
+pusPacketDecodeC interf = do 
+    missionSpecific <- view getMissionSpecific
+    conduitParserEither (pusPktParser missionSpecific interf)
