@@ -31,6 +31,7 @@ module Data.PUS.GlobalState
     , glsFOP1
     , glsLogFunc
     , glsRaiseEvent
+    , glsMissionSpecific
     , newGlobalState
     , nextADCount
     )
@@ -50,6 +51,8 @@ import           Data.PUS.Events
 import           Data.PUS.COP1Types
 import           Data.PUS.Types
 
+import           Data.PUS.MissionSpecific.Definitions
+
 -- | The AppState is just a type alias
 type AppState = TVar PUSState
 
@@ -66,6 +69,8 @@ data GlobalState = GlobalState {
     , glsState :: !AppState
     , glsFOP1 :: COP1State
 
+    , glsMissionSpecific :: PUSMissionSpecific
+
     , glsRaiseEvent :: Event -> IO ()
     , glsLogFunc :: !LogFunc
 }
@@ -73,8 +78,8 @@ data GlobalState = GlobalState {
 -- | Constructor for the global state. Takes a configuration, a
 -- logging function as specified by the RIO library and a raiseEvent
 -- function to report events to the application
-newGlobalState :: Config -> LogFunc -> (Event -> IO ()) -> IO GlobalState
-newGlobalState cfg logErr raiseEvent = do
+newGlobalState :: Config -> PUSMissionSpecific -> LogFunc -> (Event -> IO ()) -> IO GlobalState
+newGlobalState cfg missionSpecific logErr raiseEvent = do
     st   <- defaultPUSState
     tv   <- newTVarIO st
     -- fop1 <- sequence $ map (\vcid -> (vcid, newTVarIO (initialFOPState vcid)) (cfgVCIDs cfg)
@@ -88,6 +93,7 @@ newGlobalState cfg logErr raiseEvent = do
             , glsFOP1       = fop1
             , glsRaiseEvent = raiseEvent
             , glsLogFunc    = logErr
+            , glsMissionSpecific = missionSpecific
             }
     pure state
 

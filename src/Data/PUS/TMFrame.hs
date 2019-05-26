@@ -9,6 +9,7 @@
 module Data.PUS.TMFrame
     ( TMSegmentLen(..)
     , TMFrameHeader
+    , TMFrame
     , tmFrameVersion 
     , tmFrameScID 
     , tmFrameVcID 
@@ -217,7 +218,7 @@ unpackDFS i = (dfh, sync, order, seg, fhp)
 
 
 decodeFrame :: Config -> ByteString -> Either String TMFrame
-decodeFrame cfg input = A.parseOnly (tmFrameParser cfg) input
+decodeFrame cfg = A.parseOnly (tmFrameParser cfg)
 
 
 tmFrameEncodeC :: (MonadReader env m, HasConfig env) => ConduitT TMFrame ByteString m ()

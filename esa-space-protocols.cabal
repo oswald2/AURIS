@@ -67,6 +67,7 @@ library
         Data.PUS.EncTime
         Data.PUS.TMFrame
         Data.PUS.TMFrameDfh
+        Data.PUS.TMFrameExtractor
         Data.PUS.MissionSpecific.Definitions
         Protocol.SizeOf
         Protocol.NCTRS
@@ -108,6 +109,7 @@ library
         , bytestring-to-vector
         , timer-wheel
         , base64-bytestring-type
+        , containers
 
     if flag(llvm)
         ghc-options: -O -Wall -Wcompat -Widentities -Wincomplete-record-updates

@@ -21,6 +21,7 @@ module Control.PUS.Classes
     , HasPUSState(..)
     , HasGlobalState(..)
     , HasFOPState(..)
+    , HasMissionSpecific(..)
     -- , getConfig
     -- , getGlobalState
     -- , getPUSState
@@ -42,6 +43,7 @@ import           Data.PUS.Config
 import           Data.PUS.Events
 import           Data.PUS.Types
 import           Data.PUS.GlobalState
+import           Data.PUS.MissionSpecific.Definitions (PUSMissionSpecific)
 
 -- | This class specifies how to get a configuration
 class HasConfig env where
@@ -51,13 +53,17 @@ class HasConfig env where
 class HasPUSState env where
     appStateG :: Getter env AppState
 
+-- | Class for getting the missions specific handlers
+class HasMissionSpecific env where
+    getMissionSpecific :: Getter env PUSMissionSpecific
+
 -- | Class for getting the FOP1 State
 class HasFOPState env where
     copStateG :: Getter env COP1State
     fopStateG :: VCID -> env -> FOP1State
 
 -- | Class for accessing the global state
-class (HasConfig env, HasPUSState env, HasFOPState env) => HasGlobalState env where
+class (HasConfig env, HasPUSState env, HasFOPState env, HasMissionSpecific env) => HasGlobalState env where
     raiseEvent :: env -> Event -> IO ()
 
 
@@ -67,6 +73,9 @@ instance HasConfig GlobalState where
 
 instance HasPUSState GlobalState where
     appStateG = to glsState
+
+instance HasMissionSpecific GlobalState where
+    getMissionSpecific = to glsMissionSpecific
 
 instance HasFOPState GlobalState where
     copStateG = to glsFOP1
