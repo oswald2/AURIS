@@ -52,7 +52,7 @@ import qualified RIO.Text                      as T
 import           Control.Lens                   ( makeLenses )
 
 import           Data.Bits
---import           Data.ByteString.Lazy.Builder  as B
+
 import           ByteString.StrictBuilder      as B
 import           Data.Attoparsec.ByteString     ( Parser )
 import qualified Data.Attoparsec.Binary        as A
