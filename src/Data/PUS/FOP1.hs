@@ -30,7 +30,7 @@ import           Control.PUS.Classes
 import           Data.PUS.COP1Types
 --import           Data.PUS.TCTransferFrame
 --import           Data.PUS.CLCW
-import           Data.PUS.Types
+import           Data.PUS.Types          hiding ( Initial )
 --import           Data.PUS.Time
 --import           Data.PUS.TCDirective
 import           Data.PUS.Segment
@@ -146,14 +146,13 @@ initializeAD st fopData = do
     let clearWaitQueue = do
             tc <- tryTakeTMVar (fopData ^. fwaitQueue)
             case tc of
-                Nothing -> pure Nothing
-                Just seg ->
-                    case seg ^. encSegFlag of
-                        SegmentStandalone -> pure (Just seg)
-                        SegmentLast -> pure (Just seg)
-                        -- in case we are in the middle of a transmission
-                        -- of more segments, throw them all away.
-                        _ -> clearWaitQueue
+                Nothing  -> pure Nothing
+                Just seg -> case seg ^. encSegFlag of
+                    SegmentStandalone -> pure (Just seg)
+                    SegmentLast       -> pure (Just seg)
+                    -- in case we are in the middle of a transmission
+                    -- of more segments, throw them all away.
+                    _                 -> clearWaitQueue
     clearWaitQueue
 
 
@@ -173,9 +172,10 @@ stateInactive
     -> State m Initial
     -> m ()
 stateInactive fopData st = do
-    inp <- liftIO $ atomically $ readCOP1Queue (fopData ^. fvcid) (fopData ^. fcop1Queue)
+    inp <- liftIO $ atomically $ readCOP1Queue (fopData ^. fvcid)
+                                               (fopData ^. fcop1Queue)
     case inp of
-        Nothing -> stateInactive fopData st
+        Nothing   -> stateInactive fopData st
         Just inp' -> do
             case inp' of
                 COP1Dir dir -> case dir of
@@ -189,10 +189,11 @@ stateInactive fopData st = do
                     InitADWithCLCW -> do
                         newst <- initADWithCLCW fopData st
                         env   <- ask
-                        liftIO $ raiseEvent env $ EVCOP1 (EV_ADInitWaitingCLCW (fopData ^. fvcid))
+                        liftIO $ raiseEvent env $ EVCOP1
+                            (EV_ADInitWaitingCLCW (fopData ^. fvcid))
                         stateInitialisingWithoutBC fopData newst
                     _ -> stateInactive fopData st
-                COP1CLCW clcw -> stateInactive fopData st
+                COP1CLCW clcw   -> stateInactive fopData st
                 COP1TimeoutCLCW -> stateInactive fopData st
             pure ()
 
@@ -223,9 +224,10 @@ stateInitialisingWithoutBC fopData st = do
     fopState <- liftIO $ atomically $ readTVar st
 
     let timerWheel = fopData ^. ftimerWheel
-        timeout = fopState ^. fopT1Initial
+        timeout    = fopState ^. fopT1Initial
 
-    cancel <- liftIO $ register timeout (notifyTimeoutInitCLCW fopData) timerWheel
+    cancel <- liftIO
+        $ register timeout (notifyTimeoutInitCLCW fopData) timerWheel
     pure ()
 
 
@@ -243,8 +245,10 @@ readInput chan = atomically $ readTBQueue chan
 
 
 notifyTimeoutInitCLCW :: FOPData -> IO ()
-notifyTimeoutInitCLCW fopData =
-    atomically $ sendCOP1Queue (fopData ^. fvcid) (fopData ^. fcop1Queue) COP1TimeoutCLCW
+notifyTimeoutInitCLCW fopData = atomically $ sendCOP1Queue
+    (fopData ^. fvcid)
+    (fopData ^. fcop1Queue)
+    COP1TimeoutCLCW
 
 
 

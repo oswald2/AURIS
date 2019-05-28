@@ -21,9 +21,11 @@ module Data.PUS.Types
     , Flag
     , toFlag
     , fromFlag
+    , toBool
     , Ready(..)
     , Enable(..)
     , OnOff(..)
+    , Initial(..)
     , RequestID
     , getRqstID
     , mkRqstID
@@ -123,6 +125,7 @@ mapIDControl = MAPID 63
 data Ready = Ready
 data Enable = Enable
 data OnOff = OnOff
+data Initial = Initial
 
 
 newtype Flag a = MkFlag Bool
@@ -134,6 +137,8 @@ toFlag _ = MkFlag
 fromFlag :: t -> Flag t -> Bool
 fromFlag _ (MkFlag b) = b
 
+toBool :: Flag t -> Bool
+toBool (MkFlag b) = b
 
 
 newtype RequestID = RequestID { getRqstID :: Int64 }

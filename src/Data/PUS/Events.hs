@@ -56,7 +56,10 @@ instance FromJSON EventCommanding
 instance ToJSON EventCommanding where
     toEncoding = genericToEncoding defaultOptions
 
-data EventTelemetry = TelemetryEvent
+data EventTelemetry = 
+    -- | Event if a gap in the virtual channel frame count is detected. First
+    -- value is the last frame count, second value the actual frame count
+    EV_TM_FrameGap Word8 Word8
     deriving (Eq, Show, Read, Generic)
 
 instance Binary EventTelemetry
