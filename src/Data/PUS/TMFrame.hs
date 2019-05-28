@@ -1,3 +1,17 @@
+{-|
+Module      : Data.PUS.TMFrame
+Description : Data type for TM transfer frames
+Copyright   : (c) Michael Oswald, 2019
+License     : BSD-3
+Maintainer  : michael.oswald@onikudaki.net
+Stability   : experimental
+Portability : POSIX
+
+This module is about the 'TMFrame' data type. A TM frame is the transport 
+mechanism for TM packets stored in it's data part. Frames are identified by
+it's spacecraft ID as well as virtual channel ID and virutal channel frame count
+to check for correct sequences of TM frames.
+|-}
 {-# LANGUAGE OverloadedStrings
     , BangPatterns
     , NoImplicitPrelude
@@ -10,23 +24,23 @@ module Data.PUS.TMFrame
     ( TMSegmentLen(..)
     , TMFrameHeader
     , TMFrame
-    , tmFrameVersion 
-    , tmFrameScID 
-    , tmFrameVcID 
-    , tmFrameOpControl 
-    , tmFrameMCFC 
-    , tmFrameVCFC 
-    , tmFrameDfh 
-    , tmFrameSync 
-    , tmFrameOrder 
-    , tmFrameSegID 
-    , tmFrameFirstHeaderPtr 
+    , tmFrameVersion
+    , tmFrameScID
+    , tmFrameVcID
+    , tmFrameOpControl
+    , tmFrameMCFC
+    , tmFrameVCFC
+    , tmFrameDfh
+    , tmFrameSync
+    , tmFrameOrder
+    , tmFrameSegID
+    , tmFrameFirstHeaderPtr
     , tmFrameIdlePtr
     , tmFrameNoFirstHeader
     , tmSegmentLength
-    , tmFrameHdr 
+    , tmFrameHdr
     , tmFrameData
-    , tmFrameOCF 
+    , tmFrameOCF
     , tmFrameFECW
     , tmFrameBuilder
     , tmFrameParser
@@ -38,17 +52,20 @@ module Data.PUS.TMFrame
     , tmFrameAppendCRC
     , tmFrameEncodeC
     , tmFrameDecodeC
+    , tmFrameCheckOrder
+    , tmFrameCheckSync
+    , isIdleTmFrame
     )
 where
 
 
 import           RIO                     hiding ( Builder )
 import qualified RIO.ByteString                as B
-import qualified RIO.Text as T
+import qualified RIO.Text                      as T
 
 import           Control.Lens                   ( makeLenses )
-import Conduit
-import Control.PUS.Classes
+import           Conduit
+import           Control.PUS.Classes
 
 import           Data.Attoparsec.ByteString     ( Parser )
 import qualified Data.Attoparsec.ByteString    as A
@@ -75,6 +92,7 @@ data TMSegmentLen = TMSegment256
     | TMSegment65536
       deriving (Show, Read, Eq, Ord, Enum, Generic)
 
+-- | The primary frame header, adheres to the PUS Standard
 data TMFrameHeader = TMFrameHeader {
     _tmFrameVersion :: !Word8,
     _tmFrameScID :: !SCID,
@@ -109,7 +127,10 @@ tmSegmentLength TMSegment512   = 512
 tmSegmentLength TMSegment1024  = 1024
 tmSegmentLength TMSegment65536 = 65536
 
-
+-- | The frame itself. It consists of a header, the data part and optionally
+-- a CLCW (called OCF in TM terminology) and optionally a CRC value. Presence
+-- of the CLCW is indicated in the header via the 'tmFrameOpControl' flag, the
+-- presence of the CRC is indicated in the 'Config'
 data TMFrame = TMFrame {
     _tmFrameHdr :: TMFrameHeader,
     _tmFrameData :: !ByteString,
@@ -118,6 +139,24 @@ data TMFrame = TMFrame {
 } deriving (Show, Read, Generic)
 makeLenses ''TMFrame
 
+{-# INLINABLE tmFrameCheckOrder #-}
+tmFrameCheckOrder :: TMFrame -> Either Text ()
+tmFrameCheckOrder frame = case tmFrameCheckSync frame of
+    Left  err -> Left err
+    Right ()  -> if frame ^. tmFrameHdr . tmFrameOrder
+        then Left "PUS Standard only allows forward order of TM Frames"
+        else Right ()
+
+{-# INLINABLE tmFrameCheckSync #-}
+tmFrameCheckSync :: TMFrame -> Either Text ()
+tmFrameCheckSync frame = if frame ^. tmFrameHdr . tmFrameSync
+    then Left "TM Frame Sync Bit is 1, currently not implemented."
+    else Right ()
+
+{-# INLINABLE isIdleTmFrame #-}
+isIdleTmFrame :: TMFrame -> Bool
+isIdleTmFrame frame =
+    frame ^. tmFrameHdr . tmFrameFirstHeaderPtr == tmFrameIdlePtr
 
 tmFrameBuilder :: TMFrame -> Builder
 tmFrameBuilder f =
@@ -145,14 +184,14 @@ tmFrameMaxDataLen cfg missionSpecific hdr =
     opLen  = if _tmFrameOpControl hdr then fixedSizeOf @CLCW else 0
     fecLen = if (cfgTMFrameHasCRC cfg) then fixedSizeOf @CRC else 0
     dfhLen = case missionSpecific ^. pmsTMFrameDataFieldHeader of
-        Just h -> tmFrameDfhLength h
-        Nothing  -> 0
+        Just h  -> tmFrameDfhLength h
+        Nothing -> 0
 
 
 {-# INLINABLE tmFrameMaxPayloadLen #-}
 tmFrameMaxPayloadLen :: Config -> TMFrameHeader -> Int
-tmFrameMaxPayloadLen conf _ = fromIntegral (cfgMaxTMFrameLen conf)
-    - fixedSizeOf @TMFrameHeader
+tmFrameMaxPayloadLen conf _ =
+    fromIntegral (cfgMaxTMFrameLen conf) - fixedSizeOf @TMFrameHeader
 
 
 {-# INLINABLE tmFrameMinLen #-}
@@ -162,19 +201,19 @@ tmFrameMinLen = fixedSizeOf @TMFrameHeader + 1
 
 {-# INLINABLE packFlags #-}
 packFlags :: TMFrameHeader -> Word16
-packFlags hdr =
-    let
-        !vers = (fromIntegral (_tmFrameVersion hdr)) .&. 0x03
-        !scid = getSCID (_tmFrameScID hdr) .&. 0x03FF
-        !vcid = fromIntegral (getVCID (_tmFrameVcID hdr))
-        !opc  = if _tmFrameOpControl hdr then 1 else 0
-        !result =
-            (vers `shiftL` 14)
-                .|. (scid `shiftL` 4)
-                .|. (vcid `shiftL` 1)
-                .|. opc
-    in
-        result
+packFlags hdr
+    = let
+          !vers = (fromIntegral (_tmFrameVersion hdr)) .&. 0x03
+          !scid = getSCID (_tmFrameScID hdr) .&. 0x03FF
+          !vcid = fromIntegral (getVCID (_tmFrameVcID hdr))
+          !opc  = if _tmFrameOpControl hdr then 1 else 0
+          !result =
+              (vers `shiftL` 14)
+                  .|. (scid `shiftL` 4)
+                  .|. (vcid `shiftL` 1)
+                  .|. opc
+      in
+          result
 
 {-# INLINABLE unpackFlags #-}
 unpackFlags :: Word16 -> (Word8, SCID, VCID, Bool)
@@ -220,28 +259,42 @@ unpackDFS i = (dfh, sync, order, seg, fhp)
 decodeFrame :: Config -> ByteString -> Either String TMFrame
 decodeFrame cfg = A.parseOnly (tmFrameParser cfg)
 
-
-tmFrameEncodeC :: (MonadReader env m, HasConfig env) => ConduitT TMFrame ByteString m ()
+-- | Conduit to encode a 'TMFrame'. Just calls the builder on it and yields the
+-- resulting 'ByteString'
+tmFrameEncodeC
+    :: (MonadReader env m, HasConfig env) => ConduitT TMFrame ByteString m ()
 tmFrameEncodeC = awaitForever $ \frame -> do
     cfg <- view getConfig
-    let enc = builderBytes (tmFrameBuilder frame)
+    let enc    = builderBytes (tmFrameBuilder frame)
         result = tmFrameAppendCRC cfg enc
     yield result
 
-
-tmFrameDecodeC :: (MonadIO m, MonadReader env m, HasGlobalState env) => ConduitT ByteString TMFrame m ()
+-- | Conduit to decode a 'TMFrame'. In case the frame cannot be parsed, a 
+-- 'EV_IllegalTMFrame' event is raised. If the frame could be parsed, first
+-- it is checked if it is an idle-frame. Idle-frames are simply discarded.
+--
+-- In case it is a normal frame, it is CRC-checked. In case the CRC is invalid,
+-- a 'EV_IllegalTMFrame' event with an error message is raised. 
+--
+-- If the frame was ok, it is yield'ed to the next conduit.
+tmFrameDecodeC
+    :: (MonadIO m, MonadReader env m, HasGlobalState env)
+    => ConduitT ByteString TMFrame m ()
 tmFrameDecodeC = do
     cfg <- view getConfig
     conduitParserEither (A.match (tmFrameParser cfg)) .| proc cfg
-    where
-        proc cfg = awaitForever $ \x -> do
-            st <- ask
-            case x of
-                Left err -> do
-                    let msg = T.pack (errorMessage err)
-                    liftIO $ raiseEvent st (EVAlarms (EV_IllegalTMFrame msg))
-                    proc cfg
-                Right (_, (bs, frame)) -> do
+  where
+    proc cfg = awaitForever $ \x -> do
+        st <- ask
+        case x of
+            Left err -> do
+                let msg = T.pack (errorMessage err)
+                liftIO $ raiseEvent st (EVAlarms (EV_IllegalTMFrame msg))
+                proc cfg
+            Right (_, (bs, frame)) -> 
+                -- if we have an idle-frame, just throw it away
+                if isIdleTmFrame frame then proc cfg
+                else 
                     case checkFrame cfg bs of
                         Left err -> do
                             liftIO $ raiseEvent st (EVAlarms (EV_IllegalTMFrame err))
@@ -251,14 +304,12 @@ tmFrameDecodeC = do
                             proc cfg
 
 checkFrame :: Config -> ByteString -> Either Text ()
-checkFrame cfg bs = 
-    if cfgTMFrameHasCRC cfg 
-        then 
-            case crcCheck bs of 
-                Left err -> Left err
-                Right _ -> Right () 
-        else Right ()
-    
+checkFrame cfg bs = if cfgTMFrameHasCRC cfg
+    then case crcCheck bs of
+        Left  err -> Left err
+        Right _   -> Right ()
+    else Right ()
+
 
 
 
@@ -283,17 +334,13 @@ tmFrameParser cfg = do
     let stdLen = tmFrameMaxPayloadLen cfg hdr
         payloadLen =
             stdLen
-                - (if _tmFrameOpControl hdr
-                      then fixedSizeOf @CLCW
-                      else 0
-                  )
-                - (if cfgTMFrameHasCRC cfg
-                      then fixedSizeOf @CRC
-                      else 0
-                  )
+                - (if _tmFrameOpControl hdr then fixedSizeOf @CLCW else 0)
+                - (if cfgTMFrameHasCRC cfg then fixedSizeOf @CRC else 0)
     payload <- A.take payloadLen
 
-    clcw <- if _tmFrameOpControl hdr then Just <$> clcwParser else return Nothing
+    clcw    <- if _tmFrameOpControl hdr
+        then Just <$> clcwParser
+        else return Nothing
 
     crc <- if cfgTMFrameHasCRC cfg then Just <$> crcParser else return Nothing
 
@@ -319,9 +366,3 @@ tmFrameAppendCRC config encFrame = if (cfgTMFrameHasCRC config)
     then crcEncodeAndAppendBS encFrame
     else encFrame
 
-
-
--- {-# INLINABLE calcHdrLengths #-}
--- calcHdrLengths :: Config -> Int -> Int
--- calcHdrLengths config len =
---     if (cfgTMFrameHasCRC config) then len + fromIntegral crcLen else len
