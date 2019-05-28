@@ -31,6 +31,7 @@ import           Data.PUS.SegmentEncoder
 import           Data.PUS.SegmentationFlags
 import           Data.PUS.APID
 import           Data.PUS.TCRequest
+import           Data.PUS.MissionSpecific.Definitions
 
 import           Protocol.NCTRS
 
@@ -74,12 +75,15 @@ import           GHC.Conc.Sync
 
 
 
-pkt1 = PUSPacket (PUSHeader 0 0 PUSTC True (APID 256) SegmentStandalone (mkSSC 0) 0 0)
-                 (PUSTCStdHeader 3 25 0 True True False True) Nothing
-                 (B.pack [0..10])
+pkt1 ssc = PUSPacket
+    (PUSHeader 0 0 PUSTC True (APID 256) SegmentStandalone (mkSSC ssc) 0 0)
+    (PUSTCStdHeader 3 25 0 True True False True)
+    Nothing
+    (B.pack [0 .. 10])
 
+rqst1 = TCRequest 0 0 (mkSCID 533) (mkVCID 1)
 
-pusPackets = [(pkt1, TCRequest 0 0 (mkSCID 533) (mkVCID 1))]
+pusPackets = RIO.map (\i -> (pkt1 i, rqst1)) [1..1000]
 
 
 
@@ -95,6 +99,7 @@ main = do
     withLogFunc logOptions $ \logFunc -> do
         state <- newGlobalState
             defaultConfig
+            defaultMissionSpecific
             logFunc
             (\ev -> T.putStrLn ("Event: " <> T.pack (show ev)))
 
@@ -115,4 +120,6 @@ main = do
             runGeneralTCPClient (clientSettings 32111 "localhost") $ \app ->
                 void $ concurrently
                     (runConduitRes (chain .| appSink app))
-                    (runConduitRes (appSource app .| receiveTcNcduC .| showConduit))
+                    (runConduitRes
+                        (appSource app .| receiveTcNcduC .| showConduit)
+                    )
