@@ -23,7 +23,7 @@ import Data.Binary
 import Data.Aeson
 
 
-
+-- | Enumeration of the available interfaces
 data ProtocolInterface =
     IF_NCTRS
     | IF_CNC
@@ -36,7 +36,9 @@ instance FromJSON ProtocolInterface
 instance ToJSON ProtocolInterface where
     toEncoding = genericToEncoding defaultOptions
 
-
+-- | This is a simple data type wrapper around another
+-- type. It just adds a field with a 'ProtocolInterface' value to specify
+-- from which/to which interface the contained packet belongs.
 data ProtocolPacket a = ProtocolPacket {
     _protInterface :: ProtocolInterface
     , _protContent :: a
