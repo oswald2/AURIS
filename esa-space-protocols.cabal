@@ -174,6 +174,23 @@ benchmark CLTUPerf
         criterion -any,
         inline-c -any
 
+benchmark CmdEncodePerf
+    type: exitcode-stdio-1.0
+    main-is: CmdEncodePerf.hs
+    default-language: Haskell2010
+    hs-source-dirs: src/bench
+    ghc-options: -Wall -O2 -funbox-strict-fields
+    -- For profiling comment this line in:
+    --ghc-options: -Wall -O2 -threaded -fprof-auto -fexternal-interpreter
+    --            -funbox-strict-fields -prof "-with-rtsopts=-N -p -s -h -i0.1"
+
+    build-depends:
+        esa-space-protocols -any,
+        base -any,
+        bytestring -any,
+        criterion -any
+
+
 
 executable CommandingTest
     main-is: CommandingTest.hs
