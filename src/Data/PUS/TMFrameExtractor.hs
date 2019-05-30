@@ -30,6 +30,8 @@ import           RIO
 import qualified Data.IntMap.Strict            as M
 import qualified RIO.Text                      as T
 
+--import           UnliftIO.Exception
+
 import           Conduit
 import           Data.Conduit.Attoparsec
 import           Data.Conduit.TQueue
@@ -44,6 +46,12 @@ import           Data.PUS.Events
 
 import           Protocol.ProtocolInterfaces
 
+
+
+data RestartVCException = RestartVCException
+    deriving (Show)
+
+instance Exception RestartVCException
 
 -- | Conduit for switching between multiple channels. It queries the 'Config'
 -- for a list of configured virtual channels, sets up queues for these channels
@@ -71,8 +79,14 @@ tmFrameSwitchVC interf outQueue = do
 
     cont <- mapM proc vcids
     -- create the threads
-    let threadFunc (vcid, queue) = runConduitRes
-            (tmFrameExtractionChain vcid queue outQueue interf)
+    let
+        threadFunc a@(vcid, queue) = do
+            res <-
+                tryDeep $ runConduitRes
+                    (tmFrameExtractionChain vcid queue outQueue interf)
+            case res of
+                Left  RestartVCException -> threadFunc a
+                Right x                  -> pure x
     lift $ mapConcurrently_ threadFunc cont
 
     -- create the lookup map to send the contents to the right TBQueue
@@ -133,8 +147,7 @@ checkFrameCountC
 checkFrameCountC = do
     var <- newTVarIO 0xFF
 
-    let
-        go = awaitForever $ \val@(frame, _initial) -> do
+    let go = awaitForever $ \val@(frame, _initial) -> do
             let !vcfc = frame ^. tmFrameHdr . tmFrameVCFC
             lastFC <- atomically $ readTVar var
 
@@ -154,25 +167,24 @@ checkFrameCountC = do
 -- | Conduit for extracting the data part (PUS Packets) out of 
 -- the TM Frame. 
 extractPktFromTMFramesC
-    :: (MonadIO m) => ConduitT (Maybe (TMFrame, Flag Initial)) (Maybe ByteString) m ()
+    :: (MonadIO m)
+    => ConduitT (Maybe (TMFrame, Flag Initial)) (Maybe ByteString) m ()
 extractPktFromTMFramesC =
     -- on initial, we are called the first time. This means that a 
     -- frame could potentially have a header pointer set to non-zero
     -- which means we have to start parsing at the header pointer offset.
     -- from then on, there should be consistent stream of PUS packets
     -- in the data (could also be idle-packets)
-    awaitForever $ \inp ->
-        case inp of
-            Just (frame, initial) -> 
-                if toBool initial
-                    then if frame ^. tmFrameHdr . tmFrameFirstHeaderPtr == 0
-                        then yield (Just (frame ^. tmFrameData))
-                        else do
-                            let (_prev, rest) = tmFrameGetPrevAndRest frame
-                            yield (Just rest)
-                    else yield (Just (frame ^. tmFrameData))
-            Nothing -> -- now we have a gap skip, we also yield Nothing
-                yield Nothing
+                          awaitForever $ \inp -> case inp of
+    Just (frame, initial) -> if toBool initial
+        then if frame ^. tmFrameHdr . tmFrameFirstHeaderPtr == 0
+            then yield (Just (frame ^. tmFrameData))
+            else do
+                let (_prev, rest) = tmFrameGetPrevAndRest frame
+                yield (Just rest)
+        else yield (Just (frame ^. tmFrameData))
+    Nothing -> -- now we have a gap skip, we also yield Nothing
+        yield Nothing
 
 -- | Conduit which takes 'ByteString' and extracts PUS Packets out of 
 -- this stream. Raises the event 'EV_IllegalPUSPacket' in case a packet 
@@ -184,7 +196,9 @@ pusPacketDecodeC
 pusPacketDecodeC interf = do
     st <- ask
     let missionSpecific = st ^. getMissionSpecific
-    preProc .| conduitParserEither (pusPktParser missionSpecific interf) .| proc st
+    preProc
+        .| conduitParserEither (pusPktParser missionSpecific interf)
+        .| proc st
   where
     proc st = awaitForever $ \inp -> case inp of
         Left err -> do
@@ -194,8 +208,8 @@ pusPacketDecodeC interf = do
         Right (_, tc') -> do
             yield tc'
             proc st
-    
-    preProc = awaitForever $ \case 
-            Nothing -> preProc
-            Just x -> yield x
-        
+
+    preProc = awaitForever $ \case
+        Nothing -> preProc
+        Just x  -> yield x
+
