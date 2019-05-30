@@ -10,11 +10,15 @@ Currently under heavy construction and creation.
  * TC Transfer Frame encoding/decoding
  * TC Segment encoding/decoding and segmenting a PUS Packet into TC Segments. Basic functions for assembling a packet out of segments is also available
  * Encoding and Sending of arbitraty PUS Packets (currently only binary payload)
+ * TM Frame encoding and decoding
+ * TM PUS Packet extraction from TM Frames
  
 Current work focuses on the command link. Goal is to have a conduit based pipeline of command encoding flowing from a command request -> TC packet -> PUS packet -> segments -> COP-1 -> TC transfer frames -> CLTU -> Transfer Protocol. 
-Currently the pipeline goes from PUS packet full to NCTRS out in BD mode. Some code skeletons are available to lay out the types used (e.g. a module defining the data types and then a encoder which contains a conduit to transform the data type to the next layer).
+Currently the pipeline goes from PUS packet full to NCTRS out in BD mode. 
 
-Encoding from PUS Packet and sending via NCTRS protocol already works.
+For the TM also some functionality is already available. TM Transfer Frames can be encoded/decoded and contained PUS Packets can be extracted (though not tested yet).
+
+Encoding from PUS Packet and sending via NCTRS protocol in BD mode already works. Current focus is on the COP-1 machine.
  
  ## Building ##
  
@@ -46,11 +50,11 @@ Documentation can be built as usual with `cabal new-haddock`, though it is curre
  Start the docker container with `make docker-run`.
  If within AUK and internet connection is necessary (e.g. for cabal update),
  source etc/setProxy.sh.
- 
+
 ## TODO ##
 
 First, get all working.
- * Commanding independent of spacecraft definitions (MIB, CDM) is nearly done!
+ * Commanding independent of spacecraft definitions (MIB, CDM) 
  * Telemetry independent of spacecraft definitions, so the basic layers (packets)
  * Probably another library for MIB handling will be needed. Also, a general internal model should be present so that alternative representations (e.g. EGS-CCs CDM) can be used too.
  * Adding the MIB/data model to be able to send specific commands and extract TM (parameters)
@@ -58,4 +62,4 @@ First, get all working.
  * Definition of interfaces
  * Some user interfaces
  
-That's enough for the next weeks.
+
