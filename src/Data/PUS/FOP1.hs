@@ -32,7 +32,7 @@ import           Data.PUS.COP1Types
 --import           Data.PUS.CLCW
 import           Data.PUS.Types          hiding ( Initial )
 --import           Data.PUS.Time
---import           Data.PUS.TCDirective
+import           Data.PUS.TCDirective
 import           Data.PUS.Segment
 import           Data.PUS.GlobalState
 import           Data.PUS.Events
@@ -76,9 +76,9 @@ class FOPMachine m where
   type State m :: * -> *
   initial :: m (State m Initial)
 
-  initADWithoutCLCW :: (MonadIO m, MonadReader env m, HasFOPState env) => FOPData -> State m Initial -> m (State m Active)
+  initADWithoutCLCW :: (MonadIO m, MonadReader env m, HasGlobalState env) => FOPData -> State m Initial -> m (State m Active)
   initADWithCLCW :: (MonadIO m, MonadReader env m, HasGlobalState env) => FOPData -> State m Initial -> m (State m InitialisingWithoutBC)
-  initADWithUnlock :: State m Initial -> m (State m InitialisingWithBC)
+  initADWithUnlock :: (MonadIO m, MonadReader env m, HasGlobalState env) => FOPData -> State m Initial -> m (State m InitialisingWithBC)
   initADWithSetVR :: State m Initial -> m (State m InitialisingWithBC)
 
 
@@ -101,8 +101,12 @@ instance (MonadIO m, MonadReader env m, HasGlobalState env) => FOPMachine (FOPMa
     initial = pure Initial
 
     initADWithoutCLCW fopData _ = do
-        st <- fopStateG (fopData ^. fvcid) <$> ask
-        atomically $ initializeAD st fopData
+        env <- ask
+        let st = fopStateG (fopData ^. fvcid) env
+        res <- atomically $ initializeAD st fopData
+        case res of
+            Nothing -> pure ()
+            Just seg -> liftIO $ raiseEvent env $ EVCOP1 (EV_ADPurgedWaitQueue (fopData ^. fvcid) seg)
         pure Active
 
     initADWithCLCW fopData _ = do
@@ -113,6 +117,19 @@ instance (MonadIO m, MonadReader env m, HasGlobalState env) => FOPMachine (FOPMa
             Nothing -> pure ()
             Just seg -> liftIO $ raiseEvent env $ EVCOP1 (EV_ADPurgedWaitQueue (fopData ^. fvcid) seg)
         pure InitialisingWithoutBC
+
+    initADWithUnlock fopData _ = do
+        st <- fopStateG (fopData ^. fvcid) <$> ask
+        env <- ask
+        let st = fopStateG (fopData ^. fvcid) env
+        res <- atomically $ do
+            r <- initializeAD st fopData
+            modifyTVar' st (\state -> state & fopBCout .~ toFlag Ready False)
+            pure r
+        case res of
+            Nothing -> pure ()
+            Just seg -> liftIO $ raiseEvent env $ EVCOP1 (EV_ADPurgedWaitQueue (fopData ^. fvcid) seg)
+        pure InitialisingWithBC
 
 
 -- | initializes the AD mode. In case the wait queue is purged, the segment
@@ -192,8 +209,21 @@ stateInactive fopData st = do
                         liftIO $ raiseEvent env $ EVCOP1
                             (EV_ADInitWaitingCLCW (fopData ^. fvcid))
                         stateInitialisingWithoutBC fopData newst
+                    InitADWithUnlock Unlock -> do
+                        -- check BC_Out
+                        env <- ask
+                        let fopState = fopStateG (fopData ^. fvcid) env
+                        fsta <- atomically $ readTVar fopState
+                        let bcout = fsta ^. fopBCout
+
+                        if fromFlag Ready bcout
+                        then do
+                            newst <- initADWithUnlock fopData st
+                            stateInitialisingWithBC fopData newst
+                        else stateInactive fopData st
+
                     _ -> stateInactive fopData st
-                COP1CLCW clcw   -> stateInactive fopData st
+                COP1CLCW _clcw   -> stateInactive fopData st
                 COP1TimeoutCLCW -> stateInactive fopData st
             pure ()
 
