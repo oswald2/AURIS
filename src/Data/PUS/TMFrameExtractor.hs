@@ -7,7 +7,7 @@ Maintainer  : michael.oswald@onikudaki.net
 Stability   : experimental
 Portability : POSIX
 
-This module is about the extraction of the data part of 'TMFrame' s. The 
+This module is about the extraction of the data part of 'TMFrame' s. The
 extraction is done per virtual channel (taken from the 'Config') and because
 of the used 'Conduit' library automatically handles spillover-packets.
 |-}
@@ -56,9 +56,9 @@ instance Exception RestartVCException
 -- | Conduit for switching between multiple channels. It queries the 'Config'
 -- for a list of configured virtual channels, sets up queues for these channels
 -- and a map to switch between these. Per virtual channel a 'tmFrameExtractionChain'
--- is run (each in its own thread). 
--- 
--- When a 'TMFrame' is received, it determines it's virtual channel ID and 
+-- is run (each in its own thread).
+--
+-- When a 'TMFrame' is received, it determines it's virtual channel ID and
 -- sends the frame to the right extraction channel for this virtual channel
 
 -- @outQueue is the final 'TBQueue', where extracted PUS Packets are sent
@@ -93,7 +93,7 @@ tmFrameSwitchVC interf outQueue = do
     let vcMap =
             M.fromList $ map (\(v, q) -> (fromIntegral (getVCID v), q)) cont
 
-    -- This is the conduit itself, the previous was just setup. 
+    -- This is the conduit itself, the previous was just setup.
     let
         conduit = awaitForever $ \val@(frame, _initial) -> do
             let !vcid =
@@ -121,9 +121,9 @@ tmFrameSwitchVC interf outQueue = do
 --
 -- Effectively, this queue represents one virtual channel and should
 -- run in it's own thread. Multiple of these chains are possible for
--- multiple virtual channels. 
+-- multiple virtual channels.
 --
--- 'tmFrameSwitchVC' does create multiple conduit chains, each in 
+-- 'tmFrameSwitchVC' does create multiple conduit chains, each in
 -- it's own thread and distributes the frames according to their
 -- virtual channel ID
 tmFrameExtractionChain
@@ -133,10 +133,10 @@ tmFrameExtractionChain
     -> TBQueue (ProtocolPacket PUSPacket)
     -> ProtocolInterface
     -> ConduitT () Void m ()
-tmFrameExtractionChain _vcid queue outQueue interf =
+tmFrameExtractionChain vcid queue outQueue interf =
     sourceTBQueue queue
         .| checkFrameCountC
-        .| extractPktFromTMFramesC
+        .| extractPktFromTMFramesC vcid
         .| pusPacketDecodeC interf
         .| sinkTBQueue outQueue
 
@@ -147,7 +147,8 @@ checkFrameCountC
 checkFrameCountC = do
     var <- newTVarIO 0xFF
 
-    let go = awaitForever $ \val@(frame, _initial) -> do
+    let
+        go = awaitForever $ \val@(frame, _initial) -> do
             let !vcfc = frame ^. tmFrameHdr . tmFrameVCFC
             lastFC <- atomically $ readTVar var
 
@@ -164,41 +165,44 @@ checkFrameCountC = do
 
 
 
--- | Conduit for extracting the data part (PUS Packets) out of 
--- the TM Frame. 
+-- | Conduit for extracting the data part (PUS Packets) out of
+-- the TM Frame.
 extractPktFromTMFramesC
-    :: (MonadIO m)
-    => ConduitT (Maybe (TMFrame, Flag Initial)) (Maybe ByteString) m ()
-extractPktFromTMFramesC =
-    -- on initial, we are called the first time. This means that a 
+    :: (MonadIO m, MonadReader env m, HasGlobalState env)
+    => VCID -> ConduitT (Maybe (TMFrame, Flag Initial)) ByteString m ()
+extractPktFromTMFramesC vcid = do
+    -- on initial, we are called the first time. This means that a
     -- frame could potentially have a header pointer set to non-zero
     -- which means we have to start parsing at the header pointer offset.
     -- from then on, there should be consistent stream of PUS packets
     -- in the data (could also be idle-packets)
-                          awaitForever $ \inp -> case inp of
-    Just (frame, initial) -> if toBool initial
-        then if frame ^. tmFrameHdr . tmFrameFirstHeaderPtr == 0
-            then yield (Just (frame ^. tmFrameData))
-            else do
-                let (_prev, rest) = tmFrameGetPrevAndRest frame
-                yield (Just rest)
-        else yield (Just (frame ^. tmFrameData))
-    Nothing -> -- now we have a gap skip, we also yield Nothing
-        yield Nothing
+    awaitForever $ \inp -> case inp of
+        Just (frame, initial) -> if toBool initial
+            then if frame ^. tmFrameHdr . tmFrameFirstHeaderPtr == 0
+                then yield (frame ^. tmFrameData)
+                else do
+                    let (_prev, rest) = tmFrameGetPrevAndRest frame
+                    yield rest
+            else yield (frame ^. tmFrameData)
+        Nothing -> do -- now we have a gap skip, so restart this VC
+            st <- ask
+            liftIO $ raiseEvent st $ EVTelemetry
+                (EV_TM_RestartingVC vcid)
+            throwIO RestartVCException
 
--- | Conduit which takes 'ByteString' and extracts PUS Packets out of 
--- this stream. Raises the event 'EV_IllegalPUSPacket' in case a packet 
--- could not be parsed.
+-- | Conduit which takes 'ByteString' and extracts PUS Packets out of
+-- this stream. Raises the event 'EV_IllegalPUSPacket' in case a packet
+-- could not be parsed. The PUS Packets are wrapped in a 'ProtocolPacket'
+-- which also indicates it's source interface
 pusPacketDecodeC
     :: (MonadIO m, MonadReader env m, HasGlobalState env)
     => ProtocolInterface
-    -> ConduitT (Maybe ByteString) (ProtocolPacket PUSPacket) m ()
+    -> ConduitT ByteString (ProtocolPacket PUSPacket) m ()
 pusPacketDecodeC interf = do
     st <- ask
     let missionSpecific = st ^. getMissionSpecific
-    preProc
-        .| conduitParserEither (pusPktParser missionSpecific interf)
-        .| proc st
+
+    conduitParserEither (pusPktParser missionSpecific interf) .| proc st
   where
     proc st = awaitForever $ \inp -> case inp of
         Left err -> do
@@ -208,8 +212,3 @@ pusPacketDecodeC interf = do
         Right (_, tc') -> do
             yield tc'
             proc st
-
-    preProc = awaitForever $ \case
-        Nothing -> preProc
-        Just x  -> yield x
-
