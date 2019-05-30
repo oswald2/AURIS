@@ -234,16 +234,24 @@ stateInactive fopData st = do
                         stateInitialisingWithoutBC fopData newst
                     InitADWithUnlock Unlock -> do
                         -- check BC_Out
-                        bcout <- checkReadyOut fopData fopBCout
-                        if bcout
+                        env <- ask
+                        (bcout, res) <- withFOPState fopData $ \st -> do
+                            let bc = st ^. fopBCout
+                            if (toBool bc)
                             then do
-                                -- initialise the AD mode
-                                newst <- initADWithUnlock fopData st
-                                -- send the 'Unlock' directive
+                                r <- initializeAD st fopData
                                 sendBCFrame fopData Unlock
-                                -- state transition
-                                stateInitialisingWithBC fopData newst
-                            else stateInactive fopData st
+                                let newst = st & fopBCout .~ toFlag Ready False
+                                pure (newst, (bc ,r))
+                            else pure (st, (bc, Nothing))
+                        case res of
+                            Nothing -> pure ()
+                            Just seg -> liftIO $ raiseEvent env $
+                                EVCOP1 (EV_ADPurgedWaitQueue (fopData ^. fvcid) seg)
+                        if fromFlag Ready bcout
+                        then stateInitialisingWithBC fopData InitialisingWithBC
+                        else stateInactive fopData st
+
                     InitADWithSetVR dir@(SetVR vr) -> do
                         bcout <- checkReadyOut fopData fopBCout
                         if bcout
@@ -313,6 +321,40 @@ checkReadyOut fopData lens = do
     let out = fsta ^. lens
 
     pure (fromFlag Ready out)
+
+
+withFOPState_
+    :: (MonadIO m, MonadReader env m, HasFOPState env)
+    => FOPData
+    -> (FOPState -> STM FOPState)
+    -> m ()
+withFOPState_ fopData stmAction = do
+    env <- ask
+    let fopState = fopStateG (fopData ^. fvcid) env
+    atomically $ do
+        st <- readTVar fopState
+
+        newst <- stmAction st
+
+        writeTVar fopState newst
+
+
+withFOPState
+    :: (MonadIO m, MonadReader env m, HasFOPState env)
+    => FOPData
+    -> (FOPState -> STM (FOPState, a))
+    -> m a
+withFOPState fopData stmAction = do
+    env <- ask
+    let fopState = fopStateG (fopData ^. fvcid) env
+    atomically $ do
+        st <- readTVar fopState
+
+        (newst, result) <- stmAction st
+
+        writeTVar fopState newst
+        pure result
+
 
 
 stateActive fopData st = do
