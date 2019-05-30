@@ -16,19 +16,23 @@ where
 import           RIO
 import qualified RIO.Seq                       as S
 
+import           ByteString.StrictBuilder
+
 import           Conduit
 import           Data.Conduit.TQueue
 import           Data.TimerWheel
 import           Control.Lens                   ( makeLenses
                                                 , (.~)
+                                                , (+~)
                                                 )
 
 --import           UnliftIO.STM
 
 import           Control.PUS.Classes
 
+import           Data.PUS.Config
 import           Data.PUS.COP1Types
---import           Data.PUS.TCTransferFrame
+import           Data.PUS.TCTransferFrame
 --import           Data.PUS.CLCW
 import           Data.PUS.Types          hiding ( Initial )
 --import           Data.PUS.Time
@@ -45,6 +49,7 @@ data FOPData = FOPData {
     _fvcid :: VCID
     , _fwaitQueue :: TMVar EncodedSegment
     , _fcop1Queue :: COP1Queues
+    , _fout :: TBQueue TCTransferFrame
     , _ftimerWheel :: TimerWheel
     }
 makeLenses ''FOPData
@@ -79,7 +84,7 @@ class FOPMachine m where
   initADWithoutCLCW :: (MonadIO m, MonadReader env m, HasGlobalState env) => FOPData -> State m Initial -> m (State m Active)
   initADWithCLCW :: (MonadIO m, MonadReader env m, HasGlobalState env) => FOPData -> State m Initial -> m (State m InitialisingWithoutBC)
   initADWithUnlock :: (MonadIO m, MonadReader env m, HasGlobalState env) => FOPData -> State m Initial -> m (State m InitialisingWithBC)
-  initADWithSetVR :: State m Initial -> m (State m InitialisingWithBC)
+  initADWithSetVR :: (MonadIO m, MonadReader env m, HasGlobalState env) => FOPData -> Word8 -> State m Initial -> m (State m InitialisingWithBC)
 
 
 newtype FOPMachineT env m a = FOPTMachineT { runFOPMachineT :: m a }
@@ -128,9 +133,27 @@ instance (MonadIO m, MonadReader env m, HasGlobalState env) => FOPMachine (FOPMa
             pure r
         case res of
             Nothing -> pure ()
-            Just seg -> liftIO $ raiseEvent env $ EVCOP1 (EV_ADPurgedWaitQueue (fopData ^. fvcid) seg)
+            Just seg -> liftIO $ raiseEvent env $
+                EVCOP1 (EV_ADPurgedWaitQueue (fopData ^. fvcid) seg)
         pure InitialisingWithBC
 
+    initADWithSetVR fopData vr _ = do
+        st <- fopStateG (fopData ^. fvcid) <$> ask
+        env <- ask
+        let st = fopStateG (fopData ^. fvcid) env
+        res <- atomically $ do
+            r <- initializeAD st fopData
+            modifyTVar' st (\state ->
+                    state & fopBCout .~ toFlag Ready False
+                    & fopVS .~ vr
+                    & fopNNR .~ vr
+                    )
+            pure r
+        case res of
+            Nothing -> pure ()
+            Just seg -> liftIO $ raiseEvent env $
+                EVCOP1 (EV_ADPurgedWaitQueue (fopData ^. fvcid) seg)
+        pure InitialisingWithBC
 
 -- | initializes the AD mode. In case the wait queue is purged, the segment
 -- is returned
@@ -211,21 +234,85 @@ stateInactive fopData st = do
                         stateInitialisingWithoutBC fopData newst
                     InitADWithUnlock Unlock -> do
                         -- check BC_Out
-                        env <- ask
-                        let fopState = fopStateG (fopData ^. fvcid) env
-                        fsta <- atomically $ readTVar fopState
-                        let bcout = fsta ^. fopBCout
-
-                        if fromFlag Ready bcout
-                        then do
-                            newst <- initADWithUnlock fopData st
-                            stateInitialisingWithBC fopData newst
-                        else stateInactive fopData st
-
+                        bcout <- checkReadyOut fopData fopBCout
+                        if bcout
+                            then do
+                                -- initialise the AD mode
+                                newst <- initADWithUnlock fopData st
+                                -- send the 'Unlock' directive
+                                sendBCFrame fopData Unlock
+                                -- state transition
+                                stateInitialisingWithBC fopData newst
+                            else stateInactive fopData st
+                    InitADWithSetVR dir@(SetVR vr) -> do
+                        bcout <- checkReadyOut fopData fopBCout
+                        if bcout
+                            then do
+                                -- initialise the AD mode
+                                newst <- initADWithSetVR fopData vr st
+                                -- send the 'SetVR' directive
+                                sendBCFrame fopData dir
+                                -- state transition
+                                stateInitialisingWithBC fopData newst
+                            else stateInactive fopData st
                     _ -> stateInactive fopData st
-                COP1CLCW _clcw   -> stateInactive fopData st
+                COP1CLCW _clcw  -> stateInactive fopData st
                 COP1TimeoutCLCW -> stateInactive fopData st
             pure ()
+
+
+-- | send a BC Frame to the out channel (to the interface for encoding and sending).
+-- Creates a new BC Frame with the given directive as content, encodes the directive,
+-- fills out the frame values, increments the V(S) counter of the COP-1 state machine
+-- and sends the frame out to the channel.
+sendBCFrame
+    :: (MonadIO m, MonadReader env m, HasGlobalState env)
+    => FOPData
+    -> TCDirective
+    -> m ()
+sendBCFrame fopData directive = do
+    env <- ask
+    let cfg          = env ^. getConfig
+        vcid         = fopData ^. fvcid
+        scid         = cfgSCID cfg
+        fopState     = fopStateG vcid env
+        encDirective = builderBytes $ directiveBuilder directive
+    atomically $ do
+        -- read the current FOP-1 state
+        st <- readTVar fopState
+
+        -- create a new BC transfer frame and fill out the values
+        let frame = TCTransferFrame
+                { _tcFrameVersion = 0
+                , _tcFrameFlag    = FrameBC
+                , _tcFrameSCID    = scid
+                , _tcFrameVCID    = vcid
+                , _tcFrameLength  = 0
+                , _tcFrameSeq     = st ^. fopVS
+                , _tcFrameData    = encDirective
+                }
+        -- create a new state which has V(S) incremented
+            newst = st & fopVS +~ 1
+
+        -- write the new state
+        writeTVar fopState newst
+        -- write the frame to the out queue
+        writeTBQueue (fopData ^. fout) frame
+
+
+
+checkReadyOut
+    :: (MonadIO m, MonadReader env m, HasFOPState env)
+    => FOPData
+    -> Getting (Flag Ready) FOPState (Flag Ready)
+    -> m Bool
+checkReadyOut fopData lens = do
+    env <- ask
+    let fopState = fopStateG (fopData ^. fvcid) env
+    fsta <- atomically $ readTVar fopState
+    let out = fsta ^. lens
+
+    pure (fromFlag Ready out)
 
 
 stateActive fopData st = do
@@ -282,7 +369,16 @@ notifyTimeoutInitCLCW fopData = atomically $ sendCOP1Queue
 
 
 
-
+-- | This is a conduit for the input. @chan is a 'TBQueue' which is wrapped in
+-- a input conduit (STM Conduit). @segBuffer is a 'TMVar' used as the '''waitQueue'''
+-- for the COP-1 protocol.
+--
+-- So basically, this conduit gets encoded segments wrapped in ProtocolPackets as
+-- input and places them in the TMVar. This may block if the COP-1 machine is busy
+-- or in a state where it doesn't accept commands, which is the expected wait queue
+-- behaviour. The COP-1 state machine will read the segment from the TMVar when
+-- it is ready and forward it to another channel for TC Transfer Frame, CLTU and
+-- finally NCTRS or SLE encoding.
 cop1Conduit
     :: (MonadIO m)
     => NCTRSChan EncodedSegment

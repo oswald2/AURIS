@@ -70,7 +70,7 @@ data TCTransferFrame = TCTransferFrame {
     , _tcFrameVCID :: !VCID
     , _tcFrameLength :: !Word16
     , _tcFrameSeq :: !Word8
-    , _tcFrameData :: BS.ByteString
+    , _tcFrameData :: !BS.ByteString
     } deriving (Eq, Show, Read)
 
 makeLenses ''TCTransferFrame
