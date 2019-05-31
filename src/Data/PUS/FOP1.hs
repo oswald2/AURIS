@@ -115,8 +115,10 @@ class FOPMachine m where
   type State m :: * -> *
   initial :: m (State m Initial)
 
-  initADWithoutCLCW :: (MonadIO m, MonadReader env m, HasGlobalState env) => FOPData -> State m Initial -> m (State m Active)
-  initADWithCLCW :: (MonadIO m, MonadReader env m, HasGlobalState env) => FOPData -> State m Initial -> m (State m InitialisingWithoutBC)
+  initADWithoutCLCW :: (MonadIO m, MonadReader env m, HasGlobalState env) =>
+    FOPData -> State m Initial -> m (State m Active)
+  initADWithCLCW :: (MonadIO m, MonadReader env m, HasGlobalState env) =>
+    FOPData -> State m Initial -> m (IO Bool, State m InitialisingWithoutBC)
   initADWithUnlock :: (MonadIO m, MonadReader env m, HasGlobalState env) =>
     FOPData -> State m Initial -> m (InitWithBCStateOut m)
   initADWithSetVR :: (MonadIO m, MonadReader env m, HasGlobalState env) =>
@@ -156,15 +158,18 @@ instance (MonadIO m, MonadReader env m, HasGlobalState env) => FOPMachine (FOPMa
     initADWithCLCW fopData _ = do
         env <- ask
         let st = fopStateG (fopData ^. fvcid) env
-        join $ withFOPState fopData $ \state -> do
+        cancelTimer <- join $ withFOPState fopData $ \state -> do
             let newst = initializeState state
             purged <- purgeWaitQueue fopData
 
-            let action = liftIO $ do
+            let timeout = newst ^. fopT1Initial
+                timerWheel = fopData ^. ftimerWheel
+                action = liftIO $ do
                     when purged $ raiseEvent env $ EVCOP1 (EV_ADPurgedWaitQueue (fopData ^. fvcid))
                     raiseEvent env $ EVCOP1 (EV_ADInitWaitingCLCW (fopData ^. fvcid))
+                    register timeout (notifyTimeoutInitCLCW fopData) timerWheel
             pure (newst, action)
-        pure InitialisingWithoutBC
+        pure (cancelTimer, InitialisingWithoutBC)
 
     initADWithUnlock fopData _ = do
         env <- ask
@@ -191,6 +196,7 @@ instance (MonadIO m, MonadReader env m, HasGlobalState env) => FOPMachine (FOPMa
                 -- in case BC out was not ready, just remain in the initial state
                 else pure (state, pure (IWBCInitial Initial))
 
+    -- | initialises the AD mode with only SetVR. Other directives are ignored.
     initADWithSetVR fopData setVr@(SetVR vr) _ = do
         env <- ask
         let st = fopStateG (fopData ^. fvcid) env
@@ -215,6 +221,7 @@ instance (MonadIO m, MonadReader env m, HasGlobalState env) => FOPMachine (FOPMa
                     pure (newst2, action)
                 -- in case BC out was not ready, just remain in the initial state
                 else pure (state, pure (IWBCInitial Initial))
+    initADWithSetVR _ _ _ = pure (IWBCInitial Initial)
 
 
 
@@ -414,18 +421,9 @@ stateRetransmitWithWait fopData st = do
 stateInitialisingWithoutBC
     :: (MonadIO m, MonadReader env m, HasGlobalState env)
     => FOPData
-    -> State m InitialisingWithoutBC
+    -> (IO Bool, State m InitialisingWithoutBC)
     -> m ()
-stateInitialisingWithoutBC fopData st = do
-    env <- ask
-    let st = fopStateG (fopData ^. fvcid) env
-    fopState <- liftIO $ atomically $ readTVar st
-
-    let timerWheel = fopData ^. ftimerWheel
-        timeout    = fopState ^. fopT1Initial
-
-    cancel <- liftIO
-        $ register timeout (notifyTimeoutInitCLCW fopData) timerWheel
+stateInitialisingWithoutBC fopData (cancelTimer, st) = do
     pure ()
 
 
