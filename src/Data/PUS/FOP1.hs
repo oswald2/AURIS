@@ -54,7 +54,37 @@ data FOPData = FOPData {
     }
 makeLenses ''FOPData
 
+withFOPState_
+    :: (MonadIO m, MonadReader env m, HasFOPState env)
+    => FOPData
+    -> (FOPState -> STM FOPState)
+    -> m ()
+withFOPState_ fopData stmAction = do
+    env <- ask
+    let fopState = fopStateG (fopData ^. fvcid) env
+    atomically $ do
+        st    <- readTVar fopState
 
+        newst <- stmAction st
+
+        writeTVar fopState newst
+
+
+withFOPState
+    :: (MonadIO m, MonadReader env m, HasFOPState env)
+    => FOPData
+    -> (FOPState -> STM (FOPState, a))
+    -> m a
+withFOPState fopData stmAction = do
+    env <- ask
+    let fopState = fopStateG (fopData ^. fvcid) env
+    atomically $ do
+        st              <- readTVar fopState
+
+        (newst, result) <- stmAction st
+
+        writeTVar fopState newst
+        pure result
 
 _checkSlidingWinWidth :: Word8 -> Bool
 _checkSlidingWinWidth w = (2 < w) && (w < 254) && even w
@@ -76,6 +106,10 @@ data InitialisingWithBC
 data Initial
 
 
+data InitWithBCStateOut m =
+    IWBCInitial (State m Initial)
+    | IWBCInitialisingWithBC (State m InitialisingWithBC)
+
 
 class FOPMachine m where
   type State m :: * -> *
@@ -83,8 +117,10 @@ class FOPMachine m where
 
   initADWithoutCLCW :: (MonadIO m, MonadReader env m, HasGlobalState env) => FOPData -> State m Initial -> m (State m Active)
   initADWithCLCW :: (MonadIO m, MonadReader env m, HasGlobalState env) => FOPData -> State m Initial -> m (State m InitialisingWithoutBC)
-  initADWithUnlock :: (MonadIO m, MonadReader env m, HasGlobalState env) => FOPData -> State m Initial -> m (State m InitialisingWithBC)
-  initADWithSetVR :: (MonadIO m, MonadReader env m, HasGlobalState env) => FOPData -> Word8 -> State m Initial -> m (State m InitialisingWithBC)
+  initADWithUnlock :: (MonadIO m, MonadReader env m, HasGlobalState env) =>
+    FOPData -> State m Initial -> m (InitWithBCStateOut m)
+  initADWithSetVR :: (MonadIO m, MonadReader env m, HasGlobalState env) =>
+    FOPData -> TCDirective -> State m Initial -> m (InitWithBCStateOut m)
 
 
 newtype FOPMachineT env m a = FOPTMachineT { runFOPMachineT :: m a }
@@ -108,92 +144,130 @@ instance (MonadIO m, MonadReader env m, HasGlobalState env) => FOPMachine (FOPMa
     initADWithoutCLCW fopData _ = do
         env <- ask
         let st = fopStateG (fopData ^. fvcid) env
-        res <- atomically $ initializeAD st fopData
-        case res of
-            Nothing -> pure ()
-            Just seg -> liftIO $ raiseEvent env $ EVCOP1 (EV_ADPurgedWaitQueue (fopData ^. fvcid) seg)
+        join $ withFOPState fopData $ \state -> do
+            let newst = initializeState state
+            purged <- purgeWaitQueue fopData
+            let action = liftIO $ do
+                    when purged $ raiseEvent env $ EVCOP1 (EV_ADPurgedWaitQueue (fopData ^. fvcid))
+                    liftIO $ raiseEvent env $ EVCOP1 (EV_ADInitializedWithoutCLCW (fopData ^. fvcid))
+            pure (newst, action)
         pure Active
 
     initADWithCLCW fopData _ = do
         env <- ask
         let st = fopStateG (fopData ^. fvcid) env
-        res <- atomically $ initializeAD st fopData
-        case res of
-            Nothing -> pure ()
-            Just seg -> liftIO $ raiseEvent env $ EVCOP1 (EV_ADPurgedWaitQueue (fopData ^. fvcid) seg)
+        join $ withFOPState fopData $ \state -> do
+            let newst = initializeState state
+            purged <- purgeWaitQueue fopData
+
+            let action = liftIO $ do
+                    when purged $ raiseEvent env $ EVCOP1 (EV_ADPurgedWaitQueue (fopData ^. fvcid))
+                    raiseEvent env $ EVCOP1 (EV_ADInitWaitingCLCW (fopData ^. fvcid))
+            pure (newst, action)
         pure InitialisingWithoutBC
 
     initADWithUnlock fopData _ = do
-        st <- fopStateG (fopData ^. fvcid) <$> ask
         env <- ask
         let st = fopStateG (fopData ^. fvcid) env
-        res <- atomically $ do
-            r <- initializeAD st fopData
-            modifyTVar' st (\state -> state & fopBCout .~ toFlag Ready False)
-            pure r
-        case res of
-            Nothing -> pure ()
-            Just seg -> liftIO $ raiseEvent env $
-                EVCOP1 (EV_ADPurgedWaitQueue (fopData ^. fvcid) seg)
-        pure InitialisingWithBC
+        -- perform actions on the state. withFOPState returns an IO action which
+        -- is executed with join
+        join $ withFOPState fopData $ \state ->
+            -- only to this if BC out is ready
+            if toBool (state ^. fopBCout)
+                then do
+                    -- intialize the state to AD
+                    let newst = initializeState state
+                    -- purge the wait queue
+                    purged <- purgeWaitQueue fopData
+                    -- encode the Unlock directive and send it downstream
+                    newst1 <- sendBCFrameSTM (env ^. getConfig) fopData newst Unlock
+                    -- determine a new state, where BC out is set to false
+                    let newst2 = newst1 & fopBCout .~ toFlag Ready False
+                        -- action execute after return from STM call
+                        action = liftIO $ do
+                            when purged $ raiseEvent env $ EVCOP1 (EV_ADPurgedWaitQueue (fopData ^. fvcid))
+                            pure (IWBCInitialisingWithBC InitialisingWithBC)
+                    pure (newst2, action)
+                -- in case BC out was not ready, just remain in the initial state
+                else pure (state, pure (IWBCInitial Initial))
 
-    initADWithSetVR fopData vr _ = do
-        st <- fopStateG (fopData ^. fvcid) <$> ask
+    initADWithSetVR fopData setVr@(SetVR vr) _ = do
         env <- ask
         let st = fopStateG (fopData ^. fvcid) env
-        res <- atomically $ do
-            r <- initializeAD st fopData
-            modifyTVar' st (\state ->
-                    state & fopBCout .~ toFlag Ready False
-                    & fopVS .~ vr
-                    & fopNNR .~ vr
-                    )
-            pure r
-        case res of
-            Nothing -> pure ()
-            Just seg -> liftIO $ raiseEvent env $
-                EVCOP1 (EV_ADPurgedWaitQueue (fopData ^. fvcid) seg)
-        pure InitialisingWithBC
+        -- perform actions on the state. withFOPState returns an IO action which
+        -- is executed with join
+        join $ withFOPState fopData $ \state ->
+            -- only to this if BC out is ready
+            if toBool (state ^. fopBCout)
+                then do
+                    -- intialize the state to AD
+                    let newst = initializeState state & fopVS .~ vr & fopNNR .~ vr
+                    -- purge the wait queue
+                    purged <- purgeWaitQueue fopData
+                    -- encode the Unlock directive and send it downstream
+                    newst1 <- sendBCFrameSTM (env ^. getConfig) fopData newst setVr
+                    -- determine a new state, where BC out is set to false
+                    let newst2 = newst1 & fopBCout .~ toFlag Ready False
+                        -- action execute after return from STM call
+                        action = liftIO $ do
+                            when purged $ raiseEvent env $ EVCOP1 (EV_ADPurgedWaitQueue (fopData ^. fvcid))
+                            pure (IWBCInitialisingWithBC InitialisingWithBC)
+                    pure (newst2, action)
+                -- in case BC out was not ready, just remain in the initial state
+                else pure (state, pure (IWBCInitial Initial))
 
--- | initializes the AD mode. In case the wait queue is purged, the segment
--- is returned
-initializeAD :: FOP1State -> FOPData -> STM (Maybe EncodedSegment)
-initializeAD st fopData = do
-    modifyTVar'
-        st
-        (\state ->
-            state
-                &  fopWaitFlag
-                .~ False
-                &  fopLockoutFlag
-                .~ False
-                &  fopRetransmitFlag
-                .~ False
-                &  fopSentQueue
-                .~ S.empty
-                &  fopToBeRetransmitted
-                .~ False
-                &  fopADout
-                .~ toFlag Ready True
-                &  fopBDout
-                .~ toFlag Ready True
-                &  fopBCout
-                .~ toFlag Ready True
-                &  fopTransmissionCount
-                .~ 0
-        )
-    -- also purge the wait queue
-    let clearWaitQueue = do
-            tc <- tryTakeTMVar (fopData ^. fwaitQueue)
-            case tc of
-                Nothing  -> pure Nothing
-                Just seg -> case seg ^. encSegFlag of
-                    SegmentStandalone -> pure (Just seg)
-                    SegmentLast       -> pure (Just seg)
-                    -- in case we are in the middle of a transmission
-                    -- of more segments, throw them all away.
-                    _                 -> clearWaitQueue
-    clearWaitQueue
+
+
+-- | initialise the state
+initializeState :: FOPState -> FOPState
+initializeState state =
+    state
+        &  fopWaitFlag
+        .~ False
+        &  fopLockoutFlag
+        .~ False
+        &  fopRetransmitFlag
+        .~ False
+        &  fopSentQueue
+        .~ S.empty
+        &  fopToBeRetransmitted
+        .~ False
+        &  fopADout
+        .~ toFlag Ready True
+        &  fopBDout
+        .~ toFlag Ready True
+        &  fopBCout
+        .~ toFlag Ready True
+        &  fopTransmissionCount
+        .~ 0
+
+-- | increment the V(S) counter in the state
+incrementVS :: FOPState -> FOPState
+incrementVS state = state & fopVS +~ 1
+
+-- | purges the wait queue in case of initialisation of AD mode
+purgeWaitQueue :: FOPData -> STM Bool
+purgeWaitQueue fopData = do
+    tc <- tryTakeTMVar (fopData ^. fwaitQueue)
+    case tc of
+        Nothing  -> pure False
+        Just seg -> case seg ^. encSegFlag of
+            SegmentStandalone -> pure True
+            SegmentLast       -> pure True
+            -- in case we are in the middle of a transmission
+            -- of more segments, throw them all away.
+            _                 -> do
+                let loop = do
+                        seg <- takeTMVar (fopData ^. fwaitQueue)
+                        case seg ^. encSegFlag of
+                            SegmentStandalone -> do
+                                putTMVar (fopData ^. fwaitQueue) seg
+                                pure True
+                            SegmentFirst -> do
+                                putTMVar (fopData ^. fwaitQueue) seg
+                                pure True
+                            _ -> loop
+                loop
 
 
 -- | this is the whole state machine of the FOP-1 starting point
@@ -219,54 +293,50 @@ stateInactive fopData st = do
         Just inp' -> do
             case inp' of
                 COP1Dir dir -> case dir of
-                    InitADWithoutCLCW -> do
-                        newst <- initADWithoutCLCW fopData st
-                        env   <- ask
-                        liftIO $ raiseEvent env $ EVCOP1
-                            (EV_ADInitializedWithoutCLCW (fopData ^. fvcid))
-                        -- go to next state
-                        stateActive fopData newst
-                    InitADWithCLCW -> do
-                        newst <- initADWithCLCW fopData st
-                        env   <- ask
-                        liftIO $ raiseEvent env $ EVCOP1
-                            (EV_ADInitWaitingCLCW (fopData ^. fvcid))
-                        stateInitialisingWithoutBC fopData newst
+                    InitADWithoutCLCW ->
+                        initADWithoutCLCW fopData st >>= stateActive fopData
+                    InitADWithCLCW ->
+                        initADWithCLCW fopData st
+                            >>= stateInitialisingWithoutBC fopData
                     InitADWithUnlock Unlock -> do
-                        -- check BC_Out
-                        env <- ask
-                        (bcout, res) <- withFOPState fopData $ \st -> do
-                            let bc = st ^. fopBCout
-                            if (toBool bc)
-                            then do
-                                r <- initializeAD st fopData
-                                sendBCFrame fopData Unlock
-                                let newst = st & fopBCout .~ toFlag Ready False
-                                pure (newst, (bc ,r))
-                            else pure (st, (bc, Nothing))
-                        case res of
-                            Nothing -> pure ()
-                            Just seg -> liftIO $ raiseEvent env $
-                                EVCOP1 (EV_ADPurgedWaitQueue (fopData ^. fvcid) seg)
-                        if fromFlag Ready bcout
-                        then stateInitialisingWithBC fopData InitialisingWithBC
-                        else stateInactive fopData st
-
-                    InitADWithSetVR dir@(SetVR vr) -> do
-                        bcout <- checkReadyOut fopData fopBCout
-                        if bcout
-                            then do
-                                -- initialise the AD mode
-                                newst <- initADWithSetVR fopData vr st
-                                -- send the 'SetVR' directive
-                                sendBCFrame fopData dir
-                                -- state transition
-                                stateInitialisingWithBC fopData newst
-                            else stateInactive fopData st
+                        newst <- initADWithUnlock fopData st
+                        case newst of
+                            IWBCInitial sta -> stateInactive fopData sta
+                            IWBCInitialisingWithBC sta -> stateInitialisingWithBC fopData sta
+                    InitADWithSetVR setVR -> do
+                        newst <- initADWithSetVR fopData setVR st
+                        case newst of
+                            IWBCInitial sta -> stateInactive fopData sta
+                            IWBCInitialisingWithBC sta -> stateInitialisingWithBC fopData sta
                     _ -> stateInactive fopData st
                 COP1CLCW _clcw  -> stateInactive fopData st
                 COP1TimeoutCLCW -> stateInactive fopData st
             pure ()
+
+
+
+sendBCFrameSTM :: Config -> FOPData -> FOPState -> TCDirective -> STM FOPState
+sendBCFrameSTM cfg fopData fopState directive = do
+    let vcid         = fopData ^. fvcid
+        scid         = cfgSCID cfg
+        encDirective = builderBytes $ directiveBuilder directive
+    -- create a new BC transfer frame and fill out the values
+        frame        = TCTransferFrame
+            { _tcFrameVersion = 0
+            , _tcFrameFlag    = FrameBC
+            , _tcFrameSCID    = scid
+            , _tcFrameVCID    = vcid
+            , _tcFrameLength  = 0
+            , _tcFrameSeq     = fopState ^. fopVS
+            , _tcFrameData    = encDirective
+            }
+    -- create a new state which has V(S) incremented
+        newst = fopState & fopVS +~ 1
+
+    -- write the frame to the out queue
+    writeTBQueue (fopData ^. fout) frame
+
+    pure newst
 
 
 -- | send a BC Frame to the out channel (to the interface for encoding and sending).
@@ -299,7 +369,7 @@ sendBCFrame fopData directive = do
                 , _tcFrameSeq     = st ^. fopVS
                 , _tcFrameData    = encDirective
                 }
-        -- create a new state which has V(S) incremented
+-- create a new state which has V(S) incremented
             newst = st & fopVS +~ 1
 
         -- write the new state
@@ -323,37 +393,6 @@ checkReadyOut fopData lens = do
     pure (fromFlag Ready out)
 
 
-withFOPState_
-    :: (MonadIO m, MonadReader env m, HasFOPState env)
-    => FOPData
-    -> (FOPState -> STM FOPState)
-    -> m ()
-withFOPState_ fopData stmAction = do
-    env <- ask
-    let fopState = fopStateG (fopData ^. fvcid) env
-    atomically $ do
-        st <- readTVar fopState
-
-        newst <- stmAction st
-
-        writeTVar fopState newst
-
-
-withFOPState
-    :: (MonadIO m, MonadReader env m, HasFOPState env)
-    => FOPData
-    -> (FOPState -> STM (FOPState, a))
-    -> m a
-withFOPState fopData stmAction = do
-    env <- ask
-    let fopState = fopStateG (fopData ^. fvcid) env
-    atomically $ do
-        st <- readTVar fopState
-
-        (newst, result) <- stmAction st
-
-        writeTVar fopState newst
-        pure result
 
 
 

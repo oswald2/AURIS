@@ -31,7 +31,7 @@ import           Data.Binary
 import           Data.Aeson
 
 import           Data.PUS.Types
-import           Data.PUS.Segment
+--import           Data.PUS.Segment
 
 
 
@@ -84,7 +84,7 @@ instance ToJSON EventAlarm where
 data EventCOP1 =
     EV_ADInitializedWithoutCLCW VCID
     | EV_ADInitWaitingCLCW VCID
-    | EV_ADPurgedWaitQueue VCID EncodedSegment
+    | EV_ADPurgedWaitQueue VCID
     deriving (Eq, Show, Read, Generic)
 
 
