@@ -111,6 +111,13 @@ data InitWithBCStateOut m =
     | IWBCInitialisingWithBC (State m InitialisingWithBC)
 
 
+data ResumeOut m =
+    RSInitial (State m Initial)
+    | RSActive (State m Active)
+    | RSRetransmitWOWait (State m RetransmitWithoutWait)
+    | RSRetransmitWWait (State m RetransmitWithWait)
+    | RSInitialisingWOBC (State m InitialisingWithoutBC)
+
 class FOPMachine m where
   type State m :: * -> *
   initial :: m (State m Initial)
@@ -124,6 +131,8 @@ class FOPMachine m where
   initADWithSetVR :: (MonadIO m, MonadReader env m, HasGlobalState env) =>
     FOPData -> TCDirective -> State m Initial -> m (InitWithBCStateOut m)
 
+  resumeAD :: (MonadIO m, MonadReader env m, HasGlobalState env) =>
+    FOPData -> State m Initial -> m (ResumeOut m)
 
 newtype FOPMachineT env m a = FOPTMachineT { runFOPMachineT :: m a }
   deriving (Functor, Monad, Applicative, MonadIO)
@@ -186,8 +195,9 @@ instance (MonadIO m, MonadReader env m, HasGlobalState env) => FOPMachine (FOPMa
                     purged <- purgeWaitQueue fopData
                     -- encode the Unlock directive and send it downstream
                     newst1 <- sendBCFrameSTM (env ^. getConfig) fopData newst Unlock
-                    -- determine a new state, where BC out is set to false
-                    let newst2 = newst1 & fopBCout .~ toFlag Ready False
+                    -- determine a new state, where BC out is set to true since when
+                    -- sendBCFrameSTM aborts, it will be retried
+                    let newst2 = newst1 & fopBCout .~ toFlag Ready True
                         -- action execute after return from STM call
                         action = liftIO $ do
                             when purged $ raiseEvent env $ EVCOP1 (EV_ADPurgedWaitQueue (fopData ^. fvcid))
@@ -212,8 +222,9 @@ instance (MonadIO m, MonadReader env m, HasGlobalState env) => FOPMachine (FOPMa
                     purged <- purgeWaitQueue fopData
                     -- encode the Unlock directive and send it downstream
                     newst1 <- sendBCFrameSTM (env ^. getConfig) fopData newst setVr
-                    -- determine a new state, where BC out is set to false
-                    let newst2 = newst1 & fopBCout .~ toFlag Ready False
+                    -- determine a new state, where BC out is set to true since when
+                    -- sendBCFrameSTM aborts, it will be retried
+                    let newst2 = newst1 & fopBCout .~ toFlag Ready True
                         -- action execute after return from STM call
                         action = liftIO $ do
                             when purged $ raiseEvent env $ EVCOP1 (EV_ADPurgedWaitQueue (fopData ^. fvcid))
@@ -222,6 +233,9 @@ instance (MonadIO m, MonadReader env m, HasGlobalState env) => FOPMachine (FOPMa
                 -- in case BC out was not ready, just remain in the initial state
                 else pure (state, pure (IWBCInitial Initial))
     initADWithSetVR _ _ _ = pure (IWBCInitial Initial)
+
+    resumeAD fopData _ = do
+        pure (RSInitial Initial)
 
 
 
@@ -315,6 +329,10 @@ stateInactive fopData st = do
                         case newst of
                             IWBCInitial sta -> stateInactive fopData sta
                             IWBCInitialisingWithBC sta -> stateInitialisingWithBC fopData sta
+                    TerminateAD -> stateInactive fopData st
+                    ResumeAD -> do
+                        newst <- resumeAD fopData st
+                        pure()
                     _ -> stateInactive fopData st
                 COP1CLCW _clcw  -> stateInactive fopData st
                 COP1TimeoutCLCW -> stateInactive fopData st
