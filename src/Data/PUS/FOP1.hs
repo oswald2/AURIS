@@ -330,6 +330,7 @@ stateInactive
     -> State m Initial
     -> m ()
 stateInactive fopData cancelTimer st = do
+    env <- ask
     inp <- liftIO $ atomically $ readCOP1Queue (fopData ^. fvcid)
                                                (fopData ^. fcop1Queue)
     case inp of
@@ -373,9 +374,16 @@ stateInactive fopData cancelTimer st = do
                                 fopData
                                 cancelTimer'
                                 st
+                    SetVS vs -> do
+                        join $ withFOPState fopData $ \state -> do
+                            let newst = state & fopVS .~ vs & fopNNR .~ vs
+                                action = liftIO $ raiseEvent env $ EVCOP1 (EV_ADConfirmSetVS (fopData ^. fvcid) vs)
+                            pure (newst, action)
+                        stateInactive fopData cancelTimer st
                     _ -> stateInactive fopData cancelTimer st
                 COP1CLCW _clcw -> stateInactive fopData cancelTimer st
                 COP1Timeout    -> stateInactive fopData cancelTimer st
+
             pure ()
 
 

@@ -85,6 +85,7 @@ data EventCOP1 =
     EV_ADInitializedWithoutCLCW VCID
     | EV_ADInitWaitingCLCW VCID
     | EV_ADPurgedWaitQueue VCID
+    | EV_ADConfirmSetVS VCID !Word8
     deriving (Eq, Show, Read, Generic)
 
 
