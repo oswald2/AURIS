@@ -132,7 +132,7 @@ data COP1Input =
     -- | A CLCW has arrived. This is normally triggered by the telemtry chain
     | COP1CLCW CLCW
     -- | A timeout was triggered, while waiting for a CLCW to initialise the AD mode
-    | COP1TimeoutCLCW
+    | COP1Timeout
 
 
 -- | A single COP-1 queue. Note that we have multiple queues,
