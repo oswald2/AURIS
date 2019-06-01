@@ -40,6 +40,7 @@ import           Data.PUS.TCDirective
 import           Data.PUS.Segment
 import           Data.PUS.GlobalState
 import           Data.PUS.Events
+import           Data.PUS.TCRequest
 
 import           Protocol.Switcher
 import           Protocol.ProtocolInterfaces
@@ -478,12 +479,12 @@ stateRetransmitWithoutWait fopData cancelTimer st = do
     pure ()
 
 
-    -- | S3
+-- | S3
 stateRetransmitWithWait fopData cancelTimer st = do
     pure ()
 
 
-    -- | S4
+-- | S4
 stateInitialisingWithoutBC
     :: (MonadIO m, MonadReader env m, HasGlobalState env)
     => FOPData
@@ -494,7 +495,7 @@ stateInitialisingWithoutBC fopData cancelTimer st = do
     pure ()
 
 
-    -- | S5
+-- | S5
 stateInitialisingWithBC fopData st = do
     pure ()
 
@@ -513,9 +514,18 @@ notifyTimeout fopData = atomically
 
 
 
--- | This is a conduit for the input. @chan is a 'TBQueue' which is wrapped in
--- a input conduit (STM Conduit). @segBuffer is a 'TMVar' used as the '''waitQueue'''
--- for the COP-1 protocol.
+-- | This is a conduit for the input. @chan@ is a 'TBQueue' which is wrapped in
+-- a input conduit (STM Conduit). @segBuffer@ is a 'TMVar' used as the '''waitQueue'''
+-- for the COP-1 protocol. @outQueue is the direct output queue of the output interface,
+-- in most cases this will be NCTRS or SLE. Thes @outQueue is only needed in BD mode.
+-- If a encoded BD segment is received, it is directly forwarded to the interface via
+-- the TBQueue without going through the COP-1 machine.
+--
+-- __Note:__ this is a bit against the standard, which says that if a BD frame is 
+--           transmitted in between AD frames, the AD mode should be terminated. 
+--           But, actually SCOS-2000 behaves this way (it doesn't terminate the AD
+--           mode in this case), so we keep it like this. This can be changed should 
+--           the situation require it
 --
 -- So basically, this conduit gets encoded segments wrapped in ProtocolPackets as
 -- input and places them in the TMVar. This may block if the COP-1 machine is busy
@@ -524,17 +534,40 @@ notifyTimeout fopData = atomically
 -- it is ready and forward it to another channel for TC Transfer Frame, CLTU and
 -- finally NCTRS or SLE encoding.
 cop1Conduit
-    :: (MonadIO m)
-    => NCTRSChan EncodedSegment
-    -> TMVar EncodedSegment
+    :: (MonadIO m, MonadReader env m, HasConfig env)
+    => NCTRSChan EncodedSegment -- ^ Input Conduit for the encoded segments
+    -> TMVar EncodedSegment     -- ^ Wait Queue of the COP-1 state machine
+    -> TBQueue TCTransferFrame  -- ^ Direct output for BD frames
     -> ConduitT (ProtocolPacket EncodedSegment) () m ()
-cop1Conduit chan segBuffer = sourceTBQueue chan .| proc
+cop1Conduit chan segBuffer outQueue = do 
+    cfg <- view getConfig
+    sourceTBQueue chan .| proc cfg
   where
-    proc :: (MonadIO m) => ConduitT (ProtocolPacket EncodedSegment) () m ()
-    proc = do
+    proc :: (MonadIO m) => Config -> ConduitT (ProtocolPacket EncodedSegment) () m ()
+    proc cfg = do
         x <- await
         case x of
             Nothing  -> pure ()
             Just pkt -> do
-                atomically $ putTMVar segBuffer (pkt ^. protContent)
-                cop1Conduit chan segBuffer
+                -- check the actual transmission mode. 
+                case pkt ^. protContent . encSegRequest . tcReqTransMode of
+                    -- AD mode. Put the segment into the wait queue for the COP-1 protocol machine
+                    AD -> do
+                        atomically $ putTMVar segBuffer (pkt ^. protContent)
+                        proc cfg
+                    -- BD mode. Directly create a BD transfer frame and send it to the out queue
+                    BD -> do 
+                        let vcid         = pkt ^. protContent . encSegRequest . tcReqVCID
+                            scid         = cfgSCID cfg
+                            -- create a new BD mode transfer frame and fill out the values
+                            frame        = TCTransferFrame
+                                { _tcFrameVersion = 0
+                                , _tcFrameFlag    = FrameBD
+                                , _tcFrameSCID    = scid
+                                , _tcFrameVCID    = vcid
+                                , _tcFrameLength  = 0
+                                , _tcFrameSeq     = 0
+                                , _tcFrameData    = pkt ^. protContent . encSegSegment
+                                }
+                        atomically $ writeTBQueue outQueue frame 
+                        proc cfg

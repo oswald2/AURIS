@@ -9,7 +9,7 @@ module Data.PUS.TCRequest
     , tcReqMAPID
     , tcReqSCID
     , tcReqVCID
-
+    , tcReqTransMode
     )
 where
 
@@ -28,6 +28,7 @@ data TCRequest = TCRequest {
     , _tcReqMAPID :: MAPID
     , _tcReqSCID :: SCID
     , _tcReqVCID :: VCID
+    , _tcReqTransMode :: TransmissionMode
     }
     deriving (Eq, Show, Read, Generic)
 
