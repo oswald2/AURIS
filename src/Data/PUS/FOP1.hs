@@ -515,17 +515,17 @@ notifyTimeout fopData = atomically
 
 
 -- | This is a conduit for the input. @chan@ is a 'TBQueue' which is wrapped in
--- a input conduit (STM Conduit). @segBuffer@ is a 'TMVar' used as the '''waitQueue'''
--- for the COP-1 protocol. @outQueue is the direct output queue of the output interface,
--- in most cases this will be NCTRS or SLE. Thes @outQueue is only needed in BD mode.
+-- a input conduit (STM Conduit). @segBuffer@ is a 'TMVar' used as the /waitQueue/
+-- for the COP-1 protocol. @outQueue@ is the direct output queue of the output interface,
+-- in most cases this will be NCTRS or SLE. The @outQueue@ is only needed in BD mode.
 -- If a encoded BD segment is received, it is directly forwarded to the interface via
 -- the TBQueue without going through the COP-1 machine.
 --
--- __Note:__ this is a bit against the standard, which says that if a BD frame is 
+-- __Note:__ /this is a bit against the standard, which says that if a BD frame is 
 --           transmitted in between AD frames, the AD mode should be terminated. 
 --           But, actually SCOS-2000 behaves this way (it doesn't terminate the AD
 --           mode in this case), so we keep it like this. This can be changed should 
---           the situation require it
+--           the situation require it/
 --
 -- So basically, this conduit gets encoded segments wrapped in ProtocolPackets as
 -- input and places them in the TMVar. This may block if the COP-1 machine is busy
