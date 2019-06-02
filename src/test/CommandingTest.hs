@@ -81,7 +81,7 @@ pkt1 ssc = PUSPacket
     Nothing
     (B.pack [0 .. 10])
 
-rqst1 = TCRequest 0 0 (mkSCID 533) (mkVCID 1) BD
+rqst1 = TCRequest 0 (mkSCID 533) (mkVCID 1) (TCCommand 0 BD)
 
 pusPackets = RIO.map (\i -> (pkt1 i, rqst1)) [1..1000]
 
