@@ -15,7 +15,7 @@ import           RIO
 
 import           Conduit
 
-import           Data.PUS.TCTransferFrame
+import           Data.PUS.TCFrameTypes
 import           Data.PUS.CLTU
 import           Data.PUS.Segment
 import           Data.PUS.TCRequest

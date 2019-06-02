@@ -37,6 +37,8 @@ module Data.PUS.COP1Types
     , COP1Queues
     , sendCOP1Queue
     , readCOP1Queue
+    , sendCOP1Q
+    , readCOP1Q
     )
 where
 
@@ -52,10 +54,9 @@ import           Data.Binary
 import           Data.Aeson
 
 import           Data.PUS.Types
-import           Data.PUS.Segment
-import           Data.PUS.Time
 import           Data.PUS.TCDirective
 import           Data.PUS.CLCW
+import           Data.PUS.TCFrameTypes
 
 
 
@@ -78,7 +79,7 @@ _fopWaitFlag :: !Bool,
 _fopLockoutFlag :: !Bool,
 _fopRetransmitFlag :: !Bool,
 _fopVS :: !Word8,
-_fopSentQueue :: Seq EncodedSegment,
+_fopSentQueue :: Seq (TCFrameTransport, Bool),
 _fopToBeRetransmitted :: !Bool,
 _fopADout :: Flag Ready,
 _fopBDout :: Flag Ready,
@@ -162,3 +163,11 @@ readCOP1Queue vcid queues = do
     case HM.lookup vcid queues of
         Nothing    -> pure Nothing
         Just queue -> Just <$> readTBQueue queue
+
+-- | Read a COP-1 message from the queue
+readCOP1Q :: COP1Queue -> STM COP1Input
+readCOP1Q = readTBQueue
+
+-- | Send a COP-1 message
+sendCOP1Q :: COP1Queue -> COP1Input -> STM ()
+sendCOP1Q = writeTBQueue

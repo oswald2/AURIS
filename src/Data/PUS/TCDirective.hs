@@ -5,21 +5,22 @@
     , RecordWildCards
 #-}
 module Data.PUS.TCDirective
-    (
-    TCDirective(..)
+    ( TCDirective(..)
     , directiveBuilder
     , directiveParser
     )
 where
 
 
-import RIO hiding (Builder)
+import           RIO                     hiding ( Builder )
 
-import ByteString.StrictBuilder
+import           ByteString.StrictBuilder
 
-import Data.Word ()
-import Data.Attoparsec.ByteString (Parser)
-import qualified Data.Attoparsec.ByteString as A
+import           Data.Word                      ( )
+import           Data.Binary
+import           Data.Aeson
+import           Data.Attoparsec.ByteString     ( Parser )
+import qualified Data.Attoparsec.ByteString    as A
 
 
 
@@ -28,8 +29,12 @@ data TCDirective =
     Unlock
     | SetVR !Word8
     | DNop
-    deriving (Eq, Show, Read)
+    deriving (Eq, Show, Read, Generic)
 
+instance Binary TCDirective
+instance FromJSON TCDirective
+instance ToJSON TCDirective where
+    toEncoding = genericToEncoding defaultOptions
 
 {-# INLINABLE directiveBuilder #-}
 directiveBuilder :: TCDirective -> Builder

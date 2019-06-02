@@ -46,6 +46,7 @@ library
         Data.PUS.CLTUTable
         Data.PUS.CLCW
         Data.PUS.Randomizer
+        Data.PUS.TCFrameTypes
         Data.PUS.TCTransferFrame
         Data.PUS.TCTransferFrameEncoder
         Data.PUS.TCRequest

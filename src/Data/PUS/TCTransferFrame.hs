@@ -5,32 +5,13 @@
 #-}
 module Data.PUS.TCTransferFrame
     (
-      -- | The TC Transfer Frame itself
-      TCTransferFrame(..)
-      -- | Header Flags
-    , TCFrameFlag(..)
-      -- | The TC directives
-    , EncodedTCFrame
-    -- | TC Frames will be transported together with a TC Request
-    , TCFrameTransport(..)
-    , tcFrameHeaderLen
-    , tcFrameEncode
-    , tcFrameVersion
-    , tcFrameFlag
-    , tcFrameSCID
-    , tcFrameVCID
-    , tcFrameLength
-    , tcFrameSeq
       -- | A conduit to encode TC Frames
+      tcFrameHeaderLen
+    , tcFrameEncode
     , tcFrameEncodeC
     , tcFrameDecodeC
-    , encTcFrameSeq
-    , encTcFrameData
-    , encTcFrameRequest
     , checkTCFrame
     , tcFrameParser
-    , tcfTransFrame
-    , tcfTransRqst
     )
 where
 
@@ -39,9 +20,7 @@ import           RIO                     hiding ( Builder )
 import qualified RIO.ByteString                as BS
 import qualified RIO.Text                      as T
 
-import           Control.Lens                   ( makeLenses
-                                                , (.~)
-                                                )
+import           Control.Lens                   ( (.~) )
 import           Control.PUS.Classes
 
 import           Data.Bits
@@ -52,59 +31,14 @@ import qualified Data.Attoparsec.ByteString    as A
 import qualified Data.Attoparsec.Binary        as A
 import           Data.Conduit.Attoparsec
 
+import           Data.PUS.TCFrameTypes
 import           Data.PUS.CRC
 import           Data.PUS.Config
 import           Data.PUS.Types
 import           Data.PUS.Events
 import           Data.PUS.GlobalState
-import           Data.PUS.TCRequest
-
--- | indicates, which type this TC Frame is. AD/BD specifies the protocol mode
--- (AD = sequence controlled, BD = expedited), BC is a directive (see 'TCDirective')
-data TCFrameFlag =
-    FrameAD
-    | FrameBD
-    | FrameBC
-    | FrameIllegal
-    deriving (Eq, Ord, Enum, Show, Read)
 
 
--- | A TC Transfer Frame
-data TCTransferFrame = TCTransferFrame {
-    _tcFrameVersion :: !Word8
-    , _tcFrameFlag :: !TCFrameFlag
-    , _tcFrameSCID :: !SCID
-    , _tcFrameVCID :: !VCID
-    , _tcFrameLength :: !Word16
-    , _tcFrameSeq :: !Word8
-    , _tcFrameData :: !BS.ByteString
-    } deriving (Eq, Show, Read)
-
-makeLenses ''TCTransferFrame
-
-data TCFrameTransport = TCFrameTransport {
-    _tcfTransFrame :: TCTransferFrame
-    , _tcfTransRqst :: TCRequest
-    }
-makeLenses ''TCFrameTransport
-
-
-data EncodedTCFrame = EncodedTCFrame {
-    _encTcFrameSeq :: !Word8
-    , _encTcFrameData :: BS.ByteString
-    , _encTcFrameRequest :: TCRequest
-    } deriving (Show, Read)
-
-makeLenses ''EncodedTCFrame
-
-
-
--- | A TC directive for the on-board decoder
-data TCDirective =
-    Unlock
-    | SetVR !Word8
-    | DNop
-    deriving (Eq, Show, Read)
 
 -- | The lenght of the TC Transfer Frame Header in Bytes
 tcFrameHeaderLen :: Int

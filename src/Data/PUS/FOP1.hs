@@ -32,13 +32,13 @@ import           Control.PUS.Classes
 
 import           Data.PUS.Config
 import           Data.PUS.COP1Types
-import           Data.PUS.TCTransferFrame
---import           Data.PUS.CLCW
+import           Data.PUS.TCFrameTypes
+import           Data.PUS.CLCW
 import           Data.PUS.Types          hiding ( Initial )
 --import           Data.PUS.Time
 import           Data.PUS.TCDirective
 import           Data.PUS.Segment
-import           Data.PUS.GlobalState
+--import           Data.PUS.GlobalState
 import           Data.PUS.Events
 import           Data.PUS.TCRequest
 
@@ -49,26 +49,26 @@ import           Protocol.ProtocolInterfaces
 data FOPData = FOPData {
     _fvcid :: VCID
     , _fwaitQueue :: TMVar EncodedSegment
-    , _fcop1Queue :: COP1Queues
-    , _fout :: TBQueue TCTransferFrame
+    , _fcop1Queue :: COP1Queue
+    , _fout :: TBQueue TCFrameTransport
     , _ftimerWheel :: TimerWheel
     }
 makeLenses ''FOPData
 
-withFOPState_
-    :: (MonadIO m, MonadReader env m, HasFOPState env)
-    => FOPData
-    -> (FOPState -> STM FOPState)
-    -> m ()
-withFOPState_ fopData stmAction = do
-    env <- ask
-    let fopState = fopStateG (fopData ^. fvcid) env
-    atomically $ do
-        st    <- readTVar fopState
+-- withFOPState_
+--     :: (MonadIO m, MonadReader env m, HasFOPState env)
+--     => FOPData
+--     -> (FOPState -> STM FOPState)
+--     -> m ()
+-- withFOPState_ fopData stmAction = do
+--     env <- ask
+--     let fopState = fopStateG (fopData ^. fvcid) env
+--     atomically $ do
+--         st    <- readTVar fopState
 
-        newst <- stmAction st
+--         newst <- stmAction st
 
-        writeTVar fopState newst
+--         writeTVar fopState newst
 
 
 withFOPState
@@ -331,87 +331,83 @@ stateInactive
     -> m ()
 stateInactive fopData cancelTimer st = do
     env <- ask
-    inp <- liftIO $ atomically $ readCOP1Queue (fopData ^. fvcid)
-                                               (fopData ^. fcop1Queue)
-    case inp of
-        Nothing   -> stateInactive fopData cancelTimer st
-        Just inp' -> do
-            case inp' of
-                COP1Dir dir -> case dir of
-                    InitADWithoutCLCW ->
-                        initADWithoutCLCW fopData st
-                            >>= stateActive fopData cancelTimer
-                    InitADWithCLCW -> initADWithCLCW fopData st
-                        >>= uncurry (stateInitialisingWithoutBC fopData)
-                    InitADWithUnlock Unlock -> do
-                        newst <- initADWithUnlock fopData st
-                        case newst of
-                            IWBCInitial sta ->
-                                stateInactive fopData cancelTimer sta
-                            IWBCInitialisingWithBC sta ->
-                                stateInitialisingWithBC fopData sta
-                    InitADWithSetVR setVR -> do
-                        newst <- initADWithSetVR fopData setVR st
-                        case newst of
-                            IWBCInitial sta ->
-                                stateInactive fopData cancelTimer sta
-                            IWBCInitialisingWithBC sta ->
-                                stateInitialisingWithBC fopData sta
-                    TerminateAD -> stateInactive fopData cancelTimer st
-                    ResumeAD    -> do
-                        (cancelTimer', newst) <- resumeAD fopData st
-                        case newst of
-                            RSInitial sta ->
-                                stateInactive fopData cancelTimer' sta
-                            RSActive sta ->
-                                stateActive fopData cancelTimer' sta
-                            RSRetransmitWOWait sta ->
-                                stateRetransmitWithoutWait fopData
-                                                           cancelTimer'
-                                                           sta
-                            RSRetransmitWWait sta -> stateRetransmitWithWait
-                                fopData
-                                cancelTimer'
-                                sta
-                            RSInitialisingWOBC sta ->
-                                stateInitialisingWithoutBC fopData
-                                                           cancelTimer'
-                                                           sta
-                    SetVS vs -> do
-                        setMemberAndConfirm fopData
-                            (\sta -> sta & fopVS .~ vs & fopNNR .~ vs)
-                            EV_ADConfirmSetVS
-                            vs
-                        stateInactive fopData cancelTimer st
-                    SetFOPSlidingWindowWidth sww -> do
-                        setMemberAndConfirm fopData
-                                            (fopSlidingWinWidth .~ sww)
-                                            EV_ADConfirmSetSlidingWinWidth
-                                            sww
-                        stateInactive fopData cancelTimer st
-                    SetT1Initial t1 -> do
-                        setMemberAndConfirm fopData
-                                            (fopT1Initial .~ t1)
-                                            EV_ADConfirmSetT1Initial
-                                            t1
-                        stateInactive fopData cancelTimer st
-                    SetTransmissionLimit tl -> do
-                        setMemberAndConfirm fopData
-                                            (fopTransmissionLimit .~ tl)
-                                            EV_ADConfirmSetTransmissionLimit
-                                            tl
-                        stateInactive fopData cancelTimer st
-                    SetTimeoutType tt -> do
-                        setMemberAndConfirm fopData
-                                            (fopTimeoutType .~ tt)
-                                            EV_ADConfirmSetTimeoutType
-                                            tt
-                        stateInactive fopData cancelTimer st
-                    _ -> stateInactive fopData cancelTimer st
-                COP1CLCW _clcw -> stateInactive fopData cancelTimer st
-                COP1Timeout    -> stateInactive fopData cancelTimer st
+    inp' <- liftIO $ atomically $ readCOP1Q (fopData ^. fcop1Queue)
+    case inp' of
+        COP1Dir dir -> case dir of
+            InitADWithoutCLCW ->
+                initADWithoutCLCW fopData st
+                    >>= stateActive fopData cancelTimer
+            InitADWithCLCW -> initADWithCLCW fopData st
+                >>= uncurry (stateInitialisingWithoutBC fopData)
+            InitADWithUnlock Unlock -> do
+                newst <- initADWithUnlock fopData st
+                case newst of
+                    IWBCInitial sta ->
+                        stateInactive fopData cancelTimer sta
+                    IWBCInitialisingWithBC sta ->
+                        stateInitialisingWithBC fopData sta
+            InitADWithSetVR setVR -> do
+                newst <- initADWithSetVR fopData setVR st
+                case newst of
+                    IWBCInitial sta ->
+                        stateInactive fopData cancelTimer sta
+                    IWBCInitialisingWithBC sta ->
+                        stateInitialisingWithBC fopData sta
+            TerminateAD -> stateInactive fopData cancelTimer st
+            ResumeAD    -> do
+                (cancelTimer', newst) <- resumeAD fopData st
+                case newst of
+                    RSInitial sta ->
+                        stateInactive fopData cancelTimer' sta
+                    RSActive sta ->
+                        stateActive fopData cancelTimer' sta
+                    RSRetransmitWOWait sta ->
+                        stateRetransmitWithoutWait fopData
+                                                    cancelTimer'
+                                                    sta
+                    RSRetransmitWWait sta -> stateRetransmitWithWait
+                        fopData
+                        cancelTimer'
+                        sta
+                    RSInitialisingWOBC sta ->
+                        stateInitialisingWithoutBC fopData
+                                                    cancelTimer'
+                                                    sta
+            SetVS vs -> do
+                setMemberAndConfirm fopData
+                    (\sta -> sta & fopVS .~ vs & fopNNR .~ vs)
+                    EV_ADConfirmSetVS
+                    vs
+                stateInactive fopData cancelTimer st
+            SetFOPSlidingWindowWidth sww -> do
+                setMemberAndConfirm fopData
+                                    (fopSlidingWinWidth .~ sww)
+                                    EV_ADConfirmSetSlidingWinWidth
+                                    sww
+                stateInactive fopData cancelTimer st
+            SetT1Initial t1 -> do
+                setMemberAndConfirm fopData
+                                    (fopT1Initial .~ t1)
+                                    EV_ADConfirmSetT1Initial
+                                    t1
+                stateInactive fopData cancelTimer st
+            SetTransmissionLimit tl -> do
+                setMemberAndConfirm fopData
+                                    (fopTransmissionLimit .~ tl)
+                                    EV_ADConfirmSetTransmissionLimit
+                                    tl
+                stateInactive fopData cancelTimer st
+            SetTimeoutType tt -> do
+                setMemberAndConfirm fopData
+                                    (fopTimeoutType .~ tt)
+                                    EV_ADConfirmSetTimeoutType
+                                    tt
+                stateInactive fopData cancelTimer st
+            _ -> stateInactive fopData cancelTimer st
+        COP1CLCW _clcw -> stateInactive fopData cancelTimer st
+        COP1Timeout    -> stateInactive fopData cancelTimer st
 
-            pure ()
+    pure ()
 
 
 setMemberAndConfirm
@@ -436,7 +432,7 @@ sendBCFrameSTM cfg fopData fopState directive = do
     let vcid         = fopData ^. fvcid
         scid         = cfgSCID cfg
         encDirective = builderBytes $ directiveBuilder directive
--- create a new BC transfer frame and fill out the values
+        -- create a new BC transfer frame and fill out the values
         frame        = TCTransferFrame
             { _tcFrameVersion = 0
             , _tcFrameFlag    = FrameBC
@@ -446,13 +442,21 @@ sendBCFrameSTM cfg fopData fopState directive = do
             , _tcFrameSeq     = fopState ^. fopVS
             , _tcFrameData    = encDirective
             }
--- create a new state which has V(S) incremented
+        trans = TCFrameTransport frame rqst
+        rqst = TCRequest 0 scid vcid (TCDir directive)
+
+        -- create a new state which has V(S) incremented
         newst = fopState & fopVS +~ 1
 
     -- write the frame to the out queue
-    writeTBQueue (fopData ^. fout) frame
+    writeTBQueue (fopData ^. fout) trans
 
     pure newst
+
+
+addToSentQueue :: TCFrameTransport -> Bool -> FOPState -> FOPState
+addToSentQueue frame retrans state =
+    state & over fopSentQueue (S.|> (frame, retrans))
 
 
 -- | send a BC Frame to the out channel (to the interface for encoding and sending).
@@ -485,29 +489,16 @@ sendBCFrame fopData directive = do
                 , _tcFrameSeq     = st ^. fopVS
                 , _tcFrameData    = encDirective
                 }
+            trans = TCFrameTransport frame rqst
+            rqst = TCRequest 0 scid vcid (TCDir directive)
+
 -- create a new state which has V(S) incremented
             newst = st & fopVS +~ 1
 
         -- write the new state
         writeTVar fopState newst
         -- write the frame to the out queue
-        writeTBQueue (fopData ^. fout) frame
-
-
-
-checkReadyOut
-    :: (MonadIO m, MonadReader env m, HasFOPState env)
-    => FOPData
-    -> Getting (Flag Ready) FOPState (Flag Ready)
-    -> m Bool
-checkReadyOut fopData lens = do
-    env <- ask
-    let fopState = fopStateG (fopData ^. fvcid) env
-    fsta <- atomically $ readTVar fopState
-    let out = fsta ^. lens
-
-    pure (fromFlag Ready out)
-
+        writeTBQueue (fopData ^. fout) trans
 
 
 
@@ -534,6 +525,38 @@ stateInitialisingWithoutBC
     -> State m InitialisingWithoutBC
     -> m ()
 stateInitialisingWithoutBC fopData cancelTimer st = do
+    env <- ask
+    let fopState = fopStateG (fopData ^. fvcid) env
+    inp <- atomically $ readCOP1Q (fopData ^. fcop1Queue)
+    case inp of
+        COP1CLCW clcw -> do
+            fops <- atomically $ readTVar fopState
+            case checkCLCW clcw of
+                Left err -> liftIO $ raiseEvent env (EVCOP1 (EV_ADAlert err))
+                Right _ -> do
+                    if clcw ^. clcwLockout then pure () -- TODO
+                    else
+                        -- Lockout == False, check N(R) and V(S)
+                        if clcw ^. clcwReportVal == fops ^. fopVS
+                            then
+                                -- check the retransmit flag
+                                if clcw ^. clcwRetrans then stateInitialisingWithoutBC fopData cancelTimer st
+                                else
+                                    if clcw ^. clcwWait then liftIO $ raiseEvent env (EVCOP1 (EV_ADCLCWWait True))
+                                    else
+                                        if clcw ^. clcwReportVal == fops ^. fopNNR
+                                            then do
+                                                void $ liftIO $ cancelTimer
+                                                stateActive fopData cancelTimer st
+                                            else stateInitialisingWithoutBC fopData cancelTimer st
+
+                            else pure () -- TODO
+
+            pure ()
+        COP1Timeout -> do
+            pure ()
+        COP1Dir dir -> do
+            pure ()
     pure ()
 
 
@@ -550,9 +573,12 @@ readInput :: (MonadIO m) => COP1Queue -> m COP1Input
 readInput chan = atomically $ readTBQueue chan
 
 
+
+
+
 notifyTimeout :: FOPData -> IO ()
 notifyTimeout fopData = atomically
-    $ sendCOP1Queue (fopData ^. fvcid) (fopData ^. fcop1Queue) COP1Timeout
+    $ sendCOP1Q (fopData ^. fcop1Queue) COP1Timeout
 
 
 
@@ -595,7 +621,7 @@ cop1Conduit chan segBuffer outQueue = do
             Nothing  -> pure ()
             Just pkt -> do
                 -- check the actual transmission mode.
-                case pkt ^. protContent . encSegRequest . tcReqTransMode of
+                case pkt ^. protContent . encSegRequest . to tcReqTransmissionMode of
                     -- AD mode. Put the segment into the wait queue for the COP-1 protocol machine
                     AD -> do
                         atomically $ putTMVar segBuffer (pkt ^. protContent)

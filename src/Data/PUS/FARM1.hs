@@ -1,5 +1,5 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving
-    , BangPatterns 
+    , BangPatterns
     , NoImplicitPrelude
     , TemplateHaskell
 #-}
@@ -41,7 +41,7 @@ import           RIO.List
 import           Control.Lens                   ( makeLenses )
 import           Control.Lens.Setter
 
-import           Data.PUS.TCTransferFrame
+import           Data.PUS.TCFrameTypes
 import           Data.PUS.CLCW
 import           Data.PUS.Types
 

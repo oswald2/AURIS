@@ -92,6 +92,8 @@ data EventCOP1 =
     | EV_ADConfirmSetT1Initial VCID !(Fixed E6)
     | EV_ADConfirmSetTransmissionLimit VCID !Word8
     | EV_ADConfirmSetTimeoutType VCID TTType
+    | EV_ADAlert !Text
+    | EV_ADCLCWWait !Bool
     deriving (Eq, Show, Read, Generic)
 
 
