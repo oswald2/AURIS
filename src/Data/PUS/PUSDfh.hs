@@ -10,15 +10,17 @@ Portability : POSIX
 Most PUS Packets contain a secondary header, the data field header. This
 module provides data types and functions to handle the data field header.
 Since the header is often mission specific, several constructors are provided.
+
  * 'PUSEmptyHeader' is exactly that, not secondary header will be generated
- * 'PUSStdHeader' is the standard header from the PUS standard
+ * 'PUSTCStdHeader' is the standard header from the PUS standard for TCs
+ * 'PUSTMStdHeader' is the standard header from the PUS standard for TM packets
  * 'PUSFreeHeader' is a secondary header which can be freely defined as a
    Vector of Parameters (analog to a TC or TM packet), but it has to provide
    3 parameters to be PUS compliant: all three parameters with type Word8 named "Type",
    "SubType" and "SourceID". The other parameters can be set completely free.
 
 /Note: free headers are currently not implemented/
-|-}
+-}
 {-# LANGUAGE OverloadedStrings
     , BangPatterns
     , GeneralizedNewtypeDeriving
@@ -104,6 +106,8 @@ data DataFieldHeader =
         , _stdFlagProgressExec :: !Bool
         , _stdFlagExecComp :: !Bool
         }
+    -- | A standard header for TM PUS Packets. Most missions will be fine with it.
+    -- It may need replacement if different time encodings are used.
     | PUSTMStdHeader {
         _stdTmVersion :: !Word8
         , _stdTmType :: !PUSType
@@ -111,6 +115,7 @@ data DataFieldHeader =
         , _stdTmDestinationID :: !Word8
         , _stdTmOBTime :: !CUCTime
         }
+    -- | A standard header for the C&C protocol
     | PUSCnCTCHeader {
         _cncTcCrcFlags :: !Word8
         , _cncTcAcceptance :: !Bool
@@ -121,7 +126,7 @@ data DataFieldHeader =
         , _cncTcSubType :: !PUSSubType
         , _cncTcSourceID :: !Word8
     }
-    -- TODO: implementation of free header
+    -- | TODO: implementation of free header
     | PUSFreeHeader {
         _stdFrFlagAcceptance :: !Bool
         , _stdFrFlagStartExec :: !Bool
@@ -132,10 +137,11 @@ data DataFieldHeader =
     deriving (Eq, Show, Read, Generic)
 makeLenses ''DataFieldHeader
 
-
+-- | gives the default DFH for TCs
 defaultTCHeader :: DataFieldHeader
 defaultTCHeader = PUSTCStdHeader 0 0 0 False False False False
 
+-- | gives the default DFH for TCs for the C&C interface
 defaultCnCTCHeader :: DataFieldHeader
 defaultCnCTCHeader = PUSCnCTCHeader 0 False False False False 0 0 0
 
