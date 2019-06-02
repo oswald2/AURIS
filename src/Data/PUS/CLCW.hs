@@ -11,7 +11,7 @@ This module is about the CLCW data type. The CLCW is downlinked with
 TM transfer frames (it is also called OCF, operational control field)
 and is used as a state representation of the spacecraft internal FARM-1
 state machine on the receiving side of the COP-1 protocol.
-|-}
+-}
 {-# LANGUAGE OverloadedStrings
     , BangPatterns
     , GeneralizedNewtypeDeriving
