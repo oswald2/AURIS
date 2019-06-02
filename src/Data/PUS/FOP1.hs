@@ -167,17 +167,16 @@ instance (MonadIO m, MonadReader env m, HasGlobalState env) => FOPMachine (FOPMa
 
     initADWithCLCW fopData _ = do
         env <- ask
-        let st = fopStateG (fopData ^. fvcid) env
         cancelTimer <- join $ withFOPState fopData $ \state -> do
             let newst = initializeState state
             purged <- purgeWaitQueue fopData
 
-            let timeout = newst ^. fopT1Initial
+            let timeOut = newst ^. fopT1Initial
                 timerWheel = fopData ^. ftimerWheel
                 action = liftIO $ do
                     when purged $ raiseEvent env $ EVCOP1 (EV_ADPurgedWaitQueue (fopData ^. fvcid))
                     raiseEvent env $ EVCOP1 (EV_ADInitWaitingCLCW (fopData ^. fvcid))
-                    register timeout (notifyTimeout fopData) timerWheel
+                    register timeOut (notifyTimeout fopData) timerWheel
             pure (newst, action)
         pure (cancelTimer, InitialisingWithoutBC)
 
@@ -302,13 +301,13 @@ purgeWaitQueue fopData = do
             -- of more segments, throw them all away.
             _                 -> do
                 let loop = do
-                        seg <- takeTMVar (fopData ^. fwaitQueue)
+                        seg1 <- takeTMVar (fopData ^. fwaitQueue)
                         case seg ^. encSegFlag of
                             SegmentStandalone -> do
-                                putTMVar (fopData ^. fwaitQueue) seg
+                                putTMVar (fopData ^. fwaitQueue) seg1
                                 pure True
                             SegmentFirst -> do
-                                putTMVar (fopData ^. fwaitQueue) seg
+                                putTMVar (fopData ^. fwaitQueue) seg1
                                 pure True
                             _ -> loop
                 loop
@@ -343,7 +342,7 @@ stateInactive fopData cancelTimer st = do
                         initADWithoutCLCW fopData st
                             >>= stateActive fopData cancelTimer
                     InitADWithCLCW -> initADWithCLCW fopData st
-                        >>= \(ct, newst) -> stateInitialisingWithoutBC fopData ct newst
+                        >>= uncurry (stateInitialisingWithoutBC fopData)
                     InitADWithUnlock Unlock -> do
                         newst <- initADWithUnlock fopData st
                         case newst of
@@ -362,30 +361,73 @@ stateInactive fopData cancelTimer st = do
                     ResumeAD    -> do
                         (cancelTimer', newst) <- resumeAD fopData st
                         case newst of
-                            RSInitial st ->
-                                stateInactive fopData cancelTimer' st
-                            RSActive st -> stateActive fopData cancelTimer' st
-                            RSRetransmitWOWait st -> stateRetransmitWithoutWait
+                            RSInitial sta ->
+                                stateInactive fopData cancelTimer' sta
+                            RSActive sta ->
+                                stateActive fopData cancelTimer' sta
+                            RSRetransmitWOWait sta ->
+                                stateRetransmitWithoutWait fopData
+                                                           cancelTimer'
+                                                           sta
+                            RSRetransmitWWait sta -> stateRetransmitWithWait
                                 fopData
                                 cancelTimer'
-                                st
-                            RSRetransmitWWait st ->
-                                stateRetransmitWithWait fopData cancelTimer' st
-                            RSInitialisingWOBC st -> stateInitialisingWithoutBC
-                                fopData
-                                cancelTimer'
-                                st
+                                sta
+                            RSInitialisingWOBC sta ->
+                                stateInitialisingWithoutBC fopData
+                                                           cancelTimer'
+                                                           sta
                     SetVS vs -> do
-                        join $ withFOPState fopData $ \state -> do
-                            let newst = state & fopVS .~ vs & fopNNR .~ vs
-                                action = liftIO $ raiseEvent env $ EVCOP1 (EV_ADConfirmSetVS (fopData ^. fvcid) vs)
-                            pure (newst, action)
+                        setMemberAndConfirm fopData
+                            (\sta -> sta & fopVS .~ vs & fopNNR .~ vs)
+                            EV_ADConfirmSetVS
+                            vs
+                        stateInactive fopData cancelTimer st
+                    SetFOPSlidingWindowWidth sww -> do
+                        setMemberAndConfirm fopData
+                                            (fopSlidingWinWidth .~ sww)
+                                            EV_ADConfirmSetSlidingWinWidth
+                                            sww
+                        stateInactive fopData cancelTimer st
+                    SetT1Initial t1 -> do
+                        setMemberAndConfirm fopData
+                                            (fopT1Initial .~ t1)
+                                            EV_ADConfirmSetT1Initial
+                                            t1
+                        stateInactive fopData cancelTimer st
+                    SetTransmissionLimit tl -> do
+                        setMemberAndConfirm fopData
+                                            (fopTransmissionLimit .~ tl)
+                                            EV_ADConfirmSetTransmissionLimit
+                                            tl
+                        stateInactive fopData cancelTimer st
+                    SetTimeoutType tt -> do
+                        setMemberAndConfirm fopData
+                                            (fopTimeoutType .~ tt)
+                                            EV_ADConfirmSetTimeoutType
+                                            tt
                         stateInactive fopData cancelTimer st
                     _ -> stateInactive fopData cancelTimer st
                 COP1CLCW _clcw -> stateInactive fopData cancelTimer st
                 COP1Timeout    -> stateInactive fopData cancelTimer st
 
             pure ()
+
+
+setMemberAndConfirm
+    :: (MonadIO m, MonadReader env m, HasGlobalState env)
+    => FOPData
+    -> (FOPState -> FOPState)
+    -> (VCID -> t -> EventCOP1)
+    -> t
+    -> m ()
+setMemberAndConfirm fopData setOp event val = do
+    env <- ask
+    join $ withFOPState fopData $ \state -> do
+        let newst = setOp state
+            action =
+                liftIO $ raiseEvent env $ EVCOP1 (event (fopData ^. fvcid) val)
+        pure (newst, action)
 
 
 
@@ -521,11 +563,11 @@ notifyTimeout fopData = atomically
 -- If a encoded BD segment is received, it is directly forwarded to the interface via
 -- the TBQueue without going through the COP-1 machine.
 --
--- __Note:__ /this is a bit against the standard, which says that if a BD frame is 
---           transmitted in between AD frames, the AD mode should be terminated. 
+-- __Note:__ this is a bit against the standard, which says that if a BD frame is
+--           transmitted in between AD frames, the AD mode should be terminated.
 --           But, actually SCOS-2000 behaves this way (it doesn't terminate the AD
---           mode in this case), so we keep it like this. This can be changed should 
---           the situation require it/
+--           mode in this case), so we keep it like this. This can be changed should
+--           the situation require it
 --
 -- So basically, this conduit gets encoded segments wrapped in ProtocolPackets as
 -- input and places them in the TMVar. This may block if the COP-1 machine is busy
@@ -539,35 +581,41 @@ cop1Conduit
     -> TMVar EncodedSegment     -- ^ Wait Queue of the COP-1 state machine
     -> TBQueue TCTransferFrame  -- ^ Direct output for BD frames
     -> ConduitT (ProtocolPacket EncodedSegment) () m ()
-cop1Conduit chan segBuffer outQueue = do 
+cop1Conduit chan segBuffer outQueue = do
     cfg <- view getConfig
     sourceTBQueue chan .| proc cfg
   where
-    proc :: (MonadIO m) => Config -> ConduitT (ProtocolPacket EncodedSegment) () m ()
+    proc
+        :: (MonadIO m)
+        => Config
+        -> ConduitT (ProtocolPacket EncodedSegment) () m ()
     proc cfg = do
         x <- await
         case x of
             Nothing  -> pure ()
             Just pkt -> do
-                -- check the actual transmission mode. 
+                -- check the actual transmission mode.
                 case pkt ^. protContent . encSegRequest . tcReqTransMode of
                     -- AD mode. Put the segment into the wait queue for the COP-1 protocol machine
                     AD -> do
                         atomically $ putTMVar segBuffer (pkt ^. protContent)
                         proc cfg
                     -- BD mode. Directly create a BD transfer frame and send it to the out queue
-                    BD -> do 
-                        let vcid         = pkt ^. protContent . encSegRequest . tcReqVCID
-                            scid         = cfgSCID cfg
-                            -- create a new BD mode transfer frame and fill out the values
-                            frame        = TCTransferFrame
+                    BD -> do
+                        let vcid =
+                                pkt ^. protContent . encSegRequest . tcReqVCID
+                            scid  = cfgSCID cfg
+                -- create a new BD mode transfer frame and fill out the values
+                            frame = TCTransferFrame
                                 { _tcFrameVersion = 0
                                 , _tcFrameFlag    = FrameBD
                                 , _tcFrameSCID    = scid
                                 , _tcFrameVCID    = vcid
                                 , _tcFrameLength  = 0
                                 , _tcFrameSeq     = 0
-                                , _tcFrameData    = pkt ^. protContent . encSegSegment
+                                , _tcFrameData    = pkt
+                                    ^. protContent
+                                    .  encSegSegment
                                 }
-                        atomically $ writeTBQueue outQueue frame 
+                        atomically $ writeTBQueue outQueue frame
                         proc cfg

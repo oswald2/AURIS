@@ -29,8 +29,10 @@ import           RIO
 
 import           Data.Binary
 import           Data.Aeson
+import           Data.Fixed
 
 import           Data.PUS.Types
+import           Data.PUS.COP1Types
 --import           Data.PUS.Segment
 
 
@@ -86,6 +88,10 @@ data EventCOP1 =
     | EV_ADInitWaitingCLCW VCID
     | EV_ADPurgedWaitQueue VCID
     | EV_ADConfirmSetVS VCID !Word8
+    | EV_ADConfirmSetSlidingWinWidth VCID !Word8
+    | EV_ADConfirmSetT1Initial VCID !(Fixed E6)
+    | EV_ADConfirmSetTransmissionLimit VCID !Word8
+    | EV_ADConfirmSetTimeoutType VCID TTType
     deriving (Eq, Show, Read, Generic)
 
 

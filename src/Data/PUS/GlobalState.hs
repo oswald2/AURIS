@@ -78,21 +78,25 @@ data GlobalState = GlobalState {
 -- | Constructor for the global state. Takes a configuration, a
 -- logging function as specified by the RIO library and a raiseEvent
 -- function to report events to the application
-newGlobalState :: Config -> PUSMissionSpecific -> LogFunc -> (Event -> IO ()) -> IO GlobalState
+newGlobalState
+    :: Config
+    -> PUSMissionSpecific
+    -> LogFunc
+    -> (Event -> IO ())
+    -> IO GlobalState
 newGlobalState cfg missionSpecific logErr raiseEvent = do
-    st   <- defaultPUSState
-    tv   <- newTVarIO st
-    -- fop1 <- sequence $ map (\vcid -> (vcid, newTVarIO (initialFOPState vcid)) (cfgVCIDs cfg)
-    let vcids = (cfgVCIDs cfg)
+    st <- defaultPUSState
+    tv <- newTVarIO st
+    let vcids = cfgVCIDs cfg
     fopTVars <- mapM (newTVarIO . initialFOPState) vcids
     let fop1 = HM.fromList $ zip vcids fopTVars
 
     let state = GlobalState
-            { glsConfig     = cfg
-            , glsState      = tv
-            , glsFOP1       = fop1
-            , glsRaiseEvent = raiseEvent
-            , glsLogFunc    = logErr
+            { glsConfig          = cfg
+            , glsState           = tv
+            , glsFOP1            = fop1
+            , glsRaiseEvent      = raiseEvent
+            , glsLogFunc         = logErr
             , glsMissionSpecific = missionSpecific
             }
     pure state

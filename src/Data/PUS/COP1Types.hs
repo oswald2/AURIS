@@ -12,6 +12,7 @@
 #-}
 module Data.PUS.COP1Types
     ( FOPState
+    , TTType(..)
     , initialFOPState
     , fopVCID
     , fopWaitFlag
@@ -47,6 +48,8 @@ import qualified RIO.HashMap                   as HM
 import           Control.Lens                   ( makeLenses )
 
 import           Data.Fixed
+import           Data.Binary
+import           Data.Aeson
 
 import           Data.PUS.Types
 import           Data.PUS.Segment
@@ -61,9 +64,12 @@ import           Data.PUS.CLCW
 -- or it can suspend the AD mode. In this case, the AD mode can be resumed via a
 -- directive
 data TTType = TTAlert | TTSuspend
-    deriving (Eq, Ord, Enum, Show, Read)
+    deriving (Eq, Ord, Enum, Show, Read, Generic)
 
-
+instance Binary TTType
+instance FromJSON TTType
+instance ToJSON TTType where
+    toEncoding = genericToEncoding defaultOptions
 
 -- | State of a FOP-1 machine. This state is local to a virtual channel
 data FOPState = FOPState {
@@ -120,7 +126,7 @@ data COP1Directive =
     | ResumeAD
     | SetVS !Word8
     | SetFOPSlidingWindowWidth !Word8
-    | SetT1Initial TimeSpan
+    | SetT1Initial (Fixed E6)
     | SetTransmissionLimit !Word8
     | SetTimeoutType TTType
 
@@ -146,14 +152,13 @@ type COP1Queues = HashMap VCID COP1Queue
 
 -- | Send a COP-1 message
 sendCOP1Queue :: VCID -> COP1Queues -> COP1Input -> STM ()
-sendCOP1Queue vcid queues inp =
-    case HM.lookup vcid queues of
-        Nothing -> pure ()
-        Just queue -> writeTBQueue queue inp
+sendCOP1Queue vcid queues inp = case HM.lookup vcid queues of
+    Nothing    -> pure ()
+    Just queue -> writeTBQueue queue inp
 
 -- | Read a COP-1 message from the queue
 readCOP1Queue :: VCID -> COP1Queues -> STM (Maybe COP1Input)
 readCOP1Queue vcid queues = do
     case HM.lookup vcid queues of
-        Nothing -> pure Nothing
+        Nothing    -> pure Nothing
         Just queue -> Just <$> readTBQueue queue
