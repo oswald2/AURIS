@@ -11,6 +11,8 @@ module Data.PUS.TCTransferFrame
     , TCFrameFlag(..)
       -- | The TC directives
     , EncodedTCFrame
+    -- | TC Frames will be transported together with a TC Request
+    , TCFrameTransport(..)
     , tcFrameHeaderLen
     , tcFrameEncode
     , tcFrameVersion
@@ -24,8 +26,11 @@ module Data.PUS.TCTransferFrame
     , tcFrameDecodeC
     , encTcFrameSeq
     , encTcFrameData
+    , encTcFrameRequest
     , checkTCFrame
     , tcFrameParser
+    , tcfTransFrame
+    , tcfTransRqst
     )
 where
 
@@ -34,7 +39,9 @@ import           RIO                     hiding ( Builder )
 import qualified RIO.ByteString                as BS
 import qualified RIO.Text                      as T
 
-import           Control.Lens                   ( makeLenses, (.~) )
+import           Control.Lens                   ( makeLenses
+                                                , (.~)
+                                                )
 import           Control.PUS.Classes
 
 import           Data.Bits
@@ -50,7 +57,7 @@ import           Data.PUS.Config
 import           Data.PUS.Types
 import           Data.PUS.Events
 import           Data.PUS.GlobalState
-
+import           Data.PUS.TCRequest
 
 -- | indicates, which type this TC Frame is. AD/BD specifies the protocol mode
 -- (AD = sequence controlled, BD = expedited), BC is a directive (see 'TCDirective')
@@ -75,10 +82,17 @@ data TCTransferFrame = TCTransferFrame {
 
 makeLenses ''TCTransferFrame
 
+data TCFrameTransport = TCFrameTransport {
+    _tcfTransFrame :: TCTransferFrame
+    , _tcfTransRqst :: TCRequest
+    }
+makeLenses ''TCFrameTransport
+
 
 data EncodedTCFrame = EncodedTCFrame {
     _encTcFrameSeq :: !Word8
     , _encTcFrameData :: BS.ByteString
+    , _encTcFrameRequest :: TCRequest
     } deriving (Show, Read)
 
 makeLenses ''EncodedTCFrame
@@ -101,40 +115,45 @@ tcFrameHeaderLen = 5
 checkTCFrame :: Config -> TCTransferFrame -> Either Text ()
 checkTCFrame cfg frame =
     let test =
-                [ frame ^. tcFrameVersion == 0
-                , frame ^. tcFrameSCID == cfgSCID cfg
-                , frame ^. tcFrameVCID `elem` (cfgVCIDs cfg)
-                , case flag of
-                    FrameAD      -> True
-                    FrameBD      -> if seqc == 0 then True else False
-                    FrameBC      -> if seqc == 0 then True else False
-                    FrameIllegal -> False
-                ]
+            [ frame ^. tcFrameVersion == 0
+            , frame ^. tcFrameSCID == cfgSCID cfg
+            , frame ^. tcFrameVCID `elem` cfgVCIDs cfg
+            , case flag of
+                FrameAD      -> True
+                FrameBD      -> seqc == 0
+                FrameBC      -> seqc == 0
+                FrameIllegal -> False
+            ]
         flag = frame ^. tcFrameFlag
         seqc = frame ^. tcFrameSeq
-    in  case all (== True) test of
-            True -> Right ()
-            False ->
+    in  if all (== True) test
+            then Right ()
+            else
                 Left
-                    $ "TC Frame Header Error [Version, S/C ID, VC ID, Frame Type]: "
-                    <> T.pack (show test)
+                $ "TC Frame Header Error [Version, S/C ID, VC ID, Frame Type]: "
+                <> T.pack (show test)
 
 
 
 
 {-# INLINABLE tcFrameEncode #-}
-tcFrameEncode :: TCTransferFrame -> Word8 -> EncodedTCFrame
-tcFrameEncode frame frameCnt =
-    let newFrame = frame & tcFrameLength .~
+tcFrameEncode :: TCFrameTransport -> Word8 -> EncodedTCFrame
+tcFrameEncode (TCFrameTransport frame rqst) frameCnt =
+    let newFrame =
+            frame
+                &  tcFrameLength
+                .~
                     -- frame length is complete frame (header + data + CRC - 1)
-                    (fromIntegral (tcFrameHeaderLen + (BS.length newPl) + crcLen - 1))
-                    & tcFrameSeq .~ frameCnt
+                   fromIntegral
+                       (tcFrameHeaderLen + BS.length newPl + crcLen - 1)
+                &  tcFrameSeq
+                .~ frameCnt
         pl       = frame ^. tcFrameData
         newPl    = if BS.null pl then BS.singleton 0 else pl
         encFrame = builderBytes $ tcFrameBuilder newFrame
     in  EncodedTCFrame (frame ^. tcFrameSeq)
                        (encFrame <> crcEncodeBS (crcCalc encFrame))
-
+                       rqst
 
 {-# INLINABLE tcFrameBuilder #-}
 tcFrameBuilder :: TCTransferFrame -> Builder
@@ -152,11 +171,12 @@ tcFrameParser = do
     let enc           = BS.take (BS.length dat - crcLen) dat
         calculatedCRC = crcCalc enc
     if crc /= calculatedCRC
-        then
-            fail ("TC Transfer Frame: CRC does not match: received: "
-                <> show crc
-                <> ", calculated: "
-                <> show calculatedCRC)
+        then fail
+            (  "TC Transfer Frame: CRC does not match: received: "
+            <> show crc
+            <> ", calculated: "
+            <> show calculatedCRC
+            )
         else pure frame
   where
     tcFrameParser' = do
@@ -168,16 +188,16 @@ tcFrameParser = do
         let (vers, fl, scid) = unpackFlags flags
             vcid             = mkVCID (vc `shiftR` 2)
             len1 :: Word16
-            !len1 = (fromIntegral (vc .&. 0x03)) `shiftL` 8
+            !len1 = fromIntegral (vc .&. 0x03) `shiftL` 8
             len2 :: Word16
             !len2    = fromIntegral len
-            !length1 = (len1 .|. len2)
+            !length1 = len1 .|. len2
             !length2 = length1 + 1
 
         pl  <- A.take (fromIntegral length2 - crcLen)
         crc <- crcParser
 
-        pure ((TCTransferFrame vers fl scid vcid length1 seqf pl), crc)
+        pure (TCTransferFrame vers fl scid vcid length1 seqf pl, crc)
 
 
 
@@ -186,13 +206,13 @@ tcFrameParser = do
 {-# INLINABLE tcFrameEncodeC #-}
 tcFrameEncodeC
     :: (MonadIO m, MonadReader env m, HasGlobalState env, HasLogFunc env)
-    => ConduitT TCTransferFrame EncodedTCFrame m ()
+    => ConduitT TCFrameTransport EncodedTCFrame m ()
 tcFrameEncodeC = do
     f <- await
     case f of
         Just frame -> do
-            logDebug $ "Got Frame: " <> displayShow frame
-            case frame ^. tcFrameFlag of
+            logDebug $ "Got Frame: " <> displayShow (frame ^. tcfTransFrame)
+            case frame ^. tcfTransFrame . tcFrameFlag of
                 FrameAD -> do
                     st  <- view appStateG
                     cnt <- liftIO . atomically $ nextADCount st
@@ -210,9 +230,10 @@ tcFrameEncodeC = do
                     st <- ask
                     liftIO
                         $ raiseEvent st
-                        $ (EVAlarms (EV_IllegalTCFrame
-                              "Illegal Frame on encode, frame discarded")
-                          )
+                        $ EVAlarms
+                              (EV_IllegalTCFrame
+                                  "Illegal Frame on encode, frame discarded"
+                              )
                     tcFrameEncodeC
         Nothing -> pure ()
 
@@ -234,7 +255,9 @@ tcFrameDecodeC = conduitParserEither tcFrameParser .| proc
                 cfg <- view getConfig
                 case checkTCFrame cfg frame of
                     Left err -> do
-                        liftIO $ raiseEvent st (EVAlarms (EV_IllegalTCFrame err))
+                        liftIO $ raiseEvent
+                            st
+                            (EVAlarms (EV_IllegalTCFrame err))
                         proc
                     Right () -> do
                         yield frame
@@ -246,7 +269,7 @@ packFlags :: TCTransferFrame -> Word16
 packFlags frame =
     let !vers   = fromIntegral (frame ^. tcFrameVersion)
         !flag   = frame ^. tcFrameFlag
-        !scid   = (getSCID (frame ^. tcFrameSCID)) .&. 0x03FF
+        !scid   = getSCID (frame ^. tcFrameSCID) .&. 0x03FF
         encFlag = case flag of
             FrameAD      -> 0
             FrameBD      -> 0x2000
@@ -262,7 +285,7 @@ unpackFlags i = (vers, fl, scid)
   where
     !vers = fromIntegral (((i .&. 0x3FFF) `shiftR` 14) .&. 0x0003)
     !scid = mkSCID $ i .&. 0x03FF
-    !fl   = case (i .&. 0x3000) of
+    !fl   = case i .&. 0x3000 of
         0      -> FrameAD
         0x2000 -> FrameBD
         0x3000 -> FrameBC
