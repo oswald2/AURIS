@@ -572,7 +572,7 @@ stateInitialisingWithoutBC fopData cancelTimer st = do
                                            ^. fopNNR
                                         then
                                             do
-                                                void $ liftIO $ cancelTimer
+                                                void $ liftIO cancelTimer
                                                 stateActive fopData
                                                             cancelTimer
                                                             st
@@ -637,12 +637,12 @@ cop1Conduit
     => NCTRSChan EncodedSegment -- ^ Input Conduit for the encoded segments
     -> TMVar EncodedSegment     -- ^ Wait Queue of the COP-1 state machine
     -> TBQueue TCFrameTransport  -- ^ Direct output for BD frames
-    -> ConduitT EncodedSegment () m ()
+    -> ConduitT () Void m ()
 cop1Conduit chan segBuffer outQueue = do
     cfg <- view getConfig
     sourceTBQueue chan .| proc cfg
   where
-    proc :: (MonadIO m) => Config -> ConduitT EncodedSegment () m ()
+    proc :: (MonadIO m) => Config -> ConduitT EncodedSegment Void m ()
     proc cfg = do
         x <- await
         case x of

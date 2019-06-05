@@ -32,9 +32,7 @@ module Control.PUS.Classes
     )
 where
 
-import           RIO                     hiding ( to
-                                                , view
-                                                )
+import           RIO                     hiding ( to )
 import qualified RIO.HashMap.Partial           as HM
 
 import           Control.Lens.Getter
@@ -43,7 +41,8 @@ import           Data.PUS.Config
 import           Data.PUS.Events
 import           Data.PUS.Types
 import           Data.PUS.GlobalState
-import           Data.PUS.MissionSpecific.Definitions (PUSMissionSpecific)
+import           Data.PUS.MissionSpecific.Definitions
+                                                ( PUSMissionSpecific )
 
 -- | This class specifies how to get a configuration
 class HasConfig env where
@@ -79,9 +78,9 @@ instance HasMissionSpecific GlobalState where
 
 instance HasFOPState GlobalState where
     copStateG = to glsFOP1
-    fopStateG vcid env = (glsFOP1 env) HM.! vcid
+    fopStateG vcid env = glsFOP1 env HM.! vcid
 
 instance HasGlobalState GlobalState where
-    raiseEvent state event = glsRaiseEvent state event
+    raiseEvent = glsRaiseEvent
 
 

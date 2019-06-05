@@ -30,36 +30,6 @@ tcFrameToCltuC = awaitForever $ \frame -> do
     logDebug $ "New CLTU: " <> displayShow new
     yield new
 
--- -- | indicates, which type this TC Frame is. AD/BD specifies the protocol mode
--- -- (AD = sequence controlled, BD = expedited), BC is a directive (see 'TCDirective')
--- data TCFrameFlag =
---     FrameAD
---     | FrameBD
---     | FrameBC
---     | FrameIllegal
---     deriving (Eq, Ord, Enum, Show, Read)
-
-
--- -- | A TC Transfer Frame
--- data TCTransferFrame = TCTransferFrame {
---     _tcFrameVersion :: !Word8
---     , _tcFrameFlag :: !TCFrameFlag
---     , _tcFrameSCID :: !SCID
---     , _tcFrameVCID :: !VCID
---     , _tcFrameLength :: !Word16
---     , _tcFrameSeq :: !Word8
---     , _tcFrameData :: BS.ByteString
---     } deriving (Eq, Show, Read)
-
-
--- data EncodedSegment = EncodedSegment {
---         _encSegSegment :: ByteString
---         , _encSegFlag :: SegmentationFlags
---         , _encSeqSegNr :: Word32
---         , _encSeqRequest :: TCRequest
---     }
-
-
 
 tcSegmentToTransferFrame
     :: Monad m => ConduitT EncodedSegment TCFrameTransport m ()

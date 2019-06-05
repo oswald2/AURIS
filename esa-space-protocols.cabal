@@ -238,3 +238,4 @@ executable CommandingAD
         , rio
         , text
         , unliftio
+        , stm-conduit

@@ -743,7 +743,7 @@ ncduAdminMessageBuilder :: NcduAdminMessage -> Builder
 ncduAdminMessageBuilder x =
     let size   = fromIntegral (sizeof x)
         newLen = 1 + size
-    in  word32BE (newLen)
+    in  word32BE newLen
             <> word64BE (_ncduAdmTime x)
             <> ncduAdminMessageTypeBuilder (_ncduAdmType x)
             <> ncduAdminMessageSeverityBuilder (_ncduAdmSeverity x)
@@ -826,15 +826,15 @@ ncduAdminMsgTcADavailable vcid mapidLst gsName = NcduAdminMessage
             <> bytes ": MAPids="
             <> mapids
     mapids = mconcat $ intersperse (bytes ",") $ map
-        (\x -> bytes (leftPaddedC ' ' 2 (BC.pack (show x))))
+        (bytes . leftPaddedC ' ' 2 . BC.pack . show x)
         mapidLst
 
 ncduAdminMsgTmTMFLOW :: NcduAdminMessage
 ncduAdminMsgTmTMFLOW =
     NcduAdminMessage 0 0 NCDU_ADM_TM NCDU_INFO 1 "Set TM link status to TM FLOW"
 
-ncduAdminMsgTmNO_TMFLOW :: NcduAdminMessage
-ncduAdminMsgTmNO_TMFLOW = NcduAdminMessage
+ncduAdminMsgTmNOTMFLOW :: NcduAdminMessage
+ncduAdminMsgTmNOTMFLOW = NcduAdminMessage
     0
     0
     NCDU_ADM_TM
