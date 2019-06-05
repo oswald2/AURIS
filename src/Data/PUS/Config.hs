@@ -7,8 +7,8 @@ Maintainer  : michael.oswald@onikudaki.net
 Stability   : experimental
 Portability : POSIX
 
-This module contains the data structure for configuration. The configuration can currently be read and written from files in native Haskell
-format (via Show class) or as JSON (via the aeson library)
+This module contains the data structure for configuration. The configuration can currently be read and written from files in
+JSON (via the aeson library)
 -}
 {-# LANGUAGE OverloadedStrings
     , DeriveGeneric
@@ -67,7 +67,6 @@ data Config = Config {
 } deriving (Eq, Generic)
 
 instance FromJSON Config
-
 instance ToJSON Config where
     toEncoding = genericToEncoding defaultOptions
 
@@ -81,7 +80,6 @@ data CltuBlockSize =
     deriving (Eq, Enum, Show, Read, Generic)
 
 instance FromJSON CltuBlockSize
-
 instance ToJSON CltuBlockSize where
     toEncoding = genericToEncoding defaultOptions
 

@@ -34,6 +34,7 @@ import           Data.PUS.TCRequest
 import           Data.PUS.MissionSpecific.Definitions
 
 import           Protocol.NCTRS
+import           Protocol.ProtocolInterfaces
 
 import           GHC.Conc.Sync
 
@@ -81,9 +82,9 @@ pkt1 ssc = PUSPacket
     Nothing
     (B.pack [0 .. 10])
 
-rqst1 = TCRequest 0 (mkSCID 533) (mkVCID 1) (TCCommand 0 BD)
+rqst1 = TCRequest 0 IF_NCTRS (mkSCID 533) (mkVCID 1) (TCCommand 0 BD)
 
-pusPackets = RIO.map (\i -> (pkt1 i, rqst1)) [1..1000]
+pusPackets = RIO.map (\i -> (pkt1 i, rqst1)) [1 .. 1000]
 
 
 

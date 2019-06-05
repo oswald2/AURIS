@@ -34,44 +34,9 @@ import           Data.PUS.TCRequest
 import           Data.PUS.MissionSpecific.Definitions
 
 import           Protocol.NCTRS
+import           Protocol.ProtocolInterfaces
 
 import           GHC.Conc.Sync
-
-
--- transferFrames :: [TCTransferFrame]
--- transferFrames =
---     [ TCTransferFrame 0 FrameBD (mkSCID 0) (mkVCID 0) 0 0 (B.replicate 8 0xAA)
---     , TCTransferFrame 0 FrameBD (mkSCID 0) (mkVCID 0) 0 1 (B.replicate 8 0xBB)
---     ]
-
--- data PUSHeader = PUSHeader {
---     _pusHdrPktID :: !Word16,
---     _pusHdrTcVersion :: !Word8,
---     _pusHdrType ::  !PUSPacketType,
---     _pusHdrDfhFlag :: !Bool,
---     _pusHdrTcApid :: !APID,
---     _pusHdrSeqFlags :: !SegmentationFlags,
---     _pusHdrTcSsc :: !SSC,
---     _pusHdrSeqCtrl :: !Word16,
---     _pusHdrTcLength :: !Word16
---     } deriving(Show, Read, Generic)
-
--- data PUSPacket = PUSPacket {
---     _pusHdr :: !PUSHeader,
---     _pusDfh :: !DataFieldHeader,
---     _pusPIs :: Maybe (TMPIVal, TMPIVal),
---     _pusData :: !ByteString
---     } deriving (Show, Generic)
-
--- | PUSStdHeader {
---     _stdType :: PUSType
---     , _stdSubType :: PUSSubType
---     , _stdSrcID :: !Word8
---     , _stdFlagAcceptance :: !Bool
---     , _stdFlagStartExec :: !Bool
---     , _stdFlagProgressExec :: !Bool
---     , _stdFlagExecComp :: !Bool
---     }
 
 
 
@@ -81,9 +46,9 @@ pkt1 ssc = PUSPacket
     Nothing
     (B.pack [0 .. 10])
 
-rqst1 = TCRequest 0 (mkSCID 533) (mkVCID 1) (TCCommand 0 BD)
+rqst1 = TCRequest 0 IF_NCTRS (mkSCID 533) (mkVCID 1) (TCCommand 0 BD)
 
-pusPackets = RIO.map (\i -> (pkt1 i, rqst1)) [1..1000]
+pusPackets = RIO.map (\i -> (pkt1 i, rqst1)) [1 .. 1000]
 
 
 
