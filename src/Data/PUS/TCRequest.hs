@@ -16,19 +16,22 @@ module Data.PUS.TCRequest
     , tcReqDirective
     , tcReqTransmissionMode
     , tcReqTransmissionModeGetter
+    , tcReqDestination
+
     )
 where
 
 import           RIO
 
-import           Control.Lens                   ( makeLenses
-                                                )
+import           Control.Lens                   ( makeLenses )
 
 import           Data.Binary
 import           Data.Aeson
 
 import           Data.PUS.Types
 import           Data.PUS.TCDirective
+
+import           Protocol.ProtocolInterfaces
 
 
 
@@ -49,6 +52,7 @@ instance ToJSON TCRequestBody where
 
 data TCRequest = TCRequest {
     _tcReqRequestID :: RequestID
+    , _tcReqDestination :: ProtocolInterface
     , _tcReqSCID :: SCID
     , _tcReqVCID :: VCID
     , _tcReqPayload :: TCRequestBody
@@ -57,13 +61,15 @@ data TCRequest = TCRequest {
 makeLenses ''TCRequest
 
 tcReqTransmissionMode :: TCRequest -> TransmissionMode
-tcReqTransmissionMode req =
-    case _tcReqPayload req of
-        TCCommand {..} -> _tcReqTransMode
-        TCDir{}        -> AD
+tcReqTransmissionMode req = case _tcReqPayload req of
+    TCCommand {..} -> _tcReqTransMode
+    TCDir{}        -> AD
 
 tcReqTransmissionModeGetter :: Getting r TCRequest TransmissionMode
 tcReqTransmissionModeGetter = to tcReqTransmissionMode
+
+instance ProtocolDestination TCRequest where
+    destination x = x ^. tcReqDestination
 
 
 instance Binary TCRequest

@@ -7,7 +7,7 @@
 #-}
 module Data.PUS.TCRequestEncoder
     ( EncodedTCRequest
-    , encTcReqPkt
+    , encTcReqContent
     , encTcReqRqst
     , encodeTCRequest
     , tcRequestEncoderC
@@ -25,8 +25,9 @@ import           Data.PUS.TCRequest
 
 
 
+
 data EncodedTCRequest = EncodedTCRequest {
-        _encTcReqPkt :: TCPacket
+        _encTcReqContent :: Maybe TCPacket
         , _encTcReqRqst :: TCRequest
     }
     deriving (Eq, Show, Read)
@@ -34,7 +35,7 @@ data EncodedTCRequest = EncodedTCRequest {
 makeLenses ''EncodedTCRequest
 
 
-encodeTCRequest :: TCRequest -> TCPacket
+encodeTCRequest :: TCRequest -> EncodedTCRequest
 encodeTCRequest _ = undefined
 
 
@@ -42,4 +43,4 @@ encodeTCRequest _ = undefined
 tcRequestEncoderC :: Monad m => ConduitT TCRequest EncodedTCRequest m ()
 tcRequestEncoderC = awaitForever $ \rqst -> do
     let enc = encodeTCRequest rqst
-    pure (EncodedTCRequest enc rqst)
+    pure enc

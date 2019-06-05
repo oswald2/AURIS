@@ -18,6 +18,7 @@ module Data.PUS.Segment
     , segFlags
     , segData
     , segHeader
+    , segIsDirective
     --, segTrailer
     , segMaxDataLen
     , isControlCommand
@@ -58,6 +59,8 @@ import qualified Data.List.NonEmpty            as L
 import           Data.PUS.Types
 import           Data.PUS.TCRequest
 import           Data.PUS.SegmentationFlags
+
+import           Protocol.ProtocolInterfaces
 
 import           General.Chunks
 
@@ -117,6 +120,14 @@ instance FromJSON EncodedSegment where
                        <*> v .: "encSegFlag"
                        <*> v .: "encSeqSegNr"
                        <*> v .: "encSegRequest"
+
+instance ProtocolDestination EncodedSegment where
+    destination encSeg = encSeg ^. encSegRequest .tcReqDestination
+
+segIsDirective :: EncodedSegment -> Bool
+segIsDirective seg = case seg ^. encSegRequest . tcReqPayload of
+    TCDir{} -> True
+    _       -> False
 
 
 mkTCSegments :: MAPID -> ByteString -> NonEmpty TCSegment

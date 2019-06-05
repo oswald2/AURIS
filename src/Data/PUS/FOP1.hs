@@ -6,10 +6,11 @@
     , GADTs
     , TypeFamilies
     , ConstrainedClassMethods
+    , ScopedTypeVariables
 #-}
 module Data.PUS.FOP1
     ( cop1Conduit
-    , fop1Program
+    , startFOP1
     )
 where
 
@@ -54,6 +55,22 @@ data FOPData = FOPData {
     , _ftimerWheel :: TimerWheel
     }
 makeLenses ''FOPData
+
+
+startFOP1
+    :: (MonadIO m, MonadReader env m, HasGlobalState env)
+    => VCID
+    -> COP1Queue
+    -> TMVar EncodedSegment
+    -> TBQueue TCFrameTransport
+    -> m ()
+startFOP1 vcid cop1Queue waitQueue outQueue = do
+    timerWheel <- liftIO $ new 5 0.1
+    let fopData = FOPData vcid waitQueue cop1Queue outQueue timerWheel
+    runFOPMachineT (fop1Program fopData)
+    pure ()
+
+
 
 -- withFOPState_
 --     :: (MonadIO m, MonadReader env m, HasFOPState env)
@@ -136,7 +153,7 @@ class FOPMachine m where
     FOPData -> State m Initial -> m (IO Bool, ResumeOut m)
 
 newtype FOPMachineT env m a = FOPTMachineT { runFOPMachineT :: m a }
-  deriving (Functor, Monad, Applicative, MonadIO)
+  deriving (Functor, Monad, Applicative, MonadIO, MonadReader env)
 
 
 data FOPMachineState s where
@@ -155,7 +172,6 @@ instance (MonadIO m, MonadReader env m, HasGlobalState env) => FOPMachine (FOPMa
 
     initADWithoutCLCW fopData _ = do
         env <- ask
-        let st = fopStateG (fopData ^. fvcid) env
         join $ withFOPState fopData $ \state -> do
             let newst = initializeState state
             purged <- purgeWaitQueue fopData
@@ -182,7 +198,6 @@ instance (MonadIO m, MonadReader env m, HasGlobalState env) => FOPMachine (FOPMa
 
     initADWithUnlock fopData _ = do
         env <- ask
-        let st = fopStateG (fopData ^. fvcid) env
         -- perform actions on the state. withFOPState returns an IO action which
         -- is executed with join
         join $ withFOPState fopData $ \state ->
@@ -210,7 +225,6 @@ instance (MonadIO m, MonadReader env m, HasGlobalState env) => FOPMachine (FOPMa
     -- | initialises the AD mode with only SetVR. Other directives are ignored.
     initADWithSetVR fopData setVr@(SetVR vr) _ = do
         env <- ask
-        let st = fopStateG (fopData ^. fvcid) env
         -- perform actions on the state. withFOPState returns an IO action which
         -- is executed with join
         join $ withFOPState fopData $ \state ->
@@ -261,9 +275,9 @@ instance (MonadIO m, MonadReader env m, HasGlobalState env) => FOPMachine (FOPMa
 
 startTimer :: FOPState -> FOPData -> IO (IO Bool)
 startTimer state fopData = do
-    let timeOut = state ^. fopT1Initial
-        -- initialise the suspend state back to 0
-        newst = state & fopSuspendState .~ 0
+    let timeOut    = state ^. fopT1Initial
+-- initialise the suspend state back to 0
+        newst      = state & fopSuspendState .~ 0
         timerWheel = fopData ^. ftimerWheel
         -- return the action to set the timer
     register timeOut (notifyTimeout fopData) timerWheel
@@ -320,6 +334,7 @@ purgeWaitQueue fopData = do
                                 pure True
                             _ -> loop
                 loop
+
 
 
 -- | this is the whole state machine of the FOP-1 starting point
@@ -440,11 +455,11 @@ sendBCFrameSTM cfg fopData fopState directive = do
             , _tcFrameSeq     = fopState ^. fopVS
             , _tcFrameData    = encDirective
             }
-        trans  = TCFrameTransport frame rqst
-        rqst   = TCRequest 0 scid vcid (TCDir directive)
+        trans = TCFrameTransport frame rqst
+        rqst  = TCRequest 0 IF_NCTRS scid vcid (TCDir directive)
 
 -- create a new state which has V(S) incremented
-        newst  = fopState & fopVS +~ 1 & addToSentQueue trans False
+        newst = fopState & fopVS +~ 1 & addToSentQueue trans False
 
     -- write the frame to the out queue
     writeTBQueue (fopData ^. fout) trans
@@ -491,7 +506,7 @@ sendBCFrame fopData directive = do
                 , _tcFrameData    = encDirective
                 }
             trans = TCFrameTransport frame rqst
-            rqst  = TCRequest 0 scid vcid (TCDir directive)
+            rqst  = TCRequest 0 IF_NCTRS scid vcid (TCDir directive)
 
 -- create a new state which has V(S) incremented
             newst = st & fopVS +~ 1
@@ -541,7 +556,7 @@ stateInitialisingWithoutBC fopData cancelTimer st = do
                         -- Lockout == False, check N(R) and V(S)
                              if clcw ^. clcwReportVal == fops ^. fopVS
                             then
-          -- check the retransmit flag
+-- check the retransmit flag
                                  if clcw ^. clcwRetrans
                                 then stateInitialisingWithoutBC fopData
                                                                 cancelTimer
@@ -621,51 +636,39 @@ cop1Conduit
     :: (MonadIO m, MonadReader env m, HasConfig env)
     => NCTRSChan EncodedSegment -- ^ Input Conduit for the encoded segments
     -> TMVar EncodedSegment     -- ^ Wait Queue of the COP-1 state machine
-    -> TBQueue TCTransferFrame  -- ^ Direct output for BD frames
-    -> ConduitT (ProtocolPacket EncodedSegment) () m ()
+    -> TBQueue TCFrameTransport  -- ^ Direct output for BD frames
+    -> ConduitT EncodedSegment () m ()
 cop1Conduit chan segBuffer outQueue = do
     cfg <- view getConfig
     sourceTBQueue chan .| proc cfg
   where
-    proc
-        :: (MonadIO m)
-        => Config
-        -> ConduitT (ProtocolPacket EncodedSegment) () m ()
+    proc :: (MonadIO m) => Config -> ConduitT EncodedSegment () m ()
     proc cfg = do
         x <- await
         case x of
             Nothing  -> pure ()
-            Just pkt -> do
+            Just seg -> do
                 -- check the actual transmission mode.
-                case
-                        pkt
-                        ^. protContent
-                        .  encSegRequest
-                        .  to tcReqTransmissionMode
-                    of
+                case seg ^. encSegRequest . to tcReqTransmissionMode of
                     -- AD mode. Put the segment into the wait queue for the COP-1 protocol machine
-                        AD -> do
-                            atomically $ putTMVar segBuffer (pkt ^. protContent)
-                            proc cfg
-                        -- BD mode. Directly create a BD transfer frame and send it to the out queue
-                        BD -> do
-                            let vcid =
-                                    pkt
-                                        ^. protContent
-                                        .  encSegRequest
-                                        .  tcReqVCID
-                                scid  = cfgSCID cfg
-        -- create a new BD mode transfer frame and fill out the values
-                                frame = TCTransferFrame
-                                    { _tcFrameVersion = 0
-                                    , _tcFrameFlag    = FrameBD
-                                    , _tcFrameSCID    = scid
-                                    , _tcFrameVCID    = vcid
-                                    , _tcFrameLength  = 0
-                                    , _tcFrameSeq     = 0
-                                    , _tcFrameData    = pkt
-                                        ^. protContent
-                                        .  encSegSegment
-                                    }
-                            atomically $ writeTBQueue outQueue frame
-                            proc cfg
+                    AD -> do
+                        atomically $ putTMVar segBuffer seg
+                        proc cfg
+                    -- BD mode. Directly create a BD transfer frame and send it to the out queue
+                    BD -> do
+                        let vcid  = seg ^. encSegRequest . tcReqVCID
+                            scid  = cfgSCID cfg
+-- create a new BD mode transfer frame and fill out the values
+                            frame = TCTransferFrame
+                                { _tcFrameVersion = 0
+                                , _tcFrameFlag    = FrameBD
+                                , _tcFrameSCID    = scid
+                                , _tcFrameVCID    = vcid
+                                , _tcFrameLength  = 0
+                                , _tcFrameSeq     = 0
+                                , _tcFrameData    = seg ^. encSegSegment
+                                }
+                            trans = TCFrameTransport frame
+                                                     (seg ^. encSegRequest)
+                        atomically $ writeTBQueue outQueue trans
+                        proc cfg

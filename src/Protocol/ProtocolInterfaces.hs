@@ -10,6 +10,7 @@ module Protocol.ProtocolInterfaces
     (
         ProtocolInterface(..)
         , ProtocolPacket(..)
+        , ProtocolDestination(..)
         , protInterface
         , protContent
     )
@@ -45,3 +46,8 @@ data ProtocolPacket a = ProtocolPacket {
     }
 makeLenses ''ProtocolPacket
 
+
+-- | This class is to determine for a certain datatype
+-- to which destination it is sent
+class ProtocolDestination a where
+    destination :: a -> ProtocolInterface

@@ -32,14 +32,12 @@ import           Protocol.ProtocolInterfaces
 
 
 
-type NCTRSChan a = TBQueue (ProtocolPacket a)
-
-
+type NCTRSChan a = TBQueue a
 
 data ProtocolChannels a = ProtocolChannels {
    _prChNCTRS :: NCTRSChan a
-   , _prChCnC :: TBQueue (ProtocolPacket a)
-   , _prChEDEN :: TBQueue (ProtocolPacket a)
+   , _prChCnC :: TBQueue a
+   , _prChEDEN :: TBQueue a
    }
 makeLenses ''ProtocolChannels
 
@@ -64,16 +62,16 @@ protocolSwitcherC chans = do
         Just pkt -> do
             case pkt ^. protInterface of
                 IF_NCTRS -> do
-                    atomically $ writeTBQueue (_prChNCTRS chans) pkt
+                    atomically $ writeTBQueue (_prChNCTRS chans) (pkt ^. protContent)
                     protocolSwitcherC chans
                 IF_CNC -> do
-                    atomically $ writeTBQueue (_prChCnC chans) pkt
+                    atomically $ writeTBQueue (_prChCnC chans) (pkt ^. protContent)
                     protocolSwitcherC chans
                 IF_EDEN -> do
-                    atomically $ writeTBQueue (_prChEDEN chans) pkt
+                    atomically $ writeTBQueue (_prChEDEN chans) (pkt ^. protContent)
                     protocolSwitcherC chans
                 IF_EDEN_SCOE -> do
-                    atomically $ writeTBQueue (_prChEDEN chans) pkt
+                    atomically $ writeTBQueue (_prChEDEN chans) (pkt ^. protContent)
                     protocolSwitcherC chans
         Nothing -> pure ()
 
