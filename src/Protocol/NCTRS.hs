@@ -83,7 +83,7 @@ module Protocol.NCTRS
     , ncduAdminMsgTcAbortedFromGS
     , ncduAdminMsgTcADavailable
     , ncduAdminMsgTmTMFLOW
-    , ncduAdminMsgTmNO_TMFLOW
+    , ncduAdminMsgTmNOTMFLOW
     )
 where
 
@@ -826,7 +826,7 @@ ncduAdminMsgTcADavailable vcid mapidLst gsName = NcduAdminMessage
             <> bytes ": MAPids="
             <> mapids
     mapids = mconcat $ intersperse (bytes ",") $ map
-        (bytes . leftPaddedC ' ' 2 . BC.pack . show x)
+        (bytes . leftPaddedC ' ' 2 . BC.pack . show)
         mapidLst
 
 ncduAdminMsgTmTMFLOW :: NcduAdminMessage
