@@ -76,6 +76,7 @@ data EventAlarm =
     | EV_IllegalTMFrame Text
     | EV_NCDUParseError Text
     | EV_IllegalPUSPacket Text
+    | EV_IllegalAction Text
     deriving (Eq, Show, Read, Generic)
 
 instance Binary EventAlarm
