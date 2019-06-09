@@ -75,7 +75,7 @@ initSocketInterface
     :: (MonadIO m, MonadUnliftIO m, MonadReader env m, HasLogFunc env)
     => Config
     -> InterfaceType
-    -> Interface
+    -> Interface 
     -> m Interface
 initSocketInterface config ifType interface = case cfgInterfacePort config of
     Nothing   -> return interface
