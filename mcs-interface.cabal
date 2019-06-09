@@ -57,6 +57,8 @@ library
     Interface.SocketInterface
     Interface.Actions
     Interface.Executor
+    Interface.Events
+    Interface.Client.SocketClient
 
   -- Modules included in this library but not exported.
   -- other-modules:

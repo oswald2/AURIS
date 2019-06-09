@@ -31,12 +31,13 @@ import           Data.Word8
 import           Data.Binary                    ( decodeOrFail, encode )
 import           Data.Aeson                     ( eitherDecode, encode )
 
-import           Data.PUS.Events
 import           Data.PUS.Config
+import           Data.PUS.Events
 
 import           Interface.Interface
 import           Interface.Actions
 import           Interface.Executor
+import           Interface.Events
 
 
 data QuitException = QuitException
@@ -57,7 +58,7 @@ data InterfaceType =
 
 -- | The internal server type
 data Server = Server {
-    eventChan :: TVar (Maybe (TMChan Event))
+    eventChan :: TVar (Maybe (TMChan IfEvent))
 }
 
 -- | Returns true if there is currently a connection
@@ -91,7 +92,7 @@ initSocketInterface config ifType interface = case cfgInterfacePort config of
 
 
 
-localRaiseEvent :: (MonadIO m) => Server -> Event -> m ()
+localRaiseEvent :: (MonadIO m) => Server -> IfEvent -> m ()
 localRaiseEvent server ev = atomically $ do
     res <- readTVar (eventChan server)
     case res of
@@ -160,7 +161,7 @@ readConduit ifType interface = parseAction ifType .| proc
     proc = awaitForever $ \res -> 
         case res of
             Left err -> liftIO
-                $ ifRaiseEvent interface (EVAlarms (EV_IllegalAction err))
+                $ ifRaiseEvent interface (EventPUS (EVAlarms (EV_IllegalAction err)))
             Right action' -> case action' of
                 ActionQuit -> do
                     logWarn
@@ -176,7 +177,7 @@ actionSink interface =
 
 
 
-showConduit :: (Monad m) => InterfaceType -> ConduitT Event ByteString m ()
+showConduit :: (Monad m) => InterfaceType -> ConduitT IfEvent ByteString m ()
 showConduit InterfaceString = awaitForever $ \ev -> do
     yield (BC.pack ((show ev) ++ "\n"))
 showConduit InterfaceBinary = awaitForever $ \ev -> do 

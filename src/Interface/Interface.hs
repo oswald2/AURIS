@@ -45,7 +45,7 @@ import RIO
 import qualified RIO.Vector as V
 
 import           Data.PUS.TCRequest
-import           Data.PUS.Events
+import           Interface.Events
 
 
 
@@ -57,14 +57,14 @@ data ActionTable = ActionTable {
     }
 
 -- | Data type for the event handler.
-type EventHandler = Event -> IO ()
+type EventHandler = IfEvent -> IO ()
 
 -- | The interface data type itself. Contains basically just the 
 -- action table and the event handler. There can be multiple 
 -- event handlers installed if more interfaces are used.
 data Interface = Interface {
     ifActionTable :: ActionTable
-    , ifEventFuncs :: Vector (EventHandler)
+    , ifEventFuncs :: Vector EventHandler
     }
 
 
@@ -74,7 +74,7 @@ createInterface actions handler = pure (Interface actions (V.singleton handler))
 
 -- | Adds a new event handler to the given 'Interface'. Only an event handler
 -- is added, the 'ActionTable' stays the same
-addInterface :: Interface -> (Event -> IO ()) -> Interface
+addInterface :: Interface -> EventHandler -> Interface
 addInterface interface f = interface {ifEventFuncs = ifEventFuncs interface `V.snoc` f}
 
 -- | Call a specific action on the 'Interface'. This is the primary function that a local
@@ -101,6 +101,6 @@ syncCallInterface interface f = do
 -- | Main function which is used inside the MCS libraries to raise an event.
 -- Distributes the event to all registered event handlers (local interfaces,
 -- socket interfaces etc)
-ifRaiseEvent :: Interface -> Event -> IO ()
+ifRaiseEvent :: Interface -> IfEvent -> IO ()
 ifRaiseEvent interface event = 
     V.mapM_ (\f -> f event) (ifEventFuncs interface)
