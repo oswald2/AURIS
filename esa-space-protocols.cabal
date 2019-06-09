@@ -74,10 +74,6 @@ library
         Protocol.NCTRS
         Protocol.ProtocolInterfaces
         Protocol.Switcher
-        Interface.Interface 
-        Interface.SocketInterface
-        Interface.Actions
-        Interface.Executor
 
 
     hs-source-dirs: src
