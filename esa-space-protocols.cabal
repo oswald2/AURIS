@@ -105,12 +105,14 @@ library
         , lens
         , binary
         , stm-conduit
+        , stm-chans
         , thyme
         , vector-binary-instances
         , bytestring-to-vector
         , timer-wheel
         , base64-bytestring-type
         , containers
+        , word8
 
     if flag(llvm)
         ghc-options: -O2 -Wall -Wcompat -Widentities -Wincomplete-record-updates

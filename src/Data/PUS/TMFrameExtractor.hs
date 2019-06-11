@@ -16,6 +16,7 @@ of the used 'Conduit' library automatically handles spillover-packets.
     , BangPatterns
     , NoImplicitPrelude
     , LambdaCase
+    , TypeApplications
 #-}
 module Data.PUS.TMFrameExtractor
     ( extractPktFromTMFramesC
@@ -26,7 +27,7 @@ module Data.PUS.TMFrameExtractor
 where
 
 import           RIO
---import qualified RIO.ByteString                as B
+import qualified RIO.ByteString                as B
 import qualified Data.IntMap.Strict            as M
 import qualified RIO.Text                      as T
 
@@ -35,6 +36,8 @@ import qualified RIO.Text                      as T
 import           Conduit
 import           Data.Conduit.Attoparsec
 import           Data.Conduit.TQueue
+import           Data.Attoparsec.ByteString (Parser)
+import qualified Data.Attoparsec.ByteString as A
 
 import           Control.PUS.Classes
 
@@ -43,6 +46,8 @@ import           Data.PUS.Types
 import           Data.PUS.PUSPacket
 import           Data.PUS.Config
 import           Data.PUS.Events
+import           Data.PUS.MissionSpecific.Definitions
+import           Data.PUS.SegmentationFlags
 
 import           Protocol.ProtocolInterfaces
 
@@ -212,3 +217,29 @@ pusPacketDecodeC interf = do
         Right (_, tc') -> do
             yield tc'
             proc st
+
+
+segmentedTMPacketParser :: PUSMissionSpecific 
+    -> TMSegmentLen 
+    -> Parser PUSPacket
+segmentedTMPacketParser missionSpecific segLen = do 
+    loop B.empty
+    where 
+        loop acc = do
+            hdr <- pusPktHdrParser
+            body <- case hdr ^. pusHdrSeqFlags of 
+                SegmentFirst -> do
+                    packetBody hdr segLen
+                SegmentContinue -> do
+                    packetBody hdr segLen
+                SegmentLast -> do
+                    packetBody hdr segLen
+            loop (acc <> body)
+
+
+packetBody :: PUSHeader -> TMSegmentLen -> Parser ByteString
+packetBody hdr segLen = do
+    let len = hdr ^. pusHdrTcLength + 1 
+        lenToTake = min len (fromIntegral (tmSegmentLength segLen))
+    body <- A.take (fromIntegral len)
+    pure body
