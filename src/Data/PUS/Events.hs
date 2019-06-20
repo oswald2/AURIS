@@ -95,6 +95,7 @@ data EventCOP1 =
     | EV_ADConfirmSetTimeoutType VCID TTType
     | EV_ADAlert !Text
     | EV_ADCLCWWait !Bool
+    | EV_Lockout VCID
     deriving (Eq, Show, Read, Generic)
 
 

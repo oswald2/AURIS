@@ -9,6 +9,7 @@
     , ScopedTypeVariables
     , RankNTypes
     , ExistentialQuantification
+    , MultiWayIf
 #-}
 module Data.PUS.FOP1
     ( cop1Conduit
@@ -149,6 +150,10 @@ data ResumeOut m =
     | RSRetransmitWOWait (State m RetransmitWithoutWait)
     | RSRetransmitWWait (State m RetransmitWithWait)
     | RSInitialisingWOBC (State m InitialisingWithoutBC)
+
+data InitialIn m =
+    IIInitial (State m Initial)
+    | IIInitialisingWOBC (State m InitialisingWithoutBC)
 
 class FOPMachine m where
   type State m :: * -> *
@@ -342,6 +347,28 @@ purgeWaitQueue fopData = do
                             _ -> loop
                 loop
 
+purgeSentQueue :: FOPState -> FOPState
+purgeSentQueue fops = fops & fopSentQueue .~ S.empty
+
+
+alert :: (MonadIO m, MonadReader env m, HasGlobalState env) => env -> IO Bool -> FOPData -> EventCOP1 -> m ()
+alert env cancelTimer fopData event = do
+    void $ liftIO cancelTimer
+    withFOPState fopData $ \fops -> do
+        let newst = purgeSentQueue fops
+        void $ purgeWaitQueue fopData
+        pure (newst, ())
+    liftIO $ raiseEvent env (EVCOP1 event)
+
+alertSTM :: (MonadIO m, MonadReader env m, HasGlobalState env) => env -> IO Bool -> FOPData -> FOPState -> EventCOP1 -> STM (FOPState, m ())
+alertSTM env cancelTimer fopData fops event = do
+    let newst = purgeSentQueue fops
+        action = liftIO $ do
+            cancelTimer
+            raiseEvent env (EVCOP1 event)
+    void $ purgeWaitQueue fopData
+    pure (newst, action)
+
 
 
 -- | this is the whole state machine of the FOP-1 starting point
@@ -351,14 +378,14 @@ fop1Program
     -> m ()
 fop1Program fopData = do
     st <- initial
-    stateInactive fopData (pure True) st
+    stateInactive fopData (pure True) (IIInitial st)
 
 
 stateInactive
     :: (MonadIO m, MonadReader env m, HasGlobalState env, FOPMachine m)
     => FOPData
     -> IO Bool
-    -> State m Initial
+    -> InitialIn m
     -> m ()
 stateInactive fopData cancelTimer st = do
     inp' <- liftIO $ atomically $ readCOP1Q (fopData ^. fcop1Queue)
@@ -549,53 +576,72 @@ stateInitialisingWithoutBC
     -> m ()
 stateInitialisingWithoutBC fopData cancelTimer st = do
     env <- ask
-    let fopState = fopStateG (fopData ^. fvcid) env
+    let fopState = fopStateG vcid env
+        !vcid = fopData ^. fvcid
     inp <- atomically $ readCOP1Q (fopData ^. fcop1Queue)
     case inp of
         COP1CLCW clcw -> do
-            fops <- atomically $ readTVar fopState
-            case checkCLCW clcw of
-                Left  err -> liftIO $ raiseEvent env (EVCOP1 (EV_ADAlert err))
-                Right _   -> do
-                    if clcw ^. clcwLockout
-                        then pure () -- TODO
-                        else
-                        -- Lockout == False, check N(R) and V(S)
-                             if clcw ^. clcwReportVal == fops ^. fopVS
-                            then
--- check the retransmit flag
-                                 if clcw ^. clcwRetrans
-                                then stateInitialisingWithoutBC fopData
-                                                                cancelTimer
-                                                                st
-                                else if clcw ^. clcwWait
-                                    then liftIO $ raiseEvent
-                                        env
-                                        (EVCOP1 (EV_ADCLCWWait True))
-                                    else
-                                        if clcw
-                                           ^. clcwReportVal
-                                           == fops
-                                           ^. fopNNR
-                                        then
-                                            do
-                                                void $ liftIO cancelTimer
-                                                stateActive fopData
-                                                            cancelTimer
-                                                            st
-                                        else
-                                            stateInitialisingWithoutBC
-                                                fopData
-                                                cancelTimer
-                                                st
-                            else pure () -- TODO
-
+            action <- withFOPState fopData $ \fops -> do
+                case checkCLCW clcw of
+                    Left  err -> pure (fops, liftIO $ raiseEvent env (EVCOP1 (EV_ADAlert err)))
+                    Right _   -> processCLCW env vcid fops clcw
+            liftIO action
             pure ()
         COP1Timeout -> do
             pure ()
         COP1Dir dir -> do
             pure ()
     pure ()
+    where
+        processCLCW :: env -> VCID -> FOPState -> CLCW -> STM (FOPState, IO ())
+        processCLCW env vcid fops clcw =
+            if clcw ^. clcwLockout
+                then pure (fops, liftIO $ raiseEvent env (EVCOP1 (EV_Lockout vcid)))
+                else checkReportVal env vcid fops clcw
+
+        checkReportVal :: env -> VCID -> FOPState -> CLCW -> STM (FOPState, IO ())
+        checkReportVal env vcid fops clcw = do
+            -- Lockout == False, check N(R) and V(S)
+            let nR = clcw ^. clcwReportVal
+                vS = fops ^. fopVS
+                nNR = fops ^. fopNNR
+            if  | nR == vS -> checkRetransmit env vcid fops clcw
+                | nR < vS && nR >= nNR -> pure (fops, pure ()) -- TODO
+                | nR < nNR || nR > vS ->  pure (fops, pure ()) -- TODO
+                | otherwise ->  pure (fops, pure ()) -- TODO
+
+        checkRetransmit :: env -> VCID -> FOPState -> CLCW -> STM (FOPState, IO ())
+        checkRetransmit env vcid fops clcw =
+            -- check the retransmit flag
+            if clcw ^. clcwRetrans
+                then do
+                    (newst, action) <- alertSTM env cancelTimer fopData fops (EV_ADAlert "Received RETRANSMIT while in state Initialising Without BC")
+                    let newAction = do
+                            action
+                            stateInactive fopData (pure True) (IIInitialisingWOBC InitialisingWithoutBC)
+                    pure (newst, newAction)
+                else if clcw ^. clcwWait
+                    then liftIO $ raiseEvent
+                        env
+                        (EVCOP1 (EV_ADCLCWWait True))
+                    else
+                        if clcw
+                            ^. clcwReportVal
+                            == fops
+                            ^. fopNNR
+                        then
+                            do
+                                void $ liftIO cancelTimer
+                                stateActive fopData
+                                            cancelTimer
+                                            st
+                        else
+                            stateInitialisingWithoutBC
+                                fopData
+                                cancelTimer
+                                st
+
+
 
 
 -- | S5
