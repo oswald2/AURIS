@@ -72,7 +72,7 @@ tmFrameSwitchVC
     :: (MonadUnliftIO m, MonadReader env m, HasGlobalState env)
     => ProtocolInterface
     -> TBQueue (ProtocolPacket PUSPacket)
-    -> ConduitT (TMFrame, Flag Initial) Void m ()
+    -> ConduitT (TMFrame, Flag Initialized) Void m ()
 tmFrameSwitchVC interf outQueue = do
     st <- ask
     let vcids = cfgVCIDs (st ^. getConfig)
@@ -106,7 +106,7 @@ tmFrameSwitchVC interf outQueue = do
             case M.lookup vcid vcMap of
                 Nothing -> do
                     liftIO $ raiseEvent st $ EVAlarms
-                        (EV_IllegalTMFrame
+                        (EVIllegalTMFrame
                             ("Received Frame with VC ID which was not configured: "
                             <> T.pack (show vcid)
                             <> ". Discarding Frame."
@@ -134,7 +134,7 @@ tmFrameSwitchVC interf outQueue = do
 tmFrameExtractionChain
     :: (MonadIO m, MonadReader env m, HasGlobalState env)
     => VCID
-    -> TBQueue (TMFrame, Flag Initial)
+    -> TBQueue (TMFrame, Flag Initialized)
     -> TBQueue (ProtocolPacket PUSPacket)
     -> ProtocolInterface
     -> ConduitT () Void m ()
@@ -148,7 +148,7 @@ tmFrameExtractionChain vcid queue outQueue interf =
 
 checkFrameCountC
     :: (MonadIO m, MonadReader env m, HasGlobalState env)
-    => ConduitT (TMFrame, Flag Initial) (Maybe (TMFrame, Flag Initial)) m ()
+    => ConduitT (TMFrame, Flag Initialized) (Maybe (TMFrame, Flag Initialized)) m ()
 checkFrameCountC = do
     var <- newTVarIO 0xFF
 
@@ -164,7 +164,7 @@ checkFrameCountC = do
                 else do
                     st <- ask
                     liftIO $ raiseEvent st $ EVTelemetry
-                        (EV_TM_FrameGap lastFC vcfc)
+                        (EVTMFrameGap lastFC vcfc)
                     yield Nothing
     go
 
@@ -174,7 +174,7 @@ checkFrameCountC = do
 -- the TM Frame.
 extractPktFromTMFramesC
     :: (MonadIO m, MonadReader env m, HasGlobalState env)
-    => VCID -> ConduitT (Maybe (TMFrame, Flag Initial)) ByteString m ()
+    => VCID -> ConduitT (Maybe (TMFrame, Flag Initialized)) ByteString m ()
 extractPktFromTMFramesC vcid = do
     -- on initial, we are called the first time. This means that a
     -- frame could potentially have a header pointer set to non-zero
@@ -192,7 +192,7 @@ extractPktFromTMFramesC vcid = do
         Nothing -> do -- now we have a gap skip, so restart this VC
             st <- ask
             liftIO $ raiseEvent st $ EVTelemetry
-                (EV_TM_RestartingVC vcid)
+                (EVTMRestartingVC vcid)
             throwIO RestartVCException
 
 -- | Conduit which takes 'ByteString' and extracts PUS Packets out of
@@ -209,25 +209,25 @@ pusPacketDecodeC interf = do
 
     conduitParserEither (pusPktParser missionSpecific interf) .| proc st
   where
-    proc st = awaitForever $ \inp -> case inp of
+    proc st = awaitForever $ \case
         Left err -> do
             liftIO $ raiseEvent st $ EVAlarms
-                (EV_IllegalPUSPacket (T.pack (errorMessage err)))
+                (EVIllegalPUSPacket (T.pack (errorMessage err)))
             proc st
         Right (_, tc') -> do
             yield tc'
             proc st
 
 
-segmentedTMPacketParser :: PUSMissionSpecific 
-    -> TMSegmentLen 
+segmentedTMPacketParser :: PUSMissionSpecific
+    -> TMSegmentLen
     -> Parser PUSPacket
-segmentedTMPacketParser missionSpecific segLen = do 
+segmentedTMPacketParser missionSpecific segLen = do
     loop B.empty
-    where 
+    where
         loop acc = do
             hdr <- pusPktHdrParser
-            body <- case hdr ^. pusHdrSeqFlags of 
+            body <- case hdr ^. pusHdrSeqFlags of
                 SegmentFirst -> do
                     packetBody hdr segLen
                 SegmentContinue -> do
@@ -239,7 +239,7 @@ segmentedTMPacketParser missionSpecific segLen = do
 
 packetBody :: PUSHeader -> TMSegmentLen -> Parser ByteString
 packetBody hdr segLen = do
-    let len = hdr ^. pusHdrTcLength + 1 
+    let len = hdr ^. pusHdrTcLength + 1
         lenToTake = min len (fromIntegral (tmSegmentLength segLen))
     body <- A.take (fromIntegral len)
     pure body

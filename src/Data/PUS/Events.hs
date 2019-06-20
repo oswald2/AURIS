@@ -61,8 +61,8 @@ instance ToJSON EventCommanding where
 data EventTelemetry =
     -- | Event if a gap in the virtual channel frame count is detected. First
     -- value is the last frame count, second value the actual frame count
-    EV_TM_FrameGap Word8 Word8
-    | EV_TM_RestartingVC VCID
+    EVTMFrameGap Word8 Word8
+    | EVTMRestartingVC VCID
     deriving (Eq, Show, Read, Generic)
 
 instance Binary EventTelemetry
@@ -72,11 +72,11 @@ instance ToJSON EventTelemetry where
 
 
 data EventAlarm =
-    EV_IllegalTCFrame Text
-    | EV_IllegalTMFrame Text
-    | EV_NCDUParseError Text
-    | EV_IllegalPUSPacket Text
-    | EV_IllegalAction Text
+    EVIllegalTCFrame Text
+    | EVIllegalTMFrame Text
+    | EVNCDUParseError Text
+    | EVIllegalPUSPacket Text
+    | EVIllegalAction Text
     deriving (Eq, Show, Read, Generic)
 
 instance Binary EventAlarm
@@ -85,17 +85,17 @@ instance ToJSON EventAlarm where
     toEncoding = genericToEncoding defaultOptions
 
 data EventCOP1 =
-    EV_ADInitializedWithoutCLCW VCID
-    | EV_ADInitWaitingCLCW VCID
-    | EV_ADPurgedWaitQueue VCID
-    | EV_ADConfirmSetVS VCID !Word8
-    | EV_ADConfirmSetSlidingWinWidth VCID !Word8
-    | EV_ADConfirmSetT1Initial VCID !(Fixed E6)
-    | EV_ADConfirmSetTransmissionLimit VCID !Word8
-    | EV_ADConfirmSetTimeoutType VCID TTType
-    | EV_ADAlert !Text
-    | EV_ADCLCWWait !Bool
-    | EV_Lockout VCID
+    EVADInitializedWithoutCLCW VCID
+    | EVADInitWaitingCLCW VCID
+    | EVADPurgedWaitQueue VCID
+    | EVADConfirmSetVS VCID !Word8
+    | EVADConfirmSetSlidingWinWidth VCID !Word8
+    | EVADConfirmSetT1Initial VCID !(Fixed E6)
+    | EVADConfirmSetTransmissionLimit VCID !Word8
+    | EVADConfirmSetTimeoutType VCID TTType
+    | EVADAlert !Text
+    | EVADCLCWWait VCID !Bool
+    | EVLockout VCID
     deriving (Eq, Show, Read, Generic)
 
 

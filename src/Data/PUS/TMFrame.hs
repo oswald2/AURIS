@@ -7,7 +7,7 @@ Maintainer  : michael.oswald@onikudaki.net
 Stability   : experimental
 Portability : POSIX
 
-This module is about the 'TMFrame' data type. A TM frame is the transport 
+This module is about the 'TMFrame' data type. A TM frame is the transport
 mechanism for TM packets stored in it's data part. Frames are identified by
 it's spacecraft ID as well as virtual channel ID and virutal channel frame count
 to check for correct sequences of TM frames.
@@ -269,12 +269,12 @@ tmFrameEncodeC = awaitForever $ \frame -> do
         result = tmFrameAppendCRC cfg enc
     yield result
 
--- | Conduit to decode a 'TMFrame'. In case the frame cannot be parsed, a 
+-- | Conduit to decode a 'TMFrame'. In case the frame cannot be parsed, a
 -- 'EV_IllegalTMFrame' event is raised. If the frame could be parsed, first
 -- it is checked if it is an idle-frame. Idle-frames are simply discarded.
 --
 -- In case it is a normal frame, it is CRC-checked. In case the CRC is invalid,
--- a 'EV_IllegalTMFrame' event with an error message is raised. 
+-- a 'EV_IllegalTMFrame' event with an error message is raised.
 --
 -- If the frame was ok, it is yield'ed to the next conduit.
 tmFrameDecodeC
@@ -289,15 +289,15 @@ tmFrameDecodeC = do
         case x of
             Left err -> do
                 let msg = T.pack (errorMessage err)
-                liftIO $ raiseEvent st (EVAlarms (EV_IllegalTMFrame msg))
+                liftIO $ raiseEvent st (EVAlarms (EVIllegalTMFrame msg))
                 proc cfg
-            Right (_, (bs, frame)) -> 
+            Right (_, (bs, frame)) ->
                 -- if we have an idle-frame, just throw it away
                 if isIdleTmFrame frame then proc cfg
-                else 
+                else
                     case checkFrame cfg bs of
                         Left err -> do
-                            liftIO $ raiseEvent st (EVAlarms (EV_IllegalTMFrame err))
+                            liftIO $ raiseEvent st (EVAlarms (EVIllegalTMFrame err))
                             proc cfg
                         Right () -> do
                             yield frame

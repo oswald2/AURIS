@@ -12,6 +12,7 @@
 #-}
 module Data.PUS.COP1Types
     ( FOPState
+    , State(..)
     , TTType(..)
     , initialFOPState
     , fopVCID
@@ -72,25 +73,43 @@ instance FromJSON TTType
 instance ToJSON TTType where
     toEncoding = genericToEncoding defaultOptions
 
+
+
+data State =
+    -- | S1
+    Active
+    -- | S2
+    | RetransmitWithoutWait
+    -- | S3
+    | RetransmitWithWait
+    -- | S4
+    | InitialisingWithoutBC
+    -- | S5
+    | InitialisingWithBC
+    -- | S6
+    | Initial
+    deriving (Eq, Ord, Enum, Show, Read)
+
+
 -- | State of a FOP-1 machine. This state is local to a virtual channel
 data FOPState = FOPState {
-_fopVCID :: !VCID,
-_fopWaitFlag :: !Bool,
-_fopLockoutFlag :: !Bool,
-_fopRetransmitFlag :: !Bool,
-_fopVS :: !Word8,
-_fopSentQueue :: Seq (TCFrameTransport, Bool),
-_fopToBeRetransmitted :: !Bool,
-_fopADout :: Flag Ready,
-_fopBDout :: Flag Ready,
-_fopBCout :: Flag Ready,
-_fopNNR :: !Word8,
-_fopT1Initial :: Fixed E6,
-_fopTimeoutType :: !TTType,
-_fopTransmissionLimit :: !Word8,
-_fopTransmissionCount :: !Word8,
-_fopSuspendState :: !Int,
-_fopSlidingWinWidth :: !Word8
+    _fopVCID :: !VCID,
+    _fopWaitFlag :: !Bool,
+    _fopLockoutFlag :: !Bool,
+    _fopRetransmitFlag :: !Bool,
+    _fopVS :: !Word8,
+    _fopSentQueue :: Seq (TCFrameTransport, Bool),
+    _fopToBeRetransmitted :: !Bool,
+    _fopADout :: Flag Ready,
+    _fopBDout :: Flag Ready,
+    _fopBCout :: Flag Ready,
+    _fopNNR :: !Word8,
+    _fopT1Initial :: Fixed E6,
+    _fopTimeoutType :: !TTType,
+    _fopTransmissionLimit :: !Word8,
+    _fopTransmissionCount :: !Word8,
+    _fopSuspendState :: State,
+    _fopSlidingWinWidth :: !Word8
 } deriving (Show, Read)
 makeLenses ''FOPState
 
@@ -112,7 +131,7 @@ initialFOPState vcid = FOPState
     , _fopTimeoutType       = TTAlert
     , _fopTransmissionLimit = 5
     , _fopTransmissionCount = 0
-    , _fopSuspendState      = 0
+    , _fopSuspendState      = Initial
     , _fopSlidingWinWidth   = 10
     }
 
