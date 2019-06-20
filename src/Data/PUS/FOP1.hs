@@ -7,6 +7,8 @@
     , TypeFamilies
     , ConstrainedClassMethods
     , ScopedTypeVariables
+    , RankNTypes
+    , ExistentialQuantification
 #-}
 module Data.PUS.FOP1
     ( cop1Conduit
@@ -52,7 +54,7 @@ data FOPData = FOPData {
     , _fwaitQueue :: TMVar EncodedSegment
     , _fcop1Queue :: COP1Queue
     , _fout :: TBQueue TCFrameTransport
-    , _ftimerWheel :: TimerWheel
+    , _fstartTimer :: forall a. FOPState -> FOPData -> IO a -> STM (FOPState, IO (a, IO Bool))
     }
 makeLenses ''FOPData
 
@@ -66,9 +68,21 @@ startFOP1
     -> m ()
 startFOP1 vcid cop1Queue waitQueue outQueue = do
     timerWheel <- liftIO $ new 5 0.1
-    let fopData = FOPData vcid waitQueue cop1Queue outQueue timerWheel
+    let fopData = FOPData vcid waitQueue cop1Queue outQueue (startTimerSTM timerWheel)
     runFOPMachineT (fop1Program fopData)
     pure ()
+
+startTimerSTM :: TimerWheel -> FOPState -> FOPData -> IO a -> STM (FOPState, IO (a, IO Bool))
+startTimerSTM timerWheel state fopData action = do
+    let timeOut    = state ^. fopT1Initial
+    -- initialise the suspend state back to 0
+        newst      = state & fopSuspendState .~ 0
+        -- return the action to set the timer
+        act = liftIO $ do
+            result <- action
+            cancelTimer <- register timeOut (notifyTimeout fopData) timerWheel
+            pure (result, cancelTimer)
+    pure (newst, act)
 
 
 
@@ -183,24 +197,23 @@ instance (MonadIO m, MonadReader env m, HasGlobalState env) => FOPMachine (FOPMa
 
     initADWithCLCW fopData _ = do
         env <- ask
-        cancelTimer <- join $ withFOPState fopData $ \state -> do
+        act <- withFOPState fopData $ \state -> do
             let newst = initializeState state
             purged <- purgeWaitQueue fopData
 
-            let timeOut = newst ^. fopT1Initial
-                timerWheel = fopData ^. ftimerWheel
-                action = liftIO $ do
+            let action = do
                     when purged $ raiseEvent env $ EVCOP1 (EV_ADPurgedWaitQueue (fopData ^. fvcid))
                     raiseEvent env $ EVCOP1 (EV_ADInitWaitingCLCW (fopData ^. fvcid))
-                    register timeOut (notifyTimeout fopData) timerWheel
-            pure (newst, action)
+
+            (fopData ^. fstartTimer) newst fopData action
+        (_, cancelTimer) <- liftIO act
         pure (cancelTimer, InitialisingWithoutBC)
 
     initADWithUnlock fopData _ = do
         env <- ask
         -- perform actions on the state. withFOPState returns an IO action which
-        -- is executed with join
-        join $ withFOPState fopData $ \state ->
+        -- is executed afterwards
+        act <- withFOPState fopData $ \state ->
             -- only to this if BC out is ready
             if toBool (state ^. fopBCout)
                 then do
@@ -216,11 +229,11 @@ instance (MonadIO m, MonadReader env m, HasGlobalState env) => FOPMachine (FOPMa
                         -- action execute after return from STM call
                         action = liftIO $ do
                             when purged $ raiseEvent env $ EVCOP1 (EV_ADPurgedWaitQueue (fopData ^. fvcid))
-                            cancelTimer <- startTimer newst2 fopData
-                            pure (IWBCInitialisingWithBC InitialisingWithBC, cancelTimer)
-                    pure (newst2, action)
+                            pure (IWBCInitialisingWithBC InitialisingWithBC)
+                    (fopData ^. fstartTimer) newst2 fopData action
                 -- in case BC out was not ready, just remain in the initial state
                 else pure (state, pure (IWBCInitial Initial, pure True))
+        liftIO act
 
     -- | initialises the AD mode with only SetVR. Other directives are ignored.
     initADWithSetVR fopData setVr@(SetVR vr) _ = do
@@ -251,36 +264,28 @@ instance (MonadIO m, MonadReader env m, HasGlobalState env) => FOPMachine (FOPMa
 
     -- | resume AD mode operation when it was suspended.
     resumeAD fopData _ = do
-        (action, nextState) <- withFOPState fopData $ \state ->
+        action <- withFOPState fopData $ \state ->
             -- check the suspend state
             case state ^. fopSuspendState of
                 1 -> resume state (RSActive Active)
                 2 -> resume state (RSRetransmitWOWait RetransmitWithoutWait)
                 3 -> resume state (RSRetransmitWWait RetransmitWithWait)
                 4 -> resume state (RSInitialisingWOBC InitialisingWithoutBC)
-                _ -> pure (state, (pure (pure True), RSInitial Initial))
+                _ -> pure (state, pure (RSInitial Initial, pure True))
 
         -- execute the returned action
-        cancelTimer <- liftIO action
+        (nextState, cancelTimer) <- liftIO action
         -- return the result
         pure (cancelTimer, nextState)
         where
             -- performs the actual resume
+            resume :: FOPState -> a -> STM (FOPState, IO (a, IO Bool))
             resume state nextSt = do
                 let -- initialise the suspend state back to 0
                     newst = state & fopSuspendState .~ 0
-                    action = startTimer state fopData
-                pure (newst, (action, nextSt))
+                (fopData ^. fstartTimer) newst fopData (pure nextSt)
 
 
-startTimer :: FOPState -> FOPData -> IO (IO Bool)
-startTimer state fopData = do
-    let timeOut    = state ^. fopT1Initial
--- initialise the suspend state back to 0
-        newst      = state & fopSuspendState .~ 0
-        timerWheel = fopData ^. ftimerWheel
-        -- return the action to set the timer
-    register timeOut (notifyTimeout fopData) timerWheel
 
 
 
@@ -310,6 +315,8 @@ initializeState state =
 -- | increment the V(S) counter in the state
 incrementVS :: FOPState -> FOPState
 incrementVS state = state & fopVS +~ 1
+
+
 
 -- | purges the wait queue in case of initialisation of AD mode
 purgeWaitQueue :: FOPData -> STM Bool
@@ -445,7 +452,7 @@ sendBCFrameSTM cfg fopData fopState directive = do
     let vcid         = fopData ^. fvcid
         scid         = cfgSCID cfg
         encDirective = builderBytes $ directiveBuilder directive
--- create a new BC transfer frame and fill out the values
+        -- create a new BC transfer frame and fill out the values
         frame        = TCTransferFrame
             { _tcFrameVersion = 0
             , _tcFrameFlag    = FrameBC
@@ -458,7 +465,7 @@ sendBCFrameSTM cfg fopData fopState directive = do
         trans = TCFrameTransport frame rqst
         rqst  = TCRequest 0 IF_NCTRS scid vcid (TCDir directive)
 
--- create a new state which has V(S) incremented
+        -- create a new state which has V(S) incremented
         newst = fopState & fopVS +~ 1 & addToSentQueue trans False
 
     -- write the frame to the out queue
