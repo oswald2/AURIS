@@ -162,7 +162,7 @@ tmFrameBuilder :: TMFrame -> Builder
 tmFrameBuilder f =
     tmFrameHeaderBuilder (_tmFrameHdr f)
         <> bytes (_tmFrameData f)
-        <> case (_tmFrameOCF f) of
+        <> case _tmFrameOCF f of
                Just c  -> clcwBuilder c
                Nothing -> mempty
 
@@ -182,7 +182,7 @@ tmFrameMaxDataLen cfg missionSpecific hdr =
         - fecLen
   where
     opLen  = if _tmFrameOpControl hdr then fixedSizeOf @CLCW else 0
-    fecLen = if (cfgTMFrameHasCRC cfg) then fixedSizeOf @CRC else 0
+    fecLen = if cfgTMFrameHasCRC cfg then fixedSizeOf @CRC else 0
     dfhLen = case missionSpecific ^. pmsTMFrameDataFieldHeader of
         Just h  -> tmFrameDfhLength h
         Nothing -> 0
@@ -203,7 +203,7 @@ tmFrameMinLen = fixedSizeOf @TMFrameHeader + 1
 packFlags :: TMFrameHeader -> Word16
 packFlags hdr
     = let
-          !vers = (fromIntegral (_tmFrameVersion hdr)) .&. 0x03
+          !vers = fromIntegral (_tmFrameVersion hdr) .&. 0x03
           !scid = getSCID (_tmFrameScID hdr) .&. 0x03FF
           !vcid = fromIntegral (getVCID (_tmFrameVcID hdr))
           !opc  = if _tmFrameOpControl hdr then 1 else 0
@@ -236,7 +236,7 @@ packDFS hdr =
             TMSegment512   -> 0x0800
             TMSegment1024  -> 0x1000
             TMSegment65536 -> 0x1800
-        !fhp    = (_tmFrameFirstHeaderPtr hdr) .&. 0x7FF
+        !fhp    = _tmFrameFirstHeaderPtr hdr .&. 0x7FF
         !result = dfh .|. sync .|. order .|. seg .|. fhp
     in  result
 
@@ -247,7 +247,7 @@ unpackDFS i = (dfh, sync, order, seg, fhp)
     !dfh   = (i .&. 0x8000) /= 0
     !sync  = (i .&. 0x4000) /= 0
     !order = (i .&. 0x2000) /= 0
-    !seg   = case (i .&. 0x1800) of
+    !seg   = case i .&. 0x1800 of
         0x0000 -> TMSegment256
         0x0800 -> TMSegment512
         0x1000 -> TMSegment1024
@@ -362,7 +362,7 @@ tmFrameGetPrevAndRest frame =
 
 {-# INLINABLE tmFrameAppendCRC #-}
 tmFrameAppendCRC :: Config -> ByteString -> ByteString
-tmFrameAppendCRC config encFrame = if (cfgTMFrameHasCRC config)
+tmFrameAppendCRC config encFrame = if cfgTMFrameHasCRC config
     then crcEncodeAndAppendBS encFrame
     else encFrame
 

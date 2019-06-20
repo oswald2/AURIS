@@ -94,8 +94,13 @@ data EventCOP1 =
     | EVADConfirmSetTransmissionLimit VCID !Word8
     | EVADConfirmSetTimeoutType VCID TTType
     | EVADAlert !Text
-    | EVADCLCWWait VCID !Bool
-    | EVLockout VCID
+    | EVADCLCWWait VCID !Bool State
+    | EVLockout VCID State
+    | EVNrNnrNotEqual VCID State
+    | EVCLCWIllegalNR VCID State
+    | EVADTransLimit VCID !Word8 !Word8 State
+    | EVSuspendedAD VCID State
+    | EVResumedAD VCID State
     deriving (Eq, Show, Read, Generic)
 
 

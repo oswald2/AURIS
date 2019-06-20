@@ -88,7 +88,11 @@ data State =
     | InitialisingWithBC
     -- | S6
     | Initial
-    deriving (Eq, Ord, Enum, Show, Read)
+    deriving (Eq, Ord, Enum, Show, Read, Generic)
+
+instance Binary State
+instance FromJSON State
+instance ToJSON State
 
 
 -- | State of a FOP-1 machine. This state is local to a virtual channel

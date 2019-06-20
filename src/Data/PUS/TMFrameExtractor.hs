@@ -181,7 +181,7 @@ extractPktFromTMFramesC vcid = do
     -- which means we have to start parsing at the header pointer offset.
     -- from then on, there should be consistent stream of PUS packets
     -- in the data (could also be idle-packets)
-    awaitForever $ \inp -> case inp of
+    awaitForever $ \case
         Just (frame, initial) -> if toBool initial
             then if frame ^. tmFrameHdr . tmFrameFirstHeaderPtr == 0
                 then yield (frame ^. tmFrameData)

@@ -194,7 +194,7 @@ initADWithSetVR fopData setVr@(SetVR vr) = do
         -- only to this if BC out is ready
                                             if toBool (state ^. fopBCout)
         then do
-                    -- intialize the state to AD
+          -- intialize the state to AD
             let newst = initializeState state & fopVS .~ vr & fopNNR .~ vr
             -- purge the wait queue
             purged <- purgeWaitQueue fopData
@@ -209,27 +209,32 @@ initADWithSetVR fopData setVr@(SetVR vr) = do
                         (EVADPurgedWaitQueue (fopData ^. fvcid))
                     pure InitialisingWithBC
             pure (newst2, action)
-                -- in case BC out was not ready, just remain in the initial state
+      -- in case BC out was not ready, just remain in the initial state
         else pure (state, pure Initial)
 initADWithSetVR _ _ = pure Initial
 
     -- | resume AD mode operation when it was suspended.
 resumeAD
-    :: (MonadIO m, MonadReader env m, HasFOPState env)
+    :: (MonadIO m, MonadReader env m, HasGlobalState env)
     => FOPData
     -> m (State, IO Bool)
 resumeAD fopData = do
     action <- withFOPState fopData $ \state ->
         -- check the suspend state
-                                               case state ^. fopSuspendState of
-        Active                -> resume state Active
-        RetransmitWithoutWait -> resume state RetransmitWithoutWait
-        RetransmitWithWait    -> resume state RetransmitWithWait
-        InitialisingWithoutBC -> resume state InitialisingWithoutBC
-        _                     -> pure (state, pure (Initial, pure True))
+        case state ^. fopSuspendState of
+            Active                -> resume state Active
+            RetransmitWithoutWait -> resume state RetransmitWithoutWait
+            RetransmitWithWait    -> resume state RetransmitWithWait
+            InitialisingWithoutBC -> resume state InitialisingWithoutBC
+            _                     -> pure (state, pure (Initial, pure True))
 
-    -- execute the returned action
-    (nextState, cancelTimer) <- liftIO action
+    -- execute the returned action, also raise event that we have resumed
+    env <- ask
+    (nextState, cancelTimer) <- liftIO $ do
+        res@(nextState, _) <- action
+        raiseEvent env (EVCOP1 (EVResumedAD (fopData ^. fvcid) nextState))
+        pure res
+
     -- return the result
     pure (nextState, cancelTimer)
   where
@@ -240,7 +245,22 @@ resumeAD fopData = do
             newst = state & fopSuspendState .~ Initial
         (fopData ^. fstartTimer) newst fopData (pure nextSt)
 
-
+suspendAD
+    :: (MonadIO m, MonadReader env m, HasGlobalState env)
+    => env
+    -> IO Bool
+    -> FOPData
+    -> FOPState
+    -> State
+    -> STM (FOPState, m ())
+suspendAD env cancelTimer fopData fops state = do
+    let vcid = fopData ^. fvcid
+    (newst, action) <- alertSTM env cancelTimer fopData fops (EVSuspendedAD vcid state)
+    let newst2 = newst & fopSuspendState .~ state
+        newAction = do
+            action
+            stateInactive fopData cancelTimer
+    pure (newst2, newAction)
 
 
 
@@ -355,15 +375,17 @@ stateInactive fopData cancelTimer = do
             InitADWithUnlock Unlock -> do
                 (newst, cancelTimer') <- initADWithUnlock fopData
                 case newst of
-                    InitialisingWithBC -> stateInitialisingWithBC fopData cancelTimer'
-                    Initial            -> stateInactive fopData cancelTimer'
-                    _                  -> stateInactive fopData cancelTimer'
+                    InitialisingWithBC ->
+                        stateInitialisingWithBC fopData cancelTimer'
+                    Initial -> stateInactive fopData cancelTimer'
+                    _       -> stateInactive fopData cancelTimer'
             InitADWithSetVR setVR -> do
                 newst <- initADWithSetVR fopData setVR
                 case newst of
-                    InitialisingWithBC -> stateInitialisingWithBC fopData cancelTimer
-                    Initial            -> stateInactive fopData cancelTimer
-                    _                  -> stateInactive fopData cancelTimer
+                    InitialisingWithBC ->
+                        stateInitialisingWithBC fopData cancelTimer
+                    Initial -> stateInactive fopData cancelTimer
+                    _       -> stateInactive fopData cancelTimer
             TerminateAD -> stateInactive fopData cancelTimer
             ResumeAD    -> do
                 (newst, cancelTimer') <- resumeAD fopData
@@ -546,22 +568,42 @@ stateInitialisingWithoutBC
     -> m ()
 stateInitialisingWithoutBC fopData cancelTimer = do
     env <- ask
-    let fopState = fopStateG vcid env
-        !vcid    = fopData ^. fvcid
+    let !vcid = fopData ^. fvcid
     inp <- atomically $ readCOP1Q (fopData ^. fcop1Queue)
     case inp of
         COP1CLCW clcw -> do
             join $ withFOPState fopData $ \fops -> do
                 case checkCLCW clcw of
                     Left err ->
-                        pure
-                            ( fops
-                            , liftIO $ raiseEvent env (EVCOP1 (EVADAlert err))
-                            )
+                        alertSTM env cancelTimer fopData fops (EVADAlert err)
                     Right _ -> processCLCW env vcid fops clcw
-            pure ()
         COP1Timeout -> do
-            pure ()
+            join $ withFOPState fopData $ \fops -> do
+                let transCount = fops ^. fopTransmissionCount
+                    transLimit = fops ^. fopTransmissionLimit
+                if transCount < transLimit
+                    then alertSTM
+                        env
+                        cancelTimer
+                        fopData
+                        fops
+                        (EVADTransLimit vcid
+                                        transCount
+                                        transLimit
+                                        InitialisingWithoutBC
+                        )
+                    else case fops ^. fopTimeoutType of
+                        TTAlert -> alertSTM
+                            env
+                            cancelTimer
+                            fopData
+                            fops
+                            (EVADTransLimit vcid
+                                            transCount
+                                            transLimit
+                                            InitialisingWithoutBC
+                            )
+                        TTSuspend -> suspendAD env cancelTimer fopData fops InitialisingWithoutBC
         COP1Dir dir -> do
             pure ()
     pure ()
@@ -574,21 +616,36 @@ stateInitialisingWithoutBC fopData cancelTimer = do
         -> CLCW
         -> STM (FOPState, m ())
     processCLCW env vcid fops clcw = if clcw ^. clcwLockout
-        then pure (fops, liftIO $ raiseEvent env (EVCOP1 (EVLockout vcid)))
+        then alertSTM env
+                      cancelTimer
+                      fopData
+                      fops
+                      (EVLockout vcid InitialisingWithoutBC)
         else checkReportVal env vcid fops clcw
 
+    checkReportVal
+        :: (MonadIO m, MonadReader env m, HasGlobalState env)
+        => env
+        -> VCID
+        -> FOPState
+        -> CLCW
+        -> STM (FOPState, m ())
     checkReportVal env vcid fops clcw = do
         -- Lockout == False, check N(R) and V(S)
         let nR  = clcw ^. clcwReportVal
             vS  = fops ^. fopVS
             nNR = fops ^. fopNNR
         if
-            | nR == vS             -> checkRetransmit env vcid fops clcw
-            | nR < vS && nR >= nNR -> pure (fops, pure ())
-            | -- TODO
-              nR < nNR || nR > vS  -> pure (fops, pure ())
-            | -- TODO
-              otherwise            -> pure (fops, pure ()) -- TODO
+            | nR == vS -> checkRetransmit env vcid fops clcw
+            | nR < vS && nR >= nNR -> checkRetransmitNRVS env vcid fops clcw
+            | nR < nNR || nR > vS -> alertSTM
+                env
+                cancelTimer
+                fopData
+                fops
+                (EVCLCWIllegalNR vcid InitialisingWithoutBC)
+            | otherwise -> pure
+                (fops, stateInitialisingWithoutBC fopData cancelTimer) -- not applicable in this state
 
     checkRetransmit
         :: (MonadIO m, MonadReader env m, HasGlobalState env)
@@ -623,25 +680,79 @@ stateInitialisingWithoutBC fopData cancelTimer = do
         -> CLCW
         -> STM (FOPState, m ())
     checkWait env vcid fops clcw
-        | clcw ^. clcwWait = do
-            (newst, action) <- alertSTM env
-                                        cancelTimer
-                                        fopData
-                                        fops
-                                        (EVADCLCWWait vcid True)
-            let newAction = do
-                    action
-                    stateInactive fopData (pure True)
-            pure (newst, newAction)
+        | clcw ^. clcwWait = alertWaitAction env vcid fopData fops
         | clcw ^. clcwReportVal == fops ^. fopNNR = do
-                let action = do
-                        void $ liftIO cancelTimer
-                        stateActive fopData cancelTimer
-                pure (fops, action)
-        | otherwise = pure (fops, stateInitialisingWithoutBC fopData cancelTimer)
+            let action = do
+                    void $ liftIO cancelTimer
+                    stateActive fopData cancelTimer
+            pure (fops, action)
+        | otherwise = pure
+            (fops, stateInitialisingWithoutBC fopData cancelTimer)
+
+    alertWaitAction
+        :: (MonadIO m, MonadReader env m, HasGlobalState env)
+        => env
+        -> VCID
+        -> FOPData
+        -> FOPState
+        -> STM (FOPState, m ())
+    alertWaitAction env vcid fopData fops = do
+        (newst, action) <- alertSTM
+            env
+            cancelTimer
+            fopData
+            fops
+            (EVADCLCWWait vcid True InitialisingWithoutBC)
+        let newAction = do
+                action
+                stateInactive fopData (pure True)
+        pure (newst, newAction)
 
 
+    checkRetransmitNRVS
+        :: (MonadIO m, MonadReader env m, HasGlobalState env)
+        => env
+        -> VCID
+        -> FOPState
+        -> CLCW
+        -> STM (FOPState, m ())
+    checkRetransmitNRVS env vcid fops clcw = do
+        if clcw ^. clcwRetrans
+            then if clcw ^. clcwReportVal /= fops ^. fopNNR
+                then alertNrNnrNotEqual env vcid fopData fops
+                else pure (fops, stateInitialisingWithoutBC fopData cancelTimer) -- this is not applicable for this state
+            else checkWaitNRVS env vcid fops clcw
 
+    checkWaitNRVS
+        :: (MonadIO m, MonadReader env m, HasGlobalState env)
+        => env
+        -> VCID
+        -> FOPState
+        -> CLCW
+        -> STM (FOPState, m ())
+    checkWaitNRVS env vcid fops clcw
+        | clcw ^. clcwWait = alertWaitAction env vcid fopData fops
+        | clcw ^. clcwReportVal == fops ^. fopNNR = pure (fops, pure ())
+        | otherwise = alertNrNnrNotEqual env vcid fopData fops
+
+    alertNrNnrNotEqual
+        :: (MonadIO m, MonadReader env m, HasGlobalState env)
+        => env
+        -> VCID
+        -> FOPData
+        -> FOPState
+        -> STM (FOPState, m ())
+    alertNrNnrNotEqual env vcid fopData fops = do
+        (newst, action) <- alertSTM
+            env
+            cancelTimer
+            fopData
+            fops
+            (EVNrNnrNotEqual vcid InitialisingWithoutBC)
+        let newAction = do
+                action
+                stateInactive fopData (pure True)
+        pure (newst, newAction)
 
 -- | S5
 stateInitialisingWithBC fopData cancelTimer = do
