@@ -101,6 +101,8 @@ data EventCOP1 =
     | EVADTransLimit VCID !Word8 !Word8 State
     | EVSuspendedAD VCID State
     | EVResumedAD VCID State
+    | EVTerminatedAD VCID State
+    | EVReject VCID Text
     deriving (Eq, Show, Read, Generic)
 
 
