@@ -255,7 +255,7 @@ suspendAD
     -> STM (FOPState, m ())
 suspendAD env cancelTimer fopData fops state = do
     let vcid = fopData ^. fvcid
-    (newst, action) <- alertSTM env cancelTimer fopData fops (EVSuspendedAD vcid state)
+    (newst, action) <- alertSTM (EVSuspendedAD vcid state) stateInactive env vcid cancelTimer fopData fops
     let newst2 = newst & fopSuspendState .~ state
         newAction = do
             action
@@ -334,17 +334,21 @@ purgeSentQueue fops = fops & fopSentQueue .~ S.empty
 
 alertSTM
     :: (MonadIO m, HasGlobalState env)
-    => env
+    => EventCOP1
+    -> (FOPData -> IO Bool -> m ())
+    -> env
+    -> VCID
     -> IO Bool
     -> FOPData
     -> FOPState
-    -> EventCOP1
     -> STM (FOPState, m ())
-alertSTM env cancelTimer fopData fops event = do
+alertSTM event newState env _vcid cancelTimer fopData fops = do
     let newst  = purgeSentQueue fops
-        action = liftIO $ do
-            void cancelTimer
-            raiseEvent env (EVCOP1 event)
+        action = do
+            liftIO $ do
+                void cancelTimer
+                raiseEvent env (EVCOP1 event)
+            newState fopData cancelTimer
     void $ purgeWaitQueue fopData
     pure (newst, action)
 
@@ -559,6 +563,46 @@ stateRetransmitWithWait
 stateRetransmitWithWait fopData cancelTimer = do
     pure ()
 
+type Signature env m = --(MonadIO m, MonadReader env m, HasGlobalState env) =>
+    env
+    -> VCID
+    -> IO Bool
+    -> FOPData
+    -> FOPState
+    -> STM (FOPState, m ())
+
+-- | This structure correspondes to the transitions
+-- defined in the FOP-1 state transition table in the
+-- PSS Standard (ESA PSS-04-107 Issue 2)
+data StateActions env m = StateActions {
+    e1 :: Signature env m
+    , e2 :: Signature env m
+    , e3 :: Signature env m
+    , e4 :: Signature env m
+    , e5 :: Signature env m
+    , e6 :: Signature env m
+    , e7 :: Signature env m
+    , e8 :: Signature env m
+    , e9 :: Signature env m
+    , e10 :: Signature env m
+    , e11 :: Signature env m
+    , e12 :: Signature env m
+    , e13 :: Signature env m
+    , e14 :: Signature env m
+    , e15 :: Text -> Signature env m -- error message from CLCW extraction
+    , e16 :: Word8 -> Word8 -> State -> Signature env m
+    , e17 :: Word8 -> Word8 -> State -> Signature env m
+    , e18 :: Signature env m
+    }
+
+
+doNothing :: --(MonadIO m, MonadReader env m, HasGlobalState env) =>
+    (FOPData -> IO Bool -> m ())
+    -> Signature env m
+doNothing newState _env _vcid cancelTimer fopData fops  =
+    pure (fops, newState fopData cancelTimer)
+
+
 
 -- | S4
 stateInitialisingWithoutBC
@@ -569,190 +613,212 @@ stateInitialisingWithoutBC
 stateInitialisingWithoutBC fopData cancelTimer = do
     env <- ask
     let !vcid = fopData ^. fvcid
+
+        stateActions = StateActions {
+            e1 = \_ _ cancelTimer' fopData' fops -> do
+                let action = do
+                        void $ liftIO cancelTimer'
+                        stateActive fopData' cancelTimer'
+                pure (fops, action)
+            , e2 = \_ _ cancelTimer' fopData' fops -> pure
+                (fops, stateInitialisingWithoutBC fopData' cancelTimer')
+            , e3 = alertWaitAction
+            , e4 = alertSTM
+                    (EVADAlert
+                        "Received RETRANSMIT while in state Initialising Without BC"
+                    ) stateInactive
+            , e5 = doNothing stateInitialisingWithoutBC
+            , e6 = alertNrNnrNotEqual
+            , e7 = alertWaitAction
+            , e8 = alertNrNnrNotEqual
+            , e9 = alertNrNnrNotEqual
+            , e10 = doNothing stateInitialisingWithoutBC
+            , e11 = doNothing stateInitialisingWithoutBC
+            , e12 = doNothing stateInitialisingWithoutBC
+            , e13 = alertSTM (EVCLCWIllegalNR vcid InitialisingWithoutBC)
+                    stateInactive
+            , e14 = alertSTM (EVLockout vcid InitialisingWithoutBC)
+                    stateInactive
+            , e15 = \err env' vcid' cancelTimer' fopData' fops ->
+                alertSTM (EVADAlert err) stateInactive env' vcid' cancelTimer' fopData' fops
+            , e16 = \transC transL st env' vcid' cancelTimer' fopData' fops ->
+                alertSTM (EVADTransLimit vcid
+                    transC transL st) stateInactive env' vcid' cancelTimer' fopData' fops
+            , e17 = \transC transL st env' vcid' cancelTimer' fopData' fops ->
+                alertSTM (EVADTransLimit vcid
+                    transC transL st) stateInactive env' vcid' cancelTimer' fopData' fops
+            , e18 = \env' vcid' cancelTimer' fopData' fops ->
+                suspendAD env' cancelTimer' fopData' fops InitialisingWithoutBC
+        }
+
     inp <- atomically $ readCOP1Q (fopData ^. fcop1Queue)
     case inp of
         COP1CLCW clcw -> do
             join $ withFOPState fopData $ \fops -> do
                 case checkCLCW clcw of
-                    Left err ->
-                        alertSTM env cancelTimer fopData fops (EVADAlert err)
-                    Right _ -> processCLCW env vcid fops clcw
+                    Left err -> e15 stateActions err env vcid cancelTimer fopData fops
+                    Right _ -> processCLCW env vcid cancelTimer fopData fops stateActions clcw
         COP1Timeout -> do
             join $ withFOPState fopData $ \fops -> do
                 let transCount = fops ^. fopTransmissionCount
                     transLimit = fops ^. fopTransmissionLimit
                 if transCount < transLimit
-                    then alertSTM
-                        env
-                        cancelTimer
-                        fopData
-                        fops
-                        (EVADTransLimit vcid
-                                        transCount
-                                        transLimit
-                                        InitialisingWithoutBC
-                        )
+                    then e16 stateActions transCount transLimit InitialisingWithoutBC env vcid cancelTimer fopData fops
                     else case fops ^. fopTimeoutType of
-                        TTAlert -> alertSTM
-                            env
-                            cancelTimer
-                            fopData
-                            fops
-                            (EVADTransLimit vcid
-                                            transCount
-                                            transLimit
-                                            InitialisingWithoutBC
-                            )
-                        TTSuspend -> suspendAD env cancelTimer fopData fops InitialisingWithoutBC
+                        TTAlert -> e17 stateActions transCount transLimit InitialisingWithoutBC env vcid cancelTimer fopData fops
+                        TTSuspend -> e18 stateActions env vcid cancelTimer fopData fops
         COP1Dir dir -> do
             pure ()
     pure ()
-  where
-    processCLCW
-        :: (MonadIO m, MonadReader env m, HasGlobalState env)
-        => env
-        -> VCID
-        -> FOPState
-        -> CLCW
-        -> STM (FOPState, m ())
-    processCLCW env vcid fops clcw = if clcw ^. clcwLockout
-        then alertSTM env
-                      cancelTimer
-                      fopData
-                      fops
-                      (EVLockout vcid InitialisingWithoutBC)
-        else checkReportVal env vcid fops clcw
 
-    checkReportVal
-        :: (MonadIO m, MonadReader env m, HasGlobalState env)
-        => env
-        -> VCID
-        -> FOPState
-        -> CLCW
-        -> STM (FOPState, m ())
-    checkReportVal env vcid fops clcw = do
-        -- Lockout == False, check N(R) and V(S)
-        let nR  = clcw ^. clcwReportVal
-            vS  = fops ^. fopVS
-            nNR = fops ^. fopNNR
-        if
-            | nR == vS -> checkRetransmit env vcid fops clcw
-            | nR < vS && nR >= nNR -> checkRetransmitNRVS env vcid fops clcw
-            | nR < nNR || nR > vS -> alertSTM
-                env
-                cancelTimer
-                fopData
-                fops
-                (EVCLCWIllegalNR vcid InitialisingWithoutBC)
-            | otherwise -> pure
-                (fops, stateInitialisingWithoutBC fopData cancelTimer) -- not applicable in this state
+processCLCW
+    :: (MonadIO m, MonadReader env m, HasGlobalState env)
+    => env
+    -> VCID
+    -> IO Bool
+    -> FOPData
+    -> FOPState
+    -> StateActions env m
+    -> CLCW
+    -> STM (FOPState, m ())
+processCLCW env vcid cancelTimer fopData fops stateActions clcw =
+    if clcw ^. clcwLockout
+    then e14 stateActions env vcid cancelTimer fopData fops
+    else checkReportVal env vcid cancelTimer fopData fops stateActions clcw
 
-    checkRetransmit
-        :: (MonadIO m, MonadReader env m, HasGlobalState env)
-        => env
-        -> VCID
-        -> FOPState
-        -> CLCW
-        -> STM (FOPState, m ())
-    checkRetransmit env vcid fops clcw =
-        -- check the retransmit flag
-                                         if clcw ^. clcwRetrans
-        then do
-            (newst, action) <- alertSTM
-                env
-                cancelTimer
-                fopData
-                fops
-                (EVADAlert
-                    "Received RETRANSMIT while in state Initialising Without BC"
-                )
-            let newAction = do
-                    action
-                    stateInactive fopData (pure True)
-            pure (newst, newAction)
-        else checkWait env vcid fops clcw
+checkReportVal
+    :: (MonadIO m, MonadReader env m, HasGlobalState env)
+    => env
+    -> VCID
+    -> IO Bool
+    -> FOPData
+    -> FOPState
+    -> StateActions env m
+    -> CLCW
+    -> STM (FOPState, m ())
+checkReportVal env vcid cancelTimer fopData fops stateActions clcw = do
+    -- Lockout == False, check N(R) and V(S)
+    let nR  = clcw ^. clcwReportVal
+        vS  = fops ^. fopVS
+        nNR = fops ^. fopNNR
+    if
+        | nR == vS -> checkRetransmit env vcid cancelTimer fopData fops stateActions clcw
+        | nR < vS && nR >= nNR -> checkRetransmitNRVS env vcid cancelTimer fopData fops stateActions clcw
+        | nR < nNR || nR > vS -> e13 stateActions env vcid cancelTimer fopData fops
+        | otherwise -> pure
+            (fops, stateInitialisingWithoutBC fopData cancelTimer) -- not applicable in this state
 
-    checkWait
-        :: (MonadIO m, MonadReader env m, HasGlobalState env)
-        => env
-        -> VCID
-        -> FOPState
-        -> CLCW
-        -> STM (FOPState, m ())
-    checkWait env vcid fops clcw
-        | clcw ^. clcwWait = alertWaitAction env vcid fopData fops
-        | clcw ^. clcwReportVal == fops ^. fopNNR = do
-            let action = do
-                    void $ liftIO cancelTimer
-                    stateActive fopData cancelTimer
-            pure (fops, action)
-        | otherwise = pure
-            (fops, stateInitialisingWithoutBC fopData cancelTimer)
+checkRetransmit ::
+    -- :: (MonadIO m, MonadReader env m, HasGlobalState env)
+    env
+    -> VCID
+    -> IO Bool
+    -> FOPData
+    -> FOPState
+    -> StateActions env m
+    -> CLCW
+    -> STM (FOPState, m ())
+checkRetransmit env vcid cancelTimer fopData fops stateActions clcw =
+    -- check the retransmit flag
+    if clcw ^. clcwRetrans
+    then e4 stateActions env vcid cancelTimer fopData fops
+    else checkWait env vcid cancelTimer fopData fops stateActions clcw
 
-    alertWaitAction
-        :: (MonadIO m, MonadReader env m, HasGlobalState env)
-        => env
-        -> VCID
-        -> FOPData
-        -> FOPState
-        -> STM (FOPState, m ())
-    alertWaitAction env vcid fopData fops = do
-        (newst, action) <- alertSTM
-            env
-            cancelTimer
-            fopData
-            fops
-            (EVADCLCWWait vcid True InitialisingWithoutBC)
-        let newAction = do
-                action
-                stateInactive fopData (pure True)
-        pure (newst, newAction)
+checkWait
+    :: -- (MonadIO m, MonadReader env m, HasGlobalState env) =>
+    env
+    -> VCID
+    -> IO Bool
+    -> FOPData
+    -> FOPState
+    -> StateActions env m
+    -> CLCW
+    -> STM (FOPState, m ())
+checkWait env vcid cancelTimer fopData fops stateActions clcw
+    | clcw ^. clcwWait = e3 stateActions env vcid cancelTimer fopData fops
+    | clcw ^. clcwReportVal == fops ^. fopNNR = e1 stateActions env vcid cancelTimer fopData fops
+    | otherwise = e2 stateActions env vcid cancelTimer fopData fops
+
+alertWaitAction
+    :: (MonadIO m, MonadReader env m, HasGlobalState env)
+    => env
+    -> VCID
+    -> IO Bool
+    -> FOPData
+    -> FOPState
+    -> STM (FOPState, m ())
+alertWaitAction env vcid cancelTimer fopData fops = alertSTM
+        (EVADCLCWWait vcid True InitialisingWithoutBC)
+        stateInactive
+        env
+        vcid
+        cancelTimer
+        fopData
+        fops
 
 
-    checkRetransmitNRVS
-        :: (MonadIO m, MonadReader env m, HasGlobalState env)
-        => env
-        -> VCID
-        -> FOPState
-        -> CLCW
-        -> STM (FOPState, m ())
-    checkRetransmitNRVS env vcid fops clcw = do
-        if clcw ^. clcwRetrans
-            then if clcw ^. clcwReportVal /= fops ^. fopNNR
-                then alertNrNnrNotEqual env vcid fopData fops
-                else pure (fops, stateInitialisingWithoutBC fopData cancelTimer) -- this is not applicable for this state
-            else checkWaitNRVS env vcid fops clcw
+checkRetransmitNRVS
+    ::  -- (MonadIO m, MonadReader env m, HasGlobalState env) =>
+    env
+    -> VCID
+    -> IO Bool
+    -> FOPData
+    -> FOPState
+    -> StateActions env m
+    -> CLCW
+    -> STM (FOPState, m ())
+checkRetransmitNRVS env vcid cancelTimer fopData fops stateActions clcw = do
+    if clcw ^. clcwRetrans
+        then if clcw ^. clcwReportVal /= fops ^. fopNNR
+            then chkWait
+            else chkTrans
+        else checkWaitNRVS env vcid cancelTimer fopData fops stateActions clcw
+    where
+        chkWait =
+            if clcw ^. clcwWait
+                then e9 stateActions env vcid cancelTimer fopData fops
+                else e8 stateActions env vcid cancelTimer fopData fops
+        chkTrans =
+            if fops ^. fopTransmissionCount < fops ^. fopTransmissionLimit
+                then if clcw ^. clcwWait
+                    then e11 stateActions env vcid cancelTimer fopData fops
+                    else e10 stateActions env vcid cancelTimer fopData fops
+                else
+                    e12 stateActions env vcid cancelTimer fopData fops
 
-    checkWaitNRVS
-        :: (MonadIO m, MonadReader env m, HasGlobalState env)
-        => env
-        -> VCID
-        -> FOPState
-        -> CLCW
-        -> STM (FOPState, m ())
-    checkWaitNRVS env vcid fops clcw
-        | clcw ^. clcwWait = alertWaitAction env vcid fopData fops
-        | clcw ^. clcwReportVal == fops ^. fopNNR = pure (fops, pure ())
-        | otherwise = alertNrNnrNotEqual env vcid fopData fops
 
-    alertNrNnrNotEqual
-        :: (MonadIO m, MonadReader env m, HasGlobalState env)
-        => env
-        -> VCID
-        -> FOPData
-        -> FOPState
-        -> STM (FOPState, m ())
-    alertNrNnrNotEqual env vcid fopData fops = do
-        (newst, action) <- alertSTM
-            env
-            cancelTimer
-            fopData
-            fops
-            (EVNrNnrNotEqual vcid InitialisingWithoutBC)
-        let newAction = do
-                action
-                stateInactive fopData (pure True)
-        pure (newst, newAction)
+checkWaitNRVS
+    ::  --(MonadIO m, MonadReader env m, HasGlobalState env)
+    env
+    -> VCID
+    -> IO Bool
+    -> FOPData
+    -> FOPState
+    -> StateActions env m
+    -> CLCW
+    -> STM (FOPState, m ())
+checkWaitNRVS env vcid cancelTimer fopData fops stateActions clcw
+    | clcw ^. clcwWait = e7 stateActions env vcid cancelTimer fopData fops
+    | clcw ^. clcwReportVal == fops ^. fopNNR = e5 stateActions env vcid cancelTimer fopData fops
+    | otherwise = e6 stateActions env vcid cancelTimer fopData fops
+
+alertNrNnrNotEqual
+    :: (MonadIO m, MonadReader env m, HasGlobalState env)
+    => env
+    -> VCID
+    -> IO Bool
+    -> FOPData
+    -> FOPState
+    -> STM (FOPState, m ())
+alertNrNnrNotEqual env vcid cancelTimer fopData fops = do
+    alertSTM
+        (EVNrNnrNotEqual vcid InitialisingWithoutBC)
+        stateInactive
+        env
+        vcid
+        cancelTimer
+        fopData
+        fops
 
 -- | S5
 stateInitialisingWithBC fopData cancelTimer = do
