@@ -55,6 +55,7 @@ import           Control.Monad.ST
 
 import           Data.Binary
 import           Data.Aeson
+import           Codec.Serialise
 import           Data.Attoparsec.ByteString     ( Parser )
 import qualified Data.Attoparsec.ByteString    as A
 import qualified Data.Attoparsec.Binary        as A
@@ -79,6 +80,7 @@ data PUSPacketType = PUSTM | PUSTC deriving (Ord, Eq, Enum, Show, Read, Generic)
 
 
 instance Binary PUSPacketType
+instance Serialise PUSPacketType
 instance FromJSON PUSPacketType
 instance ToJSON PUSPacketType where
     toEncoding = genericToEncoding defaultOptions
@@ -107,6 +109,7 @@ data PUSHeader = PUSHeader {
 makeLenses ''PUSHeader
 
 instance Binary PUSHeader
+instance Serialise PUSHeader
 instance FromJSON PUSHeader
 instance ToJSON PUSHeader where
     toEncoding = genericToEncoding defaultOptions
@@ -124,7 +127,8 @@ data PUSPacket = PUSPacket {
 makeLenses ''PUSPacket
 
 instance SizeOf PUSPacket where
-    sizeof x = fixedSizeOf @PUSHeader + sizeof (_pusDfh x) + B.length (_pusData x)
+    sizeof x =
+        fixedSizeOf @PUSHeader + sizeof (_pusDfh x) + B.length (_pusData x)
 
 
 
@@ -325,7 +329,9 @@ decodePktMissionSpecific pkt missionSpecific commIF
                     Left "PUS Packet: not enough input to parse PUS Packet"
                 A.Done _ p -> Right p
             else
-                Left $ T.run $ T.text "CRC Error: received: "
+                Left
+                $  T.run
+                $  T.text "CRC Error: received: "
                 <> T.string (show extractedCRC)
                 <> T.text " calculated: "
                 <> T.string (show calcdCRC)
@@ -339,25 +345,18 @@ pusPktParser
 pusPktParser missionSpecific comm = do
     hdr <- pusPktHdrParser
     dfh <- if
-        | comm == IF_NCTRS
-        -> if hdr ^. pusHdrDfhFlag
+        | comm == IF_NCTRS -> if hdr ^. pusHdrDfhFlag
             then case hdr ^. pusHdrType of
-                PUSTM ->
-                    dfhParser (missionSpecific ^. pmsTMDataFieldHeader)
-                PUSTC ->
-                    dfhParser (missionSpecific ^. pmsTCDataFieldHeader)
+                PUSTM -> dfhParser (missionSpecific ^. pmsTMDataFieldHeader)
+                PUSTC -> dfhParser (missionSpecific ^. pmsTCDataFieldHeader)
             else return PUSEmptyHeader
-        | comm == IF_CNC
-        -> if hdr ^. pusHdrDfhFlag
+        | comm == IF_CNC -> if hdr ^. pusHdrDfhFlag
             then dfhParser defaultCnCTCHeader
             else return PUSEmptyHeader
-        | comm == IF_EDEN || comm == IF_EDEN_SCOE
-        -> if hdr ^. pusHdrDfhFlag
+        | comm == IF_EDEN || comm == IF_EDEN_SCOE -> if hdr ^. pusHdrDfhFlag
             then case hdr ^. pusHdrType of
-                PUSTM ->
-                    dfhParser (missionSpecific ^. pmsTMDataFieldHeader)
-                PUSTC ->
-                    dfhParser (missionSpecific ^. pmsTCDataFieldHeader)
+                PUSTM -> dfhParser (missionSpecific ^. pmsTMDataFieldHeader)
+                PUSTC -> dfhParser (missionSpecific ^. pmsTCDataFieldHeader)
             else return PUSEmptyHeader
         | otherwise -> fail $ "Unknown protocol type: " <> show comm
     dat <- A.take (fromIntegral (hdr ^. pusHdrTcLength) + 1)

@@ -53,6 +53,7 @@ import           Control.Lens                   ( makeLenses )
 import           Data.Fixed
 import           Data.Binary
 import           Data.Aeson
+import           Codec.Serialise
 
 import           Data.PUS.Types
 import           Data.PUS.TCDirective
@@ -69,6 +70,7 @@ data TTType = TTAlert | TTSuspend
     deriving (Eq, Ord, Enum, Show, Read, Generic)
 
 instance Binary TTType
+instance Serialise TTType
 instance FromJSON TTType
 instance ToJSON TTType where
     toEncoding = genericToEncoding defaultOptions
@@ -91,6 +93,7 @@ data State =
     deriving (Eq, Ord, Enum, Show, Read, Generic)
 
 instance Binary State
+instance Serialise State
 instance FromJSON State
 instance ToJSON State
 
@@ -119,25 +122,24 @@ makeLenses ''FOPState
 
 -- | the initial State of the FOP-1 machine
 initialFOPState :: VCID -> FOPState
-initialFOPState vcid = FOPState
-    { _fopVCID              = vcid
-    , _fopWaitFlag          = False
-    , _fopLockoutFlag       = False
-    , _fopRetransmitFlag    = False
-    , _fopVS                = 0
-    , _fopSentQueue         = empty
-    , _fopToBeRetransmitted = False
-    , _fopADout             = toFlag Ready True
-    , _fopBDout             = toFlag Ready True
-    , _fopBCout             = toFlag Ready True
-    , _fopNNR               = 0
-    , _fopT1Initial         = 5
-    , _fopTimeoutType       = TTAlert
-    , _fopTransmissionLimit = 5
-    , _fopTransmissionCount = 0
-    , _fopSuspendState      = Initial
-    , _fopSlidingWinWidth   = 10
-    }
+initialFOPState vcid = FOPState { _fopVCID              = vcid
+                                , _fopWaitFlag          = False
+                                , _fopLockoutFlag       = False
+                                , _fopRetransmitFlag    = False
+                                , _fopVS                = 0
+                                , _fopSentQueue         = empty
+                                , _fopToBeRetransmitted = False
+                                , _fopADout             = toFlag Ready True
+                                , _fopBDout             = toFlag Ready True
+                                , _fopBCout             = toFlag Ready True
+                                , _fopNNR               = 0
+                                , _fopT1Initial         = 5
+                                , _fopTimeoutType       = TTAlert
+                                , _fopTransmissionLimit = 5
+                                , _fopTransmissionCount = 0
+                                , _fopSuspendState      = Initial
+                                , _fopSlidingWinWidth   = 10
+                                }
 
 
 -- | All possible COP1 directives
@@ -153,6 +155,14 @@ data COP1Directive =
     | SetT1Initial (Fixed E6)
     | SetTransmissionLimit !Word8
     | SetTimeoutType TTType
+    deriving (Show, Read, Generic)
+
+instance Binary COP1Directive
+instance Serialise COP1Directive
+instance FromJSON COP1Directive
+instance ToJSON COP1Directive
+
+
 
 -- | Input to a COP-1 queue. This queue is used to notify the
 -- state machine about certain conditions.

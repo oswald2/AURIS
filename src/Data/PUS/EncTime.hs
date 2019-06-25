@@ -8,8 +8,7 @@
     , FlexibleInstances
 #-}
 module Data.PUS.EncTime
-    (
-    CUCTime
+    ( CUCTime
     , CDSTime
     , mkCUCTime
     , mkCDSTime
@@ -27,16 +26,17 @@ module Data.PUS.EncTime
     )
 where
 
-import RIO hiding (Builder)
+import           RIO                     hiding ( Builder )
 
-import ByteString.StrictBuilder
-import Data.Binary
-import Data.Aeson
-import Data.Bits
-import Data.Attoparsec.ByteString (Parser)
-import qualified Data.Attoparsec.Binary as A
+import           ByteString.StrictBuilder
+import           Data.Binary
+import           Data.Aeson
+import           Codec.Serialise
+import           Data.Bits
+import           Data.Attoparsec.ByteString     ( Parser )
+import qualified Data.Attoparsec.Binary        as A
 
-import Protocol.SizeOf
+import           Protocol.SizeOf
 
 
 -- | Time types. CUC Time is standard unix time with normal encoding of
@@ -45,6 +45,7 @@ data CUCTime = CUCTime !Integer !Int32 !Bool
     deriving (Eq, Show, Read, Generic)
 
 instance Binary CUCTime
+instance Serialise CUCTime
 instance FromJSON CUCTime
 instance ToJSON CUCTime where
     toEncoding = genericToEncoding defaultOptions
@@ -55,10 +56,11 @@ data CDSTime = CDSTime !Word16 !Word32 (Maybe Word16)
     deriving (Eq, Show, Read, Generic)
 
 instance Binary CDSTime
+instance Serialise CDSTime
 instance FromJSON CDSTime
 instance ToJSON CDSTime where
     toEncoding = genericToEncoding defaultOptions
-    
+
 
 
 instance SizeOf CUCTime where
@@ -66,7 +68,7 @@ instance SizeOf CUCTime where
 
 instance SizeOf CDSTime where
     sizeof (CDSTime _ _ (Just _)) = 8
-    sizeof (CDSTime _ _ Nothing) = 6
+    sizeof (CDSTime _ _ Nothing ) = 6
 
 
 {-# INLINABLE mkCUCTime #-}
@@ -84,8 +86,8 @@ mkCUCTime sec usec delta =
 mkCDSTime :: Word16 -> Word32 -> Maybe Word16 -> CDSTime
 mkCDSTime days milli (Just micro) =
     let (ov1, !micro') = micro `quotRem` 1000
-        (ov2, milli' ) = (milli + fromIntegral ov1)
-            `quotRem` fromIntegral milliSecsInDay
+        (ov2, milli') =
+                (milli + fromIntegral ov1) `quotRem` fromIntegral milliSecsInDay
     in  CDSTime (days + fromIntegral ov2) milli' (Just micro')
 mkCDSTime days milli Nothing =
     let (ov2, milli') = milli `quotRem` fromIntegral milliSecsInDay
@@ -179,7 +181,7 @@ cdsTimeBuilder (CDSTime days milli micro) =
 toEncoded :: Integer -> Int32 -> (Word32, Word16)
 toEncoded sec mic =
     let sign :: Int
-        !sign  = if sec < 0 || mic < 0 then (-1) else 1
+        !sign = if sec < 0 || mic < 0 then (-1) else 1
         absm :: Double
         !absm = fromIntegral (abs mic)
         sec' :: Word32
@@ -198,7 +200,7 @@ toEncoded sec mic =
 
 {-# INLINABLE cucTimeParser #-}
 cucTimeParser :: CUCTime -> Parser CUCTime
-cucTimeParser (CUCTime _ _ delta)= do
+cucTimeParser (CUCTime _ _ delta) = do
     se <- A.anyWord32be
     m  <- A.anyWord16be
 
@@ -209,7 +211,7 @@ cucTimeParser (CUCTime _ _ delta)= do
             in  if s'
                     then (s', complement ((val .|. 0xFFFF000000000000) - 1))
                     else (s', val)
-        sec    = sign * fromIntegral (val' `shiftR` 16) .&. 0xFFFFFFFF
+        sec = sign * fromIntegral (val' `shiftR` 16) .&. 0xFFFFFFFF
         micro :: Double
         micro  = fromIntegral (val' .&. 0xFFFF)
         micro' = sign * round (micro * 65536.0 * 1000000.0)

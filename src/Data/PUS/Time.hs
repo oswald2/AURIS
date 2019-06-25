@@ -41,7 +41,7 @@ class ToMicro a where
 
 
 instance ToMicro MicroSeconds where
-    toMicro _ val = truncate val
+    toMicro _ = truncate
 instance ToMicro MilliSeconds where
     toMicro _ val = truncate (val * 1_000)
 instance ToMicro Seconds where
@@ -52,7 +52,7 @@ instance ToMicro Hours where
     toMicro _ val = truncate (val * 3600 * 1_000_000)
 
 
-   
+
 mkTimeSpan :: ToMicro a => a -> Double -> TimeSpn a
 mkTimeSpan t val = TimeSpn (toMicro t val)
 
@@ -76,7 +76,7 @@ instance ToTimeSpan (TimeSpn Minutes) where
     toTimeSpan = coerce
 instance ToTimeSpan (TimeSpn Hours) where
     toTimeSpan = coerce
-                            
+
 toMilliSeconds :: TimeSpan -> TimeSpn MilliSeconds
 toMilliSeconds = coerce
 

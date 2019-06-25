@@ -29,6 +29,7 @@ import           RIO
 
 import           Data.Binary
 import           Data.Aeson
+import           Codec.Serialise
 import           Data.Fixed
 
 import           Data.PUS.Types
@@ -45,6 +46,7 @@ data Event = EVCommanding EventCommanding
     deriving (Eq, Show, Read, Generic)
 
 instance Binary Event
+instance Serialise Event
 instance FromJSON Event
 instance ToJSON Event where
     toEncoding = genericToEncoding defaultOptions
@@ -54,6 +56,7 @@ data EventCommanding = CommandEvent
     deriving (Eq, Show, Read, Generic)
 
 instance Binary EventCommanding
+instance Serialise EventCommanding
 instance FromJSON EventCommanding
 instance ToJSON EventCommanding where
     toEncoding = genericToEncoding defaultOptions
@@ -66,6 +69,7 @@ data EventTelemetry =
     deriving (Eq, Show, Read, Generic)
 
 instance Binary EventTelemetry
+instance Serialise EventTelemetry
 instance FromJSON EventTelemetry
 instance ToJSON EventTelemetry where
     toEncoding = genericToEncoding defaultOptions
@@ -80,6 +84,7 @@ data EventAlarm =
     deriving (Eq, Show, Read, Generic)
 
 instance Binary EventAlarm
+instance Serialise EventAlarm
 instance FromJSON EventAlarm
 instance ToJSON EventAlarm where
     toEncoding = genericToEncoding defaultOptions
@@ -107,6 +112,7 @@ data EventCOP1 =
 
 
 instance Binary EventCOP1
+instance Serialise EventCOP1
 instance FromJSON EventCOP1
 instance ToJSON EventCOP1 where
     toEncoding = genericToEncoding defaultOptions

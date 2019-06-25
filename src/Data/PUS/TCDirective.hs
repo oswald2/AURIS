@@ -19,6 +19,7 @@ import           ByteString.StrictBuilder
 import           Data.Word                      ( )
 import           Data.Binary
 import           Data.Aeson
+import           Codec.Serialise
 import           Data.Attoparsec.ByteString     ( Parser )
 import qualified Data.Attoparsec.ByteString    as A
 
@@ -32,6 +33,7 @@ data TCDirective =
     deriving (Eq, Show, Read, Generic)
 
 instance Binary TCDirective
+instance Serialise TCDirective
 instance FromJSON TCDirective
 instance ToJSON TCDirective where
     toEncoding = genericToEncoding defaultOptions
@@ -52,6 +54,5 @@ directiveParser = do
         0    -> return Unlock
         0x82 -> do
             _   <- A.anyWord8
-            val <- A.anyWord8
-            return (SetVR val)
+            SetVR <$> A.anyWord8
         _ -> return DNop

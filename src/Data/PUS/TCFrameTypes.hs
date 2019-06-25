@@ -86,9 +86,3 @@ makeLenses ''EncodedTCFrame
 
 
 
--- | A TC directive for the on-board decoder
-data TCDirective =
-    Unlock
-    | SetVR !Word8
-    | DNop
-    deriving (Eq, Show, Read)

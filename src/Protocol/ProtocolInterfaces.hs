@@ -22,6 +22,7 @@ import Control.Lens (makeLenses)
 
 import Data.Binary
 import Data.Aeson
+import Codec.Serialise
 
 
 -- | Enumeration of the available interfaces
@@ -33,6 +34,7 @@ data ProtocolInterface =
     deriving (Eq, Ord, Enum, Show, Read, Generic)
 
 instance Binary ProtocolInterface
+instance Serialise ProtocolInterface
 instance FromJSON ProtocolInterface
 instance ToJSON ProtocolInterface where
     toEncoding = genericToEncoding defaultOptions

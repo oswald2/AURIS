@@ -9,7 +9,7 @@ Portability : POSIX
 
 This module is used for handling APIDs. An APID is basically a 11-bit Int, but it also
 contains the PID (lower 7 bit). Some spacecrafts use APIDs for OBQ (on-board queue) management,
-some use PIDs and some use both. This gets very easily mixed up, so we have 
+some use PIDs and some use both. This gets very easily mixed up, so we have
 distinct data types as well as a sum type APIDorPID which can contain both
 for mixed containers.
 -}
@@ -38,6 +38,8 @@ import           RIO
 
 import           Data.Binary
 import           Data.Aeson
+import           Codec.Serialise
+
 import           Data.Word                      ( )
 import           Data.Bits
 
@@ -46,17 +48,18 @@ import           Formatting
 
 -- | defines an APID. Note that on encoding a PUS packet, the APID
 -- is truncated to 11 bits. But there are applications which specify
--- larger APIDs, so it can contain also higher values. Currently 
+-- larger APIDs, so it can contain also higher values. Currently
 -- represented as Word16
 newtype APID = APID { getAPID :: Word16 }
     deriving (Read, Show, Eq, Ord, Num, Generic)
 
--- | A PID is the lower 7 bits of an APID. 
+-- | A PID is the lower 7 bits of an APID.
 newtype PID = PID { getPID :: Word8 }
     deriving (Read, Show, Eq, Ord, Num, Generic)
 
 instance Hashable APID
 instance Binary APID
+instance Serialise APID
 instance FromJSON APID
 instance ToJSON APID where
     toEncoding = genericToEncoding defaultOptions
@@ -64,12 +67,13 @@ instance ToJSON APID where
 
 instance Hashable PID
 instance Binary PID
+instance Serialise PID
 instance FromJSON PID
 instance ToJSON PID where
     toEncoding = genericToEncoding defaultOptions
 
 
--- | In order to be able to have mixed containers for missions which 
+-- | In order to be able to have mixed containers for missions which
 -- use both APID and PID, this is a simple sum type which contains both.
 data APIDorPID =
     IsAPID Word16
@@ -78,6 +82,7 @@ data APIDorPID =
 
 instance Hashable APIDorPID
 instance Binary APIDorPID
+instance Serialise APIDorPID
 instance FromJSON APIDorPID
 instance ToJSON APIDorPID where
     toEncoding = genericToEncoding defaultOptions

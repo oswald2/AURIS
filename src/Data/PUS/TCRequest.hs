@@ -17,7 +17,6 @@ module Data.PUS.TCRequest
     , tcReqTransmissionMode
     , tcReqTransmissionModeGetter
     , tcReqDestination
-
     )
 where
 
@@ -27,6 +26,7 @@ import           Control.Lens                   ( makeLenses )
 
 import           Data.Binary
 import           Data.Aeson
+import           Codec.Serialise
 
 import           Data.PUS.Types
 import           Data.PUS.TCDirective
@@ -46,6 +46,7 @@ data TCRequestBody =
 makeLenses ''TCRequestBody
 
 instance Binary TCRequestBody
+instance Serialise TCRequestBody
 instance FromJSON TCRequestBody
 instance ToJSON TCRequestBody where
     toEncoding = genericToEncoding defaultOptions
@@ -73,6 +74,7 @@ instance ProtocolDestination TCRequest where
 
 
 instance Binary TCRequest
+instance Serialise TCRequest
 instance FromJSON TCRequest
 instance ToJSON TCRequest where
     toEncoding = genericToEncoding defaultOptions

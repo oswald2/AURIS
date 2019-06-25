@@ -47,6 +47,7 @@ import           Control.Lens                   ( makeLenses )
 import           ByteString.StrictBuilder
 import           Data.Binary
 import           Data.Aeson
+import           Codec.Serialise
 import           Data.Bits
 import           Data.ByteString.Base64.Type
 import           Data.Attoparsec.ByteString     ( Parser )
@@ -102,27 +103,39 @@ data EncodedSegment = EncodedSegment {
 makeLenses ''EncodedSegment
 
 instance Binary EncodedSegment
+instance Serialise EncodedSegment
 
 instance ToJSON EncodedSegment where
-    toJSON r = object [ "encSegSegment" .= makeByteString64 (_encSegSegment r)
-                , "encSegFlag" .= _encSegFlag r
-                , "encSeqSegNr" .= _encSeqSegNr r
-                , "encSegRequest" .= _encSegRequest r
-            ]
-    toEncoding r = pairs ("encSegSegment" .= makeByteString64 (_encSegSegment r)
-                        <> "encSegFlag" .= _encSegFlag r
-                        <> "encSeqSegNr" .= _encSeqSegNr r
-                        <> "encSegRequest" .= _encSegRequest r)
+    toJSON r = object
+        [ "encSegSegment" .= makeByteString64 (_encSegSegment r)
+        , "encSegFlag" .= _encSegFlag r
+        , "encSeqSegNr" .= _encSeqSegNr r
+        , "encSegRequest" .= _encSegRequest r
+        ]
+    toEncoding r = pairs
+        (  "encSegSegment"
+        .= makeByteString64 (_encSegSegment r)
+        <> "encSegFlag"
+        .= _encSegFlag r
+        <> "encSeqSegNr"
+        .= _encSeqSegNr r
+        <> "encSegRequest"
+        .= _encSegRequest r
+        )
 
 instance FromJSON EncodedSegment where
     parseJSON = withObject "EncodedSegment" $ \v ->
-        EncodedSegment <$> (getByteString64 <$> v .: "encSegSegment")
-                       <*> v .: "encSegFlag"
-                       <*> v .: "encSeqSegNr"
-                       <*> v .: "encSegRequest"
+        EncodedSegment
+            <$> (getByteString64 <$> v .: "encSegSegment")
+            <*> v
+            .:  "encSegFlag"
+            <*> v
+            .:  "encSeqSegNr"
+            <*> v
+            .:  "encSegRequest"
 
 instance ProtocolDestination EncodedSegment where
-    destination encSeg = encSeg ^. encSegRequest .tcReqDestination
+    destination encSeg = encSeg ^. encSegRequest . tcReqDestination
 
 segIsDirective :: EncodedSegment -> Bool
 segIsDirective seg = case seg ^. encSegRequest . tcReqPayload of

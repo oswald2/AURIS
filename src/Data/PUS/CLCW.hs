@@ -52,7 +52,8 @@ import qualified RIO.Text                      as T
 import           Control.Lens                   ( makeLenses )
 
 import           Data.Bits
-
+import           Codec.Serialise
+import           Data.Aeson
 import           ByteString.StrictBuilder      as B
 import           Data.Attoparsec.ByteString     ( Parser )
 import qualified Data.Attoparsec.Binary        as A
@@ -78,8 +79,13 @@ data CLCW = CLCW {
   _clcwBCounter :: {-# UNPACK #-} !Word8,
   _clcwReportType :: !Bool,
   _clcwReportVal :: {-# UNPACK #-} !Word8
-  } deriving (Read, Show)
+  } deriving (Read, Show, Generic)
 makeLenses ''CLCW
+
+instance Serialise CLCW
+instance FromJSON CLCW
+instance ToJSON CLCW
+
 
 instance Display CLCW where
     textDisplay x =
@@ -103,9 +109,9 @@ checkCLCW v =
                 , "CLCW COP in Effect not 1"
                 , "CLCW B Counter not < 4"
                 ]
-    in  case all (== True) test of
-            True  -> Right True
-            False -> Left $ T.unlines [ err | (True, err) <- zip test msg ]
+    in  if all (== True) test
+            then Right True
+            else Left $ T.unlines [ err | (True, err) <- zip test msg ]
 
 -- | smart constructor for the CLCW
 {-# INLINABLE createCLCW #-}

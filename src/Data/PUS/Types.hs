@@ -59,8 +59,9 @@ module Data.PUS.Types
 where
 
 
-import           RIO hiding (Builder)
+import           RIO                     hiding ( Builder )
 
+import           Codec.Serialise
 import           Data.Binary
 import           Data.Aeson
 import           ByteString.StrictBuilder
@@ -78,6 +79,7 @@ mkVCID :: Word8 -> VCID
 mkVCID = VCID
 
 instance Binary VCID
+instance Serialise VCID
 instance FromJSON VCID
 instance ToJSON VCID where
     toEncoding = genericToEncoding defaultOptions
@@ -101,6 +103,7 @@ mkSCID :: Word16 -> SCID
 mkSCID = SCID
 
 instance Binary SCID
+instance Serialise SCID
 instance FromJSON SCID
 instance ToJSON SCID where
     toEncoding = genericToEncoding defaultOptions
@@ -125,6 +128,7 @@ mkMAPID :: Word8 -> MAPID
 mkMAPID x = MAPID (x .&. 0x3F)
 
 instance Binary MAPID
+instance Serialise MAPID
 instance FromJSON MAPID
 instance ToJSON MAPID where
     toEncoding = genericToEncoding defaultOptions
@@ -178,6 +182,7 @@ mkRqstID :: Int64 -> RequestID
 mkRqstID = RequestID
 
 instance Binary RequestID
+instance Serialise RequestID
 instance FromJSON RequestID
 instance ToJSON RequestID where
     toEncoding = genericToEncoding defaultOptions
@@ -188,6 +193,7 @@ data TransmissionMode = AD | BD
     deriving (Eq, Ord, Enum, Show, Read, Generic)
 
 instance Binary TransmissionMode
+instance Serialise TransmissionMode
 instance FromJSON TransmissionMode
 instance ToJSON TransmissionMode where
     toEncoding = genericToEncoding defaultOptions
@@ -240,11 +246,13 @@ pusSubTypeParser = PUSSubType <$> A.anyWord8
 
 
 instance Binary PUSType
+instance Serialise PUSType
 instance FromJSON PUSType
 instance ToJSON PUSType where
     toEncoding = genericToEncoding defaultOptions
 
 instance Binary PUSSubType
+instance Serialise PUSSubType
 instance FromJSON PUSSubType
 instance ToJSON PUSSubType where
     toEncoding = genericToEncoding defaultOptions
@@ -263,6 +271,7 @@ nextSSC :: SSC -> SSC
 nextSSC (SSC x) = SSC (x + 1)
 
 instance Binary SSC
+instance Serialise SSC
 instance FromJSON SSC
 instance ToJSON SSC where
     toEncoding = genericToEncoding defaultOptions
