@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings
     , BangPatterns
     , NoImplicitPrelude
-
+    , LambdaCase
 #-}
 module Interface.SocketInterface
     ( InterfaceType(..)
@@ -57,26 +57,25 @@ data InterfaceType =
 
 
 -- | The internal server type
-data Server = Server {
+newtype Server = Server {
     eventChan :: TVar (Maybe (TMChan IfEvent))
 }
 
 -- | Returns true if there is currently a connection
 hasConnection :: (MonadIO m) => Server -> m Bool
-hasConnection server = do
-    res <- readTVarIO (eventChan server)
-    return $ isJust res
+hasConnection server =
+    isJust <$> readTVarIO (eventChan server)
 
 
 -- | Initializes the socket interface, starts the necessary threads
 -- and listens on the socket for incoming connections
 -- Returns an 'Interface' which should be added to the available
--- interfaces 
+-- interfaces
 initSocketInterface
     :: (MonadIO m, MonadUnliftIO m, MonadReader env m, HasLogFunc env)
     => Config
     -> InterfaceType
-    -> Interface 
+    -> Interface
     -> m Interface
 initSocketInterface config ifType interface = case cfgInterfacePort config of
     Nothing   -> return interface
@@ -110,7 +109,7 @@ initServer
     -> m ()
 initServer ifType port server interface =
     runGeneralTCPServer (serverSettings (fromIntegral port) "*") $ \app -> do
-        chan <- liftIO $ newTMChanIO
+        chan <- liftIO newTMChanIO
         atomically $ writeTVar (eventChan server) (Just chan)
         race_
             (runConduit
@@ -158,16 +157,15 @@ readConduit
     -> ConduitT ByteString Action m ()
 readConduit ifType interface = parseAction ifType .| proc
   where
-    proc = awaitForever $ \res -> 
-        case res of
-            Left err -> liftIO
-                $ ifRaiseEvent interface (EventPUS (EVAlarms (EV_IllegalAction err)))
-            Right action' -> case action' of
-                ActionQuit -> do
-                    logWarn
-                        "Received QUIT from Socket Interface, shutting down socket connection..."
-                    throwIO QuitException
-                action -> yield action
+    proc = awaitForever $ \case
+        Left err -> liftIO
+            $ ifRaiseEvent interface (EventPUS (EVAlarms (EVIllegalAction err)))
+        Right action' -> case action' of
+            ActionQuit -> do
+                logWarn
+                    "Received QUIT from Socket Interface, shutting down socket connection..."
+                throwIO QuitException
+            action -> yield action
 
 
 
@@ -179,8 +177,8 @@ actionSink interface =
 
 showConduit :: (Monad m) => InterfaceType -> ConduitT IfEvent ByteString m ()
 showConduit InterfaceString = awaitForever $ \ev -> do
-    yield (BC.pack ((show ev) ++ "\n"))
-showConduit InterfaceBinary = awaitForever $ \ev -> do 
+    yield (BC.pack (show ev ++ "\n"))
+showConduit InterfaceBinary = awaitForever $ \ev -> do
     yield (BL.toStrict (Data.Binary.encode ev))
-showConduit InterfaceJSON = awaitForever $ \ev -> do 
+showConduit InterfaceJSON = awaitForever $ \ev -> do
     yield (BL.toStrict (Data.Aeson.encode ev) `BC.snoc` '\n')
