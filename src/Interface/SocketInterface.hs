@@ -28,8 +28,13 @@ import           Data.Conduit.Binary           as CB
 import           Data.Conduit.Network
 import           Data.Conduit.TMChan
 import           Data.Word8
-import           Data.Binary                    ( decodeOrFail, encode )
-import           Data.Aeson                     ( eitherDecode, encode )
+import           Data.Binary                    ( decodeOrFail
+                                                , encode
+                                                )
+import           Data.Aeson                     ( eitherDecode
+                                                , encode
+                                                )
+import           Codec.Serialise
 
 import           Data.PUS.Config
 import           Data.PUS.Events
@@ -52,6 +57,7 @@ instance Exception QuitException where
 data InterfaceType =
     InterfaceString
     | InterfaceBinary
+    | InterfaceSerialise
     | InterfaceJSON
     deriving (Eq, Ord, Enum, Show, Read)
 
@@ -63,8 +69,7 @@ newtype Server = Server {
 
 -- | Returns true if there is currently a connection
 hasConnection :: (MonadIO m) => Server -> m Bool
-hasConnection server =
-    isJust <$> readTVarIO (eventChan server)
+hasConnection server = isJust <$> readTVarIO (eventChan server)
 
 
 -- | Initializes the socket interface, starts the necessary threads
@@ -118,7 +123,8 @@ initServer ifType port server interface =
                 .| actionSink interface
                 )
             )
-            (runConduit (sourceTMChan chan .| showConduit ifType .| appSink app))
+            (runConduit (sourceTMChan chan .| showConduit ifType .| appSink app)
+            )
         -- on closing the connection, set the Chan back to Nothing
         atomically $ writeTVar (eventChan server) Nothing
 
@@ -142,6 +148,10 @@ parseAction InterfaceBinary = awaitForever $ \bs -> do
     case decodeOrFail (BL.fromStrict bs) of
         Left  (_, _, err) -> yield (Left (T.pack err))
         Right (_, _, x  ) -> yield (Right x)
+parseAction InterfaceSerialise = awaitForever $ \bs -> do
+    case deserialiseOrFail (BL.fromStrict bs) of
+        Left  (DeserialiseFailure _ err) -> yield (Left (T.pack err))
+        Right x                          -> yield (Right x)
 parseAction InterfaceJSON = C.filterE (/= _cr) .| CB.lines .| proc
   where
     proc = awaitForever $ \bs -> do
@@ -158,8 +168,9 @@ readConduit
 readConduit ifType interface = parseAction ifType .| proc
   where
     proc = awaitForever $ \case
-        Left err -> liftIO
-            $ ifRaiseEvent interface (EventPUS (EVAlarms (EVIllegalAction err)))
+        Left err -> liftIO $ ifRaiseEvent
+            interface
+            (EventPUS (EVAlarms (EVIllegalAction err)))
         Right action' -> case action' of
             ActionQuit -> do
                 logWarn
@@ -180,5 +191,7 @@ showConduit InterfaceString = awaitForever $ \ev -> do
     yield (BC.pack (show ev ++ "\n"))
 showConduit InterfaceBinary = awaitForever $ \ev -> do
     yield (BL.toStrict (Data.Binary.encode ev))
+showConduit InterfaceSerialise = awaitForever $ \ev -> do
+    yield (BL.toStrict (serialise ev))
 showConduit InterfaceJSON = awaitForever $ \ev -> do
     yield (BL.toStrict (Data.Aeson.encode ev) `BC.snoc` '\n')

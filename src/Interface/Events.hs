@@ -27,17 +27,19 @@ import RIO
 
 import Data.Binary
 import Data.Aeson
+import Codec.Serialise
 
 import Data.PUS.Events
 
 
 -- | The general application based event. Contains also all PUS events from
 -- 'Data.PUS.Events'
-data IfEvent = 
+data IfEvent =
     EventPUS Event
     deriving (Read, Show, Generic)
 
 
 instance Binary IfEvent
+instance Serialise IfEvent
 instance FromJSON IfEvent
 instance ToJSON IfEvent

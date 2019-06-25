@@ -67,18 +67,19 @@ library
   -- other-extensions:
 
   -- Other library packages from which modules are imported.
-  build-depends:       
+  build-depends:
     base ^>=4.12.0.0
     , esa-space-protocols
-    , rio 
-    , aeson 
-    , binary 
+    , rio
+    , aeson
+    , binary
     , bytestring
-    , stm-chans 
-    , conduit 
-    , conduit-extra 
-    , stm-conduit 
-    , word8 
+    , stm-chans
+    , conduit
+    , conduit-extra
+    , stm-conduit
+    , word8
+    , serialise
 
   -- Directories containing source files.
   hs-source-dirs:      src
