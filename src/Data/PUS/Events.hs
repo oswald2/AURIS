@@ -108,6 +108,11 @@ data EventCOP1 =
     | EVResumedAD VCID State
     | EVTerminatedAD VCID State
     | EVReject VCID Text
+    | EVFOPSlidingWindWidthSet VCID !Word8
+    | EVT1InitialSet VCID !(Fixed E6)
+    | EVTransmissionLimitSet VCID !Word8
+    | EVTimeoutTypeSet VCID !TTType
+    | EVSetVSSet VCID !Word8
     deriving (Eq, Show, Read, Generic)
 
 

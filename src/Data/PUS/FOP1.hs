@@ -19,12 +19,15 @@ where
 
 import           RIO
 import qualified RIO.Seq                       as S
+--import qualified RIO.Text                      as T
 
 import           ByteString.StrictBuilder
 
 import           Conduit
 import           Data.Conduit.TQueue
 import           Data.TimerWheel
+import           Data.Fixed
+
 import           Control.Lens                   ( makeLenses
                                                 , (.~)
                                                 , (+~)
@@ -55,7 +58,7 @@ data FOPData = FOPData {
     , _fwaitQueue :: TMVar EncodedSegment
     , _fcop1Queue :: COP1Queue
     , _fout :: TBQueue TCFrameTransport
-    , _fstartTimer :: forall a. FOPState -> FOPData -> IO a -> STM (FOPState, IO (a, IO Bool))
+    , _fstartTimer :: FOPState -> FOPData -> STM (FOPState, IO (IO Bool))
     }
 makeLenses ''FOPData
 
@@ -75,20 +78,13 @@ startFOP1 vcid cop1Queue waitQueue outQueue = do
     pure ()
 
 startTimerSTM
-    :: TimerWheel
-    -> FOPState
-    -> FOPData
-    -> IO a
-    -> STM (FOPState, IO (a, IO Bool))
-startTimerSTM timerWheel state fopData action = do
+    :: TimerWheel -> FOPState -> FOPData -> STM (FOPState, IO (IO Bool))
+startTimerSTM timerWheel state fopData = do
     let timeOut = state ^. fopT1Initial
 -- initialise the suspend state back to 0
         newst   = state & fopSuspendState .~ Initial
 -- return the action to set the timer
-        act     = liftIO $ do
-            result      <- action
-            cancelTimer <- register timeOut (notifyTimeout fopData) timerWheel
-            pure (result, cancelTimer)
+        act     = liftIO $ register timeOut (notifyTimeout fopData) timerWheel
     pure (newst, act)
 
 
@@ -115,54 +111,66 @@ _checkSlidingWinWidth w = (2 < w) && (w < 254) && even w
 
 
 initADWithoutCLCW
-    :: (MonadIO m, MonadReader env m, HasGlobalState env) => FOPData -> m ()
-initADWithoutCLCW fopData = do
-    env <- ask
-    join $ withFOPState fopData $ \state -> do
-        let newst = initializeState state
-        purged <- purgeWaitQueue fopData
-        let action = liftIO $ do
-                when purged $ raiseEvent env $ EVCOP1
-                    (EVADPurgedWaitQueue (fopData ^. fvcid))
-                liftIO $ raiseEvent env $ EVCOP1
-                    (EVADInitializedWithoutCLCW (fopData ^. fvcid))
-        pure (newst, action)
-    pure ()
+    :: (MonadIO m, HasGlobalState env)
+    => (FOPData -> IO Bool -> m ())
+    -> env
+    -> VCID
+    -> IO Bool
+    -> FOPData
+    -> FOPState
+    -> STM (FOPState, m ())
+initADWithoutCLCW nextState env vcid cancelTimer fopData fops = do
+    let newst = initializeState fops
+    purged <- purgeWaitQueue fopData
+    let action = do
+            when purged $ liftIO $ raiseEvent env $ EVCOP1
+                (EVADPurgedWaitQueue vcid)
+            liftIO $ raiseEvent env $ EVCOP1 (EVADInitializedWithoutCLCW vcid)
+            nextState fopData cancelTimer
+    pure (newst, action)
+
 
 
 initADWithCLCW
-    :: (MonadIO m, MonadReader env m, HasGlobalState env)
-    => FOPData
-    -> m (IO Bool)
-initADWithCLCW fopData = do
-    env <- ask
-    act <- withFOPState fopData $ \state -> do
-        let newst = initializeState state
-        purged <- purgeWaitQueue fopData
+    :: (MonadIO m, HasGlobalState env)
+    => (FOPData -> IO Bool -> m ())
+    -> env
+    -> VCID
+    -> IO Bool
+    -> FOPData
+    -> FOPState
+    -> STM (FOPState, m ())
+initADWithCLCW nextState env _vcid _cancelTimer fopData fops = do
+    let newst = initializeState fops
+    purged           <- purgeWaitQueue fopData
 
-        let action = do
+    (newst2, startt) <- (fopData ^. fstartTimer) newst fopData
+    let action = do
+            cancelTimer' <- liftIO $ do
                 when purged $ raiseEvent env $ EVCOP1
                     (EVADPurgedWaitQueue (fopData ^. fvcid))
                 raiseEvent env $ EVCOP1 (EVADInitWaitingCLCW (fopData ^. fvcid))
+                startt
+            nextState fopData cancelTimer'
+    pure (newst2, action)
 
-        (fopData ^. fstartTimer) newst fopData action
-    (_, cancelTimer) <- liftIO act
-    pure cancelTimer
+
 
 initADWithUnlock
     :: (MonadIO m, MonadReader env m, HasGlobalState env)
-    => FOPData
-    -> m (State, IO Bool)
-initADWithUnlock fopData = do
-    env <- ask
-    -- perform actions on the state. withFOPState returns an IO action which
-    -- is executed afterwards
-    act <- withFOPState fopData $ \state ->
-        -- only to this if BC out is ready
-                                            if toBool (state ^. fopBCout)
+    => (FOPData -> IO Bool -> m ())
+    -> env
+    -> VCID
+    -> IO Bool
+    -> FOPData
+    -> FOPState
+    -> STM (FOPState, m ())
+initADWithUnlock nextState env vcid cancelTimer fopData fops = do
+    -- only to this if BC out is ready
+    if toBool (fops ^. fopBCout)
         then do
--- intialize the state to AD
-            let newst = initializeState state
+        -- intialize the state to AD
+            let newst = initializeState fops
             -- purge the wait queue
             purged <- purgeWaitQueue fopData
             -- encode the Unlock directive and send it downstream
@@ -170,86 +178,101 @@ initADWithUnlock fopData = do
             -- determine a new state, where BC out is set to true since when
             -- sendBCFrameSTM aborts, it will be retried
             let newst2 = newst1 & fopBCout .~ toFlag Ready True
--- action execute after return from STM call
-                action = liftIO $ do
-                    when purged $ raiseEvent env $ EVCOP1
+                -- action execute after return from STM call
+            let action = do
+                    when purged $ liftIO $ raiseEvent env $ EVCOP1
                         (EVADPurgedWaitQueue (fopData ^. fvcid))
-                    pure InitialisingWithBC
-            (fopData ^. fstartTimer) newst2 fopData action
--- in case BC out was not ready, just remain in the initial state
-        else pure (state, pure (Initial, pure True))
-    liftIO act
+                    nextState fopData cancelTimer
+            pure (newst2, action)
+        else reject "BC Out not ready for Init AD with Unlock"
+                    stateInactive
+                    env
+                    vcid
+                    cancelTimer
+                    fopData
+                    fops
+
+
+
+-- -- | initialises the AD mode with only SetVR. Other directives are ignored.
+-- initADWithSetVR
+--     :: (MonadIO m, MonadReader env m, HasGlobalState env)
+--     => FOPData
+--     -> TCDirective
+--     -> m State
+-- initADWithSetVR fopData setVr@(SetVR vr) = do
+--     env <- ask
+--     -- perform actions on the state. withFOPState returns an IO action which
+--     -- is executed with join
+--     join $ withFOPState fopData $ \state ->
+--         -- only to this if BC out is ready
+--                                             if toBool (state ^. fopBCout)
+--         then do
+--         -- intialize the state to AD
+--             let newst = initializeState state & fopVS .~ vr & fopNNR .~ vr
+--             -- purge the wait queue
+--             purged <- purgeWaitQueue fopData
+--             -- encode the Unlock directive and send it downstream
+--             newst1 <- sendBCFrameSTM (env ^. getConfig) fopData newst setVr
+--             -- determine a new state, where BC out is set to true since when
+--             -- sendBCFrameSTM aborts, it will be retried
+--             let newst2 = newst1 & fopBCout .~ toFlag Ready True
+-- -- action execute after return from STM call
+--                 action = liftIO $ do
+--                     when purged $ raiseEvent env $ EVCOP1
+--                         (EVADPurgedWaitQueue (fopData ^. fvcid))
+--                     pure InitialisingWithBC
+--             pure (newst2, action)
+--     -- in case BC out was not ready, just remain in the initial state
+--         else pure (state, pure Initial)
+-- initADWithSetVR _ _ = pure Initial
+
+
+
 
 -- | initialises the AD mode with only SetVR. Other directives are ignored.
 initADWithSetVR
     :: (MonadIO m, MonadReader env m, HasGlobalState env)
-    => FOPData
-    -> TCDirective
-    -> m State
-initADWithSetVR fopData setVr@(SetVR vr) = do
-    env <- ask
-    -- perform actions on the state. withFOPState returns an IO action which
-    -- is executed with join
-    join $ withFOPState fopData $ \state ->
-        -- only to this if BC out is ready
-                                            if toBool (state ^. fopBCout)
-        then do
+    => (FOPData -> IO Bool -> m ())
+    -> Word8
+    -> env
+    -> VCID
+    -> IO Bool
+    -> FOPData
+    -> FOPState
+    -> STM (FOPState, m ())
+initADWithSetVR nextState vr env vcid cancelTimer fopData fops =
+    do
+        if toBool (fops ^. fopBCout)
+            then do
         -- intialize the state to AD
-            let newst = initializeState state & fopVS .~ vr & fopNNR .~ vr
-            -- purge the wait queue
-            purged <- purgeWaitQueue fopData
-            -- encode the Unlock directive and send it downstream
-            newst1 <- sendBCFrameSTM (env ^. getConfig) fopData newst setVr
-            -- determine a new state, where BC out is set to true since when
-            -- sendBCFrameSTM aborts, it will be retried
-            let newst2 = newst1 & fopBCout .~ toFlag Ready True
--- action execute after return from STM call
-                action = liftIO $ do
-                    when purged $ raiseEvent env $ EVCOP1
-                        (EVADPurgedWaitQueue (fopData ^. fvcid))
-                    pure InitialisingWithBC
-            pure (newst2, action)
-    -- in case BC out was not ready, just remain in the initial state
-        else pure (state, pure Initial)
-initADWithSetVR _ _ = pure Initial
-
-    -- | resume AD mode operation when it was suspended.
-resumeAD
-    :: (MonadIO m, MonadReader env m, HasGlobalState env)
-    => FOPData
-    -> m (State, IO Bool)
-resumeAD fopData = do
-    action <- withFOPState fopData $ \state ->
-        -- check the suspend state
-                                               case state ^. fopSuspendState of
-        Active                -> resume state Active
-        RetransmitWithoutWait -> resume state RetransmitWithoutWait
-        RetransmitWithWait    -> resume state RetransmitWithWait
-        InitialisingWithoutBC -> resume state InitialisingWithoutBC
-        InitialisingWithBC    -> resume state InitialisingWithBC
-        _                     -> pure (state, pure (Initial, pure True))
-
-    -- execute the returned action, also raise event that we have resumed
-    env                      <- ask
-    (nextState, cancelTimer) <- liftIO $ do
-        res@(nextState, _) <- action
-        raiseEvent env (EVCOP1 (EVResumedAD (fopData ^. fvcid) nextState))
-        pure res
-
-    -- return the result
-    pure (nextState, cancelTimer)
-  where
-        -- performs the actual resume
-    resume :: FOPState -> a -> STM (FOPState, IO (a, IO Bool))
-    resume state nextSt = do
-        let -- initialise the suspend state back to 0
-            newst = state & fopSuspendState .~ Initial
-        (fopData ^. fstartTimer) newst fopData (pure nextSt)
+                let newst = initializeState fops & fopVS .~ vr & fopNNR .~ vr
+                -- purge the wait queue
+                purged <- purgeWaitQueue fopData
+                -- encode the Unlock directive and send it downstream
+                newst1 <- sendBCFrameSTM (env ^. getConfig) fopData newst (SetVR vr)
+                -- determine a new state, where BC out is set to true since when
+                -- sendBCFrameSTM aborts, it will be retried
+                let newst2 = newst1 & fopBCout .~ toFlag Ready True
+            -- action execute after return from STM call
+                    action = do
+                        when purged $ liftIO $ raiseEvent env $ EVCOP1
+                            (EVADPurgedWaitQueue (fopData ^. fvcid))
+                        nextState fopData cancelTimer
+                pure (newst2, action)
+        -- in case BC out was not ready, just remain in the initial state
+            else reject "BC Out not ready for Init AD with Set V(R)"
+                        stateInactive
+                        env
+                        vcid
+                        cancelTimer
+                        fopData
+                        fops
 
 
 processResume
     :: -- (MonadIO m, MonadReader env m, HasGlobalState env)
-    env
+       env
     -> VCID
     -> IO Bool
     -> FOPData
@@ -268,8 +291,9 @@ processResume env vcid cancelTimer fopData fops stateActions = do
         _ -> e30 stateActions env vcid cancelTimer fopData fops
 
 
-resumeADState :: (MonadIO m, HasGlobalState env) =>
-    (FOPData -> IO Bool -> m ())
+resumeADState
+    :: (MonadIO m, HasGlobalState env)
+    => (FOPData -> IO Bool -> m ())
     -> State
     -> env
     -> VCID
@@ -278,11 +302,12 @@ resumeADState :: (MonadIO m, HasGlobalState env) =>
     -> FOPState
     -> STM (FOPState, m ())
 resumeADState nextState state env _vcid _cancelTimer fopData fops = do
-    (newst, action) <- (fopData ^. fstartTimer) fops fopData
-        (raiseEvent env (EVCOP1 (EVResumedAD (fopData ^. fvcid) state)))
+    (newst, startt) <- (fopData ^. fstartTimer) fops fopData
     let newAction = do
-            (_, cancelTimer) <- liftIO action
-            nextState fopData cancelTimer
+            cancelTimer' <- liftIO $ do
+                raiseEvent env (EVCOP1 (EVResumedAD (fopData ^. fvcid) state))
+                startt
+            nextState fopData cancelTimer'
     pure (newst, newAction)
 
 
@@ -401,96 +426,53 @@ stateInactive
     -> IO Bool
     -> m ()
 stateInactive fopData cancelTimer = do
+    let stateActions = StateActions
+            { e1  = doNothing stateInactive
+            , e2  = doNothing stateInactive
+            , e3  = doNothing stateInactive
+            , e4  = doNothing stateInactive
+            , e5  = doNothing stateInactive
+            , e6  = doNothing stateInactive
+            , e7  = doNothing stateInactive
+            , e8  = doNothing stateInactive
+            , e9  = doNothing stateInactive
+            , e10 = doNothing stateInactive
+            , e11 = doNothing stateInactive
+            , e12 = doNothing stateInactive
+            , e13 = doNothing stateInactive
+            , e14 = doNothing stateInactive
+            , e15 = \_ -> doNothing stateInactive
+            , e16 = \_ _ _ -> doNothing stateInactive
+            , e17 = \_ _ _ -> doNothing stateInactive
+            , e18 = doNothing stateInactive
+            , e19 = reject "Transfer AD Segment illegal in S6" stateInactive
+            , e20 = reject "Transfer AD Segment illegal in S6" stateInactive
+            , e21 = doNothing stateInitialisingWithoutBC -- this is handled externally
+            , e22 = reject "Transfer BD Segment illegal in S6" stateInactive
+            , e23 = initADWithoutCLCW stateActive
+            , e24 = initADWithCLCW stateInitialisingWithoutBC
+            , e25 = initADWithUnlock stateInitialisingWithBC
+            , e26 = reject "BC Out not ready for Init AD with Unlock"
+                           stateInitialisingWithoutBC
+            , e27 = \vr -> initADWithSetVR stateInitialisingWithBC vr
+            , e28 = \_ -> reject "BC Out not ready for Init AD with Set V(R)"
+                            stateInactive
+            , e29 = terminateAD Initial
+            , e30 = reject "Resume AD SS=0 illegal in S6" stateInactive
+            , e31 = resumeADState stateActive Active
+            , e32 = resumeADState stateRetransmitWithoutWait RetransmitWithoutWait
+            , e33 = resumeADState stateRetransmitWithWait RetransmitWithWait
+            , e34 = resumeADState stateInitialisingWithoutBC InitialisingWithoutBC
+            , e35 = (`setVS` stateInactive)
+            , e36 = (`setFOPSlidingWindWidth` stateInitialisingWithoutBC)
+            , e37 = (`setT1Initial` stateInitialisingWithoutBC)
+            , e38 = (`setTransmissionLimit` stateInitialisingWithoutBC)
+            , e39 = (`setTimeoutType` stateInitialisingWithoutBC)
+            , e40 = reject "Illegal directive in S4" stateInitialisingWithoutBC
+            }
+
     inp' <- liftIO $ atomically $ readCOP1Q (fopData ^. fcop1Queue)
-    case inp' of
-        COP1Dir dir -> case dir of
-            InitADWithoutCLCW -> do
-                initADWithoutCLCW fopData
-                stateActive fopData cancelTimer
-            InitADWithCLCW -> do
-                cancelTimer' <- initADWithCLCW fopData
-                stateInitialisingWithoutBC fopData cancelTimer'
-            InitADWithUnlock Unlock -> do
-                (newst, cancelTimer') <- initADWithUnlock fopData
-                case newst of
-                    InitialisingWithBC ->
-                        stateInitialisingWithBC fopData cancelTimer'
-                    Initial -> stateInactive fopData cancelTimer'
-                    _       -> stateInactive fopData cancelTimer'
-            InitADWithSetVR setVR -> do
-                newst <- initADWithSetVR fopData setVR
-                case newst of
-                    InitialisingWithBC ->
-                        stateInitialisingWithBC fopData cancelTimer
-                    Initial -> stateInactive fopData cancelTimer
-                    _       -> stateInactive fopData cancelTimer
-            TerminateAD -> stateInactive fopData cancelTimer
-            ResumeAD    -> do
-                (newst, cancelTimer') <- resumeAD fopData
-                case newst of
-                    Initial -> stateInactive fopData cancelTimer'
-                    Active  -> stateActive fopData cancelTimer'
-                    RetransmitWithoutWait ->
-                        stateRetransmitWithoutWait fopData cancelTimer'
-                    RetransmitWithWait ->
-                        stateRetransmitWithWait fopData cancelTimer'
-                    InitialisingWithoutBC ->
-                        stateInitialisingWithoutBC fopData cancelTimer'
-                    InitialisingWithBC ->
-                        stateInitialisingWithBC fopData cancelTimer'
-            SetVS vs -> do
-                setMemberAndConfirm
-                    fopData
-                    (\sta -> sta & fopVS .~ vs & fopNNR .~ vs)
-                    EVADConfirmSetVS
-                    vs
-                stateInactive fopData cancelTimer
-            SetFOPSlidingWindowWidth sww -> do
-                setMemberAndConfirm fopData
-                                    (fopSlidingWinWidth .~ sww)
-                                    EVADConfirmSetSlidingWinWidth
-                                    sww
-                stateInactive fopData cancelTimer
-            SetT1Initial t1 -> do
-                setMemberAndConfirm fopData
-                                    (fopT1Initial .~ t1)
-                                    EVADConfirmSetT1Initial
-                                    t1
-                stateInactive fopData cancelTimer
-            SetTransmissionLimit tl -> do
-                setMemberAndConfirm fopData
-                                    (fopTransmissionLimit .~ tl)
-                                    EVADConfirmSetTransmissionLimit
-                                    tl
-                stateInactive fopData cancelTimer
-            SetTimeoutType tt -> do
-                setMemberAndConfirm fopData
-                                    (fopTimeoutType .~ tt)
-                                    EVADConfirmSetTimeoutType
-                                    tt
-                stateInactive fopData cancelTimer
-            _ -> stateInactive fopData cancelTimer
-        COP1CLCW _clcw -> stateInactive fopData cancelTimer
-        COP1Timeout    -> stateInactive fopData cancelTimer
-
-    pure ()
-
-
-setMemberAndConfirm
-    :: (MonadIO m, MonadReader env m, HasGlobalState env)
-    => FOPData
-    -> (FOPState -> FOPState)
-    -> (VCID -> t -> EventCOP1)
-    -> t
-    -> m ()
-setMemberAndConfirm fopData setOp event val = do
-    env <- ask
-    join $ withFOPState fopData $ \state -> do
-        let newst = setOp state
-            action =
-                liftIO $ raiseEvent env $ EVCOP1 (event (fopData ^. fvcid) val)
-        pure (newst, action)
-
+    processCOPQueueInput inp' stateActions cancelTimer fopData
 
 
 sendBCFrameSTM :: Config -> FOPData -> FOPState -> TCDirective -> STM FOPState
@@ -639,6 +621,12 @@ data StateActions env m = StateActions {
     , e32 :: Signature env m
     , e33 :: Signature env m
     , e34 :: Signature env m
+    , e35 :: Word8 -> Signature env m
+    , e36 :: Word8 -> Signature env m
+    , e37 :: Fixed E6 -> Signature env m
+    , e38 :: Word8 -> Signature env m
+    , e39 :: TTType -> Signature env m
+    , e40 :: Signature env m
     }
 
 
@@ -648,16 +636,17 @@ doNothing
 doNothing newState _env _vcid cancelTimer fopData fops =
     pure (fops, newState fopData cancelTimer)
 
-reject ::(MonadIO m, MonadReader env m, HasGlobalState env) =>
-    Text
+reject
+    :: (MonadIO m, HasGlobalState env)
+    => Text
     -> (FOPData -> IO Bool -> m ())
     -> env
     -> VCID
     -> IO Bool
     -> FOPData
     -> FOPState
-    -> STM (FOPState, m())
-reject msg newState env vcid cancelTimer fopData fops =
+    -> STM (FOPState, m ())
+reject msg newState env vcid cancelTimer fopData fops = do
     alertSTM (EVReject vcid msg) newState env vcid cancelTimer fopData fops
 
 
@@ -725,7 +714,7 @@ stateInitialisingWithoutBC fopData cancelTimer = do
                                  cancelTimer'
                                  fopData'
                                  fops
-            , e18 = \env' vcid' cancelTimer' fopData' fops -> suspendAD
+            , e18 = \env' _vcid' cancelTimer' fopData' fops -> suspendAD
                         env'
                         cancelTimer'
                         fopData'
@@ -735,21 +724,47 @@ stateInitialisingWithoutBC fopData cancelTimer = do
             , e20 = doNothing stateInitialisingWithoutBC
             , e21 = doNothing stateInitialisingWithoutBC
             , e22 = doNothing stateInitialisingWithoutBC
-            , e23 = doNothing stateInitialisingWithoutBC
-            , e24 = doNothing stateInitialisingWithoutBC
-            , e25 = doNothing stateInitialisingWithoutBC
-            , e26 = doNothing stateInitialisingWithoutBC
-            , e27 = \_ -> doNothing stateInitialisingWithoutBC
-            , e28 = \_ -> doNothing stateInitialisingWithoutBC
+            , e23 = reject "Initiate AD without CLCW illegal in S4"
+                           stateInitialisingWithoutBC
+            , e24 = reject "Initiate AD with CLCW illegal in S4"
+                           stateInitialisingWithoutBC
+            , e25 = reject "Initiate AD with Unlock illegal in S4"
+                           stateInitialisingWithoutBC
+            , e26 = reject "Initiate AD with Unlock illegal in S4"
+                           stateInitialisingWithoutBC
+            , e27 = \_ -> reject "Initiate AD with Set V(R) illegal in S4"
+                                 stateInitialisingWithoutBC
+            , e28 = \_ -> reject "Initiate AD with Set V(R) illegal in S4"
+                                 stateInitialisingWithoutBC
             , e29 = terminateAD InitialisingWithoutBC
-            , e30 = doNothing stateInitialisingWithoutBC
-            , e31 = doNothing stateInitialisingWithoutBC
-            , e32 = doNothing stateInitialisingWithoutBC
-            , e33 = doNothing stateInitialisingWithoutBC
-            , e34 = doNothing stateInitialisingWithoutBC
+            , e30 = reject "Resume AD illegal in S4" stateInitialisingWithoutBC
+            , e31 = reject "Resume AD illegal in S4" stateInitialisingWithoutBC
+            , e32 = reject "Resume AD illegal in S4" stateInitialisingWithoutBC
+            , e33 = reject "Resume AD illegal in S4" stateInitialisingWithoutBC
+            , e34 = reject "Resume AD illegal in S4" stateInitialisingWithoutBC
+            , e35 =
+                \_ -> reject "Set V(S) illegal in S4" stateInitialisingWithoutBC
+            , e36 = (`setFOPSlidingWindWidth` stateInitialisingWithoutBC)
+            , e37 = (`setT1Initial` stateInitialisingWithoutBC)
+            , e38 = (`setTransmissionLimit` stateInitialisingWithoutBC)
+            , e39 = (`setTimeoutType` stateInitialisingWithoutBC)
+            , e40 = reject "Illegal directive in S4" stateInitialisingWithoutBC
             }
 
     inp <- atomically $ readCOP1Q (fopData ^. fcop1Queue)
+    processCOPQueueInput inp stateActions cancelTimer fopData
+
+
+processCOPQueueInput
+    :: (MonadIO m, MonadReader env m, HasGlobalState env)
+    => COP1Input
+    -> StateActions env m
+    -> IO Bool
+    -> FOPData
+    -> m ()
+processCOPQueueInput inp stateActions cancelTimer fopData = do
+    env <- ask
+    let vcid = fopData ^. fvcid
     case inp of
         COP1CLCW clcw -> do
             join $ withFOPState fopData $ \fops -> do
@@ -802,7 +817,9 @@ stateInitialisingWithoutBC fopData cancelTimer = do
                                  fopData
                                  fops
                                  stateActions
-    pure ()
+
+
+
 
 processCLCW
     :: (MonadIO m, MonadReader env m, HasGlobalState env)
@@ -903,14 +920,11 @@ alertWaitAction
     -> FOPData
     -> FOPState
     -> STM (FOPState, m ())
-alertWaitAction env vcid cancelTimer fopData fops = alertSTM
+alertWaitAction env vcid = alertSTM
     (EVADCLCWWait vcid True InitialisingWithoutBC)
     stateInactive
     env
     vcid
-    cancelTimer
-    fopData
-    fops
 
 
 checkRetransmitNRVS
@@ -978,8 +992,8 @@ alertNrNnrNotEqual env vcid cancelTimer fopData fops = do
              fops
 
 processDirective
-    :: (MonadIO m, MonadReader env m, HasGlobalState env) =>
-       COP1Directive
+    :: (MonadIO m, HasGlobalState env)
+    => COP1Directive
     -> env
     -> VCID
     -> IO Bool
@@ -996,12 +1010,17 @@ processDirective dir env vcid cancelTimer fopData fops stateActions = do
         InitADWithSetVR (SetVR vr) ->
             e27 stateActions vr env vcid cancelTimer fopData fops
         TerminateAD -> e29 stateActions env vcid cancelTimer fopData fops
-        ResumeAD    -> processResume env vcid cancelTimer fopData fops stateActions
-        -- SetVS !Word8 ->
-        -- SetFOPSlidingWindowWidth !Word8 ->
-        -- SetT1Initial (Fixed E6) ->
-        -- SetTransmissionLimit !Word8 ->
-        -- SetTimeoutType TTType ->
+        ResumeAD ->
+            processResume env vcid cancelTimer fopData fops stateActions
+        SetVS vs -> e35 stateActions vs env vcid cancelTimer fopData fops
+        SetFOPSlidingWindowWidth val ->
+            e36 stateActions val env vcid cancelTimer fopData fops
+        SetT1Initial val ->
+            e37 stateActions val env vcid cancelTimer fopData fops
+        SetTransmissionLimit val ->
+            e38 stateActions val env vcid cancelTimer fopData fops
+        SetTimeoutType val ->
+            e39 stateActions val env vcid cancelTimer fopData fops
 
 terminateAD
     :: (MonadIO m, MonadReader env m, HasGlobalState env)
@@ -1014,6 +1033,109 @@ terminateAD
     -> STM (FOPState, m ())
 terminateAD state env vcid =
     alertSTM (EVTerminatedAD vcid state) stateInactive env vcid
+
+
+setFOPSlidingWindWidth
+    :: (MonadIO m, HasGlobalState env)
+    => Word8
+    -> (FOPData -> IO Bool -> m ())
+    -> env
+    -> VCID
+    -> IO Bool
+    -> FOPData
+    -> FOPState
+    -> STM (FOPState, m ())
+setFOPSlidingWindWidth val nextState env vcid cancelTimer fopData fops = do
+    let newst = fops & fopSlidingWinWidth .~ val
+    alertSTM (EVFOPSlidingWindWidthSet vcid val)
+             nextState
+             env
+             vcid
+             cancelTimer
+             fopData
+             newst
+
+
+setT1Initial
+    :: (MonadIO m, HasGlobalState env)
+    => Fixed E6
+    -> (FOPData -> IO Bool -> m ())
+    -> env
+    -> VCID
+    -> IO Bool
+    -> FOPData
+    -> FOPState
+    -> STM (FOPState, m ())
+setT1Initial val nextState env vcid cancelTimer fopData fops = do
+    let newst = fops & fopT1Initial .~ val
+    alertSTM (EVT1InitialSet vcid val)
+             nextState
+             env
+             vcid
+             cancelTimer
+             fopData
+             newst
+
+setTransmissionLimit
+    :: (MonadIO m, HasGlobalState env)
+    => Word8
+    -> (FOPData -> IO Bool -> m ())
+    -> env
+    -> VCID
+    -> IO Bool
+    -> FOPData
+    -> FOPState
+    -> STM (FOPState, m ())
+setTransmissionLimit val nextState env vcid cancelTimer fopData fops = do
+    let newst = fops & fopTransmissionLimit .~ val
+    alertSTM (EVTransmissionLimitSet vcid val)
+             nextState
+             env
+             vcid
+             cancelTimer
+             fopData
+             newst
+
+setTimeoutType
+    :: (MonadIO m, HasGlobalState env)
+    => TTType
+    -> (FOPData -> IO Bool -> m ())
+    -> env
+    -> VCID
+    -> IO Bool
+    -> FOPData
+    -> FOPState
+    -> STM (FOPState, m ())
+setTimeoutType val nextState env vcid cancelTimer fopData fops = do
+    let newst = fops & fopTimeoutType .~ val
+    alertSTM (EVTimeoutTypeSet vcid val)
+             nextState
+             env
+             vcid
+             cancelTimer
+             fopData
+             newst
+
+setVS
+    :: (MonadIO m, HasGlobalState env)
+    => Word8
+    -> (FOPData -> IO Bool -> m ())
+    -> env
+    -> VCID
+    -> IO Bool
+    -> FOPData
+    -> FOPState
+    -> STM (FOPState, m ())
+setVS val nextState env vcid cancelTimer fopData fops = do
+    let newst = fops & fopVS .~ val & fopNNR .~ val
+    alertSTM (EVSetVSSet vcid val)
+            nextState
+            env
+            vcid
+            cancelTimer
+            fopData
+            newst
+
 
 
 -- | S5

@@ -45,3 +45,4 @@ cabal.project.local~
 .HTF/
 .ghc.environment.*
 stack.yaml.lock
+CmdEncodePerf.ps
