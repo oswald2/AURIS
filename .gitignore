@@ -20,3 +20,8 @@ cabal.project.local
 cabal.project.local~
 .HTF/
 .ghc.environment.*
+stack.yaml.lock
+stack.yaml~
+esa-space-protocols/
+manual-stack/
+mcs-interface/
