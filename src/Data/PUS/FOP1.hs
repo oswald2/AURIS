@@ -427,7 +427,7 @@ stateInactive
     -> m ()
 stateInactive fopData cancelTimer = do
     let stateActions = StateActions
-            { e1  = doNothing stateInactive
+            { e1  = \_ -> doNothing stateInactive
             , e2  = doNothing stateInactive
             , e3  = doNothing stateInactive
             , e4  = doNothing stateInactive
@@ -509,6 +509,14 @@ addToSentQueue frame retrans state =
               then fopTransmissionCount .~ 1
               else id
 
+
+removeFromSentQueue :: Word8 -> FOPState -> FOPState
+removeFromSentQueue nr fops =
+    fops & over fopSentQueue (S.filter (isNotNR nr))
+    where
+        isNotNR nr' (trans, _retrans) = trans ^. tcfTransFrame . tcFrameSeq /= nr'
+
+
 -- | send a BC Frame to the out channel (to the interface for encoding and sending).
 -- Creates a new BC Frame with the given directive as content, encodes the directive,
 -- fills out the frame values, increments the V(S) counter of the COP-1 state machine
@@ -587,7 +595,7 @@ type Signature env m
 -- defined in the FOP-1 state transition table in the
 -- PSS Standard (ESA PSS-04-107 Issue 2)
 data StateActions env m = StateActions {
-    e1 :: Signature env m
+    e1 :: CLCW -> Signature env m
     , e2 :: Signature env m
     , e3 :: Signature env m
     , e4 :: Signature env m
@@ -661,16 +669,12 @@ stateInitialisingWithoutBC fopData cancelTimer = do
     let !vcid        = fopData ^. fvcid
 
         stateActions = StateActions
-            { e1  = \_ _ cancelTimer' fopData' fops -> do
+            { e1  = \_ _ _ cancelTimer' fopData' fops -> do
                         let action = do
                                 void $ liftIO cancelTimer'
                                 stateActive fopData' cancelTimer'
                         pure (fops, action)
-            , e2  = \_ _ cancelTimer' fopData' fops ->
-                        pure
-                            ( fops
-                            , stateInitialisingWithoutBC fopData' cancelTimer'
-                            )
+            , e2  = doNothing stateInitialisingWithoutBC
             , e3  = alertWaitAction
             , e4  =
                 alertSTM
@@ -905,6 +909,7 @@ checkWait
 checkWait env vcid cancelTimer fopData fops stateActions clcw
     | clcw ^. clcwWait = e3 stateActions env vcid cancelTimer fopData fops
     | clcw ^. clcwReportVal == fops ^. fopNNR = e1 stateActions
+                                                   clcw
                                                    env
                                                    vcid
                                                    cancelTimer
@@ -1139,9 +1144,97 @@ setVS val nextState env vcid cancelTimer fopData fops = do
 
 
 -- | S5
+stateInitialisingWithBC
+    :: (MonadIO m, MonadReader env m, HasGlobalState env)
+    => FOPData
+    -> IO Bool
+    -> m ()
 stateInitialisingWithBC fopData cancelTimer = do
-    pure ()
+    let !vcid = fopData ^. fvcid
 
+        stateActions = StateActions
+            { e1  = \clcw _env' _vcid' cancelTimer' fopData' fops -> do
+                        let action = do
+                                void $ liftIO cancelTimer'
+                                stateActive fopData' cancelTimer'
+                            newst = removeFromSentQueue (clcw ^. clcwReportVal) fops
+                        pure (newst, action)
+            , e2  = doNothing stateInitialisingWithBC
+            , e3  = alertWaitAction
+            , e4  = doNothing stateInitialisingWithBC
+            , e5  = doNothing stateInitialisingWithBC
+            , e6  = doNothing stateInitialisingWithBC
+            , e7  = alertWaitAction
+            , e8  = doNothing stateInitialisingWithBC
+            , e9  = doNothing stateInitialisingWithBC
+            , e10 = doNothing stateInitialisingWithBC
+            , e11 = doNothing stateInitialisingWithBC
+            , e12 = doNothing stateInitialisingWithBC
+            , e13 = doNothing stateInitialisingWithBC
+            , e14 = doNothing stateInitialisingWithBC
+            , e15 = \err env' vcid' cancelTimer' fopData' fops -> alertSTM
+                        (EVADAlert err)
+                        stateInactive
+                        env'
+                        vcid'
+                        cancelTimer'
+                        fopData'
+                        fops
+            , e16 = \transC transL st env' vcid' cancelTimer' fopData' fops ->
+                        alertSTM (EVADTransLimit vcid transC transL st)
+                                 stateInactive
+                                 env'
+                                 vcid'
+                                 cancelTimer'
+                                 fopData'
+                                 fops
+            , e17 = \transC transL st env' vcid' cancelTimer' fopData' fops ->
+                        alertSTM (EVADTransLimit vcid transC transL st)
+                                 stateInactive
+                                 env'
+                                 vcid'
+                                 cancelTimer'
+                                 fopData'
+                                 fops
+            , e18 = \env' _vcid' cancelTimer' fopData' fops -> suspendAD
+                        env'
+                        cancelTimer'
+                        fopData'
+                        fops
+                        InitialisingWithoutBC
+            , e19 = doNothing stateInitialisingWithoutBC
+            , e20 = doNothing stateInitialisingWithoutBC
+            , e21 = doNothing stateInitialisingWithoutBC
+            , e22 = doNothing stateInitialisingWithoutBC
+            , e23 = reject "Initiate AD without CLCW illegal in S4"
+                           stateInitialisingWithoutBC
+            , e24 = reject "Initiate AD with CLCW illegal in S4"
+                           stateInitialisingWithoutBC
+            , e25 = reject "Initiate AD with Unlock illegal in S4"
+                           stateInitialisingWithoutBC
+            , e26 = reject "Initiate AD with Unlock illegal in S4"
+                           stateInitialisingWithoutBC
+            , e27 = \_ -> reject "Initiate AD with Set V(R) illegal in S4"
+                                 stateInitialisingWithoutBC
+            , e28 = \_ -> reject "Initiate AD with Set V(R) illegal in S4"
+                                 stateInitialisingWithoutBC
+            , e29 = terminateAD InitialisingWithoutBC
+            , e30 = reject "Resume AD illegal in S4" stateInitialisingWithoutBC
+            , e31 = reject "Resume AD illegal in S4" stateInitialisingWithoutBC
+            , e32 = reject "Resume AD illegal in S4" stateInitialisingWithoutBC
+            , e33 = reject "Resume AD illegal in S4" stateInitialisingWithoutBC
+            , e34 = reject "Resume AD illegal in S4" stateInitialisingWithoutBC
+            , e35 =
+                \_ -> reject "Set V(S) illegal in S4" stateInitialisingWithoutBC
+            , e36 = (`setFOPSlidingWindWidth` stateInitialisingWithoutBC)
+            , e37 = (`setT1Initial` stateInitialisingWithoutBC)
+            , e38 = (`setTransmissionLimit` stateInitialisingWithoutBC)
+            , e39 = (`setTimeoutType` stateInitialisingWithoutBC)
+            , e40 = reject "Illegal directive in S4" stateInitialisingWithoutBC
+            }
+
+    inp <- atomically $ readCOP1Q (fopData ^. fcop1Queue)
+    processCOPQueueInput inp stateActions cancelTimer fopData
 
 readSegment :: (MonadIO m) => TMVar EncodedSegment -> m EncodedSegment
 readSegment var = atomically $ takeTMVar var
