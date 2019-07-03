@@ -84,7 +84,7 @@ pkt1 ssc = PUSPacket
 
 rqst1 = TCRequest 0 IF_NCTRS (mkSCID 533) (mkVCID 1) (TCCommand 0 BD)
 
-pusPackets = RIO.map (\i -> (pkt1 i, rqst1)) [1 .. 1000]
+pusPackets = RIO.map (\i -> (pkt1 i, rqst1)) [1 .. 10000]
 
 
 
@@ -96,7 +96,7 @@ main = do
     setNumCapabilities np
 
     defLogOptions <- logOptionsHandle stdout True
-    let logOptions = setLogMinLevel LevelDebug defLogOptions
+    let logOptions = setLogMinLevel LevelError defLogOptions
     withLogFunc logOptions $ \logFunc -> do
         state <- newGlobalState
             defaultConfig
@@ -116,7 +116,7 @@ main = do
                         .| cltuToNcduC
                         .| encodeTcNcduC
 
-                showConduit = awaitForever $ \ncdu -> liftIO (print ncdu)
+                showConduit = awaitForever $ \_ -> pure ()
 
             runGeneralTCPClient (clientSettings 32111 "localhost") $ \app ->
                 void $ concurrently
