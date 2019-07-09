@@ -46,3 +46,4 @@ cabal.project.local~
 .ghc.environment.*
 stack.yaml.lock
 CmdEncodePerf.ps
+bd_commands.raw
