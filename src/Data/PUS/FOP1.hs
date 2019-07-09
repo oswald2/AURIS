@@ -493,7 +493,33 @@ sendBCFrameSTM cfg fopData fopState directive = do
         rqst  = TCRequest 0 IF_NCTRS scid vcid (TCDir directive)
 
 -- create a new state which has V(S) incremented
-        newst = fopState & fopVS +~ 1 & addToSentQueue trans False
+        !newst = fopState & fopVS +~ 1 & addToSentQueue trans False
+
+    -- write the frame to the out queue
+    writeTBQueue (fopData ^. fout) trans
+
+    pure newst
+
+
+sendInitBCFrameSTM :: Config -> FOPData -> FOPState -> TCDirective -> STM FOPState
+sendInitBCFrameSTM cfg fopData fopState directive = do
+    let vcid         = fopData ^. fvcid
+        scid         = cfgSCID cfg
+        encDirective = builderBytes $ directiveBuilder directive
+-- create a new BC transfer frame and fill out the values
+        frame        = TCTransferFrame { _tcFrameVersion = 0
+                                        , _tcFrameFlag    = FrameBC
+                                        , _tcFrameSCID    = scid
+                                        , _tcFrameVCID    = vcid
+                                        , _tcFrameLength  = 0
+                                        , _tcFrameSeq     = fopState ^. fopVS
+                                        , _tcFrameData    = encDirective
+                                        }
+        trans = TCFrameTransport frame rqst
+        rqst  = TCRequest 0 IF_NCTRS scid vcid (TCDir directive)
+
+-- create a new state which has V(S) incremented
+        !newst = fopState & fopVS +~ 1 & addToSentQueue trans False
 
     -- write the frame to the out queue
     writeTBQueue (fopData ^. fout) trans
@@ -1235,6 +1261,16 @@ stateInitialisingWithBC fopData cancelTimer = do
 
     inp <- atomically $ readCOP1Q (fopData ^. fcop1Queue)
     processCOPQueueInput inp stateActions cancelTimer fopData
+
+
+-- initBCRetransmission = do
+--     case S.viewl . S.filter isBCFrame $ fops ^. fopSentQueue of
+--         bcFrame :< _ -> do
+--             newst <- sendBCFrameSTM cfg fopData sops bcFrame
+--             -- this is while init AD mode, so we clear the send queue
+--             let newst2 = newst & fopSentQueue .~ S.singleton bcFrame
+--         S.EmptyL ->
+
 
 readSegment :: (MonadIO m) => TMVar EncodedSegment -> m EncodedSegment
 readSegment var = atomically $ takeTMVar var

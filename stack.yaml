@@ -16,7 +16,7 @@
 # resolver:
 #  name: custom-snapshot
 #  location: "./custom-snapshot.yaml"
-resolver: lts-13.26
+resolver: lts-13.27
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -46,7 +46,6 @@ extra-deps:
 - closed-0.2.0.1
 - attoparsec-time-1
 - bytestring-to-vector-0.3.0.1
-
 
 # Override default flag values for local packages and extra-deps
 # flags:

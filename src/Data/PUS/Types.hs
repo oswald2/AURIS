@@ -55,6 +55,7 @@ module Data.PUS.Types
     , getSSC
     , mkSSC
     , nextSSC
+    , Endian(..)
     )
 where
 
@@ -277,3 +278,11 @@ instance ToJSON SSC where
     toEncoding = genericToEncoding defaultOptions
 
 
+data Endian = BiE | LiE
+    deriving (Eq, Ord, Enum, Show, Read, Generic)
+
+
+instance Binary Endian
+instance Serialise Endian
+instance FromJSON Endian
+instance ToJSON Endian

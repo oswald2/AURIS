@@ -70,6 +70,7 @@ library
         Data.PUS.TMFrameDfh
         Data.PUS.TMFrameExtractor
         Data.PUS.MissionSpecific.Definitions
+        Data.PUS.Value
         Protocol.SizeOf
         Protocol.NCTRS
         Protocol.ProtocolInterfaces
