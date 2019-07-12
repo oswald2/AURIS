@@ -29,3 +29,7 @@ import           Data.PUS.Types
 data Value =
     ValueInt8 !Int8
     | ValueUInt16 Endian !Word16
+    | ValueDouble !Double
+    | ValueString !Text
+    | ValueFixedString !Word16 !Text
+
