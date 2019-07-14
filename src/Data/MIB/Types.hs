@@ -10,11 +10,14 @@
     , GADTs
     , ExistentialQuantification
     , KindSignatures
+    , DataKinds
+    , ScopedTypeVariables
 #-}
 module Data.MIB.Types
     (
         PTC(..)
         , PFC(..)
+        , DefaultTo(..)
     )
 where
 
@@ -24,6 +27,9 @@ import RIO
 import Data.Binary
 import Data.Aeson
 import Codec.Serialise
+import Data.Csv
+
+import GHC.TypeLits
 
 
 
@@ -46,3 +52,13 @@ instance FromJSON PFC
 
 
 newtype DefaultTo (a :: Nat) = DefaultTo Int
+
+
+
+instance KnownNat a => FromField (DefaultTo a) where
+    parseField s = case runParser (parseField s) of
+        Left _ -> pure $ DefaultTo (fromIntegral (natVal (Proxy :: Proxy a)))
+        Right n  -> pure $ DefaultTo n
+
+instance ToField (DefaultTo a) where
+    toField (DefaultTo n) = toField n
