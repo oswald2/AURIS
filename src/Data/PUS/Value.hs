@@ -13,6 +13,7 @@
 module Data.PUS.Value
     (
         Value(..)
+        , initialValue
     )
 where
 
@@ -22,6 +23,7 @@ import           RIO
 --import           Data.Word
 
 import           Data.PUS.Types
+import           Data.MIB.Types
 
 
 
@@ -32,4 +34,9 @@ data Value =
     | ValueDouble !Double
     | ValueString !Text
     | ValueFixedString !Word16 !Text
+    | ValueUndefined
 
+
+initialValue :: PTC -> PFC -> Value 
+initialValue (PTC 3) (PFC 4) = ValueInt8 0
+initialValue _ _ = ValueUndefined
