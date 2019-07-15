@@ -33,6 +33,7 @@ library
         General.Hexdump
         General.Padding
         General.SetBitField
+        General.Types
         Control.PUS.Classes
         Data.PUS.Config
         Data.PUS.Types
@@ -105,6 +106,7 @@ library
         , parallel
         , lens
         , binary
+        , data-binary-ieee754
         , stm-conduit
         , stm-chans
         , thyme
@@ -116,6 +118,7 @@ library
         , word8
         , serialise
         , esa-mib
+        , scientific
 
     if flag(llvm)
         ghc-options: -O2 -Wall -Wcompat -Widentities -Wincomplete-record-updates

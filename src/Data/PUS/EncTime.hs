@@ -23,18 +23,23 @@ module Data.PUS.EncTime
     , cucTimeBuilder
     , cdsTimeBuilder
     , cucTimeParser
+    , cucTimeLen
     )
 where
 
 import           RIO                     hiding ( Builder )
 
 import           ByteString.StrictBuilder
+
 import           Data.Binary
 import           Data.Aeson
-import           Codec.Serialise
 import           Data.Bits
 import           Data.Attoparsec.ByteString     ( Parser )
 import qualified Data.Attoparsec.Binary        as A
+
+import           Codec.Serialise
+
+import           Data.PUS.Time
 
 import           Protocol.SizeOf
 
@@ -61,20 +66,23 @@ instance FromJSON CDSTime
 instance ToJSON CDSTime where
     toEncoding = genericToEncoding defaultOptions
 
-
+cucTimeLen :: Int
+cucTimeLen = 6
 
 instance SizeOf CUCTime where
-    sizeof _ = 6
+    sizeof _ = cucTimeLen
 
 instance SizeOf CDSTime where
     sizeof (CDSTime _ _ (Just _)) = 8
     sizeof (CDSTime _ _ Nothing ) = 6
 
+instance Display CUCTime where
+    display = displayShow
 
 {-# INLINABLE mkCUCTime #-}
 mkCUCTime :: Integer -> Int32 -> Bool -> CUCTime
 mkCUCTime sec usec delta =
-    let (restsec, usec') = (abs usec) `quotRem` (fromIntegral microSecInt)
+    let (restsec, usec') = abs usec `quotRem` fromIntegral microSecInt
         sign             = if sec < 0 || usec < 0 then (-1) else 1
         newSec           = (abs sec + fromIntegral restsec)
         newMicro         = usec'
@@ -189,8 +197,8 @@ toEncoded sec mic =
         mic' :: Word16
         !mic' = round (absm / 1000000.0 * 65536.0)
         val :: Word64
-        !val       = (fromIntegral sec') `shiftL` 16 .|. fromIntegral mic'
-        !val'      = if sign < 0 then (complement val) + 1 else val
+        !val       = fromIntegral sec' `shiftL` 16 .|. fromIntegral mic'
+        !val'      = if sign < 0 then complement val + 1 else val
         !resultSec = fromIntegral ((val' `shiftR` 16) .&. 0xFFFFFFFF)
         !resultMic = fromIntegral (val' .&. 0xFFFF)
     in  (resultSec, resultMic)
@@ -217,3 +225,17 @@ cucTimeParser (CUCTime _ _ delta) = do
         micro' = sign * round (micro * 65536.0 * 1000000.0)
         sign   = if s then (-1) else 1
     return $ CUCTime (sign * sec) (fromIntegral micro') delta
+
+
+instance TimeRepConversion CUCTime where
+    {-# INLINABLE timeToWord64 #-}
+    timeToWord64 (CUCTime sec usec delta) = timeToWord64' sec usec delta
+    {-# INLINABLE word64ToTime #-}
+    word64ToTime val delta =
+        let (sec, mic) = word64ToTime' val in CUCTime sec mic delta
+
+    {-# INLINABLE timeToMicro #-}
+    timeToMicro (CUCTime sec usec delta) = timeToMicro' sec usec delta
+    {-# INLINABLE microToTime #-}
+    microToTime val delta =
+        let (sec, mic) = microToTime' val in CUCTime sec mic delta
