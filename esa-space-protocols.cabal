@@ -148,7 +148,7 @@ executable TestBits
     ghc-options: -Wall -O2
     build-depends:
         base >=4.12.0.0 && <4.13,
-        hw-prim-bits,
+        bits-extra,
         formatting,
         text,
         rio

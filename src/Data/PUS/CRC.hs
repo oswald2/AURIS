@@ -40,7 +40,6 @@ import qualified RIO.Text                      as T
 import           Data.Attoparsec.ByteString     ( Parser )
 import qualified Data.Attoparsec.ByteString    as A
 import qualified Data.Attoparsec.Binary        as A
-import           Data.Text.Lazy                 ( toStrict )
 
 
 import           Data.Bits
@@ -56,7 +55,7 @@ newtype CRC = CRC Word16
   deriving (Eq, Show, Read)
 
 instance Display CRC where
-    textDisplay (CRC x) = toStrict $ format (left 4 '0' %. hex) x
+    textDisplay (CRC x) = sformat (left 4 '0' %. hex) x
 
 
 -- | Construct a CRC type from a 16 bit word.

@@ -21,6 +21,8 @@ import           Data.Binary.IEEE754
 
 import           General.Types
 
+import HaskellWorks.Prim.Bits
+
 
 -- | This class is a generic class to set a value in a vector
 -- aligned to byte boundaries with the given Endianess
@@ -259,3 +261,6 @@ setBitField bytes bitOffset bitWidth value = do
             !v1 = v .&. complement ma2
         VS.write bytes bi2 v3
     return ()
+
+
+

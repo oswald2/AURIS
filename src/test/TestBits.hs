@@ -16,7 +16,7 @@ where
 import RIO
 import qualified Data.Text.IO as T
 
-import HaskellWorks.Prim.Bits.Slow
+import Data.Bits.Pdep
 import Data.Word
 import Formatting
 
@@ -30,7 +30,7 @@ main = do
         mask :: Word64
         mask = 0x38
 
-        result = pdep64 val mask
+        result = pdep val mask
 
 
 
