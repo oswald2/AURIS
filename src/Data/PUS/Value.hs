@@ -9,6 +9,7 @@
     , FlexibleInstances
     , GADTs
     , ExistentialQuantification
+    , ScopedTypeVariables
 #-}
 module Data.PUS.Value
     ( Value(..)
@@ -16,7 +17,9 @@ module Data.PUS.Value
     , getByteOrder
     , getInt
     , setInt
+    , isSetableAligned
     , setAlignedValue
+    , isStorableWord64
     )
 where
 
@@ -25,6 +28,7 @@ import qualified RIO.ByteString                as B
 import qualified RIO.Text                      as T
 import qualified RIO.HashMap                   as HM
 import qualified RIO.Vector.Storable           as VS
+import qualified Data.Vector.Storable.Mutable  as VS
 
 import           Control.Monad.ST
 
@@ -43,6 +47,7 @@ import           ByteString.StrictBuilder
 import           Codec.Serialise
 
 import           Data.PUS.EncTime
+import           Data.PUS.Time
 
 import           Data.MIB.Types
 
@@ -204,18 +209,18 @@ initialValue _ (PTC 10) (PFC _) = ValCUCTime nullCUCTimeRel
 initialValue _ _        _       = ValUndefined
 
 
-instance BitSize Value where
+instance BitSizes Value where
     {-# INLINABLE bitSize #-}
-    bitSize ValInt8{}                = 8
-    bitSize ValInt16{}               = 16
-    bitSize ValUInt3{}               = 3
-    bitSize ValDouble{}              = 64
-    bitSize (ValString x           ) = B.length x * 8
-    bitSize (ValFixedString width _) = fromIntegral width * 8
-    bitSize (ValOctet x            ) = B.length x * 8
-    bitSize (ValFixedOctet width _ ) = fromIntegral width * 8
-    bitSize (ValCUCTime _          ) = cucTimeLen * 8
-    bitSize ValUndefined             = 0
+    bitSize ValInt8{}                = mkBitSize 8
+    bitSize ValInt16{}               = mkBitSize 16
+    bitSize ValUInt3{}               = mkBitSize 3
+    bitSize ValDouble{}              = mkBitSize 64
+    bitSize (ValString x           ) = bytesToBitSize . mkByteSize $ B.length x
+    bitSize (ValFixedString width _) = bytesToBitSize . mkByteSize $ fromIntegral width
+    bitSize (ValOctet x            ) = bytesToBitSize . mkByteSize $ B.length x
+    bitSize (ValFixedOctet width _ ) = bytesToBitSize . mkByteSize $ fromIntegral width
+    bitSize (ValCUCTime _          ) = bytesToBitSize . mkByteSize $ cucTimeLen
+    bitSize ValUndefined             = mkBitSize 0
 
 
 {-# INLINABLE getByteOrder #-}
@@ -230,6 +235,20 @@ getByteOrder ValOctet{}       = Nothing
 getByteOrder ValFixedOctet{}  = Nothing
 getByteOrder (ValCUCTime _)   = Just BiE
 getByteOrder ValUndefined     = Nothing
+
+
+
+{-# INLINABLE isStorableWord64 #-}
+-- | Returns, if a Value can be converted into a 'Word64' with the 'getInt'
+-- function. This means, it is not necessarily an integer value (e.g. ValDouble
+-- can also be converted to Word64). Used internally for encoding a packet
+isStorableWord64 :: Value -> Bool
+isStorableWord64 ValInt8{}   = True
+isStorableWord64 ValInt16{}  = True
+isStorableWord64 ValUInt3{}  = True
+isStorableWord64 ValDouble{} = True
+isStorableWord64 _           = False
+
 
 
 instance Display Value where
@@ -268,8 +287,8 @@ instance GetInt Word64 where
     getInt (ValFixedOctet _ x) = case parseOnly anyWord64be x of
         Left  _   -> 0
         Right val -> val
-    --getInt (ValCUCTime x)
-    getInt ValUndefined = 0
+    getInt (ValCUCTime x) = fromIntegral $ timeToMicro x
+    getInt ValUndefined   = 0
 
 instance GetInt Int64 where
     {-# INLINABLE getInt #-}
@@ -289,7 +308,8 @@ instance GetInt Int64 where
     getInt (ValFixedOctet _ x) = case parseOnly anyWord64be x of
         Left  _   -> 0
         Right val -> fromIntegral val
-    getInt ValUndefined = 0
+    getInt (ValCUCTime x) = fromIntegral $ timeToMicro x
+    getInt ValUndefined   = 0
 
 
 
@@ -307,6 +327,7 @@ instance GetInt Integer where
         Right val -> val
     getInt (ValOctet x       ) = fromBytesToInteger BiE x
     getInt (ValFixedOctet _ x) = fromBytesToInteger BiE x
+    getInt (ValCUCTime x     ) = timeToMicro x
     getInt ValUndefined        = 0
 
 
@@ -327,7 +348,8 @@ instance SetInt Integer where
     setInt (ValOctet _) x = ValOctet (toBytes x)
     setInt (ValFixedOctet width _) x =
         ValOctet (rightPadded 0 (fromIntegral width) (toBytes x))
-    setInt ValUndefined _ = ValUndefined
+    setInt (ValCUCTime _) x = ValCUCTime (microToTime x False)
+    setInt ValUndefined   _ = ValUndefined
 
 instance SetInt Word64 where
     {-# INLINABLE setInt #-}
@@ -343,7 +365,8 @@ instance SetInt Word64 where
     setInt (ValOctet _           ) x = ValOctet (builderBytes (word64BE x))
     setInt (ValFixedOctet width _) x = ValFixedOctet width
         $ rightPadded 0 (fromIntegral width) (builderBytes (word64BE x))
-    setInt ValUndefined _ = ValUndefined
+    setInt (ValCUCTime _) x = ValCUCTime (microToTime (fromIntegral x) False)
+    setInt ValUndefined   _ = ValUndefined
 
 
 {-# INLINABLE toBytes #-}
@@ -367,8 +390,22 @@ fromBytesToInteger BiE = B.foldl' f 0
 fromBytesToInteger LiE = (fromBytesToInteger BiE) . B.reverse
 
 
+
+{-# INLINABLE isSetableAligned #-}
+isSetableAligned :: Value -> Bool
+isSetableAligned ValInt8{}        = True
+isSetableAligned ValInt16{}       = True
+isSetableAligned ValDouble{}      = True
+isSetableAligned ValString{}      = True
+isSetableAligned ValFixedString{} = True
+isSetableAligned ValOctet{}       = True
+isSetableAligned ValFixedOctet{}  = True
+isSetableAligned ValCUCTime{}     = True
+isSetableAligned _                = False
+
+
 {-# INLINABLE setAlignedValue #-}
-setAlignedValue :: VS.MVector s Word8 -> Int -> Value -> ST s ()
+setAlignedValue :: VS.MVector s Word8 -> ByteOffset -> Value -> ST s ()
 setAlignedValue vec !off (ValInt8 x    ) = setValue vec off BiE x
 setAlignedValue vec !off (ValInt16  b x) = setValue vec off b x
 setAlignedValue vec !off (ValDouble b x) = setValue vec off b x
@@ -378,4 +415,7 @@ setAlignedValue vec !off (ValFixedString width x) =
 setAlignedValue vec !off (ValOctet x) = copyBS vec off x
 setAlignedValue vec !off (ValFixedOctet width x) =
     copyBS vec off (rightPadded 0 (fromIntegral width) x)
-setAlignedValue _ _ _ = pure ()
+setAlignedValue vec !off (ValCUCTime x) = setValue vec off BiE x
+setAlignedValue _   _    _              = pure ()
+
+

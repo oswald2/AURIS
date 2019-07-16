@@ -43,6 +43,7 @@ import           Data.PUS.Time
 
 import           Protocol.SizeOf
 
+import           General.SetBitField
 
 -- | Time types. CUC Time is standard unix time with normal encoding of
 -- | 4 bytes coards and 2 bytes fine time
@@ -167,6 +168,15 @@ microSecInt = 1_000_000
 cucTimeBuilder :: CUCTime -> Builder
 cucTimeBuilder (CUCTime sec mic _) =
     let (s, m) = toEncoded sec mic in word32BE s <> word16BE m
+
+
+instance SetValue CUCTime where
+    {-# INLINABLE setValue #-}
+    setValue vec off endian (CUCTime sec mic _) = do
+        let (s, m) = toEncoded sec mic
+        setValue vec off       endian s
+        setValue vec (off + 4) endian m
+
 
 
 {-# INLINABLE cdsTimeBuilder #-}

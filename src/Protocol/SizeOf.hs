@@ -2,10 +2,18 @@
     , NoImplicitPrelude
 #-}
 module Protocol.SizeOf
+    (
+        SizeOf(..)
+        , FixedSize(..)
+        , BitSizes(..)
+    )
 where
 
 
-import RIO
+import           RIO
+
+import           General.Types
+
 
 class SizeOf a where
     sizeof :: a -> Int
@@ -18,5 +26,5 @@ class FixedSize a where
 
 
 
-class BitSize a where
-    bitSize :: a -> Int
+class BitSizes a where
+    bitSize :: a -> BitSize

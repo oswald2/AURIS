@@ -11,8 +11,7 @@ module Data.PUS.Parameter
     , paramValue
     , extParName
     , extParValue
-    , extParOffBy
-    , extParOffBi
+    , extParOff
     , emptyParamList
     , emptyExtParamList
     , nullExtParam
@@ -35,18 +34,25 @@ import           RIO
 import qualified RIO.Text                      as T
 import           RIO.List.Partial               ( (!!) )
 
-import           Control.Lens                   ( makeLenses )
+import           Control.Lens                   ( makeLenses
+                                                , (.~)
+                                                , (+~)
+                                                )
 import           Control.Monad.ST
 
 import           Data.Binary
 import           Data.Aeson              hiding ( Value )
 import qualified Data.Vector.Storable.Mutable  as VS
+import           Data.Bits               hiding ( bitSize )
 
 import           Codec.Serialise
 
 import           Protocol.SizeOf
 
 import           Data.PUS.Value
+
+import           General.SetBitField
+import           General.Types
 
 
 data Parameter = Parameter {
@@ -65,8 +71,7 @@ instance ToJSON Parameter
 data ExtParameter = ExtParameter {
   _extParName :: !Text,
   _extParValue :: !Value,
-  _extParOffBy :: !Int,
-  _extParOffBi :: !Int
+  _extParOff :: !Offset
   }
   deriving (Show, Read, Generic)
 makeLenses ''ExtParameter
@@ -76,15 +81,15 @@ instance Eq Parameter where
     (Parameter n1 v1) == (Parameter n2 v2) = (n1 == n2) && (v1 == v2)
 
 instance Eq ExtParameter where
-    (ExtParameter n1 v1 o1 ob1) == (ExtParameter n2 v2 o2 ob2) =
-        (n1 == n2) && (v1 == v2) && (o1 == o2) && (ob1 == ob2)
+    (ExtParameter n1 v1 o1) == (ExtParameter n2 v2 o2) =
+        (n1 == n2) && (v1 == v2) && (o1 == o2)
 
 
-instance BitSize Parameter where
+instance BitSizes Parameter where
     bitSize (Parameter _ val) = bitSize val
 
-instance BitSize ExtParameter where
-    bitSize (ExtParameter _ val _ _) = bitSize val
+instance BitSizes ExtParameter where
+    bitSize (ExtParameter _ val _) = bitSize val
 
 
 data ParameterList = Empty
@@ -108,7 +113,7 @@ emptyExtParamList _        = False
 
 -- | a null parameter for e.g. initial value on folding
 nullExtParam :: ExtParameter
-nullExtParam = ExtParameter T.empty ValUndefined 0 0
+nullExtParam = ExtParameter T.empty ValUndefined nullOffset
 
 
 -- | converts a ParameterList to List. No group expansion is done
@@ -203,8 +208,8 @@ getExtParamUNL lst name = filter ((name ==) . _extParName) lst
 -- | offset and width)
 laterParam :: ExtParameter -> ExtParameter -> Ordering
 laterParam x1 x2 =
-    let bi1 = _extParOffBy x1 * 8 + _extParOffBi x1 + bitSize (_extParValue x1)
-        bi2 = _extParOffBy x2 * 8 + _extParOffBi x2 + bitSize (_extParValue x1)
+    let bi1 = _extParOff x1 .+. bitSize (_extParValue x1)
+        bi2 = _extParOff x2 .+. bitSize (_extParValue x1)
     in  compare bi1 bi2
 
 
@@ -249,16 +254,24 @@ expandGroups' (Group n t) prevGroup = n
 
 setExtParameter :: VS.MVector s Word8 -> ExtParameter -> ST s ()
 setExtParameter vec param = do
-    let !offBy = _extParOffBy param
-        !offBi = _extParOffBi param
-        offset = (offBy * 8 + offBi) `quot` 8
-        !width = bitSize param
-    if offBi `quot` 8 == 0
+    let !off          = _extParOff param
+        !bitOffset      = toBitOffset off
+        !width          = bitSize param
+        value           = _extParValue param
+
+        setGeneralValue = do
+            if isStorableWord64 value
+                then setBitField vec bitOffset width (getInt value)
+                else do
+                    -- in this case, we go to the next byte offset. According
+                    -- to PUS, we cannot set certain values on non-byte boundaries
+                    let newParam = over extParOff nextByteAligned param
+                    setExtParameter vec newParam
+
+    if isByteAligned off
         then do -- we are on a byte boundary
-            if width `quot` 8 == 0
-                then do -- we have a param that is an integral number of bytes long
-                    setAlignedValue vec offset (_extParValue param)
-                else
-                    pure ()
-        else pure ()
-    pure ()
+            if isSetableAligned value
+                then setAlignedValue vec (toByteOffset off) value
+                else setGeneralValue
+        else setGeneralValue
+

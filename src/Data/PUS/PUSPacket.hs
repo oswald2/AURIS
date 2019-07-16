@@ -73,6 +73,7 @@ import           Protocol.ProtocolInterfaces
 import           Protocol.SizeOf
 
 import           General.SetBitField
+import           General.Types
 
 
 
@@ -87,8 +88,8 @@ instance ToJSON PUSPacketType where
 
 
 data TMPIVal = TMPIVal {
-    _tmpiValue :: !Int,
-    _tmpiOffset :: !Int,
+    _tmpiValue :: !Int64,
+    _tmpiOffset :: !ByteOffset,
     _tmpiWidth :: !Word16
     } deriving (Eq, Show, Read)
 makeLenses ''TMPIVal
@@ -218,15 +219,15 @@ applyPIvals encPkt pic = worker
 
     proc v (TMPIVal val1 off1 wid1, TMPIVal val2 off2 wid2) = do
         v1 <- if off1 >= 0
-            then setBitField v
-                             (off1 * 8)
+            then setBitFieldR v
+                             (toBitOffset off1)
                              (fromIntegral wid1)
                              (fromIntegral val1)
             else return v
 
         if off2 >= 0
-            then setBitField v1
-                             (off2 * 8)
+            then setBitFieldR v1
+                             (toBitOffset off2)
                              (fromIntegral wid2)
                              (fromIntegral val2)
             else return v1
