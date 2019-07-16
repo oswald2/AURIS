@@ -46,6 +46,8 @@ extra-deps:
 - closed-0.2.0.1
 - attoparsec-time-1
 - bytestring-to-vector-0.3.0.1
+- hw-prim-bits-0.1.0.4
+
 
 # Override default flag values for local packages and extra-deps
 # flags:

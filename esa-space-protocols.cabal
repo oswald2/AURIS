@@ -91,6 +91,7 @@ library
         , text
         , text-builder
         , hw-prim
+        , hw-prim-bits
         , text-show
         , vector
         , formatting
@@ -138,6 +139,20 @@ executable WriteConfig
         esa-space-protocols -any,
         base >=4.12.0.0 && <4.13,
         bytestring >=0.10.8.2 && <0.11
+
+
+executable TestBits
+    main-is: TestBits.hs
+    default-language: Haskell2010
+    hs-source-dirs: src/test
+    ghc-options: -Wall -O2
+    build-depends:
+        base >=4.12.0.0 && <4.13,
+        hw-prim-bits,
+        formatting,
+        text,
+        rio
+
 
 test-suite CLTUTest
     type: exitcode-stdio-1.0

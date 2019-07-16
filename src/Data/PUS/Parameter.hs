@@ -25,6 +25,7 @@ module Data.PUS.Parameter
     , getParamUNL
     , getExtParamUNL
     , laterParam
+    , encodeExtParameters
     , setExtParameter
     )
 where
@@ -34,16 +35,15 @@ import           RIO
 import qualified RIO.Text                      as T
 import           RIO.List.Partial               ( (!!) )
 
-import           Control.Lens                   ( makeLenses
-                                                , (.~)
-                                                , (+~)
-                                                )
+import           Control.Lens                   ( makeLenses )
 import           Control.Monad.ST
 
 import           Data.Binary
 import           Data.Aeson              hiding ( Value )
+import qualified Data.Vector.Storable          as VS
 import qualified Data.Vector.Storable.Mutable  as VS
-import           Data.Bits               hiding ( bitSize )
+import           Data.Vector.Storable.ByteString
+import           Data.List                      ( last )
 
 import           Codec.Serialise
 
@@ -252,9 +252,26 @@ expandGroups' (Group n t) prevGroup = n
 
 
 
+encodeExtParameters :: [ExtParameter] -> ByteString
+encodeExtParameters params = runST $ do
+    let lp     = last params
+        lenOff = nextByteAligned $ toOffset
+            (toBitOffset (_extParOff lp) `addBitOffset` bitSize lp)
+        size = unByteOffset . toByteOffset $ lenOff
+
+    v <- VS.new size
+
+    mapM_ (setExtParameter v) params
+
+    vec <- VS.unsafeFreeze v
+
+    pure (vectorToByteString vec)
+
+
+
 setExtParameter :: VS.MVector s Word8 -> ExtParameter -> ST s ()
 setExtParameter vec param = do
-    let !off          = _extParOff param
+    let !off            = _extParOff param
         !bitOffset      = toBitOffset off
         !width          = bitSize param
         value           = _extParValue param
