@@ -151,7 +151,13 @@ executable TestBits
         bits-extra,
         formatting,
         text,
-        rio
+        rio,
+        hw-prim,
+        vector,
+        esa-space-protocols,
+        bytestring-to-vector,
+        criterion
+
 
 
 test-suite CLTUTest
@@ -206,13 +212,13 @@ benchmark CmdEncodePerf
     main-is: CmdEncodePerf.hs
     default-language: Haskell2010
     hs-source-dirs: src/bench
-    -- if flag(llvm)
-    --     ghc-options: -Wall -O2 -funbox-strict-fields -fllvm
-    -- else
-    --     ghc-options: -Wall -O2 -funbox-strict-fields
+    if flag(llvm)
+        ghc-options: -Wall -O2 -funbox-strict-fields -fllvm
+    else
+        ghc-options: -Wall -O2 -funbox-strict-fields
     -- For profiling comment this line in:
-    ghc-options: -Wall -O2 -threaded -fprof-auto -fexternal-interpreter
-                -funbox-strict-fields -prof "-with-rtsopts=-N -p -s -h -i0.1"
+    -- ghc-options: -Wall -O2 -threaded -fprof-auto -fexternal-interpreter
+    --             -funbox-strict-fields -prof "-with-rtsopts=-N -p -s -h -i0.1"
 
     build-depends:
         esa-space-protocols -any,
@@ -224,6 +230,29 @@ benchmark CmdEncodePerf
         conduit,
         conduit-extra
 
+
+benchmark CmdEncodePerf2
+    type: exitcode-stdio-1.0
+    main-is: CmdEncodePerf.hs
+    default-language: Haskell2010
+    hs-source-dirs: src/bench
+    if flag(llvm)
+        ghc-options: -Wall -O2 -funbox-strict-fields -fllvm
+    else
+        ghc-options: -Wall -O2 -funbox-strict-fields
+    -- For profiling comment this line in:
+    -- ghc-options: -Wall -O2 -threaded -fprof-auto -fexternal-interpreter
+    --             -funbox-strict-fields -prof "-with-rtsopts=-N -p -s -h -i0.1"
+
+    build-depends:
+        esa-space-protocols -any,
+        base -any,
+        bytestring -any,
+        criterion -any,
+        rio,
+        text,
+        conduit,
+        conduit-extra
 
 
 executable CommandingTest

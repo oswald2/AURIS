@@ -109,7 +109,7 @@ instance Ord Offset where
 
 -- | Returns the next 'Offset' which is aligned to byte boundary
 nextByteAligned :: Offset -> Offset
-nextByteAligned off@(Offset (ByteOffset a) (BitOffset b)) =
+nextByteAligned off@(Offset (ByteOffset a) (BitOffset _)) =
     if isByteAligned off
         then off
         else Offset (ByteOffset (a + 1)) (BitOffset 0)
