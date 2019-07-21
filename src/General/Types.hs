@@ -107,18 +107,26 @@ instance Ord Offset where
             GT -> GT
             EQ -> compare bi1 bi2
 
--- | Returns the next 'Offset' which is aligned to byte boundary
-nextByteAligned :: Offset -> Offset
-nextByteAligned off@(Offset (ByteOffset a) (BitOffset _)) =
-    if isByteAligned off
-        then off
-        else Offset (ByteOffset (a + 1)) (BitOffset 0)
 
+class ByteAligned a where 
 -- | returns if the 'Offset' is byte aligned
-isByteAligned :: Offset -> Bool
-isByteAligned (Offset _ (BitOffset b)) =
-    b == 0
+    isByteAligned :: a -> Bool
+    -- | Returns the next 'Offset' which is aligned to byte boundary
+    nextByteAligned :: a -> a 
 
+
+instance ByteAligned Offset where 
+    nextByteAligned off@(Offset (ByteOffset a) (BitOffset _)) =
+        if isByteAligned off
+            then off
+            else Offset (ByteOffset (a + 1)) (BitOffset 0)
+    isByteAligned (Offset _ (BitOffset b)) = b == 0
+
+
+instance ByteAligned BitOffset where 
+    nextByteAligned off@(BitOffset x) = if x .&. 0x7 /= 0 then BitOffset ((x `shiftR` 3) + 1 `shiftL` 3)  else off 
+    isByteAligned (BitOffset x) = x .&. 0x7 == 0
+        
 -- | A size type in bytes
 newtype ByteSize = ByteSize { unByteSize :: Int }
     deriving (Eq, Ord, Num, Bits, Show, Read)

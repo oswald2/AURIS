@@ -10,6 +10,7 @@
     , GADTs
     , ExistentialQuantification
     , ScopedTypeVariables
+    , DataKinds
 #-}
 module Data.PUS.Value
     ( Value(..)
