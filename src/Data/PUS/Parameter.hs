@@ -33,7 +33,8 @@ module Data.PUS.Parameter
   , encodeExtParameters
   , setExtParameter
   , expandGroups
-  , mkSizedParameterList
+  , toSizedParamList
+  , toSizedExtParamList
   )
 where
 
@@ -42,7 +43,9 @@ import           RIO
 import qualified RIO.Text                      as T
 import           RIO.List.Partial               ( (!!) )
 
-import           Control.Lens                   ( makeLenses , (.~) )
+import           Control.Lens                   ( makeLenses
+                                                , (.~)
+                                                )
 import           Control.Monad.ST
 
 import           Data.Binary
@@ -112,13 +115,15 @@ data ParameterList = Empty
     | Group Parameter ParameterList
     deriving (Show, Read)
 
-data SizedParameterList = SizedParameterList { 
-        _splSizue :: Maybe BitSize
-        , _splList ::  ParameterList
+data SizedParameterList = SizedParameterList {
+        _splSize :: BitSize
+        , _splParams ::  [Parameter]
     }
 
-mkSizedParameterList :: ParameterList -> SizedParameterList 
-mkSizedParameterList ps = SizedParameterList (Just (bitSize ps)) ps
+toSizedParamList :: ParameterList -> SizedParameterList
+toSizedParamList ps =
+  let expanded = expandGroups ps
+  in  SizedParameterList (bitSize expanded) expanded
 
 
 data ExtParameterList = ExtEmpty
@@ -126,6 +131,16 @@ data ExtParameterList = ExtEmpty
     | ExtGroup ExtParameter ExtParameterList
     deriving (Show, Read)
 
+
+data SizedExtParameterList = SizedExtParameterList {
+    _seplSize :: BitSize
+    , _seplParams :: [ExtParameter]
+    }
+
+toSizedExtParamList :: ExtParameterList -> SizedExtParameterList
+toSizedExtParamList ps =
+  let expanded = expandGroups ps
+  in  SizedExtParameterList (bitSize expanded) expanded
 
 -- | Ok, this is an orphan instance, but we need 'Read'. Maybe we
 -- can drop it later
@@ -328,17 +343,17 @@ appendExtN = go
 
 
 updateOffsets :: BitSize -> ExtParameterList -> ExtParameterList
-updateOffsets _ ExtEmpty         = ExtEmpty
+updateOffsets _     ExtEmpty         = ExtEmpty
 updateOffsets bsize (ExtList ps pss) = ExtList
-    ((SL.toSortedList . map (addOffset bsize) . SL.fromSortedList) ps)
-    (updateOffsets bsize pss)
-updateOffsets bsize (ExtGroup p ps) = ExtGroup (addOffset bsize p) (updateOffsets bsize ps)
+  ((SL.toSortedList . map (addOffset bsize) . SL.fromSortedList) ps)
+  (updateOffsets bsize pss)
+updateOffsets bsize (ExtGroup p ps) =
+  ExtGroup (addOffset bsize p) (updateOffsets bsize ps)
 
 
 addOffset :: BitSize -> ExtParameter -> ExtParameter
 addOffset bsize param = param & extParOff .~ newOff
-    where
-        newOff = param ^. extParOff .+. bsize
+  where newOff = param ^. extParOff .+. bsize
 
 
     -- | prepends the second ParameterList n times to the first
@@ -399,16 +414,23 @@ encodeExtParameters params = runST $ do
 
 
 
-encodeParameters :: [Parameter] -> ByteString
-encodeParameters params = 
-    let sizeInBits =
-            foldl' (\off p -> off `addBitOffset` bitSize p) (mkBitOffset 0) params
-        size = unByteOffset . toByteOffset . nextByteAligned $ sizeInBits
-    in encodeParametersSized size params
+encodeParameters :: SizedParameterList -> ByteString
+encodeParameters params =
+  let size = unByteSize . bitSizeToBytes . nextByteAligned $ _splSize params
+  in  encodeParametersSized size (_splParams params)
+
+
+
+-- encodeParameters' :: [Parameter] -> ByteString
+-- encodeParameters' params = 
+--     let sizeInBits =
+--             foldl' (\off p -> off `addBitOffset` bitSize p) (mkBitOffset 0) params
+--         size = unByteOffset . toByteOffset . nextByteAligned $ sizeInBits
+--     in encodeParametersSized size params
 
 
 encodeParametersSized :: Int -> [Parameter] -> ByteString
-encodeParametersSized size params = runST $ do 
+encodeParametersSized size params = runST $ do
   v <- VS.new size
 
   let setVal !off param = do

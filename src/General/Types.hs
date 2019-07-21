@@ -126,6 +126,10 @@ instance ByteAligned Offset where
 instance ByteAligned BitOffset where 
     nextByteAligned off@(BitOffset x) = if x .&. 0x7 /= 0 then BitOffset ((x `shiftR` 3) + 1 `shiftL` 3)  else off 
     isByteAligned (BitOffset x) = x .&. 0x7 == 0
+
+instance ByteAligned BitSize where 
+    nextByteAligned off@(BitSize x) = if x .&. 0x7 /= 0 then BitSize ((x `shiftR` 3) + 1 `shiftL` 3)  else off 
+    isByteAligned (BitSize x) = x .&. 0x7 == 0
         
 -- | A size type in bytes
 newtype ByteSize = ByteSize { unByteSize :: Int }
