@@ -34,6 +34,8 @@ module Data.PUS.Parameter
   , encodeExtParameters
   , setExtParameter
   , expandGroups
+  , ParameterList(..)
+  , ExtParameterList(..)
   , SizedParameterList
   , splSize
   , splParams
