@@ -12,6 +12,7 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Data.PUS.Parameter
   ( Parameter(..)
+  , ExtParameter(..)
   , paramName
   , paramValue
   , extParName
@@ -140,7 +141,7 @@ instance Show SizedParameterList where
 
 instance Read SizedParameterList where
     readsPrec n s =  map func (readsPrec n s)
-        where 
+        where
             func (a, str) = (SizedParameterList (bitSize a) a, str)
 
 toSizedParamList :: ParameterList -> SizedParameterList
@@ -456,7 +457,7 @@ encodeParameters params =
 
 
 -- encodeParameters' :: [Parameter] -> ByteString
--- encodeParameters' params = 
+-- encodeParameters' params =
 --     let sizeInBits =
 --             foldl' (\off p -> off `addBitOffset` bitSize p) (mkBitOffset 0) params
 --         size = unByteOffset . toByteOffset . nextByteAligned $ sizeInBits

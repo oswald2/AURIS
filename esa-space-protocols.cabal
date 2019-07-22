@@ -314,3 +314,5 @@ executable TCEncodeTests
         , rio
         , text
         , unliftio
+        , hspec
+        , sorted-list
