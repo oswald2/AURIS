@@ -149,6 +149,12 @@ mkByteSize = ByteSize
 newtype BitSize = BitSize { unBitSize :: Int }
     deriving (Eq, Ord, Num, Bits, Show, Read, Generic, NFData)
 
+instance Binary BitSize
+instance Serialise BitSize
+instance FromJSON BitSize 
+instance ToJSON BitSize where 
+    toEncoding = genericToEncoding defaultOptions
+
 -- | constructs a bit size
 mkBitSize :: Int -> BitSize
 mkBitSize = BitSize

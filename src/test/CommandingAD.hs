@@ -45,7 +45,7 @@ import           GHC.Conc.Sync
 
 pkt1 ssc = PUSPacket
     (PUSHeader 0 0 PUSTC True (APID 256) SegmentStandalone (mkSSC ssc) 0 0)
-    (PUSTCStdHeader 3 25 0 True True False True)
+    (PUSTCStdHeader 3 25 (mkSourceID 0) True True False True)
     Nothing
     (B.pack [0 .. 10])
 

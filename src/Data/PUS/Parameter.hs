@@ -34,6 +34,10 @@ module Data.PUS.Parameter
   , encodeExtParameters
   , setExtParameter
   , expandGroups
+  , SizedParameterList
+  , splSize
+  , splParams
+  , SizedExtParameterList
   , toSizedParamList
   , toSizedExtParamList
   )
@@ -121,6 +125,21 @@ data SizedParameterList = SizedParameterList {
         , _splParams ::  [Parameter]
     }
     deriving (Generic, NFData)
+makeLenses ''SizedParameterList
+
+instance Binary SizedParameterList
+instance Serialise SizedParameterList
+instance FromJSON SizedParameterList
+instance ToJSON SizedParameterList where
+    toEncoding = genericToEncoding defaultOptions
+
+instance Show SizedParameterList where
+    show (SizedParameterList _ l) = show l
+
+instance Read SizedParameterList where
+    readsPrec n s =  map func (readsPrec n s)
+        where 
+            func (a, str) = (SizedParameterList (bitSize a) a, str)
 
 toSizedParamList :: ParameterList -> SizedParameterList
 toSizedParamList ps =

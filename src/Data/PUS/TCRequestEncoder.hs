@@ -30,8 +30,7 @@ data EncodedTCRequest = EncodedTCRequest {
         _encTcReqContent :: Maybe TCPacket
         , _encTcReqRqst :: TCRequest
     }
-    deriving (Eq, Show, Read)
-
+    deriving (Show, Read)
 makeLenses ''EncodedTCRequest
 
 
