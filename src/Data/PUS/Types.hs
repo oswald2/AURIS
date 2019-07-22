@@ -55,6 +55,10 @@ module Data.PUS.Types
     , getSSC
     , mkSSC
     , nextSSC
+    , SourceID
+    , mkSourceID
+    , sourceIDBuilder
+    , sourceIDParser
     )
 where
 
@@ -277,3 +281,24 @@ instance ToJSON SSC where
     toEncoding = genericToEncoding defaultOptions
 
 
+newtype SourceID = SourceID { getSourceID :: Word8 }
+    deriving (Eq, Ord, Show, Read, Generic)
+
+mkSourceID :: Word8 -> SourceID
+mkSourceID = SourceID
+
+instance Binary SourceID
+instance Serialise SourceID
+instance FromJSON SourceID
+instance ToJSON SourceID where 
+    toEncoding = genericToEncoding defaultOptions
+instance NFData SourceID
+
+
+-- | A buidler for the VCID
+sourceIDBuilder :: SourceID -> Builder
+sourceIDBuilder (SourceID x) = word8 x
+
+-- | A parser for the VCID
+sourceIDParser :: Parser SourceID
+sourceIDParser = SourceID <$> A.anyWord8

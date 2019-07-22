@@ -100,7 +100,7 @@ data DataFieldHeader =
     | PUSTCStdHeader {
         _stdType :: PUSType
         , _stdSubType :: PUSSubType
-        , _stdSrcID :: !Word8
+        , _stdSrcID :: SourceID
         , _stdFlagAcceptance :: !Bool
         , _stdFlagStartExec :: !Bool
         , _stdFlagProgressExec :: !Bool
@@ -112,7 +112,7 @@ data DataFieldHeader =
         _stdTmVersion :: !Word8
         , _stdTmType :: !PUSType
         , _stdTmSubType :: !PUSSubType
-        , _stdTmDestinationID :: !Word8
+        , _stdTmDestinationID :: !SourceID
         , _stdTmOBTime :: !CUCTime
         }
     -- | A standard header for the C&C protocol
@@ -124,7 +124,7 @@ data DataFieldHeader =
         , _cncTcCompletion :: !Bool
         , _cncTcType :: !PUSType
         , _cncTcSubType :: !PUSSubType
-        , _cncTcSourceID :: !Word8
+        , _cncTcSourceID :: !SourceID
     }
     -- | TODO: implementation of free header
     | PUSFreeHeader {
@@ -139,11 +139,11 @@ makeLenses ''DataFieldHeader
 
 -- | gives the default DFH for TCs
 defaultTCHeader :: DataFieldHeader
-defaultTCHeader = PUSTCStdHeader 0 0 0 False False False False
+defaultTCHeader = PUSTCStdHeader 0 0 (mkSourceID 0) False False False False
 
 -- | gives the default DFH for TCs for the C&C interface
 defaultCnCTCHeader :: DataFieldHeader
-defaultCnCTCHeader = PUSCnCTCHeader 0 False False False False 0 0 0
+defaultCnCTCHeader = PUSCnCTCHeader 0 False False False False 0 0 (mkSourceID 0)
 
 
 -- | returns the type of the header
@@ -163,20 +163,20 @@ pusSubType PUSCnCTCHeader {..} = _cncTcSubType
 pusSubType PUSFreeHeader {..} = mkPUSSubType 0
 
 -- | returns the source ID of the header
-pusSrcID :: DataFieldHeader -> Word8
-pusSrcID PUSEmptyHeader = 0
+pusSrcID :: DataFieldHeader -> SourceID
+pusSrcID PUSEmptyHeader = mkSourceID 0
 pusSrcID PUSTCStdHeader {..} = _stdSrcID
 pusSrcID PUSTMStdHeader {..} = _stdTmDestinationID
 pusSrcID PUSCnCTCHeader {..} = _cncTcSourceID
-pusSrcID PUSFreeHeader {..} = 0
+pusSrcID PUSFreeHeader {..} = mkSourceID 0
 
 -- | returns the destination ID of the TM header
-pusDestID :: DataFieldHeader -> Word8
-pusDestID PUSEmptyHeader = 0
+pusDestID :: DataFieldHeader -> SourceID
+pusDestID PUSEmptyHeader = mkSourceID 0
 pusDestID PUSTCStdHeader {..} = _stdSrcID
 pusDestID PUSTMStdHeader {..} = _stdTmDestinationID
 pusDestID PUSCnCTCHeader {..} = _cncTcSourceID
-pusDestID PUSFreeHeader {} = 0
+pusDestID PUSFreeHeader {} = mkSourceID 0
 
 
 -- | returns the requested verification stages for the TC
@@ -218,18 +218,18 @@ dfhBuilder x@PUSTCStdHeader {} =
     in  word8 b1
             <> pusTypeBuilder (_stdType x)
             <> pusSubTypeBuilder (_stdSubType x)
-            <> word8 (_stdSrcID x)
+            <> sourceIDBuilder (_stdSrcID x)
 dfhBuilder x@PUSTMStdHeader {} =
     word8 ((((_stdTmVersion x) .&. 0x07) `shiftL` 4))
     <> pusTypeBuilder (_stdTmType x)
     <> pusSubTypeBuilder (_stdTmSubType x)
-    <> word8 (_stdTmDestinationID x)
+    <> sourceIDBuilder (_stdTmDestinationID x)
     <> cucTimeBuilder (_stdTmOBTime x)
 dfhBuilder x@PUSCnCTCHeader{} =
     word8 ((((_cncTcCrcFlags x) .&. 0x07) `shiftL` 4) .|. ackFlags)
         <> pusTypeBuilder (_cncTcType x)
         <> pusSubTypeBuilder (_cncTcSubType x)
-        <> word8 (_cncTcSourceID x)
+        <> sourceIDBuilder (_cncTcSourceID x)
     where
     ackFlags = if _cncTcAcceptance x
         then 0x01
@@ -252,7 +252,7 @@ dfhParser PUSTCStdHeader {} = do
     b1 <- A.anyWord8
     t  <- pusTypeParser
     st <- pusSubTypeParser
-    si <- A.anyWord8
+    si <- sourceIDParser
 
     let fa  = b1 .&. 0x01 /= 0
         fs  = b1 .&. 0x02 /= 0
@@ -272,7 +272,7 @@ dfhParser PUSTMStdHeader {} = do
     vers <- A.anyWord8
     tp   <- A.anyWord8
     st   <- A.anyWord8
-    si   <- A.anyWord8
+    si   <- sourceIDParser
     obt  <- cucTimeParser nullCUCTime
     let vers' = (vers .&. 0x70) `shiftR` 4
     return $! PUSTMStdHeader vers' (mkPUSType tp) (mkPUSSubType st) si obt
@@ -281,7 +281,7 @@ dfhParser PUSCnCTCHeader {} = do
     val <- A.anyWord8
     tp  <- A.anyWord8
     st  <- A.anyWord8
-    si  <- A.anyWord8
+    si  <- sourceIDParser
     let crcfl = (val `shiftR` 4) .&. 0x07
         comp  = (val .&. 0x08) /= 0
         acc   = (val .&. 0x01) /= 0

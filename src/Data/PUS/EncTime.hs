@@ -6,6 +6,7 @@
     , RecordWildCards
     , NumericUnderscores
     , FlexibleInstances
+    , DeriveAnyClass
 #-}
 module Data.PUS.EncTime
     ( CUCTime
@@ -48,7 +49,7 @@ import           General.SetBitField
 -- | Time types. CUC Time is standard unix time with normal encoding of
 -- | 4 bytes coards and 2 bytes fine time
 data CUCTime = CUCTime !Integer !Int32 !Bool
-    deriving (Eq, Show, Read, Generic)
+    deriving (Eq, Show, Read, Generic, NFData)
 
 instance Binary CUCTime
 instance Serialise CUCTime
@@ -59,7 +60,7 @@ instance ToJSON CUCTime where
 
 -- | Time is encoded in CDS Time format.
 data CDSTime = CDSTime !Word16 !Word32 (Maybe Word16)
-    deriving (Eq, Show, Read, Generic)
+    deriving (Eq, Show, Read, Generic, NFData)
 
 instance Binary CDSTime
 instance Serialise CDSTime

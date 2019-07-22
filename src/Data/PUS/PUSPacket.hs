@@ -164,9 +164,9 @@ encodePktWithoutCRC pkt useCRC =
         encHdr  = pusPktHdrBuilder (newPkt ^. pusHdr)
         encDfh  = dfhBuilder (newPkt ^. pusDfh)
         payload = newPkt ^. pusData
-        !pl     = builderBytes $ case newPkt ^. pusHdr . pusHdrDfhFlag of
-            True  -> encHdr <> encDfh <> bytes payload
-            False -> encHdr <> bytes payload
+        !pl     = builderBytes $ if newPkt ^. pusHdr . pusHdrDfhFlag 
+            then encHdr <> encDfh <> bytes payload
+            else encHdr <> bytes payload
     in  applied pkt pl
   where
     applied PUSPacket { _pusPIs = Nothing } encPkt = encPkt
@@ -267,9 +267,9 @@ packPktID !vers !tp !dfh (APID apid) =
         typeShifted = case tp of
             PUSTM -> 0x0000
             PUSTC -> 0x1000
-        dfhShifted = case dfh of
-            True  -> 0x0800
-            False -> 0x0000
+        dfhShifted = if dfh 
+            then 0x0800
+            else 0x0000
         apidMasked = apid .&. 0x7ff
     in  versShifted .|. typeShifted .|. dfhShifted .|. apidMasked
 
@@ -280,9 +280,9 @@ unpackPktID :: Word16 -> (Word8, PUSPacketType, Bool, APID)
 unpackPktID pktID =
     let !apid = pktID .&. 0x7ff
         !dfh  = (pktID .&. 0x0800) /= 0
-        !tp   = case (pktID .&. 0x1000) /= 0 of
-            True  -> PUSTC
-            False -> PUSTM
+        !tp   = if (pktID .&. 0x1000) /= 0 
+            then PUSTC
+            else PUSTM
         !ver = (pktID .&. 0xe000) `shiftR` 13
     in  (fromIntegral ver, tp, dfh, APID apid)
 
@@ -290,7 +290,7 @@ unpackPktID pktID =
 
 {-# INLINABLE packSeqFlags #-}
 packSeqFlags :: SegmentationFlags -> SSC -> Word16
-packSeqFlags !flags !ssc = bfl flags .|. (getSSC ssc) .&. 0x3FFF
+packSeqFlags !flags !ssc = bfl flags .|. getSSC ssc .&. 0x3FFF
   where
     bfl SegmentFirst      = 0x4000
     bfl SegmentContinue   = 0x0000

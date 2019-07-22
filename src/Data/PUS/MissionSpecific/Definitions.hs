@@ -28,6 +28,7 @@ import Control.Lens (makeLenses)
 import Data.PUS.PUSDfh
 import Data.PUS.EncTime
 import Data.PUS.TMFrameDfh
+import Data.PUS.Types
 
 
 -- | A data type to customize for mission specific features. A default
@@ -46,7 +47,7 @@ makeLenses ''PUSMissionSpecific
 -- | a default value for PUS compliant missions
 defaultMissionSpecific :: PUSMissionSpecific
 defaultMissionSpecific = PUSMissionSpecific {
-    _pmsTCDataFieldHeader = PUSTCStdHeader 0 0 0 True True False True
-    , _pmsTMDataFieldHeader = PUSTMStdHeader 0 0 0 0 nullCUCTime
+    _pmsTCDataFieldHeader = PUSTCStdHeader 0 0 (mkSourceID 0) True True False True
+    , _pmsTMDataFieldHeader = PUSTMStdHeader 0 0 0 (mkSourceID 0) nullCUCTime
     , _pmsTMFrameDataFieldHeader = Nothing
 }

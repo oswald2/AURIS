@@ -11,8 +11,8 @@ This module provides some general data types and functions operating on them
 -}
 {-# LANGUAGE OverloadedStrings
     , BangPatterns
-    , GeneralizedNewtypeDeriving
     , DeriveGeneric
+    , GeneralizedNewtypeDeriving
     , RecordWildCards
     , NoImplicitPrelude
     , BinaryLiterals
@@ -22,40 +22,43 @@ This module provides some general data types and functions operating on them
     , MultiParamTypeClasses
 #-}
 module General.Types
-    ( Endian(..)
-    , ByteOffset
-    , BitOffset
-    , Offset
-    , BitOffsets(..)
-    , mkByteOffset
-    , unByteOffset
-    , mkBitOffset
-    , unBitOffset
-    , mkOffset
-    , ByteSize
-    , BitSize
-    , mkByteSize
-    , mkBitSize
-    , unBitSize
-    , unByteSize
-    , bytesToBitSize
-    , bitSizeToBytes
-    , nullOffset
-    , OffsetCalculations(..)
-    , addBitOffset
-    , subBitOffset
-    , nextByteAligned
-    , isByteAligned
-    , bitSizeToOffset
-    )
+  ( Endian(..)
+  , ByteOffset
+  , BitOffset
+  , Offset
+  , BitOffsets(..)
+  , mkByteOffset
+  , unByteOffset
+  , mkBitOffset
+  , unBitOffset
+  , mkOffset
+  , ByteSize
+  , BitSize
+  , mkByteSize
+  , mkBitSize
+  , unBitSize
+  , unByteSize
+  , bytesToBitSize
+  , bitSizeToBytes
+  , nullOffset
+  , OffsetCalculations(..)
+  , addBitOffset
+  , subBitOffset
+  , nextByteAligned
+  , isByteAligned
+  , bitSizeToOffset
+  )
 where
 
 
 import           RIO
 import           Data.Binary
 import           Data.Aeson
-import           Codec.Serialise
 import           Data.Bits
+
+import           Codec.Serialise
+
+--import           Control.DeepSeq
 
 -- | Specifies the endianess (BiE = Big Endian, LiE = Little Endian)
 data Endian = BiE | LiE
@@ -66,10 +69,11 @@ instance Binary Endian
 instance Serialise Endian
 instance FromJSON Endian
 instance ToJSON Endian
+instance NFData Endian
 
 -- | A byte offset
 newtype ByteOffset = ByteOffset { unByteOffset :: Int }
-    deriving (Eq, Ord, Num, Show, Read)
+    deriving (Eq, Ord, Num, Show, Read, Generic, NFData)
 
 -- | constructs a byte offset
 mkByteOffset :: Int -> ByteOffset
@@ -77,7 +81,7 @@ mkByteOffset = ByteOffset
 
 -- | a bit offset
 newtype BitOffset = BitOffset { unBitOffset :: Int }
-    deriving (Eq, Ord, Num, Show, Read)
+    deriving (Eq, Ord, Num, Show, Read, Generic, NFData)
 
 -- | constructs a bit offset
 mkBitOffset :: Int -> BitOffset
@@ -86,14 +90,16 @@ mkBitOffset = BitOffset
 
 -- | a general offset, which contains a byte offset and a bit offset
 data Offset = Offset ByteOffset BitOffset
-    deriving (Eq, Show, Read)
+    deriving (Eq, Show, Read, Generic)
+
+instance NFData Offset
 
 -- | constructs an 'Offset' from a 'ByteOffset' and a 'BitOffset'
 mkOffset :: ByteOffset -> BitOffset -> Offset
 mkOffset (ByteOffset x) (BitOffset y) =
-    let bo = x + y `shiftR` 3
-        bi = y .&. 0x07
-    in Offset (ByteOffset bo) (BitOffset bi)
+  let bo = x + y `shiftR` 3
+      bi = y .&. 0x07
+  in  Offset (ByteOffset bo) (BitOffset bi)
 
 -- | a null offset
 nullOffset :: Offset
@@ -101,39 +107,38 @@ nullOffset = Offset (ByteOffset 0) (BitOffset 0)
 
 
 instance Ord Offset where
-    compare (Offset b1 bi1) (Offset b2 bi2) =
-        case compare b1 b2 of
-            LT -> LT
-            GT -> GT
-            EQ -> compare bi1 bi2
+  compare (Offset b1 bi1) (Offset b2 bi2) = case compare b1 b2 of
+    LT -> LT
+    GT -> GT
+    EQ -> compare bi1 bi2
 
 
-class ByteAligned a where 
+class ByteAligned a where
 -- | returns if the 'Offset' is byte aligned
     isByteAligned :: a -> Bool
     -- | Returns the next 'Offset' which is aligned to byte boundary
-    nextByteAligned :: a -> a 
+    nextByteAligned :: a -> a
 
 
-instance ByteAligned Offset where 
-    nextByteAligned off@(Offset (ByteOffset a) (BitOffset _)) =
-        if isByteAligned off
-            then off
-            else Offset (ByteOffset (a + 1)) (BitOffset 0)
-    isByteAligned (Offset _ (BitOffset b)) = b == 0
+instance ByteAligned Offset where
+  nextByteAligned off@(Offset (ByteOffset a) (BitOffset _)) =
+    if isByteAligned off then off else Offset (ByteOffset (a + 1)) (BitOffset 0)
+  isByteAligned (Offset _ (BitOffset b)) = b == 0
 
 
-instance ByteAligned BitOffset where 
-    nextByteAligned off@(BitOffset x) = if x .&. 0x7 /= 0 then BitOffset ((x `shiftR` 3) + 1 `shiftL` 3)  else off 
-    isByteAligned (BitOffset x) = x .&. 0x7 == 0
+instance ByteAligned BitOffset where
+  nextByteAligned off@(BitOffset x) =
+    if x .&. 0x7 /= 0 then BitOffset ((x `shiftR` 3) + 1 `shiftL` 3) else off
+  isByteAligned (BitOffset x) = x .&. 0x7 == 0
 
-instance ByteAligned BitSize where 
-    nextByteAligned off@(BitSize x) = if x .&. 0x7 /= 0 then BitSize ((x `shiftR` 3) + 1 `shiftL` 3)  else off 
-    isByteAligned (BitSize x) = x .&. 0x7 == 0
-        
+instance ByteAligned BitSize where
+  nextByteAligned off@(BitSize x) =
+    if x .&. 0x7 /= 0 then BitSize ((x `shiftR` 3) + 1 `shiftL` 3) else off
+  isByteAligned (BitSize x) = x .&. 0x7 == 0
+
 -- | A size type in bytes
 newtype ByteSize = ByteSize { unByteSize :: Int }
-    deriving (Eq, Ord, Num, Bits, Show, Read)
+    deriving (Eq, Ord, Num, Bits, Show, Read, Generic, NFData)
 
 -- | constructs a byte size
 mkByteSize :: Int -> ByteSize
@@ -142,7 +147,7 @@ mkByteSize = ByteSize
 
 -- | A size type in bits
 newtype BitSize = BitSize { unBitSize :: Int }
-    deriving (Eq, Ord, Num, Bits, Show, Read)
+    deriving (Eq, Ord, Num, Bits, Show, Read, Generic, NFData)
 
 -- | constructs a bit size
 mkBitSize :: Int -> BitSize
@@ -183,44 +188,41 @@ class BitOffsets a where
 
 
 instance BitOffsets ByteOffset where
-    toByteOffset x = x
-    toBitOffset (ByteOffset x) = BitOffset (x `shiftL` 3)
-    toOffset x = Offset x (BitOffset 0)
-    fromByteOffset x = x
-    fromBitOffset (BitOffset x) = ByteOffset (x `shiftR` 3)
-    addOff (ByteOffset a) (ByteOffset b) = ByteOffset (a + b)
-    subOff (ByteOffset a) (ByteOffset b) = ByteOffset (a - b)
+  toByteOffset x = x
+  toBitOffset (ByteOffset x) = BitOffset (x `shiftL` 3)
+  toOffset x = Offset x (BitOffset 0)
+  fromByteOffset x = x
+  fromBitOffset (BitOffset x) = ByteOffset (x `shiftR` 3)
+  addOff (ByteOffset a) (ByteOffset b) = ByteOffset (a + b)
+  subOff (ByteOffset a) (ByteOffset b) = ByteOffset (a - b)
 
 
 instance BitOffsets BitOffset where
-    toByteOffset (BitOffset x) = ByteOffset (x `shiftR` 3)
-    toBitOffset x = x
-    toOffset (BitOffset x) =
-        let bo = x `shiftR` 3
-            bi = x .&. 0x07
-        in
-        Offset (ByteOffset bo) (BitOffset bi)
-    fromByteOffset (ByteOffset x) = BitOffset (x `shiftL` 3)
-    fromBitOffset x = x
-    addOff (BitOffset a) (BitOffset b) = BitOffset (a + b)
-    subOff (BitOffset a) (BitOffset b) = BitOffset (a - b)
+  toByteOffset (BitOffset x) = ByteOffset (x `shiftR` 3)
+  toBitOffset x = x
+  toOffset (BitOffset x) =
+    let bo = x `shiftR` 3
+        bi = x .&. 0x07
+    in  Offset (ByteOffset bo) (BitOffset bi)
+  fromByteOffset (ByteOffset x) = BitOffset (x `shiftL` 3)
+  fromBitOffset x = x
+  addOff (BitOffset a) (BitOffset b) = BitOffset (a + b)
+  subOff (BitOffset a) (BitOffset b) = BitOffset (a - b)
 
 instance BitOffsets Offset where
-    toByteOffset (Offset bo _) = bo
-    toBitOffset (Offset bo bi) = toBitOffset bo `addOff` bi
-    toOffset x = x
-    fromByteOffset x = Offset x (BitOffset 0)
-    fromBitOffset (BitOffset x) =
-        Offset (ByteOffset (x `shiftR` 3)) (BitOffset (x .&. 0x07))
-    addOff (Offset (ByteOffset ba) (BitOffset bia)) (Offset (ByteOffset bb) (BitOffset bib)) =
-        let newBitOff' = bia + bib
-            newByteOff = ba + bb + addBy
-            addBy = newBitOff' `shiftR` 3
-            newBitOff = newBitOff' .&. 0x07
-        in
-        Offset (ByteOffset newByteOff) (BitOffset newBitOff)
-    subOff off1 off2 =
-        toOffset (toBitOffset off1 - toBitOffset off2)
+  toByteOffset (Offset bo _) = bo
+  toBitOffset (Offset bo bi) = toBitOffset bo `addOff` bi
+  toOffset x = x
+  fromByteOffset x = Offset x (BitOffset 0)
+  fromBitOffset (BitOffset x) =
+    Offset (ByteOffset (x `shiftR` 3)) (BitOffset (x .&. 0x07))
+  addOff (Offset (ByteOffset ba) (BitOffset bia)) (Offset (ByteOffset bb) (BitOffset bib))
+    = let newBitOff' = bia + bib
+          newByteOff = ba + bb + addBy
+          addBy      = newBitOff' `shiftR` 3
+          newBitOff  = newBitOff' .&. 0x07
+      in  Offset (ByteOffset newByteOff) (BitOffset newBitOff)
+  subOff off1 off2 = toOffset (toBitOffset off1 - toBitOffset off2)
 
 
 class OffsetCalculations a b where
@@ -230,14 +232,14 @@ class OffsetCalculations a b where
 infixl 6  .+., .-.
 
 instance OffsetCalculations BitOffset Offset where
-    biOff .+. off = toOffset biOff `addOff` off
-    biOff .-. off = toOffset biOff `subOff` off
+  biOff .+. off = toOffset biOff `addOff` off
+  biOff .-. off = toOffset biOff `subOff` off
 
 instance OffsetCalculations Offset BitOffset where
-    off .+. biOff = off `addOff` toOffset biOff
-    off .-. biOff = off `subOff` toOffset biOff
+  off .+. biOff = off `addOff` toOffset biOff
+  off .-. biOff = off `subOff` toOffset biOff
 
 
 instance OffsetCalculations Offset BitSize where
-    off .+. (BitSize x) = off `addOff` toOffset (BitOffset x)
-    off .-. (BitSize x) = off `subOff` toOffset (BitOffset x)
+  off .+. (BitSize x) = off `addOff` toOffset (BitOffset x)
+  off .-. (BitSize x) = off `subOff` toOffset (BitOffset x)

@@ -7,6 +7,7 @@
     , MultiParamTypeClasses
     , FunctionalDependencies
     , FlexibleInstances
+    , DeriveAnyClass
 #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Data.PUS.Parameter
@@ -74,7 +75,7 @@ data Parameter = Parameter {
   _paramName :: !Text,
   _paramValue :: !Value
   }
-  deriving (Show, Read, Generic)
+  deriving (Show, Read, Generic, NFData)
 makeLenses ''Parameter
 
 instance Binary Parameter
@@ -88,7 +89,7 @@ data ExtParameter = ExtParameter {
   _extParValue :: !Value,
   _extParOff :: !Offset
   }
-  deriving (Show, Read, Generic)
+  deriving (Show, Read, Generic, NFData)
 makeLenses ''ExtParameter
 
 
@@ -113,17 +114,18 @@ instance BitSizes ExtParameter where
 data ParameterList = Empty
     | List [Parameter] ParameterList
     | Group Parameter ParameterList
-    deriving (Show, Read)
+    deriving (Show, Read, Generic, NFData)
 
 data SizedParameterList = SizedParameterList {
         _splSize :: BitSize
         , _splParams ::  [Parameter]
     }
+    deriving (Generic, NFData)
 
 toSizedParamList :: ParameterList -> SizedParameterList
 toSizedParamList ps =
   let expanded = expandGroups ps
-  in  SizedParameterList (bitSize expanded) expanded
+  in  force $ SizedParameterList (bitSize expanded) expanded
 
 
 data ExtParameterList = ExtEmpty
@@ -136,11 +138,12 @@ data SizedExtParameterList = SizedExtParameterList {
     _seplSize :: BitSize
     , _seplParams :: [ExtParameter]
     }
+    deriving (Generic, NFData)
 
 toSizedExtParamList :: ExtParameterList -> SizedExtParameterList
 toSizedExtParamList ps =
   let expanded = expandGroups ps
-  in  SizedExtParameterList (bitSize expanded) expanded
+  in  force $ SizedExtParameterList (bitSize expanded) expanded
 
 -- | Ok, this is an orphan instance, but we need 'Read'. Maybe we
 -- can drop it later
@@ -389,29 +392,39 @@ expandExtGroups' ExtEmpty prevGroup
   | emptyExtParamList prevGroup = []
   | otherwise                   = expandExtGroups' prevGroup ExtEmpty
 expandExtGroups' (ExtList p t) prevGroup =
-  (SL.fromSortedList p) ++ expandExtGroups' t prevGroup
+  SL.fromSortedList p ++ expandExtGroups' t prevGroup
 expandExtGroups' (ExtGroup n t) prevGroup = n : expandExtGroups'
   t
-  (prependExtN ((getInt $ _extParValue n) - 1) prevGroup t)
+  (prependExtN (getInt (_extParValue n) - 1) prevGroup t)
 
 
 
-encodeExtParameters :: [ExtParameter] -> ByteString
-encodeExtParameters params = runST $ do
-  let lp     = last params
-      lenOff = nextByteAligned
-        $ toOffset (toBitOffset (_extParOff lp) `addBitOffset` bitSize lp)
-      size = unByteOffset . toByteOffset $ lenOff
+-- encodeExtParameters :: [ExtParameter] -> ByteString
+-- encodeExtParameters params = runST $ do
+--   let lp     = last params
+--       lenOff = nextByteAligned
+--         $ toOffset (toBitOffset (_extParOff lp) `addBitOffset` bitSize lp)
+--       size = unByteOffset . toByteOffset $ lenOff
 
-  v <- VS.new size
+--   v <- VS.new size
 
-  mapM_ (setExtParameter v) params
+--   mapM_ (setExtParameter v) params
 
-  vec <- VS.unsafeFreeze v
+--   vec <- VS.unsafeFreeze v
 
-  pure (vectorToByteString vec)
+--   pure (vectorToByteString vec)
 
+encodeExtParameters :: SizedExtParameterList -> ByteString
+encodeExtParameters params =
+    let size = unByteSize . bitSizeToBytes . nextByteAligned $ _seplSize params
+    in runST $ do
+        v <- VS.new size
 
+        mapM_ (setExtParameter v) (_seplParams params)
+
+        vec <- VS.unsafeFreeze v
+
+        pure (vectorToByteString vec)
 
 
 encodeParameters :: SizedParameterList -> ByteString
