@@ -59,6 +59,7 @@ library
     Data.MIB.Types
     Data.MIB.PCF
     Data.MIB.PIC
+    Data.MIB.PID
 
   -- Modules included in this library but not exported.
   -- other-modules:
@@ -83,6 +84,7 @@ library
     , hashable
     , multimap
     , directory
+    , lens
 
   -- Directories containing source files.
   hs-source-dirs:      src

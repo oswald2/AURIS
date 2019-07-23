@@ -3,16 +3,44 @@
     , BangPatterns
     , NoImplicitPrelude
     , DataKinds
+    , TemplateHaskell
 #-}
 module Data.MIB.PCF
     ( PCFentry(..)
     , loadFromFile
     , getPCFMap
     , getEndian
+
+    , pcfName
+    , pcfDescr
+    , pcfPID
+    , pcfUnit
+    , pcfPTC
+    , pcfPFC
+    , pcfWidth
+    , pcfValid
+    , pcfRelated
+    , pcfCateg
+    , pcfNatur
+    , pcfCurTx
+    , pcfInter
+    , pcfUscon
+    , pcfDecim
+    , pcfParVal
+    , pcfSubSys
+    , pcfValPar
+    , pcfSpType
+    , pcfCorr
+    , pcfOBTID
+    , pcfDARC
+    , pcfEndian
+
     )
 where
 
 import           RIO
+
+import           Control.Lens                   ( makeLenses )
 
 import qualified Data.ByteString.Lazy          as BL
 import qualified Data.ByteString.Lazy.Char8    as BC
@@ -29,40 +57,41 @@ import           Data.MIB.Types
 
 
 data PCFentry = PCFentry {
-    pcfName :: !Text,
-    pcfDescr :: !Text,
-    pcfPID :: !Text,
-    pcfUnit :: !Text,
-    pcfPTC :: !Int,
-    pcfPFC :: !Int,
-    pcfWidth :: !Text,
-    pcfValid :: !Text,
-    pcfRelated :: !Text,
-    pcfCateg :: Maybe Char,
-    pcfNatur :: Maybe Char,
-    pcfCurTx :: !Text,
-    pcfInter :: !Text,
-    pcfUscon :: !Text,
-    pcfDecim :: !Text,
-    pcfParVal :: !Text,
-    pcfSubSys :: !Text,
-    pcfValPar :: DefaultTo 1,
-    pcfSpType :: !Text,
-    pcfCorr :: Maybe Char,
-    pcfOBTID :: Maybe Int,
-    pcfDARC :: Maybe Char,
-    pcfEndian :: Maybe Char
+    _pcfName :: !Text,
+    _pcfDescr :: !Text,
+    _pcfPID :: !Text,
+    _pcfUnit :: !Text,
+    _pcfPTC :: !Int,
+    _pcfPFC :: !Int,
+    _pcfWidth :: !Text,
+    _pcfValid :: !Text,
+    _pcfRelated :: !Text,
+    _pcfCateg :: Maybe Char,
+    _pcfNatur :: Maybe Char,
+    _pcfCurTx :: !Text,
+    _pcfInter :: !Text,
+    _pcfUscon :: !Text,
+    _pcfDecim :: !Text,
+    _pcfParVal :: !Text,
+    _pcfSubSys :: !Text,
+    _pcfValPar :: DefaultTo 1,
+    _pcfSpType :: !Text,
+    _pcfCorr :: Maybe Char,
+    _pcfOBTID :: Maybe Int,
+    _pcfDARC :: Maybe Char,
+    _pcfEndian :: Maybe Char
 } deriving (Show, Read)
+makeLenses ''PCFentry
 
 
 getEndian :: PCFentry -> Char
-getEndian PCFentry { pcfEndian = Just x }  = x
-getEndian PCFentry { pcfEndian = Nothing } = 'B'
+getEndian PCFentry { _pcfEndian = Just x }  = x
+getEndian PCFentry { _pcfEndian = Nothing } = 'B'
 
 
 
 instance Eq PCFentry where
-    pcf1 == pcf2 = pcfName pcf1 == pcfName pcf2
+    pcf1 == pcf2 = _pcfName pcf1 == _pcfName pcf2
 
 
 
@@ -173,7 +202,10 @@ fileName :: FilePath
 fileName = "pcf.dat"
 
 
-loadFromFile :: (MonadIO m, MonadReader env m, HasLogFunc env, HasCallStack) => FilePath -> m (Either Text (Vector PCFentry))
+loadFromFile
+    :: (MonadIO m, MonadReader env m, HasLogFunc env, HasCallStack)
+    => FilePath
+    -> m (Either Text (Vector PCFentry))
 loadFromFile mibPath = do
     let file = mibPath </> fileName
     ex <- liftIO $ doesFileExist file
@@ -192,4 +224,4 @@ loadFromFile mibPath = do
 
 
 getPCFMap :: Vector PCFentry -> HashMap Text PCFentry
-getPCFMap = V.foldl (\m e -> HM.insert (pcfName e) e m) HM.empty
+getPCFMap = V.foldl (\m e -> HM.insert (_pcfName e) e m) HM.empty
