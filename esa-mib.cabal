@@ -58,6 +58,7 @@ library
   exposed-modules:
     Data.MIB.Types
     Data.MIB.PCF
+    Data.MIB.PIC
 
   -- Modules included in this library but not exported.
   -- other-modules:
