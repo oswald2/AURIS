@@ -151,8 +151,8 @@ newtype BitSize = BitSize { unBitSize :: Int }
 
 instance Binary BitSize
 instance Serialise BitSize
-instance FromJSON BitSize 
-instance ToJSON BitSize where 
+instance FromJSON BitSize
+instance ToJSON BitSize where
     toEncoding = genericToEncoding defaultOptions
 
 -- | constructs a bit size
@@ -171,6 +171,7 @@ bitSizeToBytes (BitSize x) = ByteSize (x `shiftR` 3)
 -- | Converst a 'BitSize' to a 'BitOffset', basically doing the subtraction of 1
 bitSizeToOffset :: BitSize -> BitOffset
 bitSizeToOffset (BitSize x) = BitOffset (x - 1)
+
 
 
 -- | adds a 'BitOffset' and a 'BitSize' and returns a 'BitOffset'

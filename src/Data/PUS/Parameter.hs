@@ -43,6 +43,11 @@ module Data.PUS.Parameter
   , SizedExtParameterList
   , toSizedParamList
   , toSizedExtParamList
+
+  , appendN
+  , appendExtN
+  , prependN
+  , prependExtN
   )
 where
 
@@ -61,9 +66,6 @@ import           Data.Aeson              hiding ( Value )
 import qualified Data.Vector.Storable          as VS
 import qualified Data.Vector.Storable.Mutable  as VS
 import           Data.Vector.Storable.ByteString
-import           Data.List                      ( last
-                                                , maximum
-                                                )
 import           Data.SortedList                ( SortedList )
 import qualified Data.SortedList               as SL
 
@@ -153,7 +155,7 @@ toSizedParamList ps =
 data ExtParameterList = ExtEmpty
     | ExtList (SortedList ExtParameter) ExtParameterList
     | ExtGroup ExtParameter ExtParameterList
-    deriving (Show, Read)
+    deriving (Eq, Show, Read, Generic, NFData)
 
 
 data SizedExtParameterList = SizedExtParameterList {
@@ -206,21 +208,26 @@ instance BitSizes ParameterList where
     in  bitSize p + mkBitSize (fromIntegral n) * bitSize ps
 
 
+bitsBetween :: ExtParameter -> ExtParameter -> BitSize
+bitsBetween (ExtParameter _ v1 off1) (ExtParameter _ _ off2) =
+    mkBitSize . unBitOffset $ toBitOffset off2 - toBitOffset off1 `addBitOffset` bitSize v1
+
+extParSize :: ExtParameter -> ExtParameter -> BitSize
+extParSize p1 p2 =
+    bitSize (_extParValue p1) + bitsBetween p1 p2
+
+
 instance BitSizes [ExtParameter] where
-  bitSize ps =
-    let p = maximum ps
-    in  mkBitSize
-          .              unBitOffset
-          $              toBitOffset (_extParOff p)
-          `addBitOffset` bitSize (_extParValue p)
+  bitSize ps = go ps 0
+    where
+        go [] !acc = acc
+        go [x] !acc = acc + bitSize x
+        go (x:y:xs) !acc = go (y:xs) (acc + extParSize x y)
+
 
 instance BitSizes (SortedList ExtParameter) where
-  bitSize ps =
-    let p = last (SL.fromSortedList ps)
-    in  mkBitSize
-          .              unBitOffset
-          $              toBitOffset (_extParOff p)
-          `addBitOffset` bitSize (_extParValue p)
+  bitSize = bitSize . SL.fromSortedList
+
 
 instance BitSizes ExtParameterList where
   bitSize ExtEmpty         = 0
@@ -387,7 +394,10 @@ prependN n t1 t2 = appendN n Empty t2 <> t1
 
 prependExtN
   :: Word64 -> ExtParameterList -> ExtParameterList -> ExtParameterList
-prependExtN n t1 t2 = appendExtN n ExtEmpty t2 <> t1
+prependExtN n t1 t2 =
+    let group = appendExtN n ExtEmpty t2
+        newT1 = updateOffsets (bitSize group) t1
+    in group <> newT1
 
 class ExpandGroups a b | a -> b where
     -- | expands the groups. No name conversion is done, so the resulting list can contain multiple
