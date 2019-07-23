@@ -57,6 +57,7 @@ library
   -- Modules exported by the library.
   exposed-modules:
     Data.MIB.Types
+    Data.MIB.PCF
 
   -- Modules included in this library but not exported.
   -- other-modules:
@@ -70,7 +71,17 @@ library
     , serialise
     , aeson
     , rio
+    , bytestring
+    , text
     , cassava
+    , vector
+    , vector-algorithms
+    , filepath
+    , unordered-containers
+    , containers
+    , hashable
+    , multimap
+    , directory
 
   -- Directories containing source files.
   hs-source-dirs:      src

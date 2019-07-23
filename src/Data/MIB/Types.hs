@@ -52,7 +52,7 @@ instance FromJSON PFC
 
 
 newtype DefaultTo (a :: Nat) = DefaultTo Int
-
+    deriving (Show, Read)
 
 
 instance KnownNat a => FromField (DefaultTo a) where
