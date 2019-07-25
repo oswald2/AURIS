@@ -121,7 +121,7 @@ instance Ord Offset where
 
 
 class ByteAligned a where
--- | returns if the 'Offset' is byte aligned
+    -- | returns if the 'Offset' is byte aligned
     isByteAligned :: a -> Bool
     -- | Returns the next 'Offset' which is aligned to byte boundary
     nextByteAligned :: a -> a
@@ -246,7 +246,7 @@ instance BitOffsets Offset where
           newBitOff  = newBitOff' .&. 0x07
       in  Offset (ByteOffset newByteOff) (BitOffset newBitOff)
   subOff off1 off2 = toOffset (toBitOffset off1 - toBitOffset off2)
-
+  
 
 class OffsetCalculations a b where
     (.+.) :: a -> b -> Offset
