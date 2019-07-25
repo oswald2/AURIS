@@ -396,7 +396,7 @@ prependExtN
   :: Word64 -> ExtParameterList -> ExtParameterList -> ExtParameterList
 prependExtN n t1 t2 =
     let group = appendExtN n ExtEmpty t2
-        newT1 = updateOffsets (BitSize (fromIntegral n) * bitSize group) t1
+        newT1 = updateOffsets (bitSize group) t1
     in group <> newT1
 
 class ExpandGroups a b | a -> b where
