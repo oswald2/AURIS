@@ -58,7 +58,7 @@ import           Data.Bits
 
 import           Codec.Serialise
 
---import           Control.DeepSeq
+
 
 -- | Specifies the endianess (BiE = Big Endian, LiE = Little Endian)
 data Endian = BiE | LiE
@@ -79,6 +79,7 @@ newtype ByteOffset = ByteOffset Int
 mkByteOffset :: Int -> ByteOffset
 mkByteOffset = ByteOffset
 
+-- | extract the number out of a 'ByteOffset'
 unByteOffset :: ByteOffset -> Int 
 unByteOffset (ByteOffset x) = x 
 
@@ -150,6 +151,7 @@ newtype ByteSize = ByteSize Int
 mkByteSize :: Int -> ByteSize
 mkByteSize = ByteSize
 
+-- | extract the number out of a 'ByteSize'
 unByteSize :: ByteSize -> Int 
 unByteSize (ByteSize x) = x 
 
@@ -169,6 +171,7 @@ instance ToJSON BitSize where
 mkBitSize :: Int -> BitSize
 mkBitSize = BitSize
 
+-- | extract the number out of a 'BitSize'
 unBitSize :: BitSize -> Int 
 unBitSize (BitSize x) = x
 

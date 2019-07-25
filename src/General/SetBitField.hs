@@ -1,3 +1,15 @@
+{-|
+Module      : General.SetBitField
+Description : Functions for setting values. Used in encoding the parameters into binary form
+Copyright   : (c) Michael Oswald, 2019
+License     : BSD-3
+Maintainer  : michael.oswald@onikudaki.net
+Stability   : experimental
+Portability : POSIX
+
+This module provides functions for encoding values down to binary form. For efficancy this 
+functions operator on a mutable vector in the 'ST' Monad.
+-}
 {-# LANGUAGE OverloadedStrings
     , BangPatterns
     , NoImplicitPrelude
@@ -56,7 +68,7 @@ instance SetValue Word16 where
 
 instance SetValue Int16 where
   setValue vec off endian val =
-    setValue vec off endian ((fromIntegral val) :: Word16)
+    setValue vec off endian (fromIntegral val :: Word16)
   {-# INLINABLE setValue #-}
 
 instance SetValue Word32 where
@@ -84,7 +96,7 @@ instance SetValue Word32 where
 
 instance SetValue Int32 where
   setValue vec off endian val =
-    setValue vec off endian ((fromIntegral val) :: Word32)
+    setValue vec off endian (fromIntegral val :: Word32)
   {-# INLINABLE setValue #-}
 
 
@@ -129,7 +141,7 @@ instance SetValue Word64 where
 
 instance SetValue Int64 where
   setValue vec off endian val =
-    setValue vec off endian ((fromIntegral val) :: Word64)
+    setValue vec off endian (fromIntegral val :: Word64)
   {-# INLINABLE setValue #-}
 
 instance SetValue Double where
@@ -144,6 +156,7 @@ instance SetValue Float where
 -- | Copy the value of a ByteString to the given vector on the
 -- given byte-offset. It is assumed, that the vector is large
 -- enough
+{-# INLINABLE copyBS #-}
 copyBS :: VS.MVector s Word8 -> ByteOffset -> ByteString -> ST s ()
 copyBS vec off' bs = go 0 (B.length bs)
  where
@@ -153,6 +166,18 @@ copyBS vec off' bs = go 0 (B.length bs)
     | otherwise = do
       VS.unsafeWrite vec (off + idx) (bs `B.index` idx)
       go (idx + 1) blength
+
+
+
+{-# INLINABLE byteIndex' #-}
+byteIndex' :: BitOffset -> BitSize -> Int
+byteIndex' bitOffset bitWidth =
+  unByteOffset
+    .              toByteOffset
+    $              bitOffset
+    `addBitOffset` bitWidth
+    `subBitOffset` 1
+
 
 -- | Sets a given Word64 value (my be smaller than Word64) as
 -- a binary value into the vector. This function may resize the
@@ -164,6 +189,7 @@ copyBS vec off' bs = go 0 (B.length bs)
 -- the value should be set
 -- @bitWidth@ specifies the width of the value in bits (smaller than 64)
 -- @value@ gives the value as 'Word64' to be set.
+{-# INLINABLE setBitFieldR #-}
 setBitFieldR
   :: VS.MVector s Word8
   -> BitOffset
@@ -171,12 +197,7 @@ setBitFieldR
   -> Word64
   -> ST s (VS.MVector s Word8)
 setBitFieldR bytes' bitOffset bitWidth value = do
-  let !byteIndex =
-        unByteOffset
-          .              toByteOffset
-          $              bitOffset
-          `addBitOffset` bitWidth
-          `subBitOffset` 1
+  let !byteIndex = byteIndex' bitOffset bitWidth
       bmask :: Word64
       !bmask =
         let x = if bitWidth < 64 then 1 `shiftL` unBitSize bitWidth else 0
@@ -238,14 +259,10 @@ setBitFieldR bytes' bitOffset bitWidth value = do
 -- the value should be set
 -- @bitWidth@ specifies the width of the value in bits (smaller than 64)
 -- @value@ gives the value as 'Word64' to be set.
+{-# INLINABLE setBitField #-}
 setBitField :: VS.MVector s Word8 -> BitOffset -> BitSize -> Word64 -> ST s ()
 setBitField bytes bitOffset bitWidth value = do
-  let !byteIndex =
-        unByteOffset
-          .              toByteOffset
-          $              bitOffset
-          `addBitOffset` bitWidth
-          `subBitOffset` 1
+  let !byteIndex = byteIndex' bitOffset bitWidth
       bmask :: Word64
       !bmask =
         let x = if bitWidth < 64 then 1 `shiftL` unBitSize bitWidth else 0
@@ -276,7 +293,7 @@ setBitField bytes bitOffset bitWidth value = do
         !v2 = va2 .&. ma2
         !v1 = v .&. complement ma2
     VS.write bytes bi2 v3
-  return ()
+
 
 
 

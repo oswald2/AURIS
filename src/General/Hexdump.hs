@@ -109,7 +109,7 @@ hexdumpBS bs = toText result
                         <> singleton '\n'
         in  content
 
-
+-- | hexdumps a strict bytestring in a single line
 hexdumpLineBS :: BS.ByteString -> Text
 hexdumpLineBS =
     toText
