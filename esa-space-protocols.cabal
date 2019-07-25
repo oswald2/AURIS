@@ -30,6 +30,7 @@ flag bench
 library
     exposed-modules:
         Control.PUS.Classes
+        Conduit.SocketConnector
         Data.PUS.Config
         Data.PUS.Types
         Data.PUS.APID
@@ -120,6 +121,7 @@ library
         , deepseq
         , esa-base
         , network
+        , streaming-commons
 
     if flag(llvm)
         ghc-options: -O2 -Wall -Wcompat -Widentities -Wincomplete-record-updates

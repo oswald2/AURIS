@@ -18,18 +18,18 @@ JSON (via the aeson library)
     , GeneralizedNewtypeDeriving
 #-}
 module Data.PUS.Config
-    (
+  (
     -- | The config data type itself
-      Config(..)
+    Config(..)
     -- | Type for the CLTU code block size. Restricted to be 5 .. 8
-    , CltuBlockSize(..)
-    , cltuBlockSizeAsWord8
-    , defaultConfig
+  , CltuBlockSize(..)
+  , cltuBlockSizeAsWord8
+  , defaultConfig
     -- , writeConfigString
-    , writeConfigJSON
+  , writeConfigJSON
     -- , loadConfigString
-    , loadConfigJSON
-    )
+  , loadConfigJSON
+  )
 where
 
 import           Control.Monad.IO.Class
@@ -46,6 +46,17 @@ import           GHC.Generics
 
 import           Data.PUS.Types
 
+
+
+data EDENConfig = EDENConfig {
+    cfgEdenHost :: Text
+    , cfgEdenPort :: Word16
+    }
+    deriving (Eq, Generic)
+
+instance FromJSON EDENConfig
+instance ToJSON EDENConfig where
+  toEncoding = genericToEncoding defaultOptions
 
 
 -- | The configuration of the PUS functionality
@@ -66,11 +77,13 @@ data Config = Config {
     , cfgMaxTMFrameLen :: Closed 128 2040
     -- | Indicates, if a TM frame does contain a CRC value
     , cfgTMFrameHasCRC :: Bool
+    -- | Specifies the configuration of an EDEN connection
+    , cfgEDEN :: Maybe EDENConfig
 } deriving (Eq, Generic)
 
 instance FromJSON Config
 instance ToJSON Config where
-    toEncoding = genericToEncoding defaultOptions
+  toEncoding = genericToEncoding defaultOptions
 
 -- | Specifies the CLTU block size. Since there are only very few
 -- values allowed (5,6,7,8), we do an enumeration
@@ -83,7 +96,7 @@ data CltuBlockSize =
 
 instance FromJSON CltuBlockSize
 instance ToJSON CltuBlockSize where
-    toEncoding = genericToEncoding defaultOptions
+  toEncoding = genericToEncoding defaultOptions
 
 cltuBlockSizeAsWord8 :: CltuBlockSize -> Word8
 cltuBlockSizeAsWord8 CltuBS_5 = 5
@@ -92,17 +105,21 @@ cltuBlockSizeAsWord8 CltuBS_7 = 7
 cltuBlockSizeAsWord8 CltuBS_8 = 8
 
 
+defaultEdenConfig :: EDENConfig
+defaultEdenConfig =
+  EDENConfig { cfgEdenHost = "localhost", cfgEdenPort = 40300 }
+
 -- | a default configuration with typical values.
 defaultConfig :: Config
-defaultConfig = Config
-    { cfgCltuBlockSize        = CltuBS_8
-    , cfgInterfacePort        = Just 55555
-    , cfgRandomizerStartValue = 0xFF
-    , cfgSCID                 = mkSCID 0
-    , cfgVCIDs                = [0, 1]
-    , cfgMaxTMFrameLen        = 1115
-    , cfgTMFrameHasCRC        = True
-    }
+defaultConfig = Config { cfgCltuBlockSize        = CltuBS_8
+                       , cfgInterfacePort        = Just 55555
+                       , cfgRandomizerStartValue = 0xFF
+                       , cfgSCID                 = mkSCID 0
+                       , cfgVCIDs                = [0, 1]
+                       , cfgMaxTMFrameLen        = 1115
+                       , cfgTMFrameHasCRC        = True
+                       , cfgEDEN                 = Just defaultEdenConfig
+                       }
 
 -- | write the config as a serialized string to a file. Uses the Show class for serizalization
 -- writeConfigString :: MonadIO m => Config -> FilePath -> m ()
@@ -127,7 +144,7 @@ writeConfigJSON cfg path = liftIO $ encodeFile path cfg
 -- | If there is an error on parsing, return 'Left error'
 loadConfigJSON :: MonadIO m => FilePath -> m (Either Text Config)
 loadConfigJSON path = do
-    content <- liftIO $ B.readFile path
-    case eitherDecode content of
-        Left  err -> return $ Left (T.pack err)
-        Right cfg -> return $ Right cfg
+  content <- liftIO $ B.readFile path
+  case eitherDecode content of
+    Left  err -> return $ Left (T.pack err)
+    Right cfg -> return $ Right cfg
