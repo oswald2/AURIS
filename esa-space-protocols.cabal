@@ -69,6 +69,7 @@ library
         Data.PUS.Value
         Protocol.SizeOf
         Protocol.NCTRS
+        Protocol.EDEN
         Protocol.ProtocolInterfaces
         Protocol.Switcher
 
@@ -118,6 +119,7 @@ library
         , sorted-list
         , deepseq
         , esa-base
+        , network
 
     if flag(llvm)
         ghc-options: -O2 -Wall -Wcompat -Widentities -Wincomplete-record-updates

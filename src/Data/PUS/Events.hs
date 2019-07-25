@@ -79,6 +79,7 @@ data EventAlarm =
     EVIllegalTCFrame Text
     | EVIllegalTMFrame Text
     | EVNCDUParseError Text
+    | EVEDENParseError Text
     | EVIllegalPUSPacket Text
     | EVIllegalAction Text
     deriving (Eq, Show, Read, Generic)
