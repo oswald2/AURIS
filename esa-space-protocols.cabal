@@ -102,7 +102,7 @@ library
         , parallel
         , lens
         , binary
-        , data-binary-ieee754
+        , binary-ieee754
         , stm-conduit
         , stm-chans
         , thyme
@@ -163,7 +163,8 @@ executable TestBits
 test-suite CLTUTest
     type: exitcode-stdio-1.0
     main-is: CLTUTest.hs
-    default-language: Haskell2010
+    default-language: Haskell2010        
+
     c-sources:
         src/csrc/CLTUcsrc.c
     hs-source-dirs: src/test
