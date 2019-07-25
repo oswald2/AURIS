@@ -29,11 +29,6 @@ flag bench
 
 library
     exposed-modules:
-        General.Chunks
-        General.Hexdump
-        General.Padding
-        General.SetBitField
-        General.Types
         Control.PUS.Classes
         Data.PUS.Config
         Data.PUS.Types
@@ -122,6 +117,7 @@ library
         , scientific
         , sorted-list
         , deepseq
+        , esa-base
 
     if flag(llvm)
         ghc-options: -O2 -Wall -Wcompat -Widentities -Wincomplete-record-updates
@@ -139,6 +135,7 @@ executable WriteConfig
     ghc-options: -Wall -O
     build-depends:
         esa-space-protocols -any,
+        esa-base -any,
         base >=4.12.0.0 && <4.13,
         bytestring >=0.10.8.2 && <0.11
 
@@ -157,6 +154,7 @@ executable TestBits
         hw-prim,
         vector,
         esa-space-protocols,
+        esa-base,
         bytestring-to-vector,
         criterion
 
@@ -174,6 +172,7 @@ test-suite CLTUTest
 
     build-depends:
         esa-space-protocols -any,
+        esa-base,
         base -any,
         bytestring -any,
         hedgehog -any,
@@ -224,6 +223,7 @@ benchmark CmdEncodePerf
 
     build-depends:
         esa-space-protocols -any,
+        esa-base,
         base -any,
         bytestring -any,
         criterion -any,
@@ -248,6 +248,7 @@ benchmark CmdEncodePerf2
 
     build-depends:
         esa-space-protocols -any,
+        esa-base, 
         base -any,
         bytestring -any,
         criterion -any,
@@ -267,6 +268,7 @@ executable CommandingTest
         ghc-options: -Wall -O2 -threaded -rtsopts -eventlog
     build-depends:
         esa-space-protocols
+        , esa-base
         , base
         , bytestring
         , conduit
@@ -287,6 +289,7 @@ executable CommandingAD
         ghc-options: -Wall -O2 -threaded -rtsopts -eventlog
     build-depends:
         esa-space-protocols
+        , esa-base
         , base
         , bytestring
         , conduit
@@ -307,6 +310,7 @@ executable TCEncodeTests
         ghc-options: -Wall -O2 -threaded -rtsopts -eventlog
     build-depends:
         esa-space-protocols
+        , esa-base
         , base
         , bytestring
         , conduit

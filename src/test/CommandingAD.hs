@@ -42,7 +42,7 @@ import           Protocol.Switcher
 import           GHC.Conc.Sync
 
 
-
+pkt1 :: Word16 -> PUSPacket
 pkt1 ssc = PUSPacket
     (PUSHeader 0 0 PUSTC True (APID 256) SegmentStandalone (mkSSC ssc) 0 0)
     (PUSTCStdHeader 3 25 (mkSourceID 0) True True False True)

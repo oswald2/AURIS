@@ -96,7 +96,7 @@ instance ToJSON Parameter
 data ExtParameter = ExtParameter {
   _extParName :: !Text,
   _extParValue :: !Value,
-  _extParOff :: !Offset
+  _extParOff :: !BitOffset 
   }
   deriving (Show, Read, Generic, NFData)
 makeLenses ''ExtParameter
@@ -186,7 +186,7 @@ emptyExtParamList _        = False
 
 -- | a null parameter for e.g. initial value on folding
 nullExtParam :: ExtParameter
-nullExtParam = ExtParameter T.empty ValUndefined nullOffset
+nullExtParam = ExtParameter T.empty ValUndefined (BitOffset 0)
 
 
 -- | converts a ParameterList to List. No group expansion is done
@@ -322,8 +322,8 @@ getExtParamUNL lst name = filter ((name ==) . _extParName) lst
 -- | offset and width)
 laterParam :: ExtParameter -> ExtParameter -> Ordering
 laterParam x1 x2 =
-  let bi1 = _extParOff x1 .+. bitSize (_extParValue x1)
-      bi2 = _extParOff x2 .+. bitSize (_extParValue x1)
+  let bi1 = _extParOff x1 `addBitOffset` bitSize (_extParValue x1)
+      bi2 = _extParOff x2 `addBitOffset` bitSize (_extParValue x1)
   in  compare bi1 bi2
 
 
@@ -385,7 +385,7 @@ updateOffsets bsize (ExtGroup p ps) =
 
 addOffset :: BitSize -> ExtParameter -> ExtParameter
 addOffset bsize param = param & extParOff .~ newOff
-  where newOff = param ^. extParOff .+. bsize
+  where newOff = (param ^. extParOff) `addBitOffset` bsize
 
 
     -- | prepends the second ParameterList n times to the first
@@ -396,7 +396,7 @@ prependExtN
   :: Word64 -> ExtParameterList -> ExtParameterList -> ExtParameterList
 prependExtN n t1 t2 =
     let group = appendExtN n ExtEmpty t2
-        newT1 = updateOffsets (bitSize group) t1
+        newT1 = updateOffsets (BitSize (fromIntegral n) * bitSize group) t1
     in group <> newT1
 
 class ExpandGroups a b | a -> b where
