@@ -32,7 +32,7 @@ module Data.PUS.Parameter
   , getExtParamUNL
   , laterParam
   , encodeParameters
-  , encodeExtParameters
+  --, encodeExtParameters
   , setExtParameter
   , expandGroups
   , ParameterList(..)
@@ -40,9 +40,9 @@ module Data.PUS.Parameter
   , SizedParameterList
   , splSize
   , splParams
-  , SizedExtParameterList
+  --, SizedExtParameterList
   , toSizedParamList
-  , toSizedExtParamList
+  --, toSizedExtParamList
 
   , appendN
   , appendExtN
@@ -158,16 +158,16 @@ data ExtParameterList = ExtEmpty
     deriving (Eq, Show, Read, Generic, NFData)
 
 
-data SizedExtParameterList = SizedExtParameterList {
-    _seplSize :: BitSize
-    , _seplParams :: [ExtParameter]
-    }
-    deriving (Generic, NFData)
+-- data SizedExtParameterList = SizedExtParameterList {
+--     _seplSize :: BitSize
+--     , _seplParams :: [ExtParameter]
+--     }
+--     deriving (Generic, NFData)
 
-toSizedExtParamList :: ExtParameterList -> SizedExtParameterList
-toSizedExtParamList ps =
-  let expanded = expandGroups ps
-  in  force $ SizedExtParameterList (bitSize expanded) expanded
+-- toSizedExtParamList :: ExtParameterList -> SizedExtParameterList
+-- toSizedExtParamList ps =
+--   let expanded = expandGroups ps
+--   in  force $ SizedExtParameterList (bitSize expanded) expanded
 
 -- | Ok, this is an orphan instance, but we need 'Read'. Maybe we
 -- can drop it later
@@ -416,18 +416,18 @@ expandGroups' (Group n t) prevGroup =
   n : expandGroups' t (prependN ((getInt $ _paramValue n) - 1) prevGroup t)
 
 
-instance ExpandGroups ExtParameterList ExtParameter where
-  expandGroups l = expandExtGroups' l ExtEmpty
+-- instance ExpandGroups ExtParameterList ExtParameter where
+--   expandGroups l = expandExtGroups' l ExtEmpty
 
-expandExtGroups' :: ExtParameterList -> ExtParameterList -> [ExtParameter]
-expandExtGroups' ExtEmpty prevGroup
-  | emptyExtParamList prevGroup = []
-  | otherwise                   = expandExtGroups' prevGroup ExtEmpty
-expandExtGroups' (ExtList p t) prevGroup =
-  SL.fromSortedList p ++ expandExtGroups' t prevGroup
-expandExtGroups' (ExtGroup n t) prevGroup = n : expandExtGroups'
-  t
-  (prependExtN (getInt (_extParValue n) - 1) prevGroup t)
+-- expandExtGroups' :: ExtParameterList -> ExtParameterList -> [ExtParameter]
+-- expandExtGroups' ExtEmpty prevGroup
+--   | emptyExtParamList prevGroup = []
+--   | otherwise                   = expandExtGroups' prevGroup ExtEmpty
+-- expandExtGroups' (ExtList p t) prevGroup =
+--   SL.fromSortedList p ++ expandExtGroups' t prevGroup
+-- expandExtGroups' (ExtGroup n t) prevGroup = n : expandExtGroups'
+--   t
+--   (prependExtN (getInt (_extParValue n) - 1) prevGroup t)
 
 
 
@@ -446,17 +446,17 @@ expandExtGroups' (ExtGroup n t) prevGroup = n : expandExtGroups'
 
 --   pure (vectorToByteString vec)
 
-encodeExtParameters :: SizedExtParameterList -> ByteString
-encodeExtParameters params =
-    let size = unByteSize . bitSizeToBytes . nextByteAligned $ _seplSize params
-    in runST $ do
-        v <- VS.new size
+-- encodeExtParameters :: SizedExtParameterList -> ByteString
+-- encodeExtParameters params =
+--     let size = unByteSize . bitSizeToBytes . nextByteAligned $ _seplSize params
+--     in runST $ do
+--         v <- VS.new size
 
-        mapM_ (setExtParameter v) (_seplParams params)
+--         mapM_ (setExtParameter v) (_seplParams params)
 
-        vec <- VS.unsafeFreeze v
+--         vec <- VS.unsafeFreeze v
 
-        pure (vectorToByteString vec)
+--         pure (vectorToByteString vec)
 
 
 encodeParameters :: SizedParameterList -> ByteString

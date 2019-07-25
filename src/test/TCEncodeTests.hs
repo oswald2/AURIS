@@ -298,9 +298,6 @@ main = hspec $ do
     it "Test of prependExtN functionality" $ do
       let result :: ExtParameterList
           result = prependExtN 3 t1 t2
-
-      putStrLn $ "Prepended:\n" <> show result
-
       result `shouldBe` expectedPrependN
 
   describe "Simple group expansion" $ do
@@ -311,11 +308,5 @@ main = hspec $ do
     it "nested expansion" $ do
       let lst = expandGroups parameters2
       lst `shouldBe` expectedParameters2
-
-    it "simple expansion, extended parameters" $ do
-      let lst = expandGroups extParameters
-      lst `shouldBe` extParametersExpected
-
-      putStrLn $ "Extended:\n" <> show lst
 
   return ()
