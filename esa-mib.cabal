@@ -85,6 +85,7 @@ library
     , multimap
     , directory
     , lens
+    , esa-base
 
   -- Directories containing source files.
   hs-source-dirs:      src
