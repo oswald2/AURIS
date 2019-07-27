@@ -317,6 +317,13 @@ data TMSegmentLen = TMSegment256
     | TMSegment65536
       deriving (Show, Read, Eq, Ord, Enum, Generic)
 
+instance Binary TMSegmentLen
+instance Serialise TMSegmentLen
+instance FromJSON TMSegmentLen
+instance ToJSON TMSegmentLen where
+    toEncoding = genericToEncoding defaultOptions
+
+
 -- | returns the length of the segment in bytes
 tmSegmentLength :: TMSegmentLen -> Int
 tmSegmentLength TMSegment256   = 256

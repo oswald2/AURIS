@@ -66,7 +66,7 @@ data Config = Config {
     -- | If the socket interface is used, specifies Just portnumber, else Nothing
     , cfgInterfacePort :: Maybe Word16
     -- | The start value of the randomizer used for standard ESA TC randomization
-    , cfgRandomizerStartValue :: Word8
+    , cfgRandomizerStartValue :: !Word8
     -- | The spacecraft ID used
     , cfgSCID :: SCID
     -- | A list of available virtual channels.
@@ -77,6 +77,8 @@ data Config = Config {
     , cfgMaxTMFrameLen :: Closed 128 2040
     -- | Indicates, if a TM frame does contain a CRC value
     , cfgTMFrameHasCRC :: Bool
+    -- | The configured segment length for TM Frames
+    , cfgTMSegLength :: !TMSegmentLen
     -- | Specifies the configuration of an EDEN connection
     , cfgEDEN :: Maybe EDENConfig
 } deriving (Eq, Generic)
@@ -118,6 +120,7 @@ defaultConfig = Config { cfgCltuBlockSize        = CltuBS_8
                        , cfgVCIDs                = [0, 1]
                        , cfgMaxTMFrameLen        = 1115
                        , cfgTMFrameHasCRC        = True
+                       , cfgTMSegLength          = TMSegment65536
                        , cfgEDEN                 = Just defaultEdenConfig
                        }
 

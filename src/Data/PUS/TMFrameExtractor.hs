@@ -37,7 +37,6 @@ import qualified RIO.HashMap                   as HM
 --import           UnliftIO.Exception
 
 import           Conduit
-import           Data.Conduit.Attoparsec
 import           Data.Conduit.TQueue
 import           Data.Attoparsec.ByteString     ( Parser )
 import qualified Data.Attoparsec.ByteString    as A
@@ -208,17 +207,47 @@ pusPacketDecodeC
 pusPacketDecodeC interf = do
   st <- ask
   let missionSpecific = st ^. getMissionSpecific
+      pktStore        = HM.empty
+      segLen = cfgTMSegLength (st ^. getConfig)
 
-  conduitParserEither (pusPktParser missionSpecific interf) .| proc st
+  parseConduit pktStore (segmentedTMPacketParser missionSpecific segLen interf)
+    .| proc st
  where
   proc st = awaitForever $ \case
     Left err -> do
-      liftIO $ raiseEvent st $ EVAlarms
-        (EVIllegalPUSPacket (T.pack (errorMessage err)))
+      liftIO $ raiseEvent st $ EVAlarms (EVIllegalPUSPacket err)
+      throwIO RestartVCException
+    Right pkt -> do
+      yield pkt
       proc st
-    Right (_, tc') -> do
-      yield tc'
-      proc st
+
+
+parseConduit
+  :: (Monad m) => PktStore
+  -> (PktStore -> Parser (PktStore, Either Text (Maybe (ProtocolPacket PUSPacket))))
+  -> ConduitT ByteString (Either Text (ProtocolPacket PUSPacket)) m ()
+parseConduit pktStore p = do
+  res <- A.parseWith gen (p pktStore) B.empty
+  case res of
+    A.Done lo x -> do
+      unless (B.null lo) $ leftover lo
+      case x of
+        (_, Left err) -> do
+          yield (Left ("Error decoding TM packet: " <> err))
+          pure ()
+        (newPktStore, Right y) -> do
+          case y of
+            Nothing  -> parseConduit newPktStore p
+            Just pkt -> do
+              yield (Right pkt)
+              parseConduit newPktStore p
+    A.Fail _ _ err -> do
+      yield (Left ("Error decoding TM packet: " <> T.pack err))
+      pure ()
+    A.Partial _cont -> pure ()
+  where 
+    gen = await >>= maybe (pure B.empty) pure
+
 
 
 data PktKey = PktKey APID SSC
@@ -242,13 +271,21 @@ segmentedTMPacketParser
   -> TMSegmentLen
   -> ProtocolInterface
   -> PktStore
-  -> Parser (PktStore, Either Text (Maybe (ProtocolPacket PUSPacket)))
+  -> Parser
+       (PktStore, Either Text (Maybe (ProtocolPacket PUSPacket)))
 segmentedTMPacketParser missionSpecific segLen protIf pktStore = do
   hdr <- pusPktHdrParser
   let pktKey = PktKey apid ssc
       apid   = hdr ^. pusHdrTcApid
       ssc    = hdr ^. pusHdrTcSsc
   case hdr ^. pusHdrSeqFlags of
+    SegmentStandalone -> do
+      let len = hdr ^. pusHdrTcLength + 1
+      body <- A.take (fromIntegral len)
+      case A.parseOnly (pusPktParserPayload missionSpecific protIf hdr) body of
+        Left err ->
+          return (pktStore, Left ("Error on parsing TM packet:" <> T.pack err))
+        Right pusPkt -> return (pktStore, Right (Just pusPkt))
     SegmentFirst -> do
       body <- packetBody hdr segLen
       let newPkt = IntermediatePacket { impHeader  = hdr
@@ -261,56 +298,81 @@ segmentedTMPacketParser missionSpecific segLen protIf pktStore = do
     SegmentContinue -> do
       body <- packetBody hdr segLen
       case HM.lookup pktKey pktStore of
-        Nothing ->
-          return (pktStore, Left ("Error: no segment of TM packet found APID: "
+        Nothing -> return
+          ( pktStore
+          , Left
+            (  "Error: no segment of TM packet found APID: "
             <> textDisplay apid
             <> " SSC: "
-            <> textDisplay ssc))
+            <> textDisplay ssc
+            )
+          )
         Just pkt -> if checkGapsValid segLen pkt hdr
-            then do
-                let newPkt = pkt {
-                        impBody = impBody pkt `B.append` body
-                        , impLastLen = hdr ^. pusHdrTcLength
-                        , impSegFlag = SegmentContinue
-                        }
-                    newStore = HM.insert pktKey newPkt pktStore
-                return (newStore, Right Nothing) 
-            else do
-                let newStore = HM.delete pktKey pktStore
-                    msg = "Detected gap in segmented TM APID: " <> textDisplay apid <> " SSC: " <> textDisplay ssc
-                        <> ". Packet discarded."
-                return (newStore, Left msg)
+          then do
+            let newPkt = pkt { impBody    = impBody pkt `B.append` body
+                             , impLastLen = hdr ^. pusHdrTcLength
+                             , impSegFlag = SegmentContinue
+                             }
+                newStore = HM.insert pktKey newPkt pktStore
+            return (newStore, Right Nothing)
+          else do
+            let newStore = HM.delete pktKey pktStore
+                msg =
+                  "Detected gap in segmented TM APID: "
+                    <> textDisplay apid
+                    <> " SSC: "
+                    <> textDisplay ssc
+                    <> ". Packet discarded."
+            return (newStore, Left msg)
     SegmentLast -> do
       body <- packetBody hdr segLen
       case HM.lookup pktKey pktStore of
-        Nothing ->
-          return (pktStore, Left ("Error: no segment of TM packet found APID: "
+        Nothing -> return
+          ( pktStore
+          , Left
+            (  "Error: no segment of TM packet found APID: "
             <> textDisplay apid
             <> " SSC: "
-            <> textDisplay ssc))
+            <> textDisplay ssc
+            )
+          )
         Just pkt -> if checkGapsValid segLen pkt hdr
-            then do
-                let newStore = HM.delete pktKey pktStore
-                    newBody = impBody pkt `B.append` body
-                case A.parseOnly (pusPktParserPayload missionSpecific protIf (impHeader pkt)) newBody of
-                    Left err -> return (newStore, Left (T.pack err))
-                    Right pusPkt -> return (newStore, Right (Just pusPkt))
-            else do
-                let newStore = HM.delete pktKey pktStore
-                    msg = "Detected gap in segmented TM APID: " <> textDisplay apid <> " SSC: " <> textDisplay ssc
-                        <> ". Packet discarded."
-                return (newStore, Left msg)
+          then do
+            let newStore = HM.delete pktKey pktStore
+                newBody  = impBody pkt `B.append` body
+            case
+                A.parseOnly
+                  (pusPktParserPayload missionSpecific protIf (impHeader pkt))
+                  newBody
+              of
+                Left err ->
+                  return
+                    ( newStore
+                    , Left
+                      ("Error on parsing segmented TM packet: " <> T.pack err)
+                    )
+                Right pusPkt -> return (newStore, Right (Just pusPkt))
+          else do
+            let newStore = HM.delete pktKey pktStore
+                msg =
+                  "Detected gap in segmented TM APID: "
+                    <> textDisplay apid
+                    <> " SSC: "
+                    <> textDisplay ssc
+                    <> ". Packet discarded."
+            return (newStore, Left msg)
 
 
 checkGapsValid :: TMSegmentLen -> IntermediatePacket -> PUSHeader -> Bool
-checkGapsValid segLen imp hdr = 
-    case impSegFlag imp of 
-        SegmentFirst -> True 
-        SegmentContinue -> 
-            fromIntegral (impLastLen imp) - tmSegmentLength segLen == fromIntegral (hdr ^. pusHdrTcLength)
-        SegmentLast -> 
-            fromIntegral (impLastLen imp) - tmSegmentLength segLen == fromIntegral (hdr ^. pusHdrTcLength)
-        SegmentStandalone -> True
+checkGapsValid segLen imp hdr = case impSegFlag imp of
+  SegmentFirst -> True
+  SegmentContinue ->
+    fromIntegral (impLastLen imp) - tmSegmentLength segLen == fromIntegral
+      (hdr ^. pusHdrTcLength)
+  SegmentLast ->
+    fromIntegral (impLastLen imp) - tmSegmentLength segLen == fromIntegral
+      (hdr ^. pusHdrTcLength)
+  SegmentStandalone -> True
 
 
 
@@ -318,4 +380,4 @@ packetBody :: PUSHeader -> TMSegmentLen -> Parser ByteString
 packetBody hdr segLen = do
   let len       = hdr ^. pusHdrTcLength + 1
       lenToTake = min len (fromIntegral (tmSegmentLength segLen))
-  A.take (fromIntegral len)
+  A.take (fromIntegral lenToTake)
