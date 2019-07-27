@@ -35,6 +35,7 @@ module Data.PUS.PUSPacket
     , pusPktHdrBuilder
     , pusPktHdrParser
     , pusPktParser
+    , pusPktParserPayload
     )
 where
 
@@ -345,6 +346,40 @@ pusPktParser
     -> Parser (ProtocolPacket PUSPacket)
 pusPktParser missionSpecific comm = do
     hdr <- pusPktHdrParser
+    dfh <- if
+        | comm == IF_NCTRS -> if hdr ^. pusHdrDfhFlag
+            then case hdr ^. pusHdrType of
+                PUSTM -> dfhParser (missionSpecific ^. pmsTMDataFieldHeader)
+                PUSTC -> dfhParser (missionSpecific ^. pmsTCDataFieldHeader)
+            else return PUSEmptyHeader
+        | comm == IF_CNC -> if hdr ^. pusHdrDfhFlag
+            then dfhParser defaultCnCTCHeader
+            else return PUSEmptyHeader
+        | comm == IF_EDEN || comm == IF_EDEN_SCOE -> if hdr ^. pusHdrDfhFlag
+            then case hdr ^. pusHdrType of
+                PUSTM -> dfhParser (missionSpecific ^. pmsTMDataFieldHeader)
+                PUSTC -> dfhParser (missionSpecific ^. pmsTCDataFieldHeader)
+            else return PUSEmptyHeader
+        | otherwise -> fail $ "Unknown protocol type: " <> show comm
+    dat <- A.take (fromIntegral (hdr ^. pusHdrTcLength) + 1)
+
+    let pl = case comm of
+            IF_CNC -> case dfh of
+                PUSCnCTCHeader { _cncTcCrcFlags = val } -> if val == 1      -- the packet contains a CRC
+                    then B.take (B.length dat - crcLen) dat
+                    else dat
+                _ -> dat
+            _ -> dat
+
+    return (ProtocolPacket comm (PUSPacket hdr dfh Nothing pl))
+
+
+pusPktParserPayload
+    :: PUSMissionSpecific
+    -> ProtocolInterface
+    -> PUSHeader 
+    -> Parser (ProtocolPacket PUSPacket)
+pusPktParserPayload missionSpecific comm hdr = do
     dfh <- if
         | comm == IF_NCTRS -> if hdr ^. pusHdrDfhFlag
             then case hdr ^. pusHdrType of

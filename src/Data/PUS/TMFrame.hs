@@ -21,8 +21,8 @@ to check for correct sequences of TM frames.
     , TemplateHaskell
 #-}
 module Data.PUS.TMFrame
-    ( TMSegmentLen(..)
-    , TMFrameHeader
+    ( 
+    TMFrameHeader
     , TMFrame
     , tmFrameVersion
     , tmFrameScID
@@ -86,11 +86,6 @@ import           Data.PUS.Events
 import           Protocol.SizeOf
 
 
-data TMSegmentLen = TMSegment256
-    | TMSegment512
-    | TMSegment1024
-    | TMSegment65536
-      deriving (Show, Read, Eq, Ord, Enum, Generic)
 
 -- | The primary frame header, adheres to the PUS Standard
 data TMFrameHeader = TMFrameHeader {
@@ -121,11 +116,6 @@ tmFrameIdlePtr = 0x7FE
 tmFrameNoFirstHeader :: Word16
 tmFrameNoFirstHeader = 0x7FF
 
-tmSegmentLength :: TMSegmentLen -> Int
-tmSegmentLength TMSegment256   = 256
-tmSegmentLength TMSegment512   = 512
-tmSegmentLength TMSegment1024  = 1024
-tmSegmentLength TMSegment65536 = 65536
 
 -- | The frame itself. It consists of a header, the data part and optionally
 -- a CLCW (called OCF in TM terminology) and optionally a CRC value. Presence

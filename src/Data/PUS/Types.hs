@@ -59,6 +59,8 @@ module Data.PUS.Types
     , mkSourceID
     , sourceIDBuilder
     , sourceIDParser
+    , TMSegmentLen(..)
+    , tmSegmentLength
     )
 where
 
@@ -279,7 +281,10 @@ instance Serialise SSC
 instance FromJSON SSC
 instance ToJSON SSC where
     toEncoding = genericToEncoding defaultOptions
+instance Hashable SSC
 
+instance Display SSC where 
+    display (SSC x) = display x 
 
 newtype SourceID = SourceID { getSourceID :: Word8 }
     deriving (Eq, Ord, Show, Read, Generic)
@@ -302,3 +307,20 @@ sourceIDBuilder (SourceID x) = word8 x
 -- | A parser for the VCID
 sourceIDParser :: Parser SourceID
 sourceIDParser = SourceID <$> A.anyWord8
+
+
+
+-- | Used for specifying the segment length for TM frames
+data TMSegmentLen = TMSegment256
+    | TMSegment512
+    | TMSegment1024
+    | TMSegment65536
+      deriving (Show, Read, Eq, Ord, Enum, Generic)
+
+-- | returns the length of the segment in bytes
+tmSegmentLength :: TMSegmentLen -> Int
+tmSegmentLength TMSegment256   = 256
+tmSegmentLength TMSegment512   = 512
+tmSegmentLength TMSegment1024  = 1024
+tmSegmentLength TMSegment65536 = 65536
+      
