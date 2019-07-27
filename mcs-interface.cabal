@@ -80,6 +80,7 @@ library
     , stm-conduit
     , word8
     , serialise
+    , unliftio
 
   -- Directories containing source files.
   hs-source-dirs:      src

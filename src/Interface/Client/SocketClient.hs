@@ -13,14 +13,15 @@ where
 import RIO
 
 import Conduit 
+import UnliftIO.STM
 
 import Interface.Actions
 import Interface.Events
 
 
 
-callAction :: TBQueue Action -> Action -> m ()
-callAction = undefined
+callAction :: (MonadIO m) => TBQueue Action -> Action -> m ()
+callAction queue action = atomically $ writeTBQueue queue action
 
 
 eventProcessor :: ConduitT IfEvent Void m ()
