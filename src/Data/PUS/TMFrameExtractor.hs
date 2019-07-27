@@ -157,7 +157,7 @@ checkFrameCountC = do
 
   let go = awaitForever $ \val@(frame, _initial) -> do
         let !vcfc = frame ^. tmFrameHdr . tmFrameVCFC
-        lastFC <- atomically $ readTVar var
+        lastFC <- readTVarIO var
 
         if lastFC + 1 == vcfc
           then do
@@ -199,7 +199,7 @@ extractPktFromTMFramesC vcid = do
 -- | Conduit which takes 'ByteString' and extracts PUS Packets out of
 -- this stream. Raises the event 'EV_IllegalPUSPacket' in case a packet
 -- could not be parsed. The PUS Packets are wrapped in a 'ProtocolPacket'
--- which also indicates it's source interface
+-- which also indicates it's source interfacethrowIO RestartVCException
 pusPacketDecodeC
   :: (MonadIO m, MonadReader env m, HasGlobalState env)
   => ProtocolInterface
