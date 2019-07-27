@@ -71,6 +71,7 @@ library
         Protocol.SizeOf
         Protocol.NCTRS
         Protocol.EDEN
+        Protocol.CnC
         Protocol.ProtocolInterfaces
         Protocol.Switcher
 
