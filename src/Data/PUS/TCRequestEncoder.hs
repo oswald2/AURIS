@@ -6,7 +6,7 @@
     , TemplateHaskell
 #-}
 module Data.PUS.TCRequestEncoder
-    ( EncodedTCRequest
+    ( EncodedTCRequest(..)
     , encTcReqContent
     , encTcReqRqst
     , encodeTCRequest

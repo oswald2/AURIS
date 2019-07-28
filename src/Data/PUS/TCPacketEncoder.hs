@@ -7,7 +7,7 @@
     , NoImplicitPrelude
 #-}
 module Data.PUS.TCPacketEncoder
-  ( EncodedTCPacket
+  ( EncodedTCPacket(..)
   , encodeTCPacket
   , encTcPUSContent
   , encTcRequest

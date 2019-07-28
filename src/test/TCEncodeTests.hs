@@ -300,7 +300,7 @@ main = hspec $ do
           result = prependExtN 3 t1 t2
       result `shouldBe` expectedPrependN
 
-  describe "Simple group expansion" $ do
+  describe "Group expansion" $ do
     it "simple expansion" $ do
       let lst = expandGroups parameters
       lst `shouldBe` expectedParameters
