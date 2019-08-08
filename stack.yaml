@@ -17,7 +17,7 @@
 #
 # resolver: ./custom-snapshot.yaml
 # resolver: https://example.com/snapshots/2018-01-01.yaml
-resolver: lts-13.26
+resolver: lts-14.0
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -29,6 +29,8 @@ resolver: lts-13.26
 #   - auto-update
 #   - wai
 packages: 
+- esa-base
+- esa-mib
 - esa-space-protocols
 - manual-stack
 - mcs-interface
@@ -48,6 +50,7 @@ extra-deps:
 - attoparsec-time-1
 - bytestring-to-vector-0.3.0.1
 - fltkhs-0.8.0.2
+- hw-prim-bits-0.1.0.4
 
 # Override default flag values for local packages and extra-deps
 flags:
