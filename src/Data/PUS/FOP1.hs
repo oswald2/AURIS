@@ -25,7 +25,7 @@ import           ByteString.StrictBuilder
 
 import           Conduit
 import           Data.Conduit.TQueue
-import           Data.TimerWheel
+import qualified Data.TimerWheel               as TW
 import           Data.Fixed
 
 import           Control.Lens                   ( makeLenses
@@ -71,20 +71,20 @@ startFOP1
     -> TBQueue TCFrameTransport
     -> m ()
 startFOP1 vcid cop1Queue waitQueue outQueue = do
-    timerWheel <- liftIO $ new 5 0.1
+    timerWheel <- liftIO $ TW.create (TW.Config 5 0.1)
     let fopData =
             FOPData vcid waitQueue cop1Queue outQueue (startTimerSTM timerWheel)
     fop1Program fopData
     pure ()
 
 startTimerSTM
-    :: TimerWheel -> FOPState -> FOPData -> STM (FOPState, IO (IO Bool))
+    :: TW.TimerWheel -> FOPState -> FOPData -> STM (FOPState, IO (IO Bool))
 startTimerSTM timerWheel state fopData = do
     let timeOut = state ^. fopT1Initial
 -- initialise the suspend state back to 0
         newst   = state & fopSuspendState .~ Initial
 -- return the action to set the timer
-        act     = liftIO $ register timeOut (notifyTimeout fopData) timerWheel
+        act     = liftIO $ TW.register timerWheel (notifyTimeout fopData) timeOut
     pure (newst, act)
 
 
@@ -241,37 +241,36 @@ initADWithSetVR
     -> FOPData
     -> FOPState
     -> STM (FOPState, m ())
-initADWithSetVR nextState vr env vcid cancelTimer fopData fops =
-    do
-        if toBool (fops ^. fopBCout)
-            then do
-        -- intialize the state to AD
-                let newst = initializeState fops & fopVS .~ vr & fopNNR .~ vr
-                -- purge the wait queue
-                purged <- purgeWaitQueue fopData
-                -- encode the Unlock directive and send it downstream
-                newst1 <- sendBCFrameSTM (env ^. getConfig) fopData newst (SetVR vr)
-                -- determine a new state, where BC out is set to true since when
-                -- sendBCFrameSTM aborts, it will be retried
-                let newst2 = newst1 & fopBCout .~ toFlag Ready True
-            -- action execute after return from STM call
-                    action = do
-                        when purged $ liftIO $ raiseEvent env $ EVCOP1
-                            (EVADPurgedWaitQueue (fopData ^. fvcid))
-                        nextState fopData cancelTimer
-                pure (newst2, action)
-        -- in case BC out was not ready, just remain in the initial state
-            else reject "BC Out not ready for Init AD with Set V(R)"
-                        stateInactive
-                        env
-                        vcid
-                        cancelTimer
-                        fopData
-                        fops
+initADWithSetVR nextState vr env vcid cancelTimer fopData fops = do
+    if toBool (fops ^. fopBCout)
+        then do
+    -- intialize the state to AD
+            let newst = initializeState fops & fopVS .~ vr & fopNNR .~ vr
+            -- purge the wait queue
+            purged <- purgeWaitQueue fopData
+            -- encode the Unlock directive and send it downstream
+            newst1 <- sendBCFrameSTM (env ^. getConfig) fopData newst (SetVR vr)
+            -- determine a new state, where BC out is set to true since when
+            -- sendBCFrameSTM aborts, it will be retried
+            let newst2 = newst1 & fopBCout .~ toFlag Ready True
+-- action execute after return from STM call
+                action = do
+                    when purged $ liftIO $ raiseEvent env $ EVCOP1
+                        (EVADPurgedWaitQueue (fopData ^. fvcid))
+                    nextState fopData cancelTimer
+            pure (newst2, action)
+    -- in case BC out was not ready, just remain in the initial state
+        else reject "BC Out not ready for Init AD with Set V(R)"
+                    stateInactive
+                    env
+                    vcid
+                    cancelTimer
+                    fopData
+                    fops
 
 
 processResume
-    :: -- (MonadIO m, MonadReader env m, HasGlobalState env)
+    ::   -- (MonadIO m, MonadReader env m, HasGlobalState env)
        env
     -> VCID
     -> IO Bool
@@ -426,7 +425,8 @@ stateInactive
     -> IO Bool
     -> m ()
 stateInactive fopData cancelTimer = do
-    let stateActions = StateActions
+    let
+        stateActions = StateActions
             { e1  = \_ -> doNothing stateInactive
             , e2  = doNothing stateInactive
             , e3  = doNothing stateInactive
@@ -455,14 +455,17 @@ stateInactive fopData cancelTimer = do
             , e26 = reject "BC Out not ready for Init AD with Unlock"
                            stateInitialisingWithoutBC
             , e27 = \vr -> initADWithSetVR stateInitialisingWithBC vr
-            , e28 = \_ -> reject "BC Out not ready for Init AD with Set V(R)"
-                            stateInactive
+            , e28 = \_ -> reject
+                "BC Out not ready for Init AD with Set V(R)"
+                stateInactive
             , e29 = terminateAD Initial
             , e30 = reject "Resume AD SS=0 illegal in S6" stateInactive
             , e31 = resumeADState stateActive Active
-            , e32 = resumeADState stateRetransmitWithoutWait RetransmitWithoutWait
+            , e32 = resumeADState stateRetransmitWithoutWait
+                                  RetransmitWithoutWait
             , e33 = resumeADState stateRetransmitWithWait RetransmitWithWait
-            , e34 = resumeADState stateInitialisingWithoutBC InitialisingWithoutBC
+            , e34 = resumeADState stateInitialisingWithoutBC
+                                  InitialisingWithoutBC
             , e35 = (`setVS` stateInactive)
             , e36 = (`setFOPSlidingWindWidth` stateInitialisingWithoutBC)
             , e37 = (`setT1Initial` stateInitialisingWithoutBC)
@@ -481,16 +484,17 @@ sendBCFrameSTM cfg fopData fopState directive = do
         scid         = cfgSCID cfg
         encDirective = builderBytes $ directiveBuilder directive
 -- create a new BC transfer frame and fill out the values
-        frame        = TCTransferFrame { _tcFrameVersion = 0
-                                       , _tcFrameFlag    = FrameBC
-                                       , _tcFrameSCID    = scid
-                                       , _tcFrameVCID    = vcid
-                                       , _tcFrameLength  = 0
-                                       , _tcFrameSeq     = fopState ^. fopVS
-                                       , _tcFrameData    = encDirective
-                                       }
-        trans = TCFrameTransport frame rqst
-        rqst  = TCRequest 0 IF_NCTRS scid vcid (TCDir directive)
+        frame        = TCTransferFrame
+            { _tcFrameVersion = 0
+            , _tcFrameFlag    = FrameBC
+            , _tcFrameSCID    = scid
+            , _tcFrameVCID    = vcid
+            , _tcFrameLength  = 0
+            , _tcFrameSeq     = fopState ^. fopVS
+            , _tcFrameData    = encDirective
+            }
+        trans  = TCFrameTransport frame rqst
+        rqst   = TCRequest 0 IF_NCTRS scid vcid (TCDir directive)
 
 -- create a new state which has V(S) incremented
         !newst = fopState & fopVS +~ 1 & addToSentQueue trans False
@@ -501,22 +505,24 @@ sendBCFrameSTM cfg fopData fopState directive = do
     pure newst
 
 
-sendInitBCFrameSTM :: Config -> FOPData -> FOPState -> TCDirective -> STM FOPState
+sendInitBCFrameSTM
+    :: Config -> FOPData -> FOPState -> TCDirective -> STM FOPState
 sendInitBCFrameSTM cfg fopData fopState directive = do
     let vcid         = fopData ^. fvcid
         scid         = cfgSCID cfg
         encDirective = builderBytes $ directiveBuilder directive
 -- create a new BC transfer frame and fill out the values
-        frame        = TCTransferFrame { _tcFrameVersion = 0
-                                        , _tcFrameFlag    = FrameBC
-                                        , _tcFrameSCID    = scid
-                                        , _tcFrameVCID    = vcid
-                                        , _tcFrameLength  = 0
-                                        , _tcFrameSeq     = fopState ^. fopVS
-                                        , _tcFrameData    = encDirective
-                                        }
-        trans = TCFrameTransport frame rqst
-        rqst  = TCRequest 0 IF_NCTRS scid vcid (TCDir directive)
+        frame        = TCTransferFrame
+            { _tcFrameVersion = 0
+            , _tcFrameFlag    = FrameBC
+            , _tcFrameSCID    = scid
+            , _tcFrameVCID    = vcid
+            , _tcFrameLength  = 0
+            , _tcFrameSeq     = fopState ^. fopVS
+            , _tcFrameData    = encDirective
+            }
+        trans  = TCFrameTransport frame rqst
+        rqst   = TCRequest 0 IF_NCTRS scid vcid (TCDir directive)
 
 -- create a new state which has V(S) incremented
         !newst = fopState & fopVS +~ 1 & addToSentQueue trans False
@@ -537,10 +543,9 @@ addToSentQueue frame retrans state =
 
 
 removeFromSentQueue :: Word8 -> FOPState -> FOPState
-removeFromSentQueue nr fops =
-    fops & over fopSentQueue (S.filter (isNotNR nr))
-    where
-        isNotNR nr' (trans, _retrans) = trans ^. tcfTransFrame . tcFrameSeq /= nr'
+removeFromSentQueue nr fops = fops & over fopSentQueue (S.filter (isNotNR nr))
+  where
+    isNotNR nr' (trans, _retrans) = trans ^. tcfTransFrame . tcFrameSeq /= nr'
 
 
 -- | send a BC Frame to the out channel (to the interface for encoding and sending).
@@ -564,14 +569,15 @@ _sendBCFrame fopData directive = do
         st <- readTVar fopState
 
         -- create a new BC transfer frame and fill out the values
-        let frame = TCTransferFrame { _tcFrameVersion = 0
-                                    , _tcFrameFlag    = FrameBC
-                                    , _tcFrameSCID    = scid
-                                    , _tcFrameVCID    = vcid
-                                    , _tcFrameLength  = 0
-                                    , _tcFrameSeq     = st ^. fopVS
-                                    , _tcFrameData    = encDirective
-                                    }
+        let frame = TCTransferFrame
+                { _tcFrameVersion = 0
+                , _tcFrameFlag    = FrameBC
+                , _tcFrameSCID    = scid
+                , _tcFrameVCID    = vcid
+                , _tcFrameLength  = 0
+                , _tcFrameSeq     = st ^. fopVS
+                , _tcFrameData    = encDirective
+                }
             trans = TCFrameTransport frame rqst
             rqst  = TCRequest 0 IF_NCTRS scid vcid (TCDir directive)
 
@@ -665,7 +671,7 @@ data StateActions env m = StateActions {
 
 
 doNothing
-    :: --(MonadIO m, MonadReader env m, HasGlobalState env) =>
+    ::   --(MonadIO m, MonadReader env m, HasGlobalState env) =>
        (FOPData -> IO Bool -> m ()) -> Signature env m
 doNothing newState _env _vcid cancelTimer fopData fops =
     pure (fops, newState fopData cancelTimer)
@@ -696,18 +702,17 @@ stateInitialisingWithoutBC fopData cancelTimer = do
 
         stateActions = StateActions
             { e1  = \_ _ _ cancelTimer' fopData' fops -> do
-                        let action = do
-                                void $ liftIO cancelTimer'
-                                stateActive fopData' cancelTimer'
-                        pure (fops, action)
+                let action = do
+                        void $ liftIO cancelTimer'
+                        stateActive fopData' cancelTimer'
+                pure (fops, action)
             , e2  = doNothing stateInitialisingWithoutBC
             , e3  = alertWaitAction
-            , e4  =
-                alertSTM
-                    (EVADAlert
-                        "Received RETRANSMIT while in state Initialising Without BC"
-                    )
-                    stateInactive
+            , e4  = alertSTM
+                (EVADAlert
+                    "Received RETRANSMIT while in state Initialising Without BC"
+                )
+                stateInactive
             , e5  = doNothing stateInitialisingWithoutBC
             , e6  = alertNrNnrNotEqual
             , e7  = alertWaitAction
@@ -721,35 +726,35 @@ stateInitialisingWithoutBC fopData cancelTimer = do
             , e14 = alertSTM (EVLockout vcid InitialisingWithoutBC)
                              stateInactive
             , e15 = \err env' vcid' cancelTimer' fopData' fops -> alertSTM
-                        (EVADAlert err)
-                        stateInactive
-                        env'
-                        vcid'
-                        cancelTimer'
-                        fopData'
-                        fops
+                (EVADAlert err)
+                stateInactive
+                env'
+                vcid'
+                cancelTimer'
+                fopData'
+                fops
             , e16 = \transC transL st env' vcid' cancelTimer' fopData' fops ->
-                        alertSTM (EVADTransLimit vcid transC transL st)
-                                 stateInactive
-                                 env'
-                                 vcid'
-                                 cancelTimer'
-                                 fopData'
-                                 fops
+                alertSTM (EVADTransLimit vcid transC transL st)
+                         stateInactive
+                         env'
+                         vcid'
+                         cancelTimer'
+                         fopData'
+                         fops
             , e17 = \transC transL st env' vcid' cancelTimer' fopData' fops ->
-                        alertSTM (EVADTransLimit vcid transC transL st)
-                                 stateInactive
-                                 env'
-                                 vcid'
-                                 cancelTimer'
-                                 fopData'
-                                 fops
+                alertSTM (EVADTransLimit vcid transC transL st)
+                         stateInactive
+                         env'
+                         vcid'
+                         cancelTimer'
+                         fopData'
+                         fops
             , e18 = \env' _vcid' cancelTimer' fopData' fops -> suspendAD
-                        env'
-                        cancelTimer'
-                        fopData'
-                        fops
-                        InitialisingWithoutBC
+                env'
+                cancelTimer'
+                fopData'
+                fops
+                InitialisingWithoutBC
             , e19 = doNothing stateInitialisingWithoutBC
             , e20 = doNothing stateInitialisingWithoutBC
             , e21 = doNothing stateInitialisingWithoutBC
@@ -772,8 +777,8 @@ stateInitialisingWithoutBC fopData cancelTimer = do
             , e32 = reject "Resume AD illegal in S4" stateInitialisingWithoutBC
             , e33 = reject "Resume AD illegal in S4" stateInitialisingWithoutBC
             , e34 = reject "Resume AD illegal in S4" stateInitialisingWithoutBC
-            , e35 =
-                \_ -> reject "Set V(S) illegal in S4" stateInitialisingWithoutBC
+            , e35 = \_ ->
+                reject "Set V(S) illegal in S4" stateInitialisingWithoutBC
             , e36 = (`setFOPSlidingWindWidth` stateInitialisingWithoutBC)
             , e37 = (`setT1Initial` stateInitialisingWithoutBC)
             , e38 = (`setTransmissionLimit` stateInitialisingWithoutBC)
@@ -906,7 +911,7 @@ checkReportVal env vcid cancelTimer fopData fops stateActions clcw = do
             (fops, stateInitialisingWithoutBC fopData cancelTimer) -- not applicable in this state
 
 checkRetransmit
-    ::
+    :: 
     -- :: (MonadIO m, MonadReader env m, HasGlobalState env)
        env
     -> VCID
@@ -923,7 +928,7 @@ checkRetransmit env vcid cancelTimer fopData fops stateActions clcw =
         else checkWait env vcid cancelTimer fopData fops stateActions clcw
 
 checkWait
-    :: -- (MonadIO m, MonadReader env m, HasGlobalState env) =>
+    ::   -- (MonadIO m, MonadReader env m, HasGlobalState env) =>
        env
     -> VCID
     -> IO Bool
@@ -959,7 +964,7 @@ alertWaitAction env vcid = alertSTM
 
 
 checkRetransmitNRVS
-    ::  -- (MonadIO m, MonadReader env m, HasGlobalState env) =>
+    ::    -- (MonadIO m, MonadReader env m, HasGlobalState env) =>
        env
     -> VCID
     -> IO Bool
@@ -986,7 +991,7 @@ checkRetransmitNRVS env vcid cancelTimer fopData fops stateActions clcw = do
 
 
 checkWaitNRVS
-    ::  --(MonadIO m, MonadReader env m, HasGlobalState env)
+    ::    --(MonadIO m, MonadReader env m, HasGlobalState env)
        env
     -> VCID
     -> IO Bool
@@ -1159,13 +1164,7 @@ setVS
     -> STM (FOPState, m ())
 setVS val nextState env vcid cancelTimer fopData fops = do
     let newst = fops & fopVS .~ val & fopNNR .~ val
-    alertSTM (EVSetVSSet vcid val)
-            nextState
-            env
-            vcid
-            cancelTimer
-            fopData
-            newst
+    alertSTM (EVSetVSSet vcid val) nextState env vcid cancelTimer fopData newst
 
 
 
@@ -1176,15 +1175,15 @@ stateInitialisingWithBC
     -> IO Bool
     -> m ()
 stateInitialisingWithBC fopData cancelTimer = do
-    let !vcid = fopData ^. fvcid
+    let !vcid        = fopData ^. fvcid
 
         stateActions = StateActions
             { e1  = \clcw _env' _vcid' cancelTimer' fopData' fops -> do
-                        let action = do
-                                void $ liftIO cancelTimer'
-                                stateActive fopData' cancelTimer'
-                            newst = removeFromSentQueue (clcw ^. clcwReportVal) fops
-                        pure (newst, action)
+                let action = do
+                        void $ liftIO cancelTimer'
+                        stateActive fopData' cancelTimer'
+                    newst = removeFromSentQueue (clcw ^. clcwReportVal) fops
+                pure (newst, action)
             , e2  = doNothing stateInitialisingWithBC
             , e3  = alertWaitAction
             , e4  = doNothing stateInitialisingWithBC
@@ -1199,35 +1198,35 @@ stateInitialisingWithBC fopData cancelTimer = do
             , e13 = doNothing stateInitialisingWithBC
             , e14 = doNothing stateInitialisingWithBC
             , e15 = \err env' vcid' cancelTimer' fopData' fops -> alertSTM
-                        (EVADAlert err)
-                        stateInactive
-                        env'
-                        vcid'
-                        cancelTimer'
-                        fopData'
-                        fops
+                (EVADAlert err)
+                stateInactive
+                env'
+                vcid'
+                cancelTimer'
+                fopData'
+                fops
             , e16 = \transC transL st env' vcid' cancelTimer' fopData' fops ->
-                        alertSTM (EVADTransLimit vcid transC transL st)
-                                 stateInactive
-                                 env'
-                                 vcid'
-                                 cancelTimer'
-                                 fopData'
-                                 fops
+                alertSTM (EVADTransLimit vcid transC transL st)
+                         stateInactive
+                         env'
+                         vcid'
+                         cancelTimer'
+                         fopData'
+                         fops
             , e17 = \transC transL st env' vcid' cancelTimer' fopData' fops ->
-                        alertSTM (EVADTransLimit vcid transC transL st)
-                                 stateInactive
-                                 env'
-                                 vcid'
-                                 cancelTimer'
-                                 fopData'
-                                 fops
+                alertSTM (EVADTransLimit vcid transC transL st)
+                         stateInactive
+                         env'
+                         vcid'
+                         cancelTimer'
+                         fopData'
+                         fops
             , e18 = \env' _vcid' cancelTimer' fopData' fops -> suspendAD
-                        env'
-                        cancelTimer'
-                        fopData'
-                        fops
-                        InitialisingWithoutBC
+                env'
+                cancelTimer'
+                fopData'
+                fops
+                InitialisingWithoutBC
             , e19 = doNothing stateInitialisingWithoutBC
             , e20 = doNothing stateInitialisingWithoutBC
             , e21 = doNothing stateInitialisingWithoutBC
@@ -1250,8 +1249,8 @@ stateInitialisingWithBC fopData cancelTimer = do
             , e32 = reject "Resume AD illegal in S4" stateInitialisingWithoutBC
             , e33 = reject "Resume AD illegal in S4" stateInitialisingWithoutBC
             , e34 = reject "Resume AD illegal in S4" stateInitialisingWithoutBC
-            , e35 =
-                \_ -> reject "Set V(S) illegal in S4" stateInitialisingWithoutBC
+            , e35 = \_ ->
+                reject "Set V(S) illegal in S4" stateInitialisingWithoutBC
             , e36 = (`setFOPSlidingWindWidth` stateInitialisingWithoutBC)
             , e37 = (`setT1Initial` stateInitialisingWithoutBC)
             , e38 = (`setTransmissionLimit` stateInitialisingWithoutBC)
@@ -1344,7 +1343,7 @@ cop1Conduit chan segBuffer outQueue = do
                                 , _tcFrameSeq     = 0
                                 , _tcFrameData    = seg ^. encSegSegment
                                 }
-                            trans =
-                                TCFrameTransport frame (seg ^. encSegRequest)
+                            trans = TCFrameTransport frame
+                                                     (seg ^. encSegRequest)
                         atomically $ writeTBQueue outQueue trans
                         proc cfg
