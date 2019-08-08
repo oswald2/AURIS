@@ -8,12 +8,16 @@ module Main where
 
 import           RIO
 
+import qualified Data.Text.IO                  as T
 import           Data.PUS.Parameter
 --import           Data.PUS.Types
 import           Data.PUS.Value
 import qualified Data.SortedList               as SL
+
 import           General.Types
---import           Protocol.SizeOf
+import           General.Hexdump
+
+import           Protocol.SizeOf
 
 import           System.IO
 
@@ -32,14 +36,14 @@ parameters = List
 
 expectedParameters :: [Parameter]
 expectedParameters =
-  [ Parameter { _paramName = "P1", _paramValue = ValInt16 BiE 43707 }
-  , Parameter { _paramName = "N", _paramValue = ValInt8 3 }
-  , Parameter { _paramName = "G1", _paramValue = ValUInt3 1 }
-  , Parameter { _paramName = "G2", _paramValue = ValDouble BiE 3.14 }
-  , Parameter { _paramName = "G1", _paramValue = ValUInt3 1 }
-  , Parameter { _paramName = "G2", _paramValue = ValDouble BiE 3.14 }
-  , Parameter { _paramName = "G1", _paramValue = ValUInt3 1 }
-  , Parameter { _paramName = "G2", _paramValue = ValDouble BiE 3.14 }
+  [ Parameter {_paramName = "P1", _paramValue = ValInt16 BiE 43707}
+  , Parameter {_paramName = "N", _paramValue = ValInt8 3}
+  , Parameter {_paramName = "G1", _paramValue = ValUInt3 1}
+  , Parameter {_paramName = "G2", _paramValue = ValDouble BiE 3.14}
+  , Parameter {_paramName = "G1", _paramValue = ValUInt3 1}
+  , Parameter {_paramName = "G2", _paramValue = ValDouble BiE 3.14}
+  , Parameter {_paramName = "G1", _paramValue = ValUInt3 1}
+  , Parameter {_paramName = "G2", _paramValue = ValDouble BiE 3.14}
   ]
 
 
@@ -62,36 +66,36 @@ parameters2 = List
 
 expectedParameters2 :: [Parameter]
 expectedParameters2 =
-  [ Parameter { _paramName = "P1", _paramValue = ValInt16 BiE 43707 }
-  , Parameter { _paramName = "N1", _paramValue = ValInt8 3 }
-  , Parameter { _paramName = "G1", _paramValue = ValUInt3 1 }
-  , Parameter { _paramName = "G2", _paramValue = ValDouble BiE 3.14 }
-  , Parameter { _paramName = "N2", _paramValue = ValInt8 2 }
-  , Parameter { _paramName = "NG1", _paramValue = ValInt8 10 }
-  , Parameter { _paramName = "NG2", _paramValue = ValInt16 BiE 45054 }
-  , Parameter { _paramName = "NG1", _paramValue = ValInt8 10 }
-  , Parameter { _paramName = "NG2", _paramValue = ValInt16 BiE 45054 }
-  , Parameter { _paramName = "G1", _paramValue = ValUInt3 1 }
-  , Parameter { _paramName = "G2", _paramValue = ValDouble BiE 3.14 }
-  , Parameter { _paramName = "N2", _paramValue = ValInt8 2 }
-  , Parameter { _paramName = "NG1", _paramValue = ValInt8 10 }
-  , Parameter { _paramName = "NG2", _paramValue = ValInt16 BiE 45054 }
-  , Parameter { _paramName = "G1", _paramValue = ValUInt3 1 }
-  , Parameter { _paramName = "G2", _paramValue = ValDouble BiE 3.14 }
-  , Parameter { _paramName = "N2", _paramValue = ValInt8 2 }
-  , Parameter { _paramName = "NG1", _paramValue = ValInt8 10 }
-  , Parameter { _paramName = "NG2", _paramValue = ValInt16 BiE 45054 }
-  , Parameter { _paramName = "NG1", _paramValue = ValInt8 10 }
-  , Parameter { _paramName = "NG2", _paramValue = ValInt16 BiE 45054 }
-  , Parameter { _paramName = "NG1", _paramValue = ValInt8 10 }
-  , Parameter { _paramName = "NG2", _paramValue = ValInt16 BiE 45054 }
-  , Parameter { _paramName = "G1", _paramValue = ValUInt3 1 }
-  , Parameter { _paramName = "G2", _paramValue = ValDouble BiE 3.14 }
-  , Parameter { _paramName = "N2", _paramValue = ValInt8 2 }
-  , Parameter { _paramName = "NG1", _paramValue = ValInt8 10 }
-  , Parameter { _paramName = "NG2", _paramValue = ValInt16 BiE 45054 }
-  , Parameter { _paramName = "NG1", _paramValue = ValInt8 10 }
-  , Parameter { _paramName = "NG2", _paramValue = ValInt16 BiE 45054 }
+  [ Parameter {_paramName = "P1", _paramValue = ValInt16 BiE 43707}
+  , Parameter {_paramName = "N1", _paramValue = ValInt8 3}
+  , Parameter {_paramName = "G1", _paramValue = ValUInt3 1}
+  , Parameter {_paramName = "G2", _paramValue = ValDouble BiE 3.14}
+  , Parameter {_paramName = "N2", _paramValue = ValInt8 2}
+  , Parameter {_paramName = "NG1", _paramValue = ValInt8 10}
+  , Parameter {_paramName = "NG2", _paramValue = ValInt16 BiE 45054}
+  , Parameter {_paramName = "NG1", _paramValue = ValInt8 10}
+  , Parameter {_paramName = "NG2", _paramValue = ValInt16 BiE 45054}
+  , Parameter {_paramName = "G1", _paramValue = ValUInt3 1}
+  , Parameter {_paramName = "G2", _paramValue = ValDouble BiE 3.14}
+  , Parameter {_paramName = "N2", _paramValue = ValInt8 2}
+  , Parameter {_paramName = "NG1", _paramValue = ValInt8 10}
+  , Parameter {_paramName = "NG2", _paramValue = ValInt16 BiE 45054}
+  , Parameter {_paramName = "G1", _paramValue = ValUInt3 1}
+  , Parameter {_paramName = "G2", _paramValue = ValDouble BiE 3.14}
+  , Parameter {_paramName = "N2", _paramValue = ValInt8 2}
+  , Parameter {_paramName = "NG1", _paramValue = ValInt8 10}
+  , Parameter {_paramName = "NG2", _paramValue = ValInt16 BiE 45054}
+  , Parameter {_paramName = "NG1", _paramValue = ValInt8 10}
+  , Parameter {_paramName = "NG2", _paramValue = ValInt16 BiE 45054}
+  , Parameter {_paramName = "NG1", _paramValue = ValInt8 10}
+  , Parameter {_paramName = "NG2", _paramValue = ValInt16 BiE 45054}
+  , Parameter {_paramName = "G1", _paramValue = ValUInt3 1}
+  , Parameter {_paramName = "G2", _paramValue = ValDouble BiE 3.14}
+  , Parameter {_paramName = "N2", _paramValue = ValInt8 2}
+  , Parameter {_paramName = "NG1", _paramValue = ValInt8 10}
+  , Parameter {_paramName = "NG2", _paramValue = ValInt16 BiE 45054}
+  , Parameter {_paramName = "NG1", _paramValue = ValInt8 10}
+  , Parameter {_paramName = "NG2", _paramValue = ValInt16 BiE 45054}
   ]
 
 
@@ -113,38 +117,46 @@ extParameters = ExtList
 
 extParametersExpected :: [ExtParameter]
 extParametersExpected =
-  [ ExtParameter { _extParName  = "P1"
-                 , _extParValue = ValInt16 BiE 43707
-                 , _extParOff   = BitOffset 0
-                 }
-  , ExtParameter { _extParName  = "N"
-                 , _extParValue = ValInt8 3
-                 , _extParOff   = BitOffset 16
-                 }
-  , ExtParameter { _extParName  = "G1"
-                 , _extParValue = ValUInt3 1
-                 , _extParOff   = BitOffset (3 * 8)
-                 }
-  , ExtParameter { _extParName  = "G2"
-                 , _extParValue = ValDouble BiE 3.14
-                 , _extParOff   = BitOffset (3 * 8 + 3)
-                 }
-  , ExtParameter { _extParName  = "G1"
-                 , _extParValue = ValUInt3 1
-                 , _extParOff   = BitOffset (8 * 8 + 3)
-                 }
-  , ExtParameter { _extParName  = "G2"
-                 , _extParValue = ValDouble BiE 3.14
-                 , _extParOff   = BitOffset (8 * 8 + 6)
-                 }
-  , ExtParameter { _extParName  = "G1"
-                 , _extParValue = ValUInt3 1
-                 , _extParOff   = BitOffset (17 * 8 + 1)
-                 }
-  , ExtParameter { _extParName  = "G2"
-                 , _extParValue = ValDouble BiE 3.14
-                 , _extParOff   = BitOffset (17 * 8 + 4)
-                 }
+  [ ExtParameter
+    { _extParName  = "P1"
+    , _extParValue = ValInt16 BiE 43707
+    , _extParOff   = BitOffset 0
+    }
+  , ExtParameter
+    { _extParName  = "N"
+    , _extParValue = ValInt8 3
+    , _extParOff   = BitOffset 16
+    }
+  , ExtParameter
+    { _extParName  = "G1"
+    , _extParValue = ValUInt3 1
+    , _extParOff   = BitOffset (3 * 8)
+    }
+  , ExtParameter
+    { _extParName  = "G2"
+    , _extParValue = ValDouble BiE 3.14
+    , _extParOff   = BitOffset (3 * 8 + 3)
+    }
+  , ExtParameter
+    { _extParName  = "G1"
+    , _extParValue = ValUInt3 1
+    , _extParOff   = BitOffset (8 * 8 + 3)
+    }
+  , ExtParameter
+    { _extParName  = "G2"
+    , _extParValue = ValDouble BiE 3.14
+    , _extParOff   = BitOffset (8 * 8 + 6)
+    }
+  , ExtParameter
+    { _extParName  = "G1"
+    , _extParValue = ValUInt3 1
+    , _extParOff   = BitOffset (17 * 8 + 1)
+    }
+  , ExtParameter
+    { _extParName  = "G2"
+    , _extParValue = ValDouble BiE 3.14
+    , _extParOff   = BitOffset (17 * 8 + 4)
+    }
   ]
 
 t1 :: ExtParameterList
@@ -165,58 +177,68 @@ t2 = ExtList
 expectedAppendN :: ExtParameterList
 expectedAppendN = ExtList
   (SL.toSortedList
-    [ ExtParameter { _extParName  = "P1"
-                   , _extParValue = ValInt8 (-85)
-                   , _extParOff   = BitOffset 0
-                   }
+    [ ExtParameter
+        { _extParName  = "P1"
+        , _extParValue = ValInt8 (-85)
+        , _extParOff   = BitOffset 0
+        }
     ]
   )
   (ExtList
     (SL.toSortedList
-      [ ExtParameter { _extParName  = "G1"
-                     , _extParValue = ValUInt3 1
-                     , _extParOff   = BitOffset 8
-                     }
-      , ExtParameter { _extParName  = "G2"
-                     , _extParValue = ValUInt3 2
-                     , _extParOff   = BitOffset (8 + 3)
-                     }
-      , ExtParameter { _extParName  = "G3"
-                     , _extParValue = ValInt16 BiE 57005
-                     , _extParOff   = BitOffset (8 + 6)
-                     }
+      [ ExtParameter
+        { _extParName  = "G1"
+        , _extParValue = ValUInt3 1
+        , _extParOff   = BitOffset 8
+        }
+      , ExtParameter
+        { _extParName  = "G2"
+        , _extParValue = ValUInt3 2
+        , _extParOff   = BitOffset (8 + 3)
+        }
+      , ExtParameter
+        { _extParName  = "G3"
+        , _extParValue = ValInt16 BiE 57005
+        , _extParOff   = BitOffset (8 + 6)
+        }
       ]
     )
     (ExtList
       (SL.toSortedList
-        [ ExtParameter { _extParName  = "G1"
-                       , _extParValue = ValUInt3 1
-                       , _extParOff   = BitOffset (3 * 8 + 6)
-                       }
-        , ExtParameter { _extParName  = "G2"
-                       , _extParValue = ValUInt3 2
-                       , _extParOff   = BitOffset (4 * 8 + 1)
-                       }
-        , ExtParameter { _extParName  = "G3"
-                       , _extParValue = ValInt16 BiE 57005
-                       , _extParOff   = BitOffset (4 * 8 + 4)
-                       }
+        [ ExtParameter
+          { _extParName  = "G1"
+          , _extParValue = ValUInt3 1
+          , _extParOff   = BitOffset (3 * 8 + 6)
+          }
+        , ExtParameter
+          { _extParName  = "G2"
+          , _extParValue = ValUInt3 2
+          , _extParOff   = BitOffset (4 * 8 + 1)
+          }
+        , ExtParameter
+          { _extParName  = "G3"
+          , _extParValue = ValInt16 BiE 57005
+          , _extParOff   = BitOffset (4 * 8 + 4)
+          }
         ]
       )
       (ExtList
         (SL.toSortedList
-          [ ExtParameter { _extParName  = "G1"
-                         , _extParValue = ValUInt3 1
-                         , _extParOff   = BitOffset (6 * 8 + 4)
-                         }
-          , ExtParameter { _extParName  = "G2"
-                         , _extParValue = ValUInt3 2
-                         , _extParOff   = BitOffset (6 * 8 + 7)
-                         }
-          , ExtParameter { _extParName  = "G3"
-                         , _extParValue = ValInt16 BiE 57005
-                         , _extParOff   = BitOffset (7 * 8 + 2)
-                         }
+          [ ExtParameter
+            { _extParName  = "G1"
+            , _extParValue = ValUInt3 1
+            , _extParOff   = BitOffset (6 * 8 + 4)
+            }
+          , ExtParameter
+            { _extParName  = "G2"
+            , _extParValue = ValUInt3 2
+            , _extParOff   = BitOffset (6 * 8 + 7)
+            }
+          , ExtParameter
+            { _extParName  = "G3"
+            , _extParValue = ValInt16 BiE 57005
+            , _extParOff   = BitOffset (7 * 8 + 2)
+            }
           ]
         )
         ExtEmpty
@@ -228,59 +250,71 @@ expectedAppendN = ExtList
 expectedPrependN :: ExtParameterList
 expectedPrependN = ExtList
   (SL.toSortedList
-    [ ExtParameter { _extParName  = "G1"
-                   , _extParValue = ValUInt3 1
-                   , _extParOff   = BitOffset 8
-                   }
-    , ExtParameter { _extParName  = "G2"
-                   , _extParValue = ValUInt3 2
-                   , _extParOff   = BitOffset (8 + 3)
-                   }
-    , ExtParameter { _extParName  = "G3"
-                   , _extParValue = ValInt16 BiE 57005
-                   , _extParOff   = BitOffset (8 + 6)
-                   }
+    [ ExtParameter
+      { _extParName  = "G1"
+      , _extParValue = ValUInt3 1
+      , _extParOff   = BitOffset 8
+      }
+    , ExtParameter
+      { _extParName  = "G2"
+      , _extParValue = ValUInt3 2
+      , _extParOff   = BitOffset (8 + 3)
+      }
+    , ExtParameter
+      { _extParName  = "G3"
+      , _extParValue = ValInt16 BiE 57005
+      , _extParOff   = BitOffset (8 + 6)
+      }
     ]
   )
   (ExtList
     (SL.toSortedList
-      [ ExtParameter { _extParName  = "G1"
-                     , _extParValue = ValUInt3 1
-                     , _extParOff   = BitOffset (3 * 8 + 6)
-                     }
-      , ExtParameter { _extParName  = "G2"
-                     , _extParValue = ValUInt3 2
-                     , _extParOff   = BitOffset (4 * 8 + 1)
-                     }
-      , ExtParameter { _extParName  = "G3"
-                     , _extParValue = ValInt16 BiE 57005
-                     , _extParOff   = BitOffset (4 * 8 + 4)
-                     }
+      [ ExtParameter
+        { _extParName  = "G1"
+        , _extParValue = ValUInt3 1
+        , _extParOff   = BitOffset (3 * 8 + 6)
+        }
+      , ExtParameter
+        { _extParName  = "G2"
+        , _extParValue = ValUInt3 2
+        , _extParOff   = BitOffset (4 * 8 + 1)
+        }
+      , ExtParameter
+        { _extParName  = "G3"
+        , _extParValue = ValInt16 BiE 57005
+        , _extParOff   = BitOffset (4 * 8 + 4)
+        }
       ]
     )
     (ExtList
       (SL.toSortedList
-        [ ExtParameter { _extParName  = "G1"
-                       , _extParValue = ValUInt3 1
-                       , _extParOff   = BitOffset (6 * 8 + 4)
-                       }
-        , ExtParameter { _extParName  = "G2"
-                       , _extParValue = ValUInt3 2
-                       , _extParOff   = BitOffset (6 * 8 + 7)
-                       }
-        , ExtParameter { _extParName  = "G3"
-                       , _extParValue = ValInt16 BiE 57005
-                       , _extParOff   = BitOffset (7 * 8 + 2)
-                       }
+        [ ExtParameter
+          { _extParName  = "G1"
+          , _extParValue = ValUInt3 1
+          , _extParOff   = BitOffset (6 * 8 + 4)
+          }
+        , ExtParameter
+          { _extParName  = "G2"
+          , _extParValue = ValUInt3 2
+          , _extParOff   = BitOffset (6 * 8 + 7)
+          }
+        , ExtParameter
+          { _extParName  = "G3"
+          , _extParValue = ValInt16 BiE 57005
+          , _extParOff   = BitOffset (7 * 8 + 2)
+          }
         ]
       )
       (ExtList
         (SL.toSortedList
-          [ ExtParameter { _extParName  = "P1"
-                         , _extParValue = ValInt8 (-85)
-                         , _extParOff   = BitOffset 66
-                         }
-          ]) ExtEmpty
+          [ ExtParameter
+              { _extParName  = "P1"
+              , _extParValue = ValInt8 (-85)
+              , _extParOff   = BitOffset 66
+              }
+          ]
+        )
+        ExtEmpty
       )
     )
   )
@@ -305,8 +339,16 @@ main = hspec $ do
       let lst = expandGroups parameters
       lst `shouldBe` expectedParameters
 
+      let size = bitSize lst
+      putStrLn $ "Size: " ++ show size ++ " in bytes: " ++ show
+        (bitSizeToBytes (nextByteAligned size))
+      let output = encodeParameters (toSizedParamList parameters)
+      T.putStrLn $ "encoded:\n" <> hexdumpBS output
+
     it "nested expansion" $ do
       let lst = expandGroups parameters2
       lst `shouldBe` expectedParameters2
+
+
 
   return ()

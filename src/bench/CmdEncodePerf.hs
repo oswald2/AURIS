@@ -46,14 +46,13 @@ rqst1 :: TCRequest
 rqst1 = TCRequest 0 IF_NCTRS (mkSCID 533) (mkVCID 1) (TCCommand 0 BD)
 
 tcPacket :: Int -> TCPacket
-tcPacket n =
-  TCPacket (APID 256) (mkPUSType 2) (mkPUSSubType 10) (mkSourceID 10)
-    $ toSizedParamList (List params Empty)
+tcPacket n = TCPacket (APID 256) (mkPUSType 2) (mkPUSSubType 10) (mkSourceID 10)
+  $ toSizedParamList (List params Empty)
   where params = RIO.replicate n (Parameter "X" (ValUInt3 0b101))
 
 packets :: Int -> [EncodedTCRequest]
 packets n =
-  RIO.replicate n (EncodedTCRequest (Just (tcPacket (256 `div` 3))) rqst1)
+  RIO.replicate 1000 (EncodedTCRequest (Just (tcPacket (n `div` 3))) rqst1)
 
 
 
@@ -97,7 +96,7 @@ main = do
 
     defaultMain
       [ bgroup
-          "encoding"
+          "TC Packet encoding"
           [ bench "Encode10" $ whnfIO $ runRIO state (runConduit (chain 10))
           , bench "Encode100" $ whnfIO $ runRIO state (runConduit (chain 100))
           , bench "Encode248" $ whnfIO $ runRIO state (runConduit (chain 248))

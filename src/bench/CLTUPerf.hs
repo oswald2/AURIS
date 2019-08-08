@@ -76,16 +76,16 @@ main = do
     let e255 = encode Data.PUS.Config.defaultConfig (cltuNew $ BS.replicate 255 0x61)
         e1024 = encode Data.PUS.Config.defaultConfig (cltuNew $ BS.replicate 1024 0x61)
     defaultMain
-        [bgroup "codProcChar" [
+        [bgroup "CLTU codProcChar" [
             bench "c_codProcChar" $ whnfIO (c_codProcChar 65 233)
             , bench "codProcChar" $ whnf (codProcChar 65) 233
             ],
-        bgroup "encoding" [
+        bgroup "CLTU encoding" [
             bench "encodeCLTU 255" $ whnf (encode Data.PUS.Config.defaultConfig) (cltuNew (BS.replicate 255 0x61))
             , bench "encodeCLTU 1024" $ whnf (encode Data.PUS.Config.defaultConfig) (cltuNew (BS.replicate 1024 0x61))
             , bench "encodeCLTU 65535" $ whnf (encode Data.PUS.Config.defaultConfig) (cltuNew (BS.replicate 65535 0x61))
         ],
-        bgroup "check" [
+        bgroup "CLTU check" [
             bench "c_check 255" $ whnfIO (c_check e255)
             , bench "check 255" $ whnf cltuParity e255
             ,bench "c_check 1024" $ whnfIO (c_check e1024)
