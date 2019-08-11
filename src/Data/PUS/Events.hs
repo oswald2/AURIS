@@ -66,6 +66,7 @@ data EventTelemetry =
     -- value is the last frame count, second value the actual frame count
     EVTMFrameGap Word8 Word8
     | EVTMRestartingVC VCID
+    | EVTMFailedCRC Text
     deriving (Eq, Show, Read, Generic)
 
 instance Binary EventTelemetry

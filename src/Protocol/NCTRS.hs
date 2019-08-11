@@ -6,6 +6,7 @@
     , NoImplicitPrelude
     , TemplateHaskell
     , TypeApplications
+    , LambdaCase
 #-}
 module Protocol.NCTRS
     ( NcduHeaderType(..)
@@ -114,7 +115,7 @@ import           Data.PUS.Events
 import           Protocol.SizeOf
 
 import           General.Padding
-import General.Hexdump
+import           General.Hexdump
 
 
 
@@ -259,8 +260,7 @@ data NcduTmDu = NcduTmDu {
 makeLenses ''NcduTmDu
 
 instance SizeOf NcduTmDu where
-    sizeof NcduTmDu {..} =
-        B.length _ncduTmData + fixedSizeOf @NcduTmDuHeader
+    sizeof NcduTmDu {..} = B.length _ncduTmData + fixedSizeOf @NcduTmDuHeader
 
 
 data NcduTcCltuRespAck =
@@ -312,8 +312,7 @@ data NcduAdminMessage = NcduAdminMessage {
 makeLenses ''NcduAdminMessage
 
 instance SizeOf NcduAdminMessage where
-    sizeof NcduAdminMessage {..} =
-        B.length _ncduAdmMsg + admMessageHdrLen
+    sizeof NcduAdminMessage {..} = B.length _ncduAdmMsg + admMessageHdrLen
 
 
 data NcduTcData =
@@ -343,8 +342,7 @@ data NcduTcDu = NcduTcDu {
 makeLenses ''NcduTcDu
 
 instance SizeOf NcduTcDu where
-    sizeof NcduTcDu {..} =
-        fixedSizeOf @NcduTcHeader + sizeof _ncduTcData
+    sizeof NcduTcDu {..} = fixedSizeOf @NcduTcHeader + sizeof _ncduTcData
 
 
 receiveTcNcduC
@@ -352,60 +350,54 @@ receiveTcNcduC
     => ConduitT ByteString NcduTcDu m ()
 receiveTcNcduC = conduitParserEither ncduTcParser .| sink
   where
-    sink = do
-        x <- await
-        case x of
-            Just tc -> case tc of
-                Left err -> do
-                    st <- ask
-                    liftIO $ raiseEvent st $ EVAlarms (EVNCDUParseError (T.pack (errorMessage err)))
-                    sink
-                Right (_, tc') -> do
-                    yield tc'
-                    sink
-            Nothing -> pure ()
+    sink = awaitForever $ \case
+        Left err -> do
+            st <- ask
+            liftIO $ raiseEvent st $ EVAlarms
+                (EVNCDUParseError (T.pack (errorMessage err)))
+            sink
+        Right (_, tc') -> do
+            yield tc'
+            sink
 
 receiveTmNcduC
     :: (MonadIO m, MonadReader env m, HasGlobalState env)
     => ConduitT ByteString NcduTmDu m ()
 receiveTmNcduC = conduitParserEither ncduTmParser .| sink
   where
-    sink = do
-        x <- await
-        case x of
-            Just tc -> case tc of
-                Left err -> do
-                    st <- ask
-                    liftIO $ raiseEvent st $ EVAlarms (EVNCDUParseError (T.pack (errorMessage err)))
-                    sink
-                Right (_, tc') -> do
-                    yield tc'
-                    sink
-            Nothing -> pure ()
+    sink = awaitForever $ \case
+        Left err -> do
+            st <- ask
+            liftIO $ raiseEvent st $ EVAlarms
+                (EVNCDUParseError (T.pack (errorMessage err)))
+            sink
+        Right (_, tc') -> do
+            yield tc'
+            sink
 
 receiveAdminNcduC
     :: (MonadIO m, MonadReader env m, HasGlobalState env)
     => ConduitT ByteString NcduAdminMessage m ()
 receiveAdminNcduC = conduitParserEither ncduAdminMessageParser .| sink
   where
-    sink = do
-        x <- await
-        case x of
-            Just tc -> case tc of
-                Left err -> do
-                    st <- ask
-                    liftIO $ raiseEvent st $ EVAlarms (EVNCDUParseError (T.pack (errorMessage err)))
-                    sink
-                Right (_, tc') -> do
-                    yield tc'
-                    sink
-            Nothing -> pure ()
+    sink = awaitForever $ \case
+        Left err -> do
+            st <- ask
+            liftIO $ raiseEvent st $ EVAlarms
+                (EVNCDUParseError (T.pack (errorMessage err)))
+            sink
+        Right (_, tc') -> do
+            yield tc'
+            sink
 
 
-encodeTcNcduC :: (MonadIO m, MonadReader env m, HasLogFunc env) => ConduitT NcduTcDu ByteString m ()
+encodeTcNcduC
+    :: (MonadIO m, MonadReader env m, HasLogFunc env)
+    => ConduitT NcduTcDu ByteString m ()
 encodeTcNcduC = awaitForever $ \du -> do
     let enc = builderBytes (ncduTcDuBuilder du)
-    logDebug $ "Encoded NCDU: " <> displayShow du <> ":\n" <> display (hexdumpBS enc)
+    logDebug $ "Encoded NCDU: " <> displayShow du <> ":\n" <> display
+        (hexdumpBS enc)
     yield enc
 
 encodeTmNcduC :: (Monad m) => ConduitT NcduTmDu ByteString m ()

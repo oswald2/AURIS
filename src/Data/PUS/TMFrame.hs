@@ -21,7 +21,7 @@ to check for correct sequences of TM frames.
     , TemplateHaskell
 #-}
 module Data.PUS.TMFrame
-    ( 
+    (
     TMFrameHeader
     , TMFrame
     , tmFrameVersion
@@ -287,7 +287,7 @@ tmFrameDecodeC = do
                 else
                     case checkFrame cfg bs of
                         Left err -> do
-                            liftIO $ raiseEvent st (EVAlarms (EVIllegalTMFrame err))
+                            liftIO $ raiseEvent st (EVTelemetry (EVTMFailedCRC err))
                             proc cfg
                         Right () -> do
                             yield frame

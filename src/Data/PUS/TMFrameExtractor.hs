@@ -69,7 +69,7 @@ instance Exception RestartVCException
 -- sends the frame to the right extraction channel for this virtual channel
 
 -- @outQueue is the final 'TBQueue', where extracted PUS Packets are sent
--- for de-segmentation and parameter processing
+-- for parameter processing
 tmFrameSwitchVC
     :: ( MonadUnliftIO m
        , MonadThrow m
@@ -207,7 +207,10 @@ data PacketPart = PacketPart {
 }
 
 
-
+-- | An attoparsec parser for segmented packets. Just parses
+-- the header and returns a packet part. Depending on the
+-- segmentation flags in the header, the packet part is
+-- either a complete standalone packet or a segment
 segmentedPacketParser :: TMSegmentLen -> Parser PacketPart
 segmentedPacketParser segLen = do
     hdr <- pusPktHdrParser
@@ -219,6 +222,13 @@ segmentedPacketParser segLen = do
         _ -> PacketPart hdr <$> packetBody hdr segLen
 
 
+-- | Reconstructs the packet from its parts. In case the packet is
+-- unsegmented, just converts it to a 'PUSPacket' and yields it. In
+-- case the packet part is a segment, stores it in the 'PktStore' for
+-- the assembly. A new packet is started with 'SegmentFirst', continued
+-- 'SegmentContinue', where also gap checks are done in case a
+-- continuation segment is missing (the packet will be discarded when
+-- this is the case) and finished with a 'SegmentLast'.
 pktReconstructorC
     :: (MonadIO m, MonadReader env m, HasLogFunc env)
     => PUSMissionSpecific
@@ -251,18 +261,24 @@ pktReconstructorC missionSpecific pIf segLen pktStore = do
                                                            part
                     pktReconstructorC missionSpecific pIf segLen newStore
                 SegmentLast -> do
-                    newStore <- processLastSegment missionSpecific pIf segLen pktStore pktKey part
+                    newStore <- processLastSegment missionSpecific
+                                                   pIf
+                                                   segLen
+                                                   pktStore
+                                                   pktKey
+                                                   part
                     pktReconstructorC missionSpecific pIf segLen newStore
 
 
 
-
+-- | Creates a 'PktKey' out of a PUSHeader for the 'PktStore'
 mkPktKey :: PUSHeader -> PktKey
 mkPktKey hdr =
     let pktKey = PktKey apid ssc
         apid   = hdr ^. pusHdrTcApid
         ssc    = hdr ^. pusHdrTcSsc
     in  pktKey
+
 
 processFinishedPacket
     :: (MonadIO m, MonadReader env m, HasLogFunc env)
@@ -373,7 +389,7 @@ processLastSegment missionSpecific pIf segLen pktStore pktKey part = do
 -- | Conduit which takes 'ByteString' and extracts PUS Packets out of
 -- this stream. Raises the event 'EV_IllegalPUSPacket' in case a packet
 -- could not be parsed. The PUS Packets are wrapped in a 'ProtocolPacket'
--- which also indicates it's source interfacethrowIO RestartVCException
+-- which also indicates it's source interface
 pusPacketDecodeC
     :: ( MonadIO m
        , MonadThrow m
@@ -424,103 +440,6 @@ tmFrameExtractionChain vcid queue outQueue interf =
         .| sinkTBQueue outQueue
 
 
-
--- segmentedTMPacketParser
---   :: PUSMissionSpecific
---   -> TMSegmentLen
---   -> ProtocolInterface
---   -> PktStore
---   -> Parser
---        (PktStore, Either Text (Maybe (ProtocolPacket PUSPacket)))
--- segmentedTMPacketParser missionSpecific segLen protIf pktStore = do
---   hdr <- pusPktHdrParser
---   let pktKey = PktKey apid ssc
---       apid   = hdr ^. pusHdrTcApid
---       ssc    = hdr ^. pusHdrTcSsc
---   case hdr ^. pusHdrSeqFlags of
---     SegmentStandalone -> do
---       let len = hdr ^. pusHdrTcLength + 1
---       body <- A.take (fromIntegral len)
---       case A.parseOnly (pusPktParserPayload missionSpecific protIf hdr) body of
---         Left err ->
---           return (pktStore, Left ("Error on parsing TM packet:" <> T.pack err))
---         Right pusPkt -> return (pktStore, Right (Just pusPkt))
---     SegmentFirst -> do
---       body <- packetBody hdr segLen
---       let newPkt = IntermediatePacket { impHeader  = hdr
---                                       , impBody    = body
---                                       , impLastLen = hdr ^. pusHdrTcLength
---                                       , impSegFlag = hdr ^. pusHdrSeqFlags
---                                       }
---           newStore = HM.insert pktKey newPkt pktStore
---       return (newStore, Right Nothing)
---     SegmentContinue -> do
---       body <- packetBody hdr segLen
---       case HM.lookup pktKey pktStore of
---         Nothing -> return
---           ( pktStore
---           , Left
---             (  "Error: no segment of TM packet found APID: "
---             <> textDisplay apid
---             <> " SSC: "
---             <> textDisplay ssc
---             )
---           )
---         Just pkt -> if checkGapsValid segLen pkt hdr
---           then do
---             let newPkt = pkt { impBody    = impBody pkt `B.append` body
---                              , impLastLen = hdr ^. pusHdrTcLength
---                              , impSegFlag = SegmentContinue
---                              }
---                 newStore = HM.insert pktKey newPkt pktStore
---             return (newStore, Right Nothing)
---           else do
---             let newStore = HM.delete pktKey pktStore
---                 msg =
---                   "Detected gap in segmented TM APID: "
---                     <> textDisplay apid
---                     <> " SSC: "
---                     <> textDisplay ssc
---                     <> ". Packet discarded."
---             return (newStore, Left msg)
---     SegmentLast -> do
---       body <- packetBody hdr segLen
---       case HM.lookup pktKey pktStore of
---         Nothing -> return
---           ( pktStore
---           , Left
---             (  "Error: no segment of TM packet found APID: "
---             <> textDisplay apid
---             <> " SSC: "
---             <> textDisplay ssc
---             )
---           )
---         Just pkt -> if checkGapsValid segLen pkt hdr
---           then do
---             let newStore = HM.delete pktKey pktStore
---                 newBody  = impBody pkt `B.append` body
---             case
---                 A.parseOnly
---                   (pusPktParserPayload missionSpecific protIf (impHeader pkt))
---                   newBody
---               of
---                 Left err ->
---                   return
---                     ( newStore
---                     , Left
---                       ("Error on parsing segmented TM packet: " <> T.pack err)
---                     )
---                 Right pusPkt -> return (newStore, Right (Just pusPkt))
---           else doparseConduit
-
---             let newStore = HM.delete pktKey pktStore
---                 msg =
---                   "Detected gap in segmented TM APID: "
---                     <> textDisplay apid
---                     <> " SSC: "
---                     <> textDisplay ssc
---                     <> ". Packet discarded."
---             return (newStore, Left msg)
 
 
 checkGapsValid :: TMSegmentLen -> IntermediatePacket -> PUSHeader -> Bool
