@@ -79,7 +79,7 @@ tmFrameSwitchVC
        )
     => ProtocolInterface
     -> TBQueue (ProtocolPacket PUSPacket)
-    -> ConduitT (TMFrame, Flag Initialized) Void m ()
+    -> ConduitT TMFrame Void m ()
 tmFrameSwitchVC interf outQueue = do
     st <- ask
     let vcids = cfgVCIDs (st ^. getConfig)
@@ -92,10 +92,10 @@ tmFrameSwitchVC interf outQueue = do
     cont <- mapM proc vcids
     -- create the threads
     let
-        threadFunc a@(vcid, queue) = do
+        threadFunc a@(_vcid, queue) = do
             res <-
                 tryDeep $ runConduitRes
-                    (tmFrameExtractionChain vcid queue outQueue interf)
+                    (tmFrameExtractionChain queue outQueue interf)
             case res of
                 Left  RestartVCException -> threadFunc a
                 Right x                  -> pure x
@@ -107,7 +107,7 @@ tmFrameSwitchVC interf outQueue = do
 
     -- This is the conduit itself, the previous was just setup.
     let
-        conduit = awaitForever $ \val@(frame, _initial) -> do
+        conduit = awaitForever $ \frame -> do
             let !vcid =
                     fromIntegral $ getVCID (frame ^. tmFrameHdr . tmFrameVcID)
             case M.lookup vcid vcMap of
@@ -121,7 +121,7 @@ tmFrameSwitchVC interf outQueue = do
                         )
                     conduit
                 Just q -> do
-                    atomically $ writeTBQueue q val
+                    atomically $ writeTBQueue q frame
                     conduit
     conduit
 
@@ -132,57 +132,71 @@ tmFrameSwitchVC interf outQueue = do
 checkFrameCountC
     :: (MonadIO m, MonadReader env m, HasGlobalState env)
     => ConduitT
-           (TMFrame, Flag Initialized)
-           (Maybe (TMFrame, Flag Initialized))
+           TMFrame
+           TMFrame
            m
            ()
 checkFrameCountC = do
-    var <- newTVarIO 0xFF
+    var <- newTVarIO Nothing
 
-    let go = awaitForever $ \val@(frame, _initial) -> do
+    let go = awaitForever $ \frame -> do
             let !vcfc = frame ^. tmFrameHdr . tmFrameVCFC
-            lastFC <- readTVarIO var
-
-            if lastFC + 1 == vcfc
-                then do
-                    yield (Just val)
-                    atomically $ writeTVar var vcfc
-                else do
-                    st <- ask
-                    liftIO $ raiseEvent st $ EVTelemetry
-                        (EVTMFrameGap lastFC vcfc)
-                    yield Nothing
+            lastFC' <- readTVarIO var
+            case lastFC' of
+                Just lastFC -> do
+                    -- check, if we have a gap
+                    if lastFC + 1 == vcfc
+                        then do
+                            atomically $ writeTVar var (Just vcfc)
+                            yield frame
+                        else do
+                            st <- ask
+                            liftIO $ raiseEvent st $ EVTelemetry
+                                (EVTMFrameGap lastFC vcfc)
+                            liftIO $ raiseEvent st $ EVTelemetry (EVTMRestartingVC (frame ^. tmFrameHdr . tmFrameVcID))
+                            throwIO RestartVCException
+                Nothing -> atomically $ writeTVar var (Just vcfc)
     go
 
 
 
 -- | Conduit for extracting the data part (PUS Packets) out of
 -- the TM Frame.
+--     awaitForever $ \case
+--         Just (frame, initial) -> if toBool initial
+--             then if frame ^. tmFrameHdr . tmFrameFirstHeaderPtr == 0
+--                 then yield (frame ^. tmFrameData)
+--                 else do
+--                     let (_prev, rest) = tmFrameGetPrevAndRest frame
+--                     yield rest
+--             else yield (frame ^. tmFrameData)
+--         Nothing -> do -- now we have a gap skip, so restart this VC
+--             st <- ask
+--             liftIO $ raiseEvent st $ EVTelemetry (EVTMRestartingVC vcid)
+--             throwIO RestartVCException
+
+
 extractPktFromTMFramesC
-    :: (MonadIO m, MonadReader env m, HasGlobalState env)
-    => VCID
-    -> ConduitT (Maybe (TMFrame, Flag Initialized)) ByteString m ()
-extractPktFromTMFramesC vcid = do
-    -- on initial, we are called the first time. This means that a
-    -- frame could potentially have a header pointer set to non-zero
-    -- which means we have to start parsing at the header pointer offset.
-    -- from then on, there should be consistent stream of PUS packets
-    -- in the data (could also be idle-packets)
-    awaitForever $ \case
-        Just (frame, initial) -> if toBool initial
-            then if frame ^. tmFrameHdr . tmFrameFirstHeaderPtr == 0
+    :: (MonadIO m)
+    => ConduitT TMFrame ByteString m ()
+extractPktFromTMFramesC = do
+    x <- await
+    case x of
+        Nothing -> pure ()
+        Just frame -> do
+            -- on initial, we are called the first time. This means that a
+            -- frame could potentially have a header pointer set to non-zero
+            -- which means we have to start parsing at the header pointer offset.
+            -- from then on, there should be consistent stream of PUS packets
+            -- in the data (could also be idle-packets)
+            if frame ^. tmFrameHdr . tmFrameFirstHeaderPtr == 0
                 then yield (frame ^. tmFrameData)
                 else do
                     let (_prev, rest) = tmFrameGetPrevAndRest frame
                     yield rest
-            else yield (frame ^. tmFrameData)
-        Nothing -> do -- now we have a gap skip, so restart this VC
-            st <- ask
-            liftIO $ raiseEvent st $ EVTelemetry (EVTMRestartingVC vcid)
-            throwIO RestartVCException
-
-
-
+            loop
+    where
+        loop = awaitForever $ \frame -> yield (frame ^. tmFrameData)
 
 
 data PktKey = PktKey !APID !SSC
@@ -427,15 +441,14 @@ tmFrameExtractionChain
        , HasGlobalState env
        , HasLogFunc env
        )
-    => VCID
-    -> TBQueue (TMFrame, Flag Initialized)
+    => TBQueue TMFrame
     -> TBQueue (ProtocolPacket PUSPacket)
     -> ProtocolInterface
     -> ConduitT () Void m ()
-tmFrameExtractionChain vcid queue outQueue interf =
+tmFrameExtractionChain queue outQueue interf =
     sourceTBQueue queue
         .| checkFrameCountC
-        .| extractPktFromTMFramesC vcid
+        .| extractPktFromTMFramesC
         .| pusPacketDecodeC interf
         .| sinkTBQueue outQueue
 

@@ -52,8 +52,6 @@ import qualified Text.Builder                  as T
 import           Control.Lens                   ( makeLenses
                                                 , (.~)
                                                 )
-import           Control.Monad.ST
-
 import           Data.Binary
 import           Data.Aeson
 import           Codec.Serialise
@@ -165,7 +163,7 @@ encodePktWithoutCRC pkt useCRC =
         encHdr  = pusPktHdrBuilder (newPkt ^. pusHdr)
         encDfh  = dfhBuilder (newPkt ^. pusDfh)
         payload = newPkt ^. pusData
-        !pl     = builderBytes $ if newPkt ^. pusHdr . pusHdrDfhFlag 
+        !pl     = builderBytes $ if newPkt ^. pusHdr . pusHdrDfhFlag
             then encHdr <> encDfh <> bytes payload
             else encHdr <> bytes payload
     in  applied pkt pl
@@ -268,7 +266,7 @@ packPktID !vers !tp !dfh (APID apid) =
         typeShifted = case tp of
             PUSTM -> 0x0000
             PUSTC -> 0x1000
-        dfhShifted = if dfh 
+        dfhShifted = if dfh
             then 0x0800
             else 0x0000
         apidMasked = apid .&. 0x7ff
@@ -281,7 +279,7 @@ unpackPktID :: Word16 -> (Word8, PUSPacketType, Bool, APID)
 unpackPktID pktID =
     let !apid = pktID .&. 0x7ff
         !dfh  = (pktID .&. 0x0800) /= 0
-        !tp   = if (pktID .&. 0x1000) /= 0 
+        !tp   = if (pktID .&. 0x1000) /= 0
             then PUSTC
             else PUSTM
         !ver = (pktID .&. 0xe000) `shiftR` 13
@@ -346,38 +344,13 @@ pusPktParser
     -> Parser (ProtocolPacket PUSPacket)
 pusPktParser missionSpecific comm = do
     hdr <- pusPktHdrParser
-    dfh <- if
-        | comm == IF_NCTRS -> if hdr ^. pusHdrDfhFlag
-            then case hdr ^. pusHdrType of
-                PUSTM -> dfhParser (missionSpecific ^. pmsTMDataFieldHeader)
-                PUSTC -> dfhParser (missionSpecific ^. pmsTCDataFieldHeader)
-            else return PUSEmptyHeader
-        | comm == IF_CNC -> if hdr ^. pusHdrDfhFlag
-            then dfhParser defaultCnCTCHeader
-            else return PUSEmptyHeader
-        | comm == IF_EDEN || comm == IF_EDEN_SCOE -> if hdr ^. pusHdrDfhFlag
-            then case hdr ^. pusHdrType of
-                PUSTM -> dfhParser (missionSpecific ^. pmsTMDataFieldHeader)
-                PUSTC -> dfhParser (missionSpecific ^. pmsTCDataFieldHeader)
-            else return PUSEmptyHeader
-        | otherwise -> fail $ "Unknown protocol type: " <> show comm
-    dat <- A.take (fromIntegral (hdr ^. pusHdrTcLength) + 1)
-
-    let pl = case comm of
-            IF_CNC -> case dfh of
-                PUSCnCTCHeader { _cncTcCrcFlags = val } -> if val == 1      -- the packet contains a CRC
-                    then B.take (B.length dat - crcLen) dat
-                    else dat
-                _ -> dat
-            _ -> dat
-
-    return (ProtocolPacket comm (PUSPacket hdr dfh Nothing pl))
+    pusPktParserPayload missionSpecific comm hdr
 
 
 pusPktParserPayload
     :: PUSMissionSpecific
     -> ProtocolInterface
-    -> PUSHeader 
+    -> PUSHeader
     -> Parser (ProtocolPacket PUSPacket)
 pusPktParserPayload missionSpecific comm hdr = do
     dfh <- if
