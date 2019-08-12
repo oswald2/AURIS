@@ -50,6 +50,7 @@ import           Data.PUS.Config
 import           Data.PUS.Events
 import           Data.PUS.MissionSpecific.Definitions
 import           Data.PUS.SegmentationFlags
+import           Data.PUS.ExtractedDU
 
 import           Protocol.ProtocolInterfaces
 
@@ -59,6 +60,8 @@ data RestartVCException = RestartVCException
     deriving (Show)
 
 instance Exception RestartVCException
+
+
 
 -- | Conduit for switching between multiple channels. It queries the 'Config'
 -- for a list of configured virtual channels, sets up queues for these channels
@@ -78,7 +81,7 @@ tmFrameSwitchVC
        , HasLogFunc env
        )
     => ProtocolInterface
-    -> TBQueue (ProtocolPacket PUSPacket)
+    -> TBQueue (ExtractedDU PUSPacket)
     -> ConduitT TMFrame Void m ()
 tmFrameSwitchVC interf outQueue = do
     st <- ask
@@ -93,9 +96,8 @@ tmFrameSwitchVC interf outQueue = do
     -- create the threads
     let
         threadFunc a@(_vcid, queue) = do
-            res <-
-                tryDeep $ runConduitRes
-                    (tmFrameExtractionChain queue outQueue interf)
+            res <- tryDeep
+                $ runConduitRes (tmFrameExtractionChain queue outQueue interf)
             case res of
                 Left  RestartVCException -> threadFunc a
                 Right x                  -> pure x
@@ -131,15 +133,13 @@ tmFrameSwitchVC interf outQueue = do
 
 checkFrameCountC
     :: (MonadIO m, MonadReader env m, HasGlobalState env)
-    => ConduitT
-           TMFrame
-           TMFrame
-           m
-           ()
-checkFrameCountC = do
+    => ProtocolInterface
+    -> ConduitT TMFrame (ExtractedDU TMFrame) m ()
+checkFrameCountC pIf = do
     var <- newTVarIO Nothing
 
-    let go = awaitForever $ \frame -> do
+    let
+        go = awaitForever $ \frame -> do
             let !vcfc = frame ^. tmFrameHdr . tmFrameVCFC
             lastFC' <- readTVarIO var
             case lastFC' of
@@ -148,13 +148,29 @@ checkFrameCountC = do
                     if lastFC + 1 == vcfc
                         then do
                             atomically $ writeTVar var (Just vcfc)
-                            yield frame
+                            let ep = ExtractedDU
+                                    { _epQuality = toFlag Good True
+                                    , _epGap     = Nothing
+                                    , _epSource  = pIf
+                                    , _epDU      = frame
+                                    }
+                            yield ep
                         else do
                             st <- ask
                             liftIO $ raiseEvent st $ EVTelemetry
                                 (EVTMFrameGap lastFC vcfc)
-                            liftIO $ raiseEvent st $ EVTelemetry (EVTMRestartingVC (frame ^. tmFrameHdr . tmFrameVcID))
-                            throwIO RestartVCException
+                            let
+                                ep = ExtractedDU
+                                    { _epQuality = toFlag Good False
+                                    , _epGap     =
+                                        Just
+                                            ( fromIntegral lastFC
+                                            , fromIntegral vcfc
+                                            )
+                                    , _epSource  = pIf
+                                    , _epDU      = frame
+                                    }
+                            yield ep
                 Nothing -> atomically $ writeTVar var (Just vcfc)
     go
 
@@ -177,26 +193,34 @@ checkFrameCountC = do
 
 
 extractPktFromTMFramesC
-    :: (MonadIO m)
-    => ConduitT TMFrame ByteString m ()
+    :: (MonadIO m) => ConduitT (ExtractedDU TMFrame) ByteString m ()
 extractPktFromTMFramesC = do
     x <- await
     case x of
-        Nothing -> pure ()
-        Just frame -> do
-            -- on initial, we are called the first time. This means that a
-            -- frame could potentially have a header pointer set to non-zero
-            -- which means we have to start parsing at the header pointer offset.
-            -- from then on, there should be consistent stream of PUS packets
-            -- in the data (could also be idle-packets)
-            if frame ^. tmFrameHdr . tmFrameFirstHeaderPtr == 0
-                then yield (frame ^. tmFrameData)
+        Nothing     -> pure ()
+        Just frame' -> do
+            if toBool (frame' ^. epQuality)
+                then do
+                    -- on initial, we are called the first time. This means that a
+                    -- frame could potentially have a header pointer set to non-zero
+                    -- which means we have to start parsing at the header pointer offset.
+                    -- from then on, there should be consistent stream of PUS packets
+                    -- in the data (could also be idle-packets)
+                    let frame = frame' ^. epDU
+                    if frame ^. tmFrameHdr . tmFrameFirstHeaderPtr == 0
+                        then yield (frame ^. tmFrameData)
+                        else do
+                            let (_prev, rest) = tmFrameGetPrevAndRest frame
+                            yield rest
+                    loop
                 else do
-                    let (_prev, rest) = tmFrameGetPrevAndRest frame
-                    yield rest
-            loop
-    where
-        loop = awaitForever $ \frame -> yield (frame ^. tmFrameData)
+                    -- TODO log the frame into the bad frames table but 
+                    -- don't yield it
+                    loop
+  where
+    loop = awaitForever $ \frame -> if toBool (frame ^. epQuality)
+        then yield (frame ^. epDU . tmFrameData)
+        else pure ()
 
 
 data PktKey = PktKey !APID !SSC
@@ -210,6 +234,7 @@ data IntermediatePacket = IntermediatePacket {
     , impBody :: !ByteString
     , impLastLen :: !Word16
     , impSegFlag :: !SegmentationFlags
+    , impQuality :: Flag Good
 }
 
 type PktStore = HashMap PktKey IntermediatePacket
@@ -251,7 +276,7 @@ pktReconstructorC
     -> PktStore
     -> ConduitT
            (PositionRange, PacketPart)
-           (ProtocolPacket PUSPacket)
+           (ExtractedDU PUSPacket)
            m
            ()
 pktReconstructorC missionSpecific pIf segLen pktStore = do
@@ -300,14 +325,19 @@ processFinishedPacket
     -> ProtocolInterface
     -> PUSHeader
     -> ByteString
-    -> ConduitT w (ProtocolPacket PUSPacket) m ()
+    -> ConduitT w (ExtractedDU PUSPacket) m ()
 processFinishedPacket missionSpecific pIf hdr body = do
     case A.parseOnly (pusPktParserPayload missionSpecific pIf hdr) body of
         Left err -> do
             logWarn $ display ("Error parsing TM packet: " :: Text) <> display
                 (T.pack err)
         Right pusPkt -> do
-            yield pusPkt
+            let ep = ExtractedDU { _epQuality = toFlag Good True
+                                 , _epGap     = Nothing
+                                 , _epSource  = pIf
+                                 , _epDU      = pusPkt ^. protContent
+                                 }
+            yield ep
 
 processFirstSegment :: PUSHeader -> PacketPart -> PktStore -> PktStore
 processFirstSegment hdr part pktStore =
@@ -315,6 +345,7 @@ processFirstSegment hdr part pktStore =
                                     , impBody    = ppBody part
                                     , impLastLen = hdr ^. pusHdrTcLength
                                     , impSegFlag = hdr ^. pusHdrSeqFlags
+                                    , impQuality = toFlag Good True
                                     }
         pktKey   = PktKey (hdr ^. pusHdrTcApid) (hdr ^. pusHdrTcSsc)
         newStore = HM.insert pktKey newPkt pktStore
@@ -346,18 +377,32 @@ processContinuationSegment segLen pktStore pktKey part = do
                         { impBody    = impBody ipkt `B.append` ppBody part
                         , impLastLen = hdr ^. pusHdrTcLength
                         , impSegFlag = SegmentContinue
+                        , impQuality = toFlag Good True
                         }
                     newStore = HM.insert pktKey newPkt pktStore
                 return newStore
             else do
-                let newStore = HM.delete pktKey pktStore
                 logWarn
                     $  "Detected gap in segmented TM APID: "
                     <> display apid
                     <> " SSC: "
                     <> display ssc
-                    <> ". Packet discarded."
+                    <> ". Packet marked as bad."
+                let newStore = padGap pktStore pktKey ipkt hdr 
                 return newStore
+
+
+padGap :: PktStore -> PktKey -> IntermediatePacket -> PUSHeader -> PktStore 
+padGap pktStore pktKey ipkt hdr = 
+    let newPkt = ipkt { impBody    = impBody ipkt `B.append` padding
+            , impLastLen = hdr ^. pusHdrTcLength
+            , impSegFlag = SegmentContinue
+            , impQuality = toFlag Good False
+            }
+        padding = B.replicate (fromIntegral (impLastLen ipkt) - fromIntegral (hdr ^. pusHdrTcLength)) 0
+    in HM.insert pktKey newPkt pktStore
+
+
 
 processLastSegment
     :: (MonadIO m, MonadReader env m, HasLogFunc env)
@@ -367,7 +412,7 @@ processLastSegment
     -> PktStore
     -> PktKey
     -> PacketPart
-    -> ConduitT w (ProtocolPacket PUSPacket) m (PktStore)
+    -> ConduitT w (ExtractedDU PUSPacket) m (PktStore)
 processLastSegment missionSpecific pIf segLen pktStore pktKey part = do
     let body = ppBody part
         apid = hdr ^. pusHdrTcApid
@@ -389,7 +434,7 @@ processLastSegment missionSpecific pIf segLen pktStore pktKey part = do
                 processFinishedPacket missionSpecific pIf hdr newBody
                 return newStore
             else do
-                let newStore = HM.delete pktKey pktStore
+                let newStore = padGap pktStore pktKey pkt hdr 
                     msg =
                         "Detected gap in segmented TM APID: "
                             <> display apid
@@ -412,7 +457,7 @@ pusPacketDecodeC
        , HasLogFunc env
        )
     => ProtocolInterface
-    -> ConduitT ByteString (ProtocolPacket PUSPacket) m ()
+    -> ConduitT ByteString (ExtractedDU PUSPacket) m ()
 pusPacketDecodeC pIf = do
     st <- ask
     let missionSpecific = st ^. getMissionSpecific
@@ -442,12 +487,12 @@ tmFrameExtractionChain
        , HasLogFunc env
        )
     => TBQueue TMFrame
-    -> TBQueue (ProtocolPacket PUSPacket)
+    -> TBQueue (ExtractedDU PUSPacket)
     -> ProtocolInterface
     -> ConduitT () Void m ()
 tmFrameExtractionChain queue outQueue interf =
     sourceTBQueue queue
-        .| checkFrameCountC
+        .| checkFrameCountC interf
         .| extractPktFromTMFramesC
         .| pusPacketDecodeC interf
         .| sinkTBQueue outQueue

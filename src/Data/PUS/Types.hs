@@ -37,6 +37,7 @@ module Data.PUS.Types
     , Enable(..)
     , OnOff(..)
     , Initialized(..)
+    , Good(..)
     , RequestID
     , getRqstID
     , mkRqstID
@@ -162,6 +163,9 @@ data Enable = Enable
 data OnOff = OnOff
 -- | 'Flag' for Initial/Not Initial. Used in one-time initialisations
 data Initialized = Initialized
+-- | 'Flag' for quality
+data Good = Good
+
 
 -- | Generic flag type. To be used with the types above (or new ones)
 newtype Flag a = MkFlag Bool

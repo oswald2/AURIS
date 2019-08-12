@@ -66,6 +66,7 @@ library
         Data.PUS.TMFrame
         Data.PUS.TMFrameDfh
         Data.PUS.TMFrameExtractor
+        Data.PUS.ExtractedDU
         Data.PUS.MissionSpecific.Definitions
         Data.PUS.Value
         Protocol.SizeOf
