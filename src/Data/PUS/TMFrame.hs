@@ -57,6 +57,7 @@ module Data.PUS.TMFrame
     , tmFrameCheckSync
     , isIdleTmFrame
     , tmFrameFHType
+    , tmFrameDefaultHeader
     )
 where
 
@@ -112,6 +113,21 @@ data TMFrameHeader = TMFrameHeader {
     _tmFrameFirstHeaderPtr :: !Word16
 } deriving (Show, Read, Generic)
 makeLenses ''TMFrameHeader
+
+tmFrameDefaultHeader :: TMFrameHeader
+tmFrameDefaultHeader = TMFrameHeader {
+    _tmFrameVersion = 0,
+    _tmFrameScID = mkSCID 0,
+    _tmFrameVcID = mkVCID 0,
+    _tmFrameOpControl = True,
+    _tmFrameMCFC = 0,
+    _tmFrameVCFC = 0,
+    _tmFrameDfh = False,
+    _tmFrameSync = True,
+    _tmFrameOrder = True,
+    _tmFrameSegID = TMSegment65536,
+    _tmFrameFirstHeaderPtr = 0
+    }
 
 
 instance SizeOf TMFrameHeader where
@@ -188,6 +204,7 @@ tmFrameBuilder f =
 {-# INLINABLE makeTMFrame #-}
 makeTMFrame :: TMFrameHeader -> ByteString -> TMFrame
 makeTMFrame hdr pl = TMFrame hdr pl Nothing Nothing
+
 
 {-# INLINABLE tmFrameMaxDataLen #-}
 tmFrameMaxDataLen :: Config -> PUSMissionSpecific -> TMFrameHeader -> Int
