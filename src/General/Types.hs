@@ -68,20 +68,27 @@ data Endian = BiE | LiE
 instance Binary Endian
 instance Serialise Endian
 instance FromJSON Endian
-instance ToJSON Endian
+instance ToJSON Endian where
+    toEncoding = genericToEncoding defaultOptions
 instance NFData Endian
 
 -- | A byte offset
 newtype ByteOffset = ByteOffset Int
     deriving (Eq, Ord, Num, Show, Read, Generic, NFData)
 
+instance Binary ByteOffset
+instance Serialise ByteOffset
+instance FromJSON ByteOffset
+instance ToJSON ByteOffset where
+    toEncoding = genericToEncoding defaultOptions
+
 -- | constructs a byte offset
 mkByteOffset :: Int -> ByteOffset
 mkByteOffset = ByteOffset
 
 -- | extract the number out of a 'ByteOffset'
-unByteOffset :: ByteOffset -> Int 
-unByteOffset (ByteOffset x) = x 
+unByteOffset :: ByteOffset -> Int
+unByteOffset (ByteOffset x) = x
 
 -- | a bit offset
 newtype BitOffset = BitOffset Int
@@ -92,7 +99,7 @@ mkBitOffset :: Int -> BitOffset
 mkBitOffset = BitOffset
 
 -- | get the number out of the bit offset
-unBitOffset :: BitOffset -> Int 
+unBitOffset :: BitOffset -> Int
 unBitOffset (BitOffset x) = x
 
 -- | a general offset, which contains a byte offset and a bit offset
@@ -152,8 +159,8 @@ mkByteSize :: Int -> ByteSize
 mkByteSize = ByteSize
 
 -- | extract the number out of a 'ByteSize'
-unByteSize :: ByteSize -> Int 
-unByteSize (ByteSize x) = x 
+unByteSize :: ByteSize -> Int
+unByteSize (ByteSize x) = x
 
 
 
@@ -172,7 +179,7 @@ mkBitSize :: Int -> BitSize
 mkBitSize = BitSize
 
 -- | extract the number out of a 'BitSize'
-unBitSize :: BitSize -> Int 
+unBitSize :: BitSize -> Int
 unBitSize (BitSize x) = x
 
 -- | converst a byte size into a bit size
@@ -246,7 +253,7 @@ instance BitOffsets Offset where
           newBitOff  = newBitOff' .&. 0x07
       in  Offset (ByteOffset newByteOff) (BitOffset newBitOff)
   subOff off1 off2 = toOffset (toBitOffset off1 - toBitOffset off2)
-  
+
 
 class OffsetCalculations a b where
     (.+.) :: a -> b -> Offset
