@@ -33,6 +33,7 @@ import           Codec.Serialise
 import           Data.Fixed
 
 import           Data.PUS.Types
+import           Data.PUS.PUSPacket
 import           Data.PUS.COP1Types
 --import           Data.PUS.Segment
 
@@ -43,7 +44,7 @@ data Event = EVCommanding EventCommanding
     | EVAlarms EventAlarm
     | EVTelemetry EventTelemetry
     | EVCOP1 EventCOP1
-    deriving (Eq, Show, Read, Generic)
+    deriving (Show, Generic)
 
 instance Binary Event
 instance Serialise Event
@@ -53,7 +54,7 @@ instance ToJSON Event where
 
 
 data EventCommanding = CommandEvent
-    deriving (Eq, Show, Read, Generic)
+    deriving (Show, Generic)
 
 instance Binary EventCommanding
 instance Serialise EventCommanding
@@ -67,7 +68,10 @@ data EventTelemetry =
     EVTMFrameGap Word8 Word8
     | EVTMRestartingVC VCID
     | EVTMFailedCRC Text
-    deriving (Eq, Show, Read, Generic)
+    | EVTMRejectSpillOver [Word8]
+    | EVTMGarbledSpillOver [Word8]
+    | EVTMRejectedSpillOverPkt PUSPacket
+    deriving (Show, Generic)
 
 instance Binary EventTelemetry
 instance Serialise EventTelemetry
@@ -83,7 +87,7 @@ data EventAlarm =
     | EVEDENParseError Text
     | EVIllegalPUSPacket Text
     | EVIllegalAction Text
-    deriving (Eq, Show, Read, Generic)
+    deriving (Show, Generic)
 
 instance Binary EventAlarm
 instance Serialise EventAlarm
@@ -115,7 +119,7 @@ data EventCOP1 =
     | EVTransmissionLimitSet VCID !Word8
     | EVTimeoutTypeSet VCID !TTType
     | EVSetVSSet VCID !Word8
-    deriving (Eq, Show, Read, Generic)
+    deriving (Show, Generic)
 
 
 instance Binary EventCOP1

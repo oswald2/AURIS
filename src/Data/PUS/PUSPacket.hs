@@ -34,6 +34,7 @@ module Data.PUS.PUSPacket
     , tmpiWidth
     , pusPktHdrBuilder
     , pusPktHdrParser
+    , pusPktHdrLenOnlyParser
     , pusPktParser
     , pusPktParserPayload
     )
@@ -60,6 +61,7 @@ import qualified Data.Attoparsec.ByteString    as A
 import qualified Data.Attoparsec.Binary        as A
 import           ByteString.StrictBuilder
 import           Data.Bits
+import           Data.ByteString.Base64.Type
 
 import           Data.PUS.Types
 import           Data.PUS.APID
@@ -90,8 +92,14 @@ data TMPIVal = TMPIVal {
     _tmpiValue :: !Int64,
     _tmpiOffset :: !ByteOffset,
     _tmpiWidth :: !Word16
-    } deriving (Eq, Show, Read)
+    } deriving (Eq, Show, Read, Generic)
 makeLenses ''TMPIVal
+
+instance Binary TMPIVal
+instance Serialise TMPIVal
+instance FromJSON TMPIVal
+instance ToJSON TMPIVal where
+    toEncoding = genericToEncoding defaultOptions
 
 
 data PUSHeader = PUSHeader {
@@ -125,6 +133,41 @@ data PUSPacket = PUSPacket {
     _pusData :: !ByteString
     } deriving (Show, Generic)
 makeLenses ''PUSPacket
+
+instance Binary PUSPacket
+instance Serialise PUSPacket
+
+instance FromJSON PUSPacket where
+    parseJSON = withObject "PUSPacket" $ \v ->
+        PUSPacket
+            <$> v
+            .:  "pusHdr"
+            <*> v
+            .:  "pusDfh"
+            <*> v
+            .:  "pusPIs"
+            <*> (getByteString64 <$> v .: "pusData")
+
+
+instance ToJSON PUSPacket where
+    toJSON r = object
+        [ "pusHdr" .= _pusHdr r
+        , "pusDfh" .= _pusDfh r
+        , "pusPIs" .= _pusPIs r
+        , "pusData" .= makeByteString64 (_pusData r)
+        ]
+    toEncoding r = pairs
+        (  "pusHdr"
+        .= _pusHdr r
+        <> "pusDfh"
+        .= _pusDfh r
+        <> "pusPIs"
+        .= _pusPIs r
+        <> "pusData"
+        .= makeByteString64 (_pusData r)
+        )
+
+
 
 instance SizeOf PUSPacket where
     sizeof x =
@@ -219,16 +262,16 @@ applyPIvals encPkt pic = worker
     proc v (TMPIVal val1 off1 wid1, TMPIVal val2 off2 wid2) = do
         v1 <- if off1 >= 0
             then setBitFieldR v
-                             (toBitOffset off1)
-                             (fromIntegral wid1)
-                             (fromIntegral val1)
+                              (toBitOffset off1)
+                              (fromIntegral wid1)
+                              (fromIntegral val1)
             else return v
 
         if off2 >= 0
             then setBitFieldR v1
-                             (toBitOffset off2)
-                             (fromIntegral wid2)
-                             (fromIntegral val2)
+                              (toBitOffset off2)
+                              (fromIntegral wid2)
+                              (fromIntegral val2)
             else return v1
 
 
@@ -258,6 +301,14 @@ pusPktHdrParser = do
     return (PUSHeader pktId vers tp dfh apid sf ssc seqFlags len)
 
 
+{-# INLINABLE pusPktHdrLenOnlyParser #-}
+pusPktHdrLenOnlyParser :: Parser Word16
+pusPktHdrLenOnlyParser = do
+    void $ A.take 4
+    A.anyWord16be
+
+
+
 
 {-# INLINABLE packPktID #-}
 packPktID :: Word8 -> PUSPacketType -> Bool -> APID -> Word16
@@ -266,9 +317,7 @@ packPktID !vers !tp !dfh (APID apid) =
         typeShifted = case tp of
             PUSTM -> 0x0000
             PUSTC -> 0x1000
-        dfhShifted = if dfh
-            then 0x0800
-            else 0x0000
+        dfhShifted = if dfh then 0x0800 else 0x0000
         apidMasked = apid .&. 0x7ff
     in  versShifted .|. typeShifted .|. dfhShifted .|. apidMasked
 
@@ -279,10 +328,8 @@ unpackPktID :: Word16 -> (Word8, PUSPacketType, Bool, APID)
 unpackPktID pktID =
     let !apid = pktID .&. 0x7ff
         !dfh  = (pktID .&. 0x0800) /= 0
-        !tp   = if (pktID .&. 0x1000) /= 0
-            then PUSTC
-            else PUSTM
-        !ver = (pktID .&. 0xe000) `shiftR` 13
+        !tp   = if (pktID .&. 0x1000) /= 0 then PUSTC else PUSTM
+        !ver  = (pktID .&. 0xe000) `shiftR` 13
     in  (fromIntegral ver, tp, dfh, APID apid)
 
 

@@ -53,6 +53,7 @@ import           Data.PUS.SegmentationFlags
 import           Data.PUS.ExtractedDU
 
 import           Protocol.ProtocolInterfaces
+import           Protocol.SizeOf
 
 
 
@@ -80,10 +81,11 @@ tmFrameSwitchVC
        , HasGlobalState env
        , HasLogFunc env
        )
-    => ProtocolInterface
+    => PUSMissionSpecific
+    -> ProtocolInterface
     -> TBQueue (ExtractedDU PUSPacket)
     -> ConduitT TMFrame Void m ()
-tmFrameSwitchVC interf outQueue = do
+tmFrameSwitchVC missionSpecific interf outQueue = do
     st <- ask
     let vcids = cfgVCIDs (st ^. getConfig)
 
@@ -97,7 +99,7 @@ tmFrameSwitchVC interf outQueue = do
     let
         threadFunc a@(_vcid, queue) = do
             res <- tryDeep
-                $ runConduitRes (tmFrameExtractionChain queue outQueue interf)
+                $ runConduitRes (tmFrameExtractionChain missionSpecific queue outQueue interf)
             case res of
                 Left  RestartVCException -> threadFunc a
                 Right x                  -> pure x
@@ -161,7 +163,7 @@ checkFrameCountC pIf = do
                                 (EVTMFrameGap lastFC vcfc)
                             let
                                 ep = ExtractedDU
-                                    { _epQuality = toFlag Good False
+                                    { _epQuality = toFlag Good True
                                     , _epGap     =
                                         Just
                                             ( fromIntegral lastFC
@@ -176,51 +178,102 @@ checkFrameCountC pIf = do
 
 
 
--- | Conduit for extracting the data part (PUS Packets) out of
--- the TM Frame.
---     awaitForever $ \case
---         Just (frame, initial) -> if toBool initial
---             then if frame ^. tmFrameHdr . tmFrameFirstHeaderPtr == 0
---                 then yield (frame ^. tmFrameData)
---                 else do
---                     let (_prev, rest) = tmFrameGetPrevAndRest frame
---                     yield rest
---             else yield (frame ^. tmFrameData)
---         Nothing -> do -- now we have a gap skip, so restart this VC
---             st <- ask
---             liftIO $ raiseEvent st $ EVTelemetry (EVTMRestartingVC vcid)
---             throwIO RestartVCException
-
-
 extractPktFromTMFramesC
-    :: (MonadIO m) => ConduitT (ExtractedDU TMFrame) ByteString m ()
-extractPktFromTMFramesC = do
+    :: (MonadIO m, MonadReader env m, HasGlobalState env)
+    => PUSMissionSpecific
+    -> ProtocolInterface
+    -> ConduitT (ExtractedDU TMFrame) ByteString m ()
+extractPktFromTMFramesC missionSpecific pIf = do
     x <- await
     case x of
         Nothing     -> pure ()
         Just frame' -> do
-            if toBool (frame' ^. epQuality)
-                then do
-                    -- on initial, we are called the first time. This means that a
-                    -- frame could potentially have a header pointer set to non-zero
-                    -- which means we have to start parsing at the header pointer offset.
-                    -- from then on, there should be consistent stream of PUS packets
-                    -- in the data (could also be idle-packets)
-                    let frame = frame' ^. epDU
-                    if frame ^. tmFrameHdr . tmFrameFirstHeaderPtr == 0
-                        then yield (frame ^. tmFrameData)
-                        else do
-                            let (_prev, rest) = tmFrameGetPrevAndRest frame
-                            yield rest
-                    loop
+            -- if toBool (frame' ^. epQuality)
+            --     then do
+            --     else do
+            -- on initial, we are called the first time. This means that a
+            -- frame could potentially have a header pointer set to non-zero
+            -- which means we have to start parsing at the header pointer offset.
+            -- from then on, there should be consistent stream of PUS packets
+            -- in the data (could also be idle-packets)
+            let frame = frame' ^. epDU
+            if frame ^. tmFrameHdr . tmFrameFirstHeaderPtr == 0
+                then loop (frame ^. tmFrameData)
                 else do
-                    -- TODO log the frame into the bad frames table but 
-                    -- don't yield it
-                    loop
+                    let (_prev, rest) = tmFrameGetPrevAndRest frame
+                    loop rest
   where
-    loop = awaitForever $ \frame -> if toBool (frame ^. epQuality)
-        then yield (frame ^. epDU . tmFrameData)
-        else pure ()
+    loop
+        :: (MonadIO m, MonadReader env m, HasGlobalState env)
+        => ByteString
+        -> ConduitT (ExtractedDU TMFrame) ByteString m ()
+    loop spillOverData = do
+        x <- await
+        case x of
+            Nothing    -> pure ()
+            Just frame -> do
+                let frame' = frame ^. epDU
+                if isJust (frame ^. epGap)
+                    then do
+                        -- we have a gap, so process the spill-over packet
+                        rejectSpillOver spillOverData
+                        let (_prev, rest) = tmFrameGetPrevAndRest frame'
+                        loop rest
+                    else do
+                        -- when we have no gap, just continue processing
+                        let dat = spillOverData <> frame' ^. tmFrameData
+                        case tmFrameFHType frame' of
+                            FirstHeaderZero -> do
+                                yield dat
+                                loop B.empty
+                            FirstHeaderNoFH -> loop dat
+                            FirstHeaderNonZero -> do
+                                let (prev, rest) = tmFrameGetPrevAndRest frame'
+                                    newDat = spillOverData <> prev
+                                yield newDat
+                                loop rest
+                            FirstHeaderIdle -> loop spillOverData
+
+    rejectSpillOver
+        :: (MonadIO m, MonadReader env m, HasGlobalState env)
+        => ByteString
+        -> ConduitT (ExtractedDU TMFrame) ByteString m ()
+    rejectSpillOver sp = do
+        env <- ask
+        if B.length sp >= fixedSizeOf @PUSHeader
+            then do
+                case A.parseOnly pusPktHdrLenOnlyParser sp of
+                    Left _err ->
+                        liftIO
+                            $ raiseEvent env
+                            $ EVTelemetry
+                            $ EVTMGarbledSpillOver (B.unpack sp)
+                    Right pktLen -> do
+                        let len =
+                                fromIntegral (pktLen + 1)
+                                    - (B.length sp - fixedSizeOf @PUSHeader)
+                            newSp = sp <> B.replicate len 0
+                        case
+                                A.parseOnly
+                                    (pusPktParser missionSpecific pIf)
+                                    newSp
+                            of
+                                Left _err ->
+                                    liftIO
+                                        $ raiseEvent env
+                                        $ EVTelemetry
+                                        $ EVTMGarbledSpillOver (B.unpack newSp)
+                                Right pusPkt ->
+                                    liftIO
+                                        $ raiseEvent env
+                                        $ EVTelemetry
+                                        $ EVTMRejectedSpillOverPkt
+                                              (pusPkt ^. protContent)
+            else do
+                liftIO $ raiseEvent env $ EVTelemetry $ EVTMRejectSpillOver
+                    (B.unpack sp)
+
+
 
 
 data PktKey = PktKey !APID !SSC
@@ -388,19 +441,23 @@ processContinuationSegment segLen pktStore pktKey part = do
                     <> " SSC: "
                     <> display ssc
                     <> ". Packet marked as bad."
-                let newStore = padGap pktStore pktKey ipkt hdr 
+                let newStore = padGap pktStore pktKey ipkt hdr
                 return newStore
 
 
-padGap :: PktStore -> PktKey -> IntermediatePacket -> PUSHeader -> PktStore 
-padGap pktStore pktKey ipkt hdr = 
+padGap :: PktStore -> PktKey -> IntermediatePacket -> PUSHeader -> PktStore
+padGap pktStore pktKey ipkt hdr =
     let newPkt = ipkt { impBody    = impBody ipkt `B.append` padding
-            , impLastLen = hdr ^. pusHdrTcLength
-            , impSegFlag = SegmentContinue
-            , impQuality = toFlag Good False
-            }
-        padding = B.replicate (fromIntegral (impLastLen ipkt) - fromIntegral (hdr ^. pusHdrTcLength)) 0
-    in HM.insert pktKey newPkt pktStore
+                      , impLastLen = hdr ^. pusHdrTcLength
+                      , impSegFlag = SegmentContinue
+                      , impQuality = toFlag Good False
+                      }
+        padding = B.replicate
+            ( fromIntegral (impLastLen ipkt)
+            - fromIntegral (hdr ^. pusHdrTcLength)
+            )
+            0
+    in  HM.insert pktKey newPkt pktStore
 
 
 
@@ -434,7 +491,7 @@ processLastSegment missionSpecific pIf segLen pktStore pktKey part = do
                 processFinishedPacket missionSpecific pIf hdr newBody
                 return newStore
             else do
-                let newStore = padGap pktStore pktKey pkt hdr 
+                let newStore = padGap pktStore pktKey pkt hdr
                     msg =
                         "Detected gap in segmented TM APID: "
                             <> display apid
@@ -486,14 +543,15 @@ tmFrameExtractionChain
        , HasGlobalState env
        , HasLogFunc env
        )
-    => TBQueue TMFrame
+    => PUSMissionSpecific
+    -> TBQueue TMFrame
     -> TBQueue (ExtractedDU PUSPacket)
     -> ProtocolInterface
     -> ConduitT () Void m ()
-tmFrameExtractionChain queue outQueue interf =
+tmFrameExtractionChain missionSpecific queue outQueue interf =
     sourceTBQueue queue
         .| checkFrameCountC interf
-        .| extractPktFromTMFramesC
+        .| extractPktFromTMFramesC missionSpecific interf
         .| pusPacketDecodeC interf
         .| sinkTBQueue outQueue
 

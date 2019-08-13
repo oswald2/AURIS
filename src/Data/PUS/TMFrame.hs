@@ -24,6 +24,7 @@ module Data.PUS.TMFrame
     (
     TMFrameHeader
     , TMFrame
+    , FirstHeaderPtrVal(..)
     , tmFrameVersion
     , tmFrameScID
     , tmFrameVcID
@@ -55,6 +56,7 @@ module Data.PUS.TMFrame
     , tmFrameCheckOrder
     , tmFrameCheckSync
     , isIdleTmFrame
+    , tmFrameFHType
     )
 where
 
@@ -87,6 +89,14 @@ import           Protocol.SizeOf
 
 
 
+data FirstHeaderPtrVal =
+    FirstHeaderZero
+    | FirstHeaderNoFH
+    | FirstHeaderNonZero
+    | FirstHeaderIdle
+    deriving (Eq, Ord, Show, Read)
+
+
 -- | The primary frame header, adheres to the PUS Standard
 data TMFrameHeader = TMFrameHeader {
     _tmFrameVersion :: !Word8,
@@ -103,6 +113,7 @@ data TMFrameHeader = TMFrameHeader {
 } deriving (Show, Read, Generic)
 makeLenses ''TMFrameHeader
 
+
 instance SizeOf TMFrameHeader where
     sizeof _ = 6
 
@@ -117,6 +128,7 @@ tmFrameNoFirstHeader :: Word16
 tmFrameNoFirstHeader = 0x7FF
 
 
+
 -- | The frame itself. It consists of a header, the data part and optionally
 -- a CLCW (called OCF in TM terminology) and optionally a CRC value. Presence
 -- of the CLCW is indicated in the header via the 'tmFrameOpControl' flag, the
@@ -128,6 +140,21 @@ data TMFrame = TMFrame {
     _tmFrameFECW :: Maybe CRC
 } deriving (Show, Read, Generic)
 makeLenses ''TMFrame
+
+
+
+
+{-# INLINABLE tmFrameFHType #-}
+tmFrameFHType :: TMFrame -> FirstHeaderPtrVal
+tmFrameFHType frame =
+    let fh = frame ^. tmFrameHdr . tmFrameFirstHeaderPtr
+    in
+    if | fh == 0 -> FirstHeaderZero
+       | fh == tmFrameNoFirstHeader -> FirstHeaderNoFH
+       | fh == tmFrameIdlePtr -> FirstHeaderIdle
+       | otherwise -> FirstHeaderNonZero
+
+
 
 {-# INLINABLE tmFrameCheckOrder #-}
 tmFrameCheckOrder :: TMFrame -> Either Text ()
@@ -346,7 +373,10 @@ tmFrameGetPrevAndRest frame =
             | hdrPtr == tmFrameNoFirstHeader -> B.empty
             | hdrPtr == tmFrameIdlePtr       -> B.empty
             | otherwise                      -> B.take (fromIntegral hdrPtr) dat
-        rest = B.drop (fromIntegral hdrPtr) dat
+        rest =  if
+            | hdrPtr == tmFrameNoFirstHeader -> dat
+            | hdrPtr == tmFrameIdlePtr       -> B.empty
+            | otherwise                      -> B.drop (fromIntegral hdrPtr) dat
     in  (prev, rest)
 
 

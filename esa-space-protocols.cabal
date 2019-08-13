@@ -150,7 +150,7 @@ benchmark TestBits
     type: exitcode-stdio-1.0
     main-is: TestBits.hs
     default-language: Haskell2010
-    hs-source-dirs: src/test
+    hs-source-dirs: src/bench
     ghc-options: -Wall -O2
     build-depends:
         base >=4.12.0.0 && <4.13,
@@ -170,7 +170,7 @@ benchmark TestBits
 test-suite CLTUTest
     type: exitcode-stdio-1.0
     main-is: CLTUTest.hs
-    default-language: Haskell2010        
+    default-language: Haskell2010
 
     c-sources:
         src/csrc/CLTUcsrc.c
@@ -256,7 +256,7 @@ benchmark CmdEncodePerf2
 
     build-depends:
         esa-space-protocols -any,
-        esa-base, 
+        esa-base,
         base -any,
         bytestring -any,
         criterion -any,
