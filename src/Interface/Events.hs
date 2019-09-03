@@ -25,7 +25,6 @@ where
 
 import RIO
 
-import Data.Binary
 import Data.Aeson
 import Codec.Serialise
 
@@ -39,7 +38,6 @@ data IfEvent =
     deriving (Show, Generic)
 
 
-instance Binary IfEvent
 instance Serialise IfEvent
 instance FromJSON IfEvent
 instance ToJSON IfEvent

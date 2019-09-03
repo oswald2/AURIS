@@ -28,9 +28,6 @@ import           Data.Conduit.Binary           as CB
 import           Data.Conduit.Network
 import           Data.Conduit.TMChan
 import           Data.Word8
-import           Data.Binary                    ( decodeOrFail
-                                                , encode
-                                                )
 import           Data.Aeson                     ( eitherDecode
                                                 , encode
                                                 )
@@ -56,7 +53,6 @@ instance Exception QuitException where
 -- and via JSON (line based) when 'InterfaceJSON'
 data InterfaceType =
     InterfaceString
-    | InterfaceBinary
     | InterfaceSerialise
     | InterfaceJSON
     deriving (Eq, Ord, Enum, Show, Read)
@@ -144,10 +140,6 @@ parseAction InterfaceString = C.filterE (/= _cr) .| CB.lines .| proc
                         Right m   -> m
                 yield (Left msg)
             else yield (Right (fst (L.head res)))
-parseAction InterfaceBinary = awaitForever $ \bs -> do
-    case decodeOrFail (BL.fromStrict bs) of
-        Left  (_, _, err) -> yield (Left (T.pack err))
-        Right (_, _, x  ) -> yield (Right x)
 parseAction InterfaceSerialise = awaitForever $ \bs -> do
     case deserialiseOrFail (BL.fromStrict bs) of
         Left  (DeserialiseFailure _ err) -> yield (Left (T.pack err))
@@ -189,8 +181,6 @@ actionSink interface =
 showConduit :: (Monad m) => InterfaceType -> ConduitT IfEvent ByteString m ()
 showConduit InterfaceString = awaitForever $ \ev -> do
     yield (BC.pack (show ev ++ "\n"))
-showConduit InterfaceBinary = awaitForever $ \ev -> do
-    yield (BL.toStrict (Data.Binary.encode ev))
 showConduit InterfaceSerialise = awaitForever $ \ev -> do
     yield (BL.toStrict (serialise ev))
 showConduit InterfaceJSON = awaitForever $ \ev -> do
