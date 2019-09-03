@@ -32,7 +32,7 @@ import qualified RIO.HashMap                   as HM
 import qualified RIO.Vector.Storable           as VS
 --import qualified Data.Vector.Storable.Mutable  as VS
 
-import           Control.Monad.ST
+--import           Control.Monad.ST
 --import           Control.DeepSeq
 
 import qualified Data.ByteString.Char8         as BC

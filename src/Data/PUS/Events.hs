@@ -27,7 +27,6 @@ where
 
 import           RIO
 
-import           Data.Binary
 import           Data.Aeson
 import           Codec.Serialise
 import           Data.Fixed
@@ -35,8 +34,8 @@ import           Data.Fixed
 import           Data.PUS.Types
 import           Data.PUS.PUSPacket
 import           Data.PUS.COP1Types
---import           Data.PUS.Segment
-
+import           Data.PUS.ExtractedDU
+import           Data.PUS.TMFrame
 
 
 -- | The events themselves
@@ -46,7 +45,6 @@ data Event = EVCommanding EventCommanding
     | EVCOP1 EventCOP1
     deriving (Show, Generic)
 
-instance Binary Event
 instance Serialise Event
 instance FromJSON Event
 instance ToJSON Event where
@@ -56,7 +54,6 @@ instance ToJSON Event where
 data EventCommanding = CommandEvent
     deriving (Show, Generic)
 
-instance Binary EventCommanding
 instance Serialise EventCommanding
 instance FromJSON EventCommanding
 instance ToJSON EventCommanding where
@@ -71,9 +68,9 @@ data EventTelemetry =
     | EVTMRejectSpillOver [Word8]
     | EVTMGarbledSpillOver [Word8]
     | EVTMRejectedSpillOverPkt PUSPacket
+    | EVTMFrameReceived (ExtractedDU TMFrame)
     deriving (Show, Generic)
 
-instance Binary EventTelemetry
 instance Serialise EventTelemetry
 instance FromJSON EventTelemetry
 instance ToJSON EventTelemetry where
@@ -89,7 +86,6 @@ data EventAlarm =
     | EVIllegalAction Text
     deriving (Show, Generic)
 
-instance Binary EventAlarm
 instance Serialise EventAlarm
 instance FromJSON EventAlarm
 instance ToJSON EventAlarm where
@@ -122,7 +118,6 @@ data EventCOP1 =
     deriving (Show, Generic)
 
 
-instance Binary EventCOP1
 instance Serialise EventCOP1
 instance FromJSON EventCOP1
 instance ToJSON EventCOP1 where

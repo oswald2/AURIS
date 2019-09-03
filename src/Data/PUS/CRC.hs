@@ -15,6 +15,7 @@ ByteStrings.
     , OverloadedStrings
     , NoImplicitPrelude
     , GeneralizedNewtypeDeriving
+    , DeriveGeneric
 #-}
 module Data.PUS.CRC
     ( CRC
@@ -40,7 +41,8 @@ import qualified RIO.Text                      as T
 import           Data.Attoparsec.ByteString     ( Parser )
 import qualified Data.Attoparsec.ByteString    as A
 import qualified Data.Attoparsec.Binary        as A
-
+import           Codec.Serialise
+import           Data.Aeson
 
 import           Data.Bits
 import qualified Data.Vector.Unboxed           as V
@@ -52,10 +54,15 @@ import           Formatting
 
 -- | The CRC type
 newtype CRC = CRC Word16
-  deriving (Eq, Show, Read)
+  deriving (Eq, Show, Read, Generic)
 
 instance Display CRC where
     textDisplay (CRC x) = sformat (left 4 '0' %. hex) x
+
+instance Serialise CRC
+instance FromJSON CRC
+instance ToJSON CRC where
+    toEncoding = genericToEncoding defaultOptions
 
 
 -- | Construct a CRC type from a 16 bit word.

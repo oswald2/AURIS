@@ -171,6 +171,12 @@ data Good = Good
 newtype Flag a = MkFlag Bool
     deriving (Eq, Ord, Show, Read, Generic)
 
+instance Serialise (Flag a)
+instance FromJSON (Flag a)
+instance ToJSON (Flag a) where
+    toEncoding = genericToEncoding defaultOptions
+
+
 -- | Converts a type with the given Bool to a 'Flag'
 toFlag :: t -> Bool -> Flag t
 toFlag _ = MkFlag
@@ -287,8 +293,8 @@ instance ToJSON SSC where
     toEncoding = genericToEncoding defaultOptions
 instance Hashable SSC
 
-instance Display SSC where 
-    display (SSC x) = display x 
+instance Display SSC where
+    display (SSC x) = display x
 
 newtype SourceID = SourceID { getSourceID :: Word8 }
     deriving (Eq, Ord, Show, Read, Generic)
@@ -299,7 +305,7 @@ mkSourceID = SourceID
 instance Binary SourceID
 instance Serialise SourceID
 instance FromJSON SourceID
-instance ToJSON SourceID where 
+instance ToJSON SourceID where
     toEncoding = genericToEncoding defaultOptions
 instance NFData SourceID
 
@@ -334,4 +340,3 @@ tmSegmentLength TMSegment256   = 256
 tmSegmentLength TMSegment512   = 512
 tmSegmentLength TMSegment1024  = 1024
 tmSegmentLength TMSegment65536 = 65536
-      

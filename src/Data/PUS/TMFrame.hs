@@ -21,8 +21,7 @@ to check for correct sequences of TM frames.
     , TemplateHaskell
 #-}
 module Data.PUS.TMFrame
-    (
-    TMFrameHeader
+    ( TMFrameHeader
     , TMFrame
     , FirstHeaderPtrVal(..)
     , tmFrameVersion
@@ -51,10 +50,9 @@ module Data.PUS.TMFrame
     , tmFrameGetPrevAndRest
     , decodeFrame
     , tmFrameAppendCRC
-    , tmFrameEncodeC
-    , tmFrameDecodeC
     , tmFrameCheckOrder
     , tmFrameCheckSync
+    , tmFrameCheckCRC
     , isIdleTmFrame
     , tmFrameFHType
     , tmFrameDefaultHeader
@@ -64,17 +62,16 @@ where
 
 import           RIO                     hiding ( Builder )
 import qualified RIO.ByteString                as B
-import qualified RIO.Text                      as T
 
 import           Control.Lens                   ( makeLenses )
-import           Conduit
-import           Control.PUS.Classes
 
 import           Data.Attoparsec.ByteString     ( Parser )
 import qualified Data.Attoparsec.ByteString    as A
 import qualified Data.Attoparsec.Binary        as A
 import           Data.Bits
-import           Data.Conduit.Attoparsec
+import           Data.ByteString.Base64.Type
+import           Data.Aeson
+import           Codec.Serialise
 
 import           ByteString.StrictBuilder
 
@@ -84,7 +81,6 @@ import           Data.PUS.Types
 import           Data.PUS.Config
 import           Data.PUS.MissionSpecific.Definitions
 import           Data.PUS.TMFrameDfh
-import           Data.PUS.Events
 
 import           Protocol.SizeOf
 
@@ -95,7 +91,12 @@ data FirstHeaderPtrVal =
     | FirstHeaderNoFH
     | FirstHeaderNonZero
     | FirstHeaderIdle
-    deriving (Eq, Ord, Show, Read)
+    deriving (Eq, Ord, Show, Read, Generic)
+
+instance Serialise FirstHeaderPtrVal
+instance FromJSON FirstHeaderPtrVal
+instance ToJSON FirstHeaderPtrVal where
+    toEncoding = genericToEncoding defaultOptions
 
 
 -- | The primary frame header, adheres to the PUS Standard
@@ -114,20 +115,27 @@ data TMFrameHeader = TMFrameHeader {
 } deriving (Show, Read, Generic)
 makeLenses ''TMFrameHeader
 
+instance Serialise TMFrameHeader
+instance FromJSON TMFrameHeader
+instance ToJSON TMFrameHeader where
+    toEncoding = genericToEncoding defaultOptions
+
+
+
+
 tmFrameDefaultHeader :: TMFrameHeader
-tmFrameDefaultHeader = TMFrameHeader {
-    _tmFrameVersion = 0,
-    _tmFrameScID = mkSCID 0,
-    _tmFrameVcID = mkVCID 0,
-    _tmFrameOpControl = True,
-    _tmFrameMCFC = 0,
-    _tmFrameVCFC = 0,
-    _tmFrameDfh = False,
-    _tmFrameSync = True,
-    _tmFrameOrder = True,
-    _tmFrameSegID = TMSegment65536,
-    _tmFrameFirstHeaderPtr = 0
-    }
+tmFrameDefaultHeader = TMFrameHeader { _tmFrameVersion        = 0
+                                     , _tmFrameScID           = mkSCID 0
+                                     , _tmFrameVcID           = mkVCID 0
+                                     , _tmFrameOpControl      = True
+                                     , _tmFrameMCFC           = 0
+                                     , _tmFrameVCFC           = 0
+                                     , _tmFrameDfh            = False
+                                     , _tmFrameSync           = True
+                                     , _tmFrameOrder          = True
+                                     , _tmFrameSegID          = TMSegment65536
+                                     , _tmFrameFirstHeaderPtr = 0
+                                     }
 
 
 instance SizeOf TMFrameHeader where
@@ -157,6 +165,36 @@ data TMFrame = TMFrame {
 } deriving (Show, Read, Generic)
 makeLenses ''TMFrame
 
+instance Serialise TMFrame
+instance FromJSON TMFrame where
+    parseJSON = withObject "TMFrame" $ \v ->
+        TMFrame
+            <$> v
+            .:  "tmFrameHdr"
+            <*> (getByteString64 <$> v .: "tmFrameData")
+            <*> v
+            .:  "tmFrameOCF"
+            <*> v
+            .:  "tmFrameFECW"
+
+
+instance ToJSON TMFrame where
+    toJSON r = object
+        [ "tmFrameHdr" .= _tmFrameHdr r
+        , "tmFrameData" .= makeByteString64 (_tmFrameData r)
+        , "tmFrameOCF" .= _tmFrameOCF r
+        , "tmFrameFECW" .= _tmFrameFECW r
+        ]
+    toEncoding r = pairs
+        (  "tmFrameHdr"
+        .= _tmFrameHdr r
+        <> "tmFrameData"
+        .= makeByteString64 (_tmFrameData r)
+        <> "tmFrameOCF"
+        .= _tmFrameOCF r
+        <> "tmFrameFECW"
+        .= _tmFrameFECW r
+        )
 
 
 
@@ -164,11 +202,11 @@ makeLenses ''TMFrame
 tmFrameFHType :: TMFrame -> FirstHeaderPtrVal
 tmFrameFHType frame =
     let fh = frame ^. tmFrameHdr . tmFrameFirstHeaderPtr
-    in
-    if | fh == 0 -> FirstHeaderZero
-       | fh == tmFrameNoFirstHeader -> FirstHeaderNoFH
-       | fh == tmFrameIdlePtr -> FirstHeaderIdle
-       | otherwise -> FirstHeaderNonZero
+    in  if
+            | fh == 0                    -> FirstHeaderZero
+            | fh == tmFrameNoFirstHeader -> FirstHeaderNoFH
+            | fh == tmFrameIdlePtr       -> FirstHeaderIdle
+            | otherwise                  -> FirstHeaderNonZero
 
 
 
@@ -191,6 +229,8 @@ isIdleTmFrame :: TMFrame -> Bool
 isIdleTmFrame frame =
     frame ^. tmFrameHdr . tmFrameFirstHeaderPtr == tmFrameIdlePtr
 
+
+{-# INLINABLE tmFrameBuilder #-}
 tmFrameBuilder :: TMFrame -> Builder
 tmFrameBuilder f =
     tmFrameHeaderBuilder (_tmFrameHdr f)
@@ -235,19 +275,19 @@ tmFrameMinLen = fixedSizeOf @TMFrameHeader + 1
 
 {-# INLINABLE packFlags #-}
 packFlags :: TMFrameHeader -> Word16
-packFlags hdr
-    = let
-          !vers = fromIntegral (_tmFrameVersion hdr) .&. 0x03
-          !scid = getSCID (_tmFrameScID hdr) .&. 0x03FF
-          !vcid = fromIntegral (getVCID (_tmFrameVcID hdr))
-          !opc  = if _tmFrameOpControl hdr then 1 else 0
-          !result =
-              (vers `shiftL` 14)
-                  .|. (scid `shiftL` 4)
-                  .|. (vcid `shiftL` 1)
-                  .|. opc
-      in
-          result
+packFlags hdr =
+    let
+        !vers = fromIntegral (_tmFrameVersion hdr) .&. 0x03
+        !scid = getSCID (_tmFrameScID hdr) .&. 0x03FF
+        !vcid = fromIntegral (getVCID (_tmFrameVcID hdr))
+        !opc  = if _tmFrameOpControl hdr then 1 else 0
+        !result =
+            (vers `shiftL` 14)
+                .|. (scid `shiftL` 4)
+                .|. (vcid `shiftL` 1)
+                .|. opc
+    in
+        result
 
 {-# INLINABLE unpackFlags #-}
 unpackFlags :: Word16 -> (Word8, SCID, VCID, Bool)
@@ -290,55 +330,14 @@ unpackDFS i = (dfh, sync, order, seg, fhp)
     !fhp = i .&. 0x7FF
 
 
+{-# INLINABLE decodeFrame #-}
 decodeFrame :: Config -> ByteString -> Either String TMFrame
 decodeFrame cfg = A.parseOnly (tmFrameParser cfg)
 
--- | Conduit to encode a 'TMFrame'. Just calls the builder on it and yields the
--- resulting 'ByteString'
-tmFrameEncodeC
-    :: (MonadReader env m, HasConfig env) => ConduitT TMFrame ByteString m ()
-tmFrameEncodeC = awaitForever $ \frame -> do
-    cfg <- view getConfig
-    let enc    = builderBytes (tmFrameBuilder frame)
-        result = tmFrameAppendCRC cfg enc
-    yield result
 
--- | Conduit to decode a 'TMFrame'. In case the frame cannot be parsed, a
--- 'EV_IllegalTMFrame' event is raised. If the frame could be parsed, first
--- it is checked if it is an idle-frame. Idle-frames are simply discarded.
---
--- In case it is a normal frame, it is CRC-checked. In case the CRC is invalid,
--- a 'EV_IllegalTMFrame' event with an error message is raised.
---
--- If the frame was ok, it is yield'ed to the next conduit.
-tmFrameDecodeC
-    :: (MonadIO m, MonadReader env m, HasGlobalState env)
-    => ConduitT ByteString TMFrame m ()
-tmFrameDecodeC = do
-    cfg <- view getConfig
-    conduitParserEither (A.match (tmFrameParser cfg)) .| proc cfg
-  where
-    proc cfg = awaitForever $ \x -> do
-        st <- ask
-        case x of
-            Left err -> do
-                let msg = T.pack (errorMessage err)
-                liftIO $ raiseEvent st (EVAlarms (EVIllegalTMFrame msg))
-                proc cfg
-            Right (_, (bs, frame)) ->
-                -- if we have an idle-frame, just throw it away
-                if isIdleTmFrame frame then proc cfg
-                else
-                    case checkFrame cfg bs of
-                        Left err -> do
-                            liftIO $ raiseEvent st (EVTelemetry (EVTMFailedCRC err))
-                            proc cfg
-                        Right () -> do
-                            yield frame
-                            proc cfg
-
-checkFrame :: Config -> ByteString -> Either Text ()
-checkFrame cfg bs = if cfgTMFrameHasCRC cfg
+{-# INLINABLE tmFrameCheckCRC #-}
+tmFrameCheckCRC :: Config -> ByteString -> Either Text ()
+tmFrameCheckCRC cfg bs = if cfgTMFrameHasCRC cfg
     then case crcCheck bs of
         Left  err -> Left err
         Right _   -> Right ()
@@ -347,6 +346,7 @@ checkFrame cfg bs = if cfgTMFrameHasCRC cfg
 
 
 
+{-# INLINABLE tmFrameHeaderBuilder #-}
 tmFrameHeaderBuilder :: TMFrameHeader -> Builder
 tmFrameHeaderBuilder hdr =
     word16BE (packFlags hdr)
@@ -354,6 +354,7 @@ tmFrameHeaderBuilder hdr =
         <> word8 (_tmFrameVCFC hdr)
         <> word16BE (packDFS hdr)
 
+{-# INLINABLE tmFrameHeaderParser #-}
 tmFrameHeaderParser :: Parser TMFrameHeader
 tmFrameHeaderParser = do
     (vers, scid, vcid, opc)      <- unpackFlags <$> A.anyWord16be
@@ -362,6 +363,7 @@ tmFrameHeaderParser = do
     (dfh, sync, order, seg, fhp) <- unpackDFS <$> A.anyWord16be
     return (TMFrameHeader vers scid vcid opc mc vc dfh sync order seg fhp)
 
+{-# INLINABLE tmFrameParser #-}
 tmFrameParser :: Config -> Parser TMFrame
 tmFrameParser cfg = do
     hdr <- tmFrameHeaderParser
@@ -390,7 +392,7 @@ tmFrameGetPrevAndRest frame =
             | hdrPtr == tmFrameNoFirstHeader -> B.empty
             | hdrPtr == tmFrameIdlePtr       -> B.empty
             | otherwise                      -> B.take (fromIntegral hdrPtr) dat
-        rest =  if
+        rest = if
             | hdrPtr == tmFrameNoFirstHeader -> dat
             | hdrPtr == tmFrameIdlePtr       -> B.empty
             | otherwise                      -> B.drop (fromIntegral hdrPtr) dat
@@ -399,7 +401,6 @@ tmFrameGetPrevAndRest frame =
 
 {-# INLINABLE tmFrameAppendCRC #-}
 tmFrameAppendCRC :: Config -> ByteString -> ByteString
-tmFrameAppendCRC config encFrame = if cfgTMFrameHasCRC config
-    then crcEncodeAndAppendBS encFrame
-    else encFrame
+tmFrameAppendCRC config encFrame =
+    if cfgTMFrameHasCRC config then crcEncodeAndAppendBS encFrame else encFrame
 

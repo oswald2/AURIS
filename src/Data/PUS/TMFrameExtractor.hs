@@ -25,6 +25,8 @@ module Data.PUS.TMFrameExtractor
     , tmFrameExtractionChain
     , tmFrameSwitchVC
     , pusPacketDecodeC
+    , tmFrameEncodeC
+    , tmFrameDecodeC
     )
 where
 
@@ -33,6 +35,7 @@ import qualified RIO.ByteString                as B
 import qualified Data.IntMap.Strict            as M
 import qualified RIO.Text                      as T
 import qualified RIO.HashMap                   as HM
+import           ByteString.StrictBuilder
 
 import           Conduit
 import           Data.Conduit.TQueue
@@ -61,6 +64,53 @@ data RestartVCException = RestartVCException
     deriving (Show)
 
 instance Exception RestartVCException
+
+
+
+
+-- | Conduit to encode a 'TMFrame'. Just calls the builder on it and yields the
+-- resulting 'ByteString'
+tmFrameEncodeC
+    :: (MonadReader env m, HasConfig env) => ConduitT TMFrame ByteString m ()
+tmFrameEncodeC = awaitForever $ \frame -> do
+    cfg <- view getConfig
+    let enc    = builderBytes (tmFrameBuilder frame)
+        result = tmFrameAppendCRC cfg enc
+    yield result
+
+-- | Conduit to decode a 'TMFrame'. In case the frame cannot be parsed, a
+-- 'EV_IllegalTMFrame' event is raised. If the frame could be parsed, first
+-- it is checked if it is an idle-frame. Idle-frames are simply discarded.
+--
+-- In case it is a normal frame, it is CRC-checked. In case the CRC is invalid,
+-- a 'EV_IllegalTMFrame' event with an error message is raised.
+--
+-- If the frame was ok, it is yield'ed to the next conduit.
+tmFrameDecodeC
+    :: (MonadIO m, MonadReader env m, HasGlobalState env)
+    => ConduitT ByteString TMFrame m ()
+tmFrameDecodeC = do
+    cfg <- view getConfig
+    conduitParserEither (A.match (tmFrameParser cfg)) .| proc cfg
+  where
+    proc cfg = awaitForever $ \x -> do
+        st <- ask
+        case x of
+            Left err -> do
+                let msg = T.pack (errorMessage err)
+                liftIO $ raiseEvent st (EVAlarms (EVIllegalTMFrame msg))
+                proc cfg
+            Right (_, (bs, frame)) ->
+                -- if we have an idle-frame, just throw it away
+                                      if isIdleTmFrame frame
+                then proc cfg
+                else case tmFrameCheckCRC cfg bs of
+                    Left err -> do
+                        liftIO $ raiseEvent st (EVTelemetry (EVTMFailedCRC err))
+                        proc cfg
+                    Right () -> do
+                        yield frame
+                        proc cfg
 
 
 
@@ -98,8 +148,8 @@ tmFrameSwitchVC missionSpecific interf outQueue = do
     -- create the threads
     let
         threadFunc a@(_vcid, queue) = do
-            res <- tryDeep
-                $ runConduitRes (tmFrameExtractionChain missionSpecific queue outQueue interf)
+            res <- tryDeep $ runConduitRes
+                (tmFrameExtractionChain missionSpecific queue outQueue interf)
             case res of
                 Left  RestartVCException -> threadFunc a
                 Right x                  -> pure x
@@ -226,10 +276,10 @@ extractPktFromTMFramesC missionSpecific pIf = do
                             FirstHeaderZero -> do
                                 yield dat
                                 loop B.empty
-                            FirstHeaderNoFH -> loop dat
+                            FirstHeaderNoFH    -> loop dat
                             FirstHeaderNonZero -> do
                                 let (prev, rest) = tmFrameGetPrevAndRest frame'
-                                    newDat = spillOverData <> prev
+                                    newDat       = spillOverData <> prev
                                 yield newDat
                                 loop rest
                             FirstHeaderIdle -> loop spillOverData

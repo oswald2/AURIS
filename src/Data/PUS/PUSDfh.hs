@@ -81,15 +81,15 @@ import           Data.Attoparsec.ByteString     ( Parser )
 import qualified Data.Attoparsec.ByteString    as A
 import           Data.Bits
 import           ByteString.StrictBuilder
-import           Data.Vector                    ( Vector )
-import qualified Data.Vector                   as V
+--import           Data.Vector                    ( Vector )
+--import qualified Data.Vector                   as V
 import           Data.Binary
 import           Data.Aeson
 
 import           Codec.Serialise
 
 import           Data.PUS.Types
-import           Data.PUS.Parameter
+--import           Data.PUS.Parameter
 import           Data.PUS.EncTime
 
 import           Protocol.SizeOf
