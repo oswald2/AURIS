@@ -35,9 +35,6 @@ import           Test.Hspec
 
 
 
-payload :: ByteString
-payload = B.pack (take 2400 (cycle [0 .. 255]))
-
 
 makeTMFrames
     :: Config -> PUSMissionSpecific -> TMFrameHeader -> ByteString -> [TMFrame]
@@ -50,6 +47,41 @@ makeTMFrames cfg missionSpecific hdr pl =
     in  frames
 
 
+runTestAction :: RIO GlobalState b -> IO b
+runTestAction action = do
+    defLogOptions <- logOptionsHandle stdout True
+    let logOptions = setLogMinLevel LevelError defLogOptions
+    withLogFunc logOptions $ \logFunc -> do
+        state <- newGlobalState
+                    defaultConfig
+                    defaultMissionSpecific
+                    logFunc
+                    (\ev -> T.putStrLn ("Event: " <> T.pack (show ev)))
+
+        runRIO state action
+
+goodExtraction :: Config -> IO ()
+goodExtraction cfg = do
+    let payload = B.pack (take 4096 (cycle [0 .. 255]))
+    let frames = map ep $ makeTMFrames cfg
+                    defaultMissionSpecific
+                    tmFrameDefaultHeader
+                    payload
+        ep x = ExtractedDU { _epQuality = toFlag Good True
+                        , _epGap     = Nothing
+                        , _epSource  = IF_NCTRS
+                        , _epDU      = x
+                        }
+        conduit =C.sourceList frames
+                .| extractPktFromTMFramesC defaultMissionSpecific
+                        IF_NCTRS
+                .| C.consume
+    result <- runTestAction (runConduit conduit)
+
+    length result `shouldBe` 3
+    B.concat result `shouldBe` payload
+    return ()
+
 
 main :: IO ()
 main = hspec $ do
@@ -57,31 +89,5 @@ main = hspec $ do
 
     describe "TM Frame Extraction" $ do
         it "good extraction" $ do
-            let frames = map ep $ makeTMFrames cfg
-                                               defaultMissionSpecific
-                                               tmFrameDefaultHeader
-                                               payload
-                ep x = ExtractedDU { _epQuality = toFlag Good True
-                                   , _epGap     = Nothing
-                                   , _epSource  = IF_NCTRS
-                                   , _epDU      = x
-                                   }
-                conduit =
-                    C.sourceList frames
-                        .| extractPktFromTMFramesC defaultMissionSpecific
-                                                   IF_NCTRS
-                        .| C.consume
-            defLogOptions <- logOptionsHandle stdout True
-            let logOptions = setLogMinLevel LevelError defLogOptions
-            withLogFunc logOptions $ \logFunc -> do
-                state <- newGlobalState
-                    defaultConfig
-                    defaultMissionSpecific
-                    logFunc
-                    (\ev -> T.putStrLn ("Event: " <> T.pack (show ev)))
-
-                runRIO state $ do
-                    res <- runConduit conduit
-                    liftIO $ T.putStrLn $ T.pack (show res)
-            return ()
+            goodExtraction cfg
 
