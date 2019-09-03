@@ -36,7 +36,7 @@ import Data.PUS.Events
 -- 'Data.PUS.Events'
 data IfEvent =
     EventPUS Event
-    deriving (Read, Show, Generic)
+    deriving (Show, Generic)
 
 
 instance Binary IfEvent
