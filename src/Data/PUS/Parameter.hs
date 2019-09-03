@@ -59,7 +59,7 @@ import           RIO.List.Partial               ( (!!) )
 import           Control.Lens                   ( makeLenses
                                                 , (.~)
                                                 )
-import           Control.Monad.ST
+--import           Control.Monad.ST
 
 import           Data.Binary
 import           Data.Aeson              hiding ( Value )
@@ -96,7 +96,7 @@ instance ToJSON Parameter
 data ExtParameter = ExtParameter {
   _extParName :: !Text,
   _extParValue :: !Value,
-  _extParOff :: !BitOffset 
+  _extParOff :: !BitOffset
   }
   deriving (Show, Read, Generic, NFData)
 makeLenses ''ExtParameter

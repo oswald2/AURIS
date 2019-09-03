@@ -22,6 +22,7 @@ of the used 'Conduit' library automatically handles spillover-packets.
 #-}
 module Data.PUS.TMFrameExtractor
     ( extractPktFromTMFramesC
+    , tmFrameExtraction
     , tmFrameExtractionChain
     , tmFrameSwitchVC
     , pusPacketDecodeC
@@ -600,12 +601,27 @@ tmFrameExtractionChain
     -> ConduitT () Void m ()
 tmFrameExtractionChain missionSpecific queue outQueue interf =
     sourceTBQueue queue
-        .| checkFrameCountC interf
-        .| extractPktFromTMFramesC missionSpecific interf
-        .| pusPacketDecodeC interf
+        .| tmFrameExtraction missionSpecific interf
         .| sinkTBQueue outQueue
 
 
+-- | A conduit chain. Reads 'TMFrame' s,
+-- extracts the packets from the frames, passes them to the PUS Packet
+-- parser and passes that on downstream.
+tmFrameExtraction
+    :: ( MonadIO m
+       , MonadThrow m
+       , MonadReader env m
+       , HasGlobalState env
+       , HasLogFunc env
+       )
+    => PUSMissionSpecific
+    -> ProtocolInterface
+    -> ConduitT TMFrame (ExtractedDU PUSPacket) m ()
+tmFrameExtraction missionSpecific interf =
+    checkFrameCountC interf
+        .| extractPktFromTMFramesC missionSpecific interf
+        .| pusPacketDecodeC interf
 
 
 checkGapsValid :: TMSegmentLen -> IntermediatePacket -> PUSHeader -> Bool

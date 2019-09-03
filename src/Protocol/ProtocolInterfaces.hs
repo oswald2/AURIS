@@ -45,7 +45,7 @@ instance ToJSON ProtocolInterface where
 data ProtocolPacket a = ProtocolPacket {
     _protInterface :: ProtocolInterface
     , _protContent :: a
-    }
+    } deriving (Show)
 makeLenses ''ProtocolPacket
 
 

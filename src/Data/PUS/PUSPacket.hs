@@ -75,6 +75,7 @@ import           Protocol.SizeOf
 
 import           General.SetBitField
 import           General.Types
+import           General.Hexdump
 
 
 
@@ -116,6 +117,22 @@ data PUSHeader = PUSHeader {
 
 makeLenses ''PUSHeader
 
+-- we don't compare the fields pktID and SeqCtrl as these are only
+-- convenience fields, which are only used when a packet is decoded.
+-- they are set to 0 when a packet is created and therefore are
+-- not necessary to compare
+-- Also the length is not set when creating a packet, but will be
+-- calculated on encoding.
+instance Eq PUSHeader where
+    p1 == p2 =
+        _pusHdrTcVersion p1 == _pusHdrTcVersion p2
+        && _pusHdrType p1 == _pusHdrType p2
+        && _pusHdrDfhFlag p1 == _pusHdrDfhFlag p2
+        && _pusHdrTcApid p1 == _pusHdrTcApid p2
+        && _pusHdrSeqFlags p1 == _pusHdrSeqFlags p2
+        && _pusHdrTcSsc p1 == _pusHdrTcSsc p2
+
+
 instance Binary PUSHeader
 instance Serialise PUSHeader
 instance FromJSON PUSHeader
@@ -131,7 +148,7 @@ data PUSPacket = PUSPacket {
     _pusDfh :: !DataFieldHeader,
     _pusPIs :: Maybe (TMPIVal, TMPIVal),
     _pusData :: !ByteString
-    } deriving (Show, Generic)
+    } deriving (Eq, Show, Generic)
 makeLenses ''PUSPacket
 
 instance Binary PUSPacket
@@ -391,6 +408,7 @@ pusPktParser
     -> Parser (ProtocolPacket PUSPacket)
 pusPktParser missionSpecific comm = do
     hdr <- pusPktHdrParser
+    -- traceM $ "pusPktParser: pusHdr = " <> T.pack (show hdr)
     pusPktParserPayload missionSpecific comm hdr
 
 
@@ -415,14 +433,23 @@ pusPktParserPayload missionSpecific comm hdr = do
                 PUSTC -> dfhParser (missionSpecific ^. pmsTCDataFieldHeader)
             else return PUSEmptyHeader
         | otherwise -> fail $ "Unknown protocol type: " <> show comm
-    dat <- A.take (fromIntegral (hdr ^. pusHdrTcLength) + 1)
 
-    let pl = case comm of
-            IF_CNC -> case dfh of
-                PUSCnCTCHeader { _cncTcCrcFlags = val } -> if val == 1      -- the packet contains a CRC
-                    then B.take (B.length dat - crcLen) dat
-                    else dat
-                _ -> dat
-            _ -> dat
+    -- traceShowM dfh
+
+    -- The length in the PUS header is data length - 1, so we need to take
+    -- one byte more, but we have to ignore the CRC, which is also considered
+    -- in the length calculation
+    let plCRC = A.take len
+        len = fromIntegral (hdr ^. pusHdrTcLength) + 1 - crcLen - dfhLength dfh
+        lenWoCRC = fromIntegral (hdr ^. pusHdrTcLength) + 1 - dfhLength dfh
+    pl <- case comm of
+        IF_CNC -> case dfh of
+            PUSCnCTCHeader { _cncTcCrcFlags = val } -> if val == 1      -- the packet contains a CRC
+                then plCRC
+                else A.take (fromIntegral (hdr ^. pusHdrTcLength) + 1)
+            _ -> plCRC
+        _ -> plCRC
+
+    -- traceM (hexdumpBS pl)
 
     return (ProtocolPacket comm (PUSPacket hdr dfh Nothing pl))
