@@ -4,7 +4,7 @@ cabal-version:       2.4
 --   For further documentation, see http://haskell.org/cabal/users-guide/
 
 -- The name of the package.
-name:                esa-base
+name:                esa-db
 
 -- The package version.  See the Haskell package versioning policy (PVP)
 -- for standards guiding when and how versions should be incremented.
