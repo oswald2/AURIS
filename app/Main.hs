@@ -17,8 +17,8 @@ testApp = do
 main = do
     logOptions <- logOptionsHandle stderr True 
     (termLog, killTL) <- newLogFunc logOptions
-    (log, killDB) <- logToSQLiteDatabase "test.db"
-    runRIO (Logging termLog ()) $ runWithLogs log testApp
+    (logDB, killDB) <- logToSQLiteDatabase "test.db"
+    runRIO (Logging termLog ()) $ prependLogger logDB testApp
     killDB
     killTL
 
