@@ -22,8 +22,4 @@ cabal.project.local~
 .ghc.environment.*
 stack.yaml.lock
 stack.yaml~
-esa-base/
-esa-mib/
-esa-space-protocols/
-manual-stack/
-mcs-interface/
+

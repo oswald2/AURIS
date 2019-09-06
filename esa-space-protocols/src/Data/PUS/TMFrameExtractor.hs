@@ -188,44 +188,46 @@ checkFrameCountC
     :: (MonadIO m, MonadReader env m, HasGlobalState env)
     => ProtocolInterface
     -> ConduitT TMFrame (ExtractedDU TMFrame) m ()
-checkFrameCountC pIf = do
-    var <- newTVarIO Nothing
-
-    let
-        go = awaitForever $ \frame -> do
-            let !vcfc = frame ^. tmFrameHdr . tmFrameVCFC
-            lastFC' <- readTVarIO var
-            case lastFC' of
-                Just lastFC -> do
-                    -- check, if we have a gap
-                    if lastFC + 1 == vcfc
-                        then do
-                            atomically $ writeTVar var (Just vcfc)
-                            let ep = ExtractedDU
-                                    { _epQuality = toFlag Good True
-                                    , _epGap     = Nothing
-                                    , _epSource  = pIf
-                                    , _epDU      = frame
-                                    }
-                            yield ep
-                        else do
-                            st <- ask
-                            liftIO $ raiseEvent st $ EVTelemetry
-                                (EVTMFrameGap lastFC vcfc)
-                            let
-                                ep = ExtractedDU
-                                    { _epQuality = toFlag Good True
-                                    , _epGap     =
-                                        Just
-                                            ( fromIntegral lastFC
-                                            , fromIntegral vcfc
-                                            )
-                                    , _epSource  = pIf
-                                    , _epDU      = frame
-                                    }
-                            yield ep
-                Nothing -> atomically $ writeTVar var (Just vcfc)
-    go
+checkFrameCountC pIf = go Nothing
+    where
+        go lastFC' = do 
+            x <- await
+            case x of 
+                Nothing -> return ()
+                Just frame -> do
+                    let !vcfc = frame ^. tmFrameHdr . tmFrameVCFC
+                    case lastFC' of
+                        Just lastFC -> do
+                            -- check, if we have a gap
+                            if lastFC + 1 == vcfc
+                                then do
+                                    let ep = ExtractedDU
+                                            { _epQuality = toFlag Good True
+                                            , _epGap     = Nothing
+                                            , _epSource  = pIf
+                                            , _epDU      = frame
+                                            }
+                                    yield ep
+                                    go (Just vcfc)
+                                else do
+                                    st <- ask
+                                    liftIO $ raiseEvent st $ EVTelemetry
+                                        (EVTMFrameGap lastFC vcfc)
+                                    let
+                                        ep = ExtractedDU
+                                            { _epQuality = toFlag Good True
+                                            , _epGap     =
+                                                Just
+                                                    ( fromIntegral lastFC
+                                                    , fromIntegral vcfc
+                                                    )
+                                            , _epSource  = pIf
+                                            , _epDU      = frame
+                                            }
+                                    yield ep
+                                    go lastFC'
+                        Nothing -> go (Just vcfc)
+    
 
 
 
