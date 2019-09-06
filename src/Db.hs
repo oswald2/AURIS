@@ -1,26 +1,19 @@
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, BlockArguments #-}
 
-module Db
-    ( EventLog(..)
-    , logToDatabase,
-    ) where
+module Db where
 
 import           Control.Monad.State
 import           Data.Text as T
 import           Data.Time
-import           RIO
 import           Database.Selda
 import           Database.Selda.Backend
 import           Database.Selda.Backend.Internal
 import           Database.Selda.SqlType
+import Database.Selda.SQLite
+import RIO
+import EventLog
 
-
-data EventLog = EventLog
-    { utcTime :: UTCTime
-    , logLevel :: LogLevel
-    , logMessage :: T.Text
-    } deriving (Generic)
 
 instance SqlType LogLevel where
     mkLit LevelDebug = LCustom TText $ LText "debug"
@@ -45,12 +38,15 @@ instance SqlRow EventLog where
 eventLogTable :: Table EventLog
 eventLogTable = table "eventLog" []
 
-logToDatabase :: EventLog -> ReaderT (IORef (SeldaConnection (Backend IO))) IO ()
-logToDatabase e = do
-    cRef <- ask
-    c <- liftIO $ readIORef cRef
-    (_, c') <- liftIO $ runStateT (unS f) c
-    liftIO $ writeIORef cRef c'
-  where
-    f = insert_ eventLogTable [e]
+runQ cRef (S f) = do
+    c <- readIORef cRef
+    (_, c') <- runStateT f c
+    writeIORef cRef c'
+
+logToSQLiteDatabase :: FilePath -> IO (EventLog -> IO (), IO ())
+logToSQLiteDatabase fp = do
+    cRef <- sqliteOpen fp >>= newIORef
+    let run = runQ cRef
+    run $ tryCreateTable eventLogTable
+    pure $ (run . insert_ eventLogTable . pure, readIORef cRef >>= seldaClose)
 
