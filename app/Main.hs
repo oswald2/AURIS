@@ -1,5 +1,5 @@
 
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, InstanceSigs #-}
 module Main where
 
 import           RIO
@@ -7,6 +7,16 @@ import           System.Random
 
 import           DbLogging
 import Db
+
+data Logging a = Logging
+    { appLogFunc :: LogFunc
+    , applicationCtx :: a
+    }
+
+
+instance HasLogFunc (Logging a) where
+    logFuncL :: Lens' (Logging a) LogFunc
+    logFuncL d (Logging x a) = (\x -> Logging x a) <$> d x
 
 testApp :: RIO (Logging ()) ()
 testApp = do
