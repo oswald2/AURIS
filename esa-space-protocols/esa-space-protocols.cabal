@@ -1,0 +1,361 @@
+cabal-version: >=1.10
+name: esa-space-protocols
+version: 0.1.0.0
+license: BSD3
+license-file: LICENSE
+maintainer: michael.oswald@onikudaki.net
+author: Michael Oswald
+synopsis: A Haskell library for handling space protocols from ESA (European Space Agency) like CCSDS, PUS etc
+category: Data
+build-type: Simple
+extra-source-files:
+    CHANGELOG.md
+    README.md
+
+flag llvm
+    description:
+        build library with llvm
+    default: False
+
+flag tests
+    description:
+        Build test suite
+    default: False
+
+flag bench
+    description:
+        Build benchmarks
+    default: False
+
+library
+    exposed-modules:
+        Control.PUS.Classes
+        Conduit.SocketConnector
+        Data.PUS.Config
+        Data.PUS.Types
+        Data.PUS.APID
+        Data.PUS.PUSState
+        Data.PUS.GlobalState
+        Data.PUS.Events
+        Data.PUS.CRC
+        Data.PUS.CLTU
+        Data.PUS.CLTUEncoder
+        Data.PUS.CLTUTable
+        Data.PUS.CLCW
+        Data.PUS.Randomizer
+        Data.PUS.TCFrameTypes
+        Data.PUS.TCTransferFrame
+        Data.PUS.TCTransferFrameEncoder
+        Data.PUS.TCRequest
+        Data.PUS.TCRequestEncoder
+        Data.PUS.TCPacket
+        Data.PUS.TCPacketEncoder
+        Data.PUS.PUSPacket
+        Data.PUS.PUSPacketEncoder
+        Data.PUS.PUSDfh
+        Data.PUS.COP1Types
+        Data.PUS.FOP1
+        Data.PUS.FARM1
+        Data.PUS.Segment
+        Data.PUS.SegmentEncoder
+        Data.PUS.SegmentationFlags
+        Data.PUS.TCDirective
+        Data.PUS.Time
+        Data.PUS.Parameter
+        Data.PUS.EncTime
+        Data.PUS.TMFrame
+        Data.PUS.TMFrameDfh
+        Data.PUS.TMFrameExtractor
+        Data.PUS.ExtractedDU
+        Data.PUS.MissionSpecific.Definitions
+        Data.PUS.Value
+        Protocol.SizeOf
+        Protocol.NCTRS
+        Protocol.EDEN
+        Protocol.CnC
+        Protocol.ProtocolInterfaces
+        Protocol.Switcher
+
+
+    hs-source-dirs: src
+    default-language: Haskell2010
+    other-extensions:
+        OverloadedStrings
+        BangPatterns
+    build-depends:
+        base
+        , bytestring
+        , bytestring-strict-builder
+        , aeson
+        , text
+        , text-builder
+        , hw-prim
+        , hw-prim-bits
+        , text-show
+        , vector
+        , formatting
+        , attoparsec
+        , attoparsec-binary
+        , attoparsec-data
+        , conduit
+        , conduit-extra
+        , closed
+        , rio
+        , mtl
+        , unliftio
+        , parallel
+        , lens
+        , binary
+        , binary-ieee754
+        , stm-conduit
+        , stm-chans
+        , thyme
+        , vector-binary-instances
+        , bytestring-to-vector
+        , timer-wheel
+        , base64-bytestring-type
+        , containers
+        , word8
+        , serialise
+        , esa-mib
+        , scientific
+        , sorted-list
+        , deepseq
+        , esa-base
+        , network
+        , streaming-commons
+
+    if flag(llvm)
+        ghc-options: -O0 -Wall -Wcompat -Widentities -Wincomplete-record-updates
+                     -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
+                     -funbox-strict-fields -fllvm
+        -- ghc-options: -O2 -Wall -Wcompat -Widentities -Wincomplete-record-updates
+        --              -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
+        --              -funbox-strict-fields -fllvm
+    else
+        ghc-options: -O0 -Wall -Wcompat -Widentities -Wincomplete-record-updates
+                     -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
+                     -funbox-strict-fields
+        -- ghc-options: -O2 -Wall -Wcompat -Widentities -Wincomplete-record-updates
+        --              -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
+        --              -funbox-strict-fields
+
+executable WriteConfig
+    main-is: WriteConfig.hs
+    default-language: Haskell2010
+    hs-source-dirs: src/test
+    ghc-options: -Wall -O
+    build-depends:
+        esa-space-protocols -any,
+        esa-base -any,
+        base >=4.12.0.0 && <4.13,
+        bytestring >=0.10.8.2 && <0.11
+
+
+benchmark TestBits
+    type: exitcode-stdio-1.0
+    main-is: TestBits.hs
+    default-language: Haskell2010
+    hs-source-dirs: src/bench
+    ghc-options: -Wall -O2
+    build-depends:
+        base >=4.12.0.0 && <4.13,
+        bits-extra,
+        formatting,
+        text,
+        rio,
+        hw-prim,
+        vector,
+        esa-space-protocols,
+        esa-base,
+        bytestring-to-vector,
+        criterion
+
+
+
+test-suite CLTUTest
+    type: exitcode-stdio-1.0
+    main-is: CLTUTest.hs
+    default-language: Haskell2010
+
+    c-sources:
+        src/csrc/CLTUcsrc.c
+    hs-source-dirs: src/test
+    include-dirs: src/csrc
+    ghc-options: -Wall -O
+
+    build-depends:
+        esa-space-protocols -any,
+        esa-base,
+        base -any,
+        bytestring -any,
+        hedgehog -any,
+        inline-c -any,
+        attoparsec -any,
+        text -any,
+        mtl -any,
+        vector -any
+
+
+
+-- benchmark CLTUPerf
+--     type: exitcode-stdio-1.0
+--     main-is: CLTUPerf.hs
+--     default-language: Haskell2010
+--     c-sources:
+--         src/csrc/CLTUcsrc.c
+--     hs-source-dirs: src/bench
+--     include-dirs: src/csrc
+--     if flag(llvm)
+--         ghc-options: -Wall -O2 -funbox-strict-fields -fllvm
+--     else
+--         ghc-options: -Wall -O2 -funbox-strict-fields
+--     -- For profiling comment this line in:
+--     --ghc-options: -Wall -O2 -threaded -fprof-auto -fexternal-interpreter
+--     --            -funbox-strict-fields -prof "-with-rtsopts=-N -p -s -h -i0.1"
+
+--     build-depends:
+--         esa-space-protocols -any,
+--         base -any,
+--         bytestring -any,
+--         inline-c -any,
+--         criterion -any,
+--         inline-c -any
+
+benchmark CmdEncodePerf
+    type: exitcode-stdio-1.0
+    main-is: CmdEncodePerf.hs
+    default-language: Haskell2010
+    hs-source-dirs: src/bench
+    if flag(llvm)
+        ghc-options: -Wall -O2 -funbox-strict-fields -fllvm
+    else
+        ghc-options: -Wall -O2 -funbox-strict-fields
+    -- For profiling comment this line in:
+    -- ghc-options: -Wall -O2 -threaded -fprof-auto -fexternal-interpreter
+    --             -funbox-strict-fields -prof "-with-rtsopts=-N -p -s -h -i0.1"
+
+    build-depends:
+        esa-space-protocols -any,
+        esa-base,
+        base -any,
+        bytestring -any,
+        criterion -any,
+        rio,
+        text,
+        conduit,
+        conduit-extra
+
+
+benchmark CmdEncodePerf2
+    type: exitcode-stdio-1.0
+    main-is: CmdEncodePerf.hs
+    default-language: Haskell2010
+    hs-source-dirs: src/bench
+    if flag(llvm)
+        ghc-options: -Wall -O2 -funbox-strict-fields -fllvm
+    else
+        ghc-options: -Wall -O2 -funbox-strict-fields
+    -- For profiling comment this line in:
+    -- ghc-options: -Wall -O2 -threaded -fprof-auto -fexternal-interpreter
+    --             -funbox-strict-fields -prof "-with-rtsopts=-N -p -s -h -i0.1"
+
+    build-depends:
+        esa-space-protocols -any,
+        esa-base,
+        base -any,
+        bytestring -any,
+        criterion -any,
+        rio,
+        text,
+        conduit,
+        conduit-extra
+
+
+executable CommandingTest
+    main-is: CommandingTest.hs
+    default-language: Haskell2010
+    hs-source-dirs: src/test
+    if flag(llvm)
+        ghc-options: -Wall -O2 -threaded -rtsopts -fllvm -eventlog
+    else
+        ghc-options: -Wall -O2 -threaded -rtsopts -eventlog
+    build-depends:
+        esa-space-protocols
+        , esa-base
+        , base
+        , bytestring
+        , conduit
+        , conduit-extra
+        , rio
+        , text
+        , unliftio
+
+
+
+executable CommandingAD
+    main-is: CommandingAD.hs
+    default-language: Haskell2010
+    hs-source-dirs: src/test
+    if flag(llvm)
+        ghc-options: -Wall -O2 -threaded -rtsopts -fllvm -eventlog
+    else
+        ghc-options: -Wall -O2 -threaded -rtsopts -eventlog
+    build-depends:
+        esa-space-protocols
+        , esa-base
+        , base
+        , bytestring
+        , conduit
+        , conduit-extra
+        , rio
+        , text
+        , unliftio
+        , stm-conduit
+
+
+test-suite TCEncodeTests
+    type: exitcode-stdio-1.0
+    main-is: TCEncodeTests.hs
+    default-language: Haskell2010
+    hs-source-dirs: src/test
+    if flag(llvm)
+        ghc-options: -Wall -O2 -threaded -rtsopts -fllvm -eventlog
+    else
+        ghc-options: -Wall -O2 -threaded -rtsopts -eventlog
+    build-depends:
+        esa-space-protocols
+        , esa-base
+        , base
+        , bytestring
+        , conduit
+        , conduit-extra
+        , rio
+        , text
+        , unliftio
+        , hspec
+        , sorted-list
+
+test-suite TMExtractionTest
+    type: exitcode-stdio-1.0
+    main-is: TMExtractionTest.hs
+    default-language: Haskell2010
+
+    hs-source-dirs: src/test
+    ghc-options: -Wall -O
+
+    build-depends:
+        esa-space-protocols -any,
+        esa-base,
+        base -any,
+        bytestring -any,
+        hedgehog -any,
+        inline-c -any,
+        attoparsec -any,
+        text -any,
+        mtl -any,
+        vector -any,
+        hspec -any,
+        conduit -any,
+        rio -any,
+        lens -any
