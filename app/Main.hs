@@ -1,6 +1,9 @@
 module Main where
 
-import Lib
+import           RIO
+import           System.Random
+
+import           Lib
 
 main :: IO ()
-main = someFunc
+main = test

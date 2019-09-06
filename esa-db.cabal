@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 2b66a930166c01ed664e1ddab2119586d6d7bf98fbe4adb23f6658f7b9dad65b
+-- hash: ed6b250c1b4489469dd30aab77e203660efc816dced034ffcd6980b393b88cc4
 
 name:           esa-db
 version:        0.1.0.0
@@ -27,15 +27,22 @@ source-repository head
 
 library
   exposed-modules:
-      Lib
+      Db
+      DbLogging
   other-modules:
       Paths_esa_db
   hs-source-dirs:
       src
   build-depends:
       base >=4.7 && <5
+    , mtl
+    , random
+    , rio
     , selda
     , selda-sqlite
+    , stm
+    , text
+    , time
   default-language: Haskell2010
 
 executable esa-db-exe
@@ -48,8 +55,14 @@ executable esa-db-exe
   build-depends:
       base >=4.7 && <5
     , esa-db
+    , mtl
+    , random
+    , rio
     , selda
     , selda-sqlite
+    , stm
+    , text
+    , time
   default-language: Haskell2010
 
 test-suite esa-db-test
@@ -63,6 +76,12 @@ test-suite esa-db-test
   build-depends:
       base >=4.7 && <5
     , esa-db
+    , mtl
+    , random
+    , rio
     , selda
     , selda-sqlite
+    , stm
+    , text
+    , time
   default-language: Haskell2010
