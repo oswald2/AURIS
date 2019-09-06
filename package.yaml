@@ -21,6 +21,8 @@ description:         Please see the README on GitHub at <https://github.com/gith
 
 dependencies:
 - base >= 4.7 && < 5
+- selda
+- selda-sqlite
 
 library:
   source-dirs: src
@@ -46,3 +48,4 @@ tests:
     - -with-rtsopts=-N
     dependencies:
     - esa-db
+
