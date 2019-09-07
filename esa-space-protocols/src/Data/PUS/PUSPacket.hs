@@ -37,6 +37,9 @@ module Data.PUS.PUSPacket
     , pusPktHdrLenOnlyParser
     , pusPktParser
     , pusPktParserPayload
+
+    , headPacket
+    , chunkPackets
     )
 where
 
@@ -75,7 +78,7 @@ import           Protocol.SizeOf
 
 import           General.SetBitField
 import           General.Types
-import           General.Hexdump
+--import           General.Hexdump
 
 
 
@@ -323,8 +326,24 @@ pusPktHdrLenOnlyParser :: Parser Word16
 pusPktHdrLenOnlyParser = do
     void $ A.take 4
     A.anyWord16be
+   
 
 
+headPacket :: ByteString -> (ByteString, ByteString)
+headPacket bs = 
+    case A.parseOnly pusPktHdrLenOnlyParser bs of 
+        Left _ -> (B.empty, bs)
+        Right len -> B.splitAt (fromIntegral len + 1 + 6) bs 
+
+chunkPackets :: ByteString -> ([ByteString], ByteString)
+chunkPackets bs = go bs []
+    where 
+        go bs' acc = 
+            let (pkt, rest) = headPacket bs'
+            in
+            if B.null pkt 
+                then (reverse acc, rest)
+                else go rest (pkt : acc) 
 
 
 {-# INLINABLE packPktID #-}
@@ -408,7 +427,7 @@ pusPktParser
     -> Parser (ProtocolPacket PUSPacket)
 pusPktParser missionSpecific comm = do
     hdr <- pusPktHdrParser
-    traceM $ "pusPktParser: pusHdr = " <> T.pack (show hdr)
+    --traceM $ "pusPktParser: pusHdr = " <> T.pack (show hdr)
     pusPktParserPayload missionSpecific comm hdr
 
 
@@ -434,7 +453,7 @@ pusPktParserPayload missionSpecific comm hdr = do
             else return PUSEmptyHeader
         | otherwise -> fail $ "Unknown protocol type: " <> show comm
 
-    traceShowM dfh
+    --traceShowM dfh
 
     -- The length in the PUS header is data length - 1, so we need to take
     -- one byte more, but we have to ignore the CRC, which is also considered
@@ -450,6 +469,6 @@ pusPktParserPayload missionSpecific comm hdr = do
             _ -> plCRC
         _ -> plCRC
 
-    traceM (hexdumpBS pl)
+    --traceM (hexdumpBS pl)
 
     return (ProtocolPacket comm (PUSPacket hdr dfh Nothing pl))

@@ -188,6 +188,7 @@ testFrameExtraction2 = do
   result <- runRIOTestAction (runConduit conduit)
 
   T.putStrLn $ T.pack (show result)
+  length result `shouldBe` 2
 
   return ()
 

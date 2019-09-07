@@ -62,6 +62,7 @@ import           Data.PUS.Time
 import           Protocol.ProtocolInterfaces
 import           Protocol.SizeOf
 
+--import           General.Hexdump
 
 
 data RestartVCException = RestartVCException
@@ -119,9 +120,9 @@ tmFrameDecodeC = do
 
 
 storeFrameC :: (MonadIO m) => ConduitT TMStoreFrame TMFrame m ()
-storeFrameC = awaitForever $ \sf -> do 
+storeFrameC = awaitForever $ \sf -> do
     -- store value in database
-    yield (sf ^. tmstFrame)
+  yield (sf ^. tmstFrame)
 
 
 -- | Conduit for switching between multiple channels. It queries the 'Config'
@@ -201,19 +202,22 @@ checkFrameCountC pIf = go Nothing
     case x of
       Nothing    -> return ()
       Just frame -> do
-        traceM (T.pack (show frame))
+        --traceM $ "checkFrameCountC: " <> T.pack (show frame)
         let !vcfc = frame ^. tmFrameHdr . tmFrameVCFC
+            yieldNoGap = do 
+                let ep = ExtractedDU { _epQuality = toFlag Good True
+                            , _epGap     = Nothing
+                            , _epSource  = pIf
+                            , _epDU      = frame
+                            }
+                --traceM "Yield no gap"
+                yield ep
         case lastFC' of
           Just lastFC -> do
               -- check, if we have a gap
             if lastFC + 1 == vcfc
               then do
-                let ep = ExtractedDU { _epQuality = toFlag Good True
-                                     , _epGap     = Nothing
-                                     , _epSource  = pIf
-                                     , _epDU      = frame
-                                     }
-                yield ep
+                yieldNoGap
                 go (Just vcfc)
               else do
                 st <- ask
@@ -224,9 +228,12 @@ checkFrameCountC pIf = go Nothing
                       , _epSource  = pIf
                       , _epDU      = frame
                       }
+                --traceM "Yield gap!"
                 yield ep
                 go lastFC'
-          Nothing -> go (Just vcfc)
+          Nothing -> do
+            yieldNoGap 
+            go (Just vcfc)
 
 
 
@@ -249,12 +256,18 @@ extractPktFromTMFramesC missionSpecific pIf = do
         -- which means we have to start parsing at the header pointer offset.
         -- from then on, there should be consistent stream of PUS packets
         -- in the data (could also be idle-packets)
+      
+      --traceM $ "extractPktFromTMFramesC: " <> T.pack (show frame')
+
       let frame = frame' ^. epDU
-      if frame ^. tmFrameHdr . tmFrameFirstHeaderPtr == 0
-        then loop (frame ^. tmFrameData)
-        else do
-          let (_prev, rest) = tmFrameGetPrevAndRest frame
-          loop rest
+          pdat  = if frame ^. tmFrameHdr . tmFrameFirstHeaderPtr == 0
+            then frame ^. tmFrameData
+            else let (_prev, rest) = tmFrameGetPrevAndRest frame in rest
+          (pkts, spill) = chunkPackets pdat
+
+      --traceM $ "Pkts: " <> T.pack (show pkts) <> " spill: " <> hexdumpBS spill
+      yieldMany pkts
+      loop spill
  where
   loop
     :: (MonadIO m, MonadReader env m, HasGlobalState env)
@@ -274,18 +287,10 @@ extractPktFromTMFramesC missionSpecific pIf = do
             loop rest
           else do
                 -- when we have no gap, just continue processing
-            let dat = spillOverData <> frame' ^. tmFrameData
-            case tmFrameFHType frame' of
-              FirstHeaderZero -> do
-                yield dat
-                loop B.empty
-              FirstHeaderNoFH    -> loop dat
-              FirstHeaderNonZero -> do
-                let (prev, rest) = tmFrameGetPrevAndRest frame'
-                    newDat       = spillOverData <> prev
-                yield newDat
-                loop rest
-              FirstHeaderIdle -> loop spillOverData
+            let dat           = spillOverData <> frame' ^. tmFrameData
+                (pkts, spill) = chunkPackets dat
+            yieldMany pkts
+            loop spill
 
   rejectSpillOver
     :: (MonadIO m, MonadReader env m, HasGlobalState env)
