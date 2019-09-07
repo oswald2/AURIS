@@ -1,15 +1,11 @@
-
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Main where
 
-import           Db
-
-import           EventLog
-
+import           Persistence.Db
+import           Persistence.EventLog
 import           RIO
-
 import           System.Random
 
 data Logging a = Logging { appLogFunc :: LogFunc, applicationCtx :: a }

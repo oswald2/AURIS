@@ -1,5 +1,5 @@
 -- |
--- Module      :  EventLog
+-- Module      :  Persistence.EventLog
 -- Copyright   :  Paolo Veronelli, Matthias Putz
 -- License     :  BSD3
 --
@@ -12,14 +12,13 @@
 
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE OverloadedStrings #-}
 
-module EventLog where
+module Persistence.EventLog where
 
-import RIO
-import Data.Text
-import Data.Time
-import Control.Monad.Reader
+import           Control.Monad.Reader
+import           Data.Text
+import           Data.Time
+import           RIO
 
 
 data EventLog = EventLog

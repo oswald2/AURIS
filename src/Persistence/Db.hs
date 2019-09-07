@@ -1,5 +1,5 @@
 -- |
--- Module      :  Db
+-- Module      :  Persistence.Db
 -- Copyright   :  Paolo Veronelli, Matthias Putz
 -- License     :  BSD3
 --
@@ -12,11 +12,10 @@
 
 
 {-# LANGUAGE BlockArguments #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Db where
+module Persistence.Db where
 
 import           Control.Monad.State
 
@@ -29,11 +28,11 @@ import           Database.Selda.Backend.Internal
 import           Database.Selda.SQLite
 import           Database.Selda.SqlType
 
-import           EventLog
+import           Persistence.EventLog
 
 import           RIO
 
-import System.Directory
+import           System.Directory
 
 customText :: Text -> Lit a
 customText = LCustom TText . LText
