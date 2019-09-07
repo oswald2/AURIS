@@ -71,6 +71,6 @@ logToSQLiteDatabase fp = do
     cRef <- sqliteOpen fp >>= newMVar
     let run = runQ cRef
     e <- doesFileExist fp
-    when (not e) $ run $ tryCreateTable eventLogTable
+    when (not e) $ run $ createTable eventLogTable
     pure $ (run . insert_ eventLogTable . pure, readMVar cRef >>= seldaClose)
 

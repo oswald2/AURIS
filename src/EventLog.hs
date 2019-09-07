@@ -19,6 +19,7 @@ module EventLog where
 import RIO
 import Data.Text
 import Data.Time
+import Control.Monad.Reader
 
 
 data EventLog = EventLog
@@ -35,6 +36,6 @@ mkLoggerF log = mkLogFunc $ \_ _ ll t -> do
     time <- getCurrentTime
     log $ EventLog time ll $ textDisplay t
 
-prependLogger :: HasLogFunc e => EventLogger -> RIO e b -> RIO e b
+prependLogger :: (MonadReader e m, HasLogFunc e) => EventLogger -> m b -> m b
 prependLogger log = local (over logFuncL $ mappend $ mkLoggerF log) 
 
