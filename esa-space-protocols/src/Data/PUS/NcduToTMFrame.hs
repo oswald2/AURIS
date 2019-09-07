@@ -16,8 +16,8 @@ import           RIO
 
 import           Conduit
 
-import           Data.PUS.TMFrame
 import           Data.PUS.TMFrameExtractor
+import           Data.PUS.TMStoreFrame
 
 import           Control.PUS.Classes
 
@@ -27,7 +27,7 @@ import           Protocol.NCTRS
 
 ncduToTMFrameC
   :: (MonadIO m, MonadReader env m, HasGlobalState env)
-  => ConduitT NcduTmDu TMFrame m ()
+  => ConduitT NcduTmDu TMStoreFrame m ()
 ncduToTMFrameC = ncduTmLoadC .| tmFrameDecodeC
 
 ncduTmLoadC :: (MonadIO m) => ConduitT NcduTmDu ByteString m ()

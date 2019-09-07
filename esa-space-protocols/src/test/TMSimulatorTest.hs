@@ -49,11 +49,12 @@ main = do
       let chain =
             receiveTmNcduC
               .| ncduToTMFrameC
+              .| storeFrameC
               .| showConduit
               .| tmFrameExtraction defaultMissionSpecific IF_NCTRS
 
 
-          showConduitF = awaitForever $ \du -> liftIO $ print du
+          showConduitF = awaitForever $ \_du -> pure ()
 
       runGeneralTCPClient (clientSettings 2502 "localhost") $ \app ->
         void $ concurrently

@@ -8,32 +8,45 @@
     , NoImplicitPrelude
 #-}
 module Data.PUS.Time
-    (
-        TimeSpan(..)
-        , ToTimeSpan(..)
-        , mkTimeSpan
-        , getMicro
-        , Hours(..)
-        , Minutes(..)
-        , Seconds(..)
-        , MilliSeconds(..)
-        , MicroSeconds(..)
-        , toMilliSeconds
-        , toSeconds
-        , toMinutes
-        , toHours
-        , TimeRepConversion(..)
-        , timeToWord64'
-        , word64ToTime'
-        , timeToMicro'
-        , microToTime'
-    )
+  ( TimeSpan(..)
+  , ToTimeSpan(..)
+  , mkTimeSpan
+  , getMicro
+  , Hours(..)
+  , Minutes(..)
+  , Seconds(..)
+  , MilliSeconds(..)
+  , MicroSeconds(..)
+  , toMilliSeconds
+  , toSeconds
+  , toMinutes
+  , toHours
+  , TimeRepConversion(..)
+  , timeToWord64'
+  , word64ToTime'
+  , timeToMicro'
+  , microToTime'
+  , SunTime
+  , makeTime
+  , tdsSecs
+  , tdsMicro
+  , nullTime
+  , nullRelTime
+  , oneMicroSecond
+  , tdsNull
+  , secsInDay
+  , secsInYear
+  , milliSecsInDay
+  , microSecsInDay
+  , microSecInt
+  , microSecond
+  )
 where
 
-import RIO
+import           RIO
 
-import Data.Coerce
-import Data.Bits
+import           Data.Coerce
+import           Data.Bits
 
 
 data Hours = Hours
@@ -51,15 +64,15 @@ class ToMicro a where
 
 
 instance ToMicro MicroSeconds where
-    toMicro _ = truncate
+  toMicro _ = truncate
 instance ToMicro MilliSeconds where
-    toMicro _ val = truncate (val * 1_000)
+  toMicro _ val = truncate (val * 1_000)
 instance ToMicro Seconds where
-    toMicro _ val = truncate (val * 1_000_000)
+  toMicro _ val = truncate (val * 1_000_000)
 instance ToMicro Minutes where
-    toMicro _ val = truncate (val * 60 * 1_000_000)
+  toMicro _ val = truncate (val * 60 * 1_000_000)
 instance ToMicro Hours where
-    toMicro _ val = truncate (val * 3600 * 1_000_000)
+  toMicro _ val = truncate (val * 3600 * 1_000_000)
 
 
 
@@ -77,15 +90,15 @@ class ToTimeSpan a where
     toTimeSpan :: a -> TimeSpan
 
 instance ToTimeSpan (TimeSpn MicroSeconds) where
-    toTimeSpan = coerce
+  toTimeSpan = coerce
 instance ToTimeSpan (TimeSpn MilliSeconds) where
-    toTimeSpan = coerce
+  toTimeSpan = coerce
 instance ToTimeSpan (TimeSpn Seconds) where
-    toTimeSpan = coerce
+  toTimeSpan = coerce
 instance ToTimeSpan (TimeSpn Minutes) where
-    toTimeSpan = coerce
+  toTimeSpan = coerce
 instance ToTimeSpan (TimeSpn Hours) where
-    toTimeSpan = coerce
+  toTimeSpan = coerce
 
 toMilliSeconds :: TimeSpan -> TimeSpn MilliSeconds
 toMilliSeconds = coerce
@@ -123,36 +136,100 @@ class TimeRepConversion a where
 {-# INLINABLE timeToWord64' #-}
 timeToWord64' :: Integer -> Int32 -> Bool -> Word64
 timeToWord64' sec usec _ =
-    let sec' :: Int64
-        sec' = fromIntegral sec `shiftL` 32
-    in  fromIntegral sec' .|. (fromIntegral usec .&. 0xFFFFFFFF)
+  let sec' :: Int64
+      sec' = fromIntegral sec `shiftL` 32
+  in  fromIntegral sec' .|. (fromIntegral usec .&. 0xFFFFFFFF)
 
 {-# INLINABLE word64ToTime' #-}
 word64ToTime' :: Word64 -> (Integer, Int32)
 word64ToTime' val' =
-    let val :: Int64
-        val = fromIntegral val'
-        sec = val `shiftR` 32
-        usec :: Int32
-        usec = fromIntegral (val .&. 0xFFFFFFFF)
-    in  (fromIntegral sec, usec)
+  let val :: Int64
+      val = fromIntegral val'
+      sec = val `shiftR` 32
+      usec :: Int32
+      usec = fromIntegral (val .&. 0xFFFFFFFF)
+  in  (fromIntegral sec, usec)
 
 
 {-# INLINABLE timeToMicro' #-}
 timeToMicro' :: Integer -> Int32 -> Bool -> Integer
-timeToMicro' sec usec _
-    = let sign = if sec < 0 || usec < 0 then (-1) else 1
-        in
-            sign
-                * (abs sec
-                * microSecs
-                + fromIntegral (abs usec))
+timeToMicro' sec usec _ =
+  let sign = if sec < 0 || usec < 0 then (-1) else 1
+  in  sign * (abs sec * microSecs + fromIntegral (abs usec))
 
 
 {-# INLINABLE microToTime' #-}
 microToTime' :: Integer -> (Integer, Int32)
 microToTime' x =
-    let sign        = signum x
-        absx        = abs x
-        (sec, usec) = absx `quotRem` microSecs
-    in  (sign * sec, fromIntegral (sign * usec))
+  let sign        = signum x
+      absx        = abs x
+      (sec, usec) = absx `quotRem` microSecs
+  in  (sign * sec, fromIntegral (sign * usec))
+
+
+-- | Time types
+data SunTime = SunTime {
+    tdsTime :: !Integer,
+    tdsDelta :: !Bool
+    }
+    deriving (Eq, Show, Read)
+
+
+makeTime :: Integer -> Int32 -> Bool -> SunTime
+makeTime sec usec delta =
+  let (restsec, usec') = (abs usec) `quotRem` (fromIntegral microSecInt)
+      sign             = if sec < 0 || usec < 0 then (-1) else 1
+      newSec           = (abs sec + fromIntegral restsec)
+      newMicro         = newSec * microSecInt + (fromIntegral usec')
+  in  SunTime (sign * newMicro) delta
+
+tdsSecs :: SunTime -> Integer
+tdsSecs (SunTime micro _) = micro `quot` microSecInt
+
+tdsMicro :: SunTime -> Int32
+tdsMicro (SunTime micro _) = fromIntegral (micro `rem` microSecInt)
+
+
+-- | the null time for standard unix time
+nullTime :: SunTime
+nullTime = SunTime 0 False
+
+nullRelTime :: SunTime
+nullRelTime = SunTime 0 True
+
+
+-- | one micro second in unix time
+oneMicroSecond :: SunTime
+oneMicroSecond = SunTime 1 True
+
+
+-- | check if a time is a null time
+{-# INLINABLE tdsNull #-}
+tdsNull :: SunTime -> Bool
+tdsNull (SunTime mic _) = mic == 0
+
+{-# INLINABLE secsInDay #-}
+secsInDay :: Integer
+secsInDay = 86400
+
+{-# INLINABLE milliSecsInDay #-}
+milliSecsInDay :: Integer
+milliSecsInDay = secsInDay * 1000
+
+{-# INLINABLE microSecsInDay #-}
+microSecsInDay :: Integer
+microSecsInDay = secsInDay * 1_000_000
+
+{-# INLINABLE microSecInt #-}
+microSecInt :: Integer
+microSecInt = 1_000_000
+
+{-# INLINABLE secsInYear #-}
+secsInYear :: Integer
+secsInYear = 31536000
+
+{-# INLINABLE microSecond #-}
+microSecond :: Double
+microSecond = fromIntegral microSecInt
+
+

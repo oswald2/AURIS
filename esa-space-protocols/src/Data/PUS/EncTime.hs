@@ -148,21 +148,7 @@ oneMicroSecondCDS :: CDSTime
 oneMicroSecondCDS = CDSTime 0 0 (Just 1)
 
 
-{-# INLINABLE secsInDay #-}
-secsInDay :: Integer
-secsInDay = 86400
 
-{-# INLINABLE milliSecsInDay #-}
-milliSecsInDay :: Integer
-milliSecsInDay = secsInDay * 1000
-
-{-# INLINABLE microSecsInDay #-}
-microSecsInDay :: Integer
-microSecsInDay = secsInDay * 1_000_000
-
-{-# INLINABLE microSecInt #-}
-microSecInt :: Integer
-microSecInt = 1_000_000
 
 
 {-# INLINABLE cucTimeBuilder #-}
