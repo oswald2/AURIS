@@ -37,7 +37,10 @@ module Data.PUS.PUSPacket
     , pusPktHdrLenOnlyParser
     , pusPktParser
     , pusPktParserPayload
-
+    , pusPktIdleAPID
+    , pusPktTimePktAPID
+    , pusPktIsIdle
+    
     , headPacket
     , chunkPackets
     )
@@ -194,8 +197,14 @@ instance SizeOf PUSPacket where
         fixedSizeOf @PUSHeader + sizeof (_pusDfh x) + B.length (_pusData x)
 
 
+pusPktIdleAPID :: APID
+pusPktIdleAPID = APID 0x7FF
 
-
+pusPktTimePktAPID :: APID
+pusPktTimePktAPID = APID 0
+        
+pusPktIsIdle :: PUSPacket -> Bool
+pusPktIsIdle pkt = pkt ^. pusHdr . pusHdrTcApid == pusPktIdleAPID
 
 -- | encodes a packet and sets the PI1/2 values for correct identification
 {-# INLINABLE encodePUSPacket #-}

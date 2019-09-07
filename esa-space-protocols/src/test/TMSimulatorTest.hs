@@ -50,8 +50,8 @@ main = do
             receiveTmNcduC
               .| ncduToTMFrameC
               .| storeFrameC
-              .| showConduit
               .| tmFrameExtraction defaultMissionSpecific IF_NCTRS
+              .| showConduit
 
 
           showConduitF = awaitForever $ \_du -> pure ()

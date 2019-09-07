@@ -188,7 +188,7 @@ testFrameExtraction2 = do
   result <- runRIOTestAction (runConduit conduit)
 
   T.putStrLn $ T.pack (show result)
-  length result `shouldBe` 2
+  length result `shouldBe` 1
 
   return ()
 
@@ -199,12 +199,12 @@ main = hspec $ do
   let cfg = defaultConfig
 
   describe "TM Frame Extraction" $ do
-    -- it "good extraction" $ do
-    --   goodExtraction cfg
-    -- it "PUS Packet encoding" $ do
-    --   pusPacketEncoding cfg
-    -- it "PUS Packet extraction" $ do
-    --   pusPacketExtraction cfg
+    it "good extraction" $ do
+      goodExtraction cfg
+    it "PUS Packet encoding" $ do
+      pusPacketEncoding cfg
+    it "PUS Packet extraction" $ do
+      pusPacketExtraction cfg
     it "Frame Extraction2" $ do
       testFrameExtraction2
 

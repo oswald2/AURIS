@@ -435,9 +435,11 @@ processFinishedPacket missionSpecific pIf hdr body = do
       let ep = ExtractedDU { _epQuality = toFlag Good True
                            , _epGap     = Nothing
                            , _epSource  = pIf
-                           , _epDU      = pusPkt ^. protContent
+                           , _epDU      = extrPkt
                            }
-      yield ep
+          extrPkt = pusPkt ^. protContent
+      -- only pass on the packet if it is not an Idle Pkt
+      unless (pusPktIsIdle extrPkt) $ yield ep
 
 processFirstSegment :: PUSHeader -> PacketPart -> PktStore -> PktStore
 processFirstSegment hdr part pktStore =
