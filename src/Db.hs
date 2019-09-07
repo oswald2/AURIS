@@ -13,13 +13,13 @@
 
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, OverloadedLabels #-}
 
 module Db where
 
 import           Control.Monad.State
 
-import           Data.Text                       as T
+import qualified Data.Text                       as T
 import           Data.Time
 
 import           Database.Selda
@@ -32,13 +32,15 @@ import           EventLog
 
 import           RIO
 
+customText :: Text -> Lit a
+customText = LCustom TText . LText
 
 instance SqlType LogLevel where
-    mkLit LevelDebug      = LCustom TText $ LText "debug"
-    mkLit LevelInfo       = LCustom TText $ LText "info"
-    mkLit LevelWarn       = LCustom TText $ LText "warn"
-    mkLit LevelError      = LCustom TText $ LText "error"
-    mkLit (LevelOther t)  = LCustom TText $ LText t
+    mkLit LevelDebug      = customText "debug"
+    mkLit LevelInfo       = customText "info"
+    mkLit LevelWarn       = customText "warn"
+    mkLit LevelError      = customText "error"
+    mkLit (LevelOther t)  = customText t
     sqlType _             = TText
     fromSql (SqlString x) = case x of
         "debug" -> LevelDebug
@@ -46,23 +48,25 @@ instance SqlType LogLevel where
         "warn"  -> LevelWarn
         "error" -> LevelError
         y       -> LevelOther y
-    defaultValue = LCustom TText $ LText "wtf"
+    defaultValue = customText "wtf"
 
 instance SqlRow EventLog 
 
 eventLogTable :: Table EventLog
-eventLogTable = table "eventLog" []
+eventLogTable = tableFieldMod "events_log" 
+    [   #logTime :- index]
+    (T.drop $ T.length "log")
 
-runQ :: MonadIO m => IORef (SeldaConnection b) -> SeldaT b m a -> m ()
+runQ :: MonadIO m => MVar (SeldaConnection b) -> SeldaT b m a -> m ()
 runQ cRef (S f) = do
-    c <- readIORef cRef
+    c <- readMVar cRef
     (_, c') <- runStateT f c
-    writeIORef cRef c'
+    putMVar cRef c'
 
 logToSQLiteDatabase :: FilePath -> IO (EventLogger, IO ())
 logToSQLiteDatabase fp = do
-    cRef <- sqliteOpen fp >>= newIORef
+    cRef <- sqliteOpen fp >>= newMVar
     let run = runQ cRef
     run $ tryCreateTable eventLogTable
-    pure $ (run . insert_ eventLogTable . pure, readIORef cRef >>= seldaClose)
+    pure $ (run . insert_ eventLogTable . pure, readMVar cRef >>= seldaClose)
 
