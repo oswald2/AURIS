@@ -1,18 +1,18 @@
 
-{-# LANGUAGE OverloadedStrings, InstanceSigs #-}
+{-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE OverloadedStrings #-}
+
 module Main where
 
+import           Db
+
+import           EventLog
+
 import           RIO
+
 import           System.Random
 
-import           DbLogging
-import Db
-
-data Logging a = Logging
-    { appLogFunc :: LogFunc
-    , applicationCtx :: a
-    }
-
+data Logging a = Logging { appLogFunc :: LogFunc, applicationCtx :: a }
 
 instance HasLogFunc (Logging a) where
     logFuncL :: Lens' (Logging a) LogFunc
@@ -25,7 +25,7 @@ testApp = do
     logError "Starting 1"
 
 main = do
-    logOptions <- logOptionsHandle stderr True 
+    logOptions <- logOptionsHandle stderr True
     (termLog, killTL) <- newLogFunc logOptions
     (logDB, killDB) <- logToSQLiteDatabase "test.db"
     runRIO (Logging termLog ()) $ prependLogger logDB testApp
