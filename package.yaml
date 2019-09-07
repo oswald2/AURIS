@@ -28,6 +28,7 @@ dependencies:
 - selda-sqlite
 - stm
 - text
+- directory
 - time
 
 library:

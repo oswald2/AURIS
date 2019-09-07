@@ -37,9 +37,7 @@ packages:
 # Dependency packages to be pulled from upstream that are not in the resolver
 # using the same syntax as the packages field.
 # (e.g., acme-missiles-0.3)
-extra-deps: 
-- git: https://github.com/valderman/selda
-  commit: 4a536a5391e914cf95bdb83a87a208cc21ff1f05
+extra-deps: []
 
   # Override default flag values for local packages and extra-deps
 # flags: {}
@@ -64,6 +62,7 @@ extra-deps:
 #
 # Allow a newer minor version of GHC than the snapshot specifies
 # compiler-check: newer-minor
+allow-newer: true
 nix:
     enable: true
     packages: [gmp]

@@ -13,7 +13,8 @@
 
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE OverloadedStrings, OverloadedLabels #-}
+{-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Db where
 
@@ -31,6 +32,8 @@ import           Database.Selda.SqlType
 import           EventLog
 
 import           RIO
+
+import System.Directory
 
 customText :: Text -> Lit a
 customText = LCustom TText . LText
@@ -59,7 +62,7 @@ eventLogTable = tableFieldMod "events_log"
 
 runQ :: MonadIO m => MVar (SeldaConnection b) -> SeldaT b m a -> m ()
 runQ cRef (S f) = do
-    c <- readMVar cRef
+    c <- takeMVar cRef
     (_, c') <- runStateT f c
     putMVar cRef c'
 
@@ -67,6 +70,7 @@ logToSQLiteDatabase :: FilePath -> IO (EventLogger, IO ())
 logToSQLiteDatabase fp = do
     cRef <- sqliteOpen fp >>= newMVar
     let run = runQ cRef
-    run $ tryCreateTable eventLogTable
+    e <- doesFileExist fp
+    when (not e) $ run $ tryCreateTable eventLogTable
     pure $ (run . insert_ eventLogTable . pure, readMVar cRef >>= seldaClose)
 
