@@ -21,8 +21,8 @@ to check for correct sequences of TM frames.
     , TemplateHaskell
 #-}
 module Data.PUS.TMFrame
-    ( TMFrameHeader
-    , TMFrame
+    ( TMFrameHeader(..)
+    , TMFrame(..)
     , FirstHeaderPtrVal(..)
     , tmFrameVersion
     , tmFrameScID

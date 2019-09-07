@@ -195,6 +195,7 @@ checkFrameCountC pIf = go Nothing
             case x of 
                 Nothing -> return ()
                 Just frame -> do
+                    traceM (T.pack (show frame))
                     let !vcfc = frame ^. tmFrameHdr . tmFrameVCFC
                     case lastFC' of
                         Just lastFC -> do

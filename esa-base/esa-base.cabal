@@ -57,6 +57,7 @@ library
     General.Hexdump 
     General.Padding 
     General.SetBitField
+    General.ShowConduit
 
   -- Modules included in this library but not exported.
   -- other-modules:
@@ -76,6 +77,7 @@ library
     , text-show
     , serialise 
     , binary-ieee754
+    , conduit
 
   -- Directories containing source files.
   hs-source-dirs:      src

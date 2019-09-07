@@ -29,6 +29,8 @@ import           Data.PUS.Types
 import           Data.PUS.SegmentationFlags
 import           Data.PUS.APID
 import           Data.PUS.EncTime
+import           Data.PUS.CLCW
+import           Data.PUS.CRC
 --import           Data.PUS.TMFrameExtractor
 
 --import           General.Types
@@ -134,13 +136,61 @@ pusPacketExtraction cfg = do
 
   T.putStrLn $ T.pack (show frames)
 
-  result <- runRIOTestAction (runConduit conduit) 
-  
+  result <- runRIOTestAction (runConduit conduit)
+
   T.putStrLn $ T.pack (show result)
 
   length result `shouldBe` 1
   head result ^. epDU `shouldBe` pusPkt
   return ()
+
+testFrameExtraction2 :: IO ()
+testFrameExtraction2 = do
+  let
+    frame = TMFrame
+      { _tmFrameHdr  = TMFrameHeader { _tmFrameVersion        = 0
+                                     , _tmFrameScID = SCID { getSCID = 533 }
+                                     , _tmFrameVcID = VCID { getVCID = 0 }
+                                     , _tmFrameOpControl      = True
+                                     , _tmFrameMCFC           = 112
+                                     , _tmFrameVCFC           = 108
+                                     , _tmFrameDfh            = False
+                                     , _tmFrameSync           = False
+                                     , _tmFrameOrder          = False
+                                     , _tmFrameSegID          = TMSegment65536
+                                     , _tmFrameFirstHeaderPtr = 0
+                                     }
+      , _tmFrameData =
+        "\b\DC1\192\ETX\NUL\SI\DLE\SOH\SOH\NULJ\158\US\SUB\252\ESC\NUL\NUL\NUL\NUL|\143\a\255\208\213\EOT2UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU=\GS"
+      , _tmFrameOCF  = Just
+                         (CLCW { _clcwType        = False
+                               , _clcwVersion     = 0
+                               , _clcwStatus      = 0
+                               , _clcwCopInEffect = 1
+                               , _clcwVcID        = VCID { getVCID = 0 }
+                               , _clcwNoRF        = False
+                               , _clcwNoBitLock   = False
+                               , _clcwLockout     = False
+                               , _clcwWait        = False
+                               , _clcwRetrans     = False
+                               , _clcwBCounter    = 0
+                               , _clcwReportType  = False
+                               , _clcwReportVal   = 0
+                               }
+                         )
+      , _tmFrameFECW = Just (mkCRC 61462)
+      }
+    conduit =
+      C.sourceList [frame]
+        .| tmFrameExtraction defaultMissionSpecific IF_NCTRS
+        .| C.consume
+
+  result <- runRIOTestAction (runConduit conduit)
+
+  T.putStrLn $ T.pack (show result)
+
+  return ()
+
 
 
 main :: IO ()
@@ -148,10 +198,12 @@ main = hspec $ do
   let cfg = defaultConfig
 
   describe "TM Frame Extraction" $ do
-    it "good extraction" $ do
-      goodExtraction cfg
-    it "PUS Packet encoding" $ do
-      pusPacketEncoding cfg
-    it "PUS Packet extraction" $ do
-      pusPacketExtraction cfg
+    -- it "good extraction" $ do
+    --   goodExtraction cfg
+    -- it "PUS Packet encoding" $ do
+    --   pusPacketEncoding cfg
+    -- it "PUS Packet extraction" $ do
+    --   pusPacketExtraction cfg
+    it "Frame Extraction2" $ do
+      testFrameExtraction2
 

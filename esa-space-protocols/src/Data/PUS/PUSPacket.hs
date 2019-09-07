@@ -408,7 +408,7 @@ pusPktParser
     -> Parser (ProtocolPacket PUSPacket)
 pusPktParser missionSpecific comm = do
     hdr <- pusPktHdrParser
-    -- traceM $ "pusPktParser: pusHdr = " <> T.pack (show hdr)
+    traceM $ "pusPktParser: pusHdr = " <> T.pack (show hdr)
     pusPktParserPayload missionSpecific comm hdr
 
 
@@ -434,7 +434,7 @@ pusPktParserPayload missionSpecific comm hdr = do
             else return PUSEmptyHeader
         | otherwise -> fail $ "Unknown protocol type: " <> show comm
 
-    -- traceShowM dfh
+    traceShowM dfh
 
     -- The length in the PUS header is data length - 1, so we need to take
     -- one byte more, but we have to ignore the CRC, which is also considered
@@ -446,10 +446,10 @@ pusPktParserPayload missionSpecific comm hdr = do
         IF_CNC -> case dfh of
             PUSCnCTCHeader { _cncTcCrcFlags = val } -> if val == 1      -- the packet contains a CRC
                 then plCRC
-                else A.take (fromIntegral (hdr ^. pusHdrTcLength) + 1)
+                else A.take lenWoCRC
             _ -> plCRC
         _ -> plCRC
 
-    -- traceM (hexdumpBS pl)
+    traceM (hexdumpBS pl)
 
     return (ProtocolPacket comm (PUSPacket hdr dfh Nothing pl))

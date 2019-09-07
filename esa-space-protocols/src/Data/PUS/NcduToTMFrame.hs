@@ -5,30 +5,32 @@
 
 #-}
 module Data.PUS.NcduToTMFrame
-(
-    ncduToTMFrameC
-    , ncduTmLoadC
-)
+  ( ncduToTMFrameC
+  , ncduTmLoadC
+  )
 where
 
 
-import RIO
+import           RIO
 
 
-import Conduit
+import           Conduit
 
-import Data.PUS.TMFrame
-import Data.PUS.TMFrameExtractor
+import           Data.PUS.TMFrame
+import           Data.PUS.TMFrameExtractor
 
-import Control.PUS.Classes
+import           Control.PUS.Classes
 
-import Protocol.NCTRS
+import           Protocol.NCTRS
 
 
 
-ncduToTMFrameC :: (MonadIO m, MonadReader env m, HasGlobalState env) => ConduitT NcduTmDu TMFrame m () 
-ncduToTMFrameC = ncduTmLoadC .| tmFrameDecodeC  
+ncduToTMFrameC
+  :: (MonadIO m, MonadReader env m, HasGlobalState env)
+  => ConduitT NcduTmDu TMFrame m ()
+ncduToTMFrameC = ncduTmLoadC .| tmFrameDecodeC
 
 ncduTmLoadC :: (MonadIO m) => ConduitT NcduTmDu ByteString m ()
-ncduTmLoadC = awaitForever $ \ncdu -> yield (ncdu ^. ncduTmData)
+ncduTmLoadC = awaitForever $ \ncdu -> do
+  yield (ncdu ^. ncduTmData)
 
