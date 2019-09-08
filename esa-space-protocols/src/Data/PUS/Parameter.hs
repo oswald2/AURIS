@@ -43,7 +43,6 @@ module Data.PUS.Parameter
   --, SizedExtParameterList
   , toSizedParamList
   --, toSizedExtParamList
-
   , appendN
   , appendExtN
   , prependN
@@ -76,9 +75,12 @@ import           Protocol.SizeOf
 
 import           Data.PUS.Value
 
+import           Data.TM.Parameter
+import           Data.TM.Value
+
 import           General.SetBitField
 import           General.Types
-
+import           General.Time
 
 data Parameter = Parameter {
   _paramName :: !Text,
@@ -136,15 +138,14 @@ instance Binary SizedParameterList
 instance Serialise SizedParameterList
 instance FromJSON SizedParameterList
 instance ToJSON SizedParameterList where
-    toEncoding = genericToEncoding defaultOptions
+  toEncoding = genericToEncoding defaultOptions
 
 instance Show SizedParameterList where
-    show (SizedParameterList _ l) = show l
+  show (SizedParameterList _ l) = show l
 
 instance Read SizedParameterList where
-    readsPrec n s =  map func (readsPrec n s)
-        where
-            func (a, str) = (SizedParameterList (bitSize a) a, str)
+  readsPrec n s = map func (readsPrec n s)
+    where func (a, str) = (SizedParameterList (bitSize a) a, str)
 
 toSizedParamList :: ParameterList -> SizedParameterList
 toSizedParamList ps =
@@ -210,19 +211,22 @@ instance BitSizes ParameterList where
 
 bitsBetween :: ExtParameter -> ExtParameter -> BitSize
 bitsBetween (ExtParameter _ v1 off1) (ExtParameter _ _ off2) =
-    mkBitSize . unBitOffset $ toBitOffset off2 - toBitOffset off1 `addBitOffset` bitSize v1
+  mkBitSize
+    .              unBitOffset
+    $              toBitOffset off2
+    -              toBitOffset off1
+    `addBitOffset` bitSize v1
 
 extParSize :: ExtParameter -> ExtParameter -> BitSize
-extParSize p1 p2 =
-    bitSize (_extParValue p1) + bitsBetween p1 p2
+extParSize p1 p2 = bitSize (_extParValue p1) + bitsBetween p1 p2
 
 
 instance BitSizes [ExtParameter] where
   bitSize ps = go ps 0
-    where
-        go [] !acc = acc
-        go [x] !acc = acc + bitSize x
-        go (x:y:xs) !acc = go (y:xs) (acc + extParSize x y)
+   where
+    go []           !acc = acc
+    go [x         ] !acc = acc + bitSize x
+    go (x : y : xs) !acc = go (y : xs) (acc + extParSize x y)
 
 
 instance BitSizes (SortedList ExtParameter) where
@@ -395,9 +399,9 @@ prependN n t1 t2 = appendN n Empty t2 <> t1
 prependExtN
   :: Word64 -> ExtParameterList -> ExtParameterList -> ExtParameterList
 prependExtN n t1 t2 =
-    let group = appendExtN n ExtEmpty t2
-        newT1 = updateOffsets (bitSize group) t1
-    in group <> newT1
+  let group = appendExtN n ExtEmpty t2
+      newT1 = updateOffsets (bitSize group) t1
+  in  group <> newT1
 
 class ExpandGroups a b | a -> b where
     -- | expands the groups. No name conversion is done, so the resulting list can contain multiple
@@ -521,3 +525,11 @@ setParameter' vec bitOffset value = do
     else setGeneralValue
 
 
+convertToTMParam :: SunTime -> Parameter -> TMSumParameter
+convertToTMParam time param@(Parameter nm (ValInt8 x)) = TMSII
+  (TMParameter nm
+               time
+               (TMValInt (fromIntegral x))
+               (TMValInt (fromIntegral x))
+               (mkValidity [ValidityOK])
+  )

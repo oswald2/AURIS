@@ -123,6 +123,7 @@ library
         , sorted-list
         , deepseq
         , esa-base
+        , esa-tm-model
         , network
         , streaming-commons
 

@@ -40,6 +40,7 @@ packages:
 - .
 - ../esa-base
 - ../esa-mib
+- ../esa-tm-model
 
 
 # Dependency packages to be pulled from upstream that are not in the resolver

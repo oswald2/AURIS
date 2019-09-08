@@ -8,6 +8,12 @@
 module Data.TM.Value
 (
     ValType(..)
+    , TMValInt(..)
+    , TMValUInt(..)
+    , TMValDouble(..)
+    , TMValTime(..)
+    , TMValString(..)
+    , TMSumValue(..)
 )
 where
 
@@ -15,7 +21,7 @@ import RIO
 
 import General.Time
 
-data ValType = ValInt | ValUInt | ValDouble | ValString
+data ValType = ValInt | ValUInt | ValDouble | ValTime | ValString
 
 
 newtype TMValInt = TMValInt Int64
