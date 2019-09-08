@@ -175,6 +175,14 @@ data SunTime = SunTime {
     deriving (Eq, Show, Read)
 
 
+instance Ord SunTime where
+    SunTime t1 False `compare` SunTime t2 False = t1 `compare` t2
+    SunTime t1 True `compare` SunTime t2 True = t1 `compare` t2
+    SunTime _t1 False `compare` SunTime _t2 True = GT
+    SunTime _t1 True `compare` SunTime _t2 False = LT
+
+
+
 makeTime :: Integer -> Int32 -> Bool -> SunTime
 makeTime sec usec delta =
   let (restsec, usec') = (abs usec) `quotRem` (fromIntegral microSecInt)

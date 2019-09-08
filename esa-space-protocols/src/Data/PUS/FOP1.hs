@@ -42,7 +42,7 @@ import           Data.PUS.COP1Types
 import           Data.PUS.TCFrameTypes
 import           Data.PUS.CLCW
 import           Data.PUS.Types
---import           Data.PUS.Time
+--import           General.Time
 import           Data.PUS.TCDirective
 import           Data.PUS.Segment
 --import           Data.PUS.GlobalState

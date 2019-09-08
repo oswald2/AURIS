@@ -57,7 +57,7 @@ import           Data.PUS.MissionSpecific.Definitions
 import           Data.PUS.SegmentationFlags
 import           Data.PUS.ExtractedDU
 import           Data.PUS.TMStoreFrame
-import           Data.PUS.Time
+import           General.Time
 
 import           Protocol.ProtocolInterfaces
 import           Protocol.SizeOf

@@ -19,7 +19,7 @@ import RIO
 
 import Control.Lens (makeLenses)
 
-import Data.PUS.Time
+import General.Time
 import Data.PUS.TMFrame
 
 

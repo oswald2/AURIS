@@ -40,7 +40,7 @@ import qualified Data.Attoparsec.Binary        as A
 
 import           Codec.Serialise
 
-import           Data.PUS.Time
+import           General.Time
 
 import           Protocol.SizeOf
 

@@ -32,6 +32,7 @@ packages:
 - esa-base
 - esa-mib
 - esa-space-protocols
+- esa-tm-model
 - mcs-interface
 
 # Dependency packages to be pulled from upstream that are not in the resolver.

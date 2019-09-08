@@ -50,7 +50,7 @@ import           ByteString.StrictBuilder
 import           Codec.Serialise
 
 import           Data.PUS.EncTime
-import           Data.PUS.Time
+import           General.Time
 
 import           Data.MIB.Types
 
