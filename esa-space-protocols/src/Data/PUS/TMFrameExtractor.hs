@@ -106,10 +106,7 @@ tmFrameDecodeC = do
         liftIO $ raiseEvent st (EVAlarms (EVIllegalTMFrame msg))
         proc cfg
       Right (_, (bs, frame)) ->
-          -- if we have an idle-frame, just throw it away
-                                if isIdleTmFrame frame
-        then proc cfg
-        else case tmFrameCheckCRC cfg bs of
+        case tmFrameCheckCRC cfg bs of
           Left err -> do
             liftIO $ raiseEvent st (EVTelemetry (EVTMFailedCRC err))
             proc cfg
@@ -121,8 +118,10 @@ tmFrameDecodeC = do
 
 storeFrameC :: (MonadIO m) => ConduitT TMStoreFrame TMFrame m ()
 storeFrameC = awaitForever $ \sf -> do
-    -- store value in database
-  yield (sf ^. tmstFrame)
+    let frame = sf ^. tmstFrame
+    unless (isIdleTmFrame frame) $ do
+        -- store value in database
+        yield frame
 
 
 -- | Conduit for switching between multiple channels. It queries the 'Config'
