@@ -32,7 +32,7 @@ data ExtractedDU a = ExtractedDU {
     , _epGap ::Maybe (Word32, Word32)
     , _epSource :: !ProtocolInterface
     , _epDU :: a
-} deriving (Show, Generic)
+} deriving (Eq, Show, Generic)
 makeLenses ''ExtractedDU
 
 instance Serialise a => Serialise (ExtractedDU a)

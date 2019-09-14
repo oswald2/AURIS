@@ -9,8 +9,8 @@
     , DeriveAnyClass
 #-}
 module Data.PUS.EncTime
-    ( CUCTime
-    , CDSTime
+    ( CUCTime(..)
+    , CDSTime(..)
     , mkCUCTime
     , mkCDSTime
     , nullCUCTime
