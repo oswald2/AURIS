@@ -217,10 +217,10 @@ checkFrameCountC pIf = go Nothing
                                              }
                         --traceM "Yield no gap"
                         unless (isIdleTmFrame frame) $ yield ep
-                traceM $ "TM Frame: VCFC: " <> T.pack (show vcfc)
+                -- traceM $ "TM Frame: VCFC: " <> T.pack (show vcfc)
                 case lastFC' of
                     Just lastFC -> do
-                        traceM $ "Last FC: " <> T.pack (show lastFC)
+                        --traceM $ "Last FC: " <> T.pack (show lastFC)
                         -- check, if we have a gap
                         if lastFC + 1 == vcfc
                             then do
