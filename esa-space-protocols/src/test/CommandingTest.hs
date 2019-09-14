@@ -10,7 +10,6 @@ module Main where
 
 
 import           RIO
-import qualified Data.ByteString               as B
 import qualified RIO.Text                      as T
 import qualified Data.Text.IO                  as T
 
@@ -117,8 +116,6 @@ main = do
   np <- getNumProcessors
   setNumCapabilities np
 
-  (logDB, killDB) <- logToSQLiteDatabase "test.db"
-
   defLogOptions <- logOptionsHandle stdout True
   let logOptions = setLogMinLevel LevelError defLogOptions
   withLogFunc logOptions $ \logFunc -> do
@@ -128,7 +125,7 @@ main = do
       logFunc
       (\ev -> T.putStrLn ("Event: " <> T.pack (show ev)))
 
-    runRIO state $ prependLogger logDB $ do
+    runRIO state $ do
       let chain =
             sourceList (packets 1000)
               .| tcPktEncoderC defaultMissionSpecific

@@ -28,10 +28,11 @@ resolver: lts-14.0
 #   subdirs:
 #   - auto-update
 #   - wai
-packages: 
+packages:
 - esa-base
 - esa-mib
 - esa-space-protocols
+- esa-db
 - esa-tm-model
 - mcs-interface
 
@@ -44,7 +45,7 @@ packages:
 # - git: https://github.com/commercialhaskell/stack.git
 #   commit: e7b331f14bcffb8367cd58fbfc8b40ec7642100a
 #
-extra-deps: 
+extra-deps:
 - attoparsec-data-1.0.4.1
 - closed-0.2.0.1
 - attoparsec-time-1
