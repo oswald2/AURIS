@@ -15,6 +15,7 @@ import qualified RIO.Text                      as T
 import qualified Data.Text.IO                  as T
 
 import           Conduit
+import qualified Data.Conduit.List             as C
 import           Data.Conduit.List
 import           Data.Conduit.Network
 
@@ -39,8 +40,13 @@ import           Data.PUS.Parameter
 import           Data.PUS.Value
 import           Data.PUS.MissionSpecific.Definitions
 
+import           Persistence.Db
+import           Persistence.EventLog
+
 import           Protocol.NCTRS
 import           Protocol.ProtocolInterfaces
+
+import           General.ShowConduit
 
 import           GHC.Conc.Sync
 
@@ -111,6 +117,8 @@ main = do
   np <- getNumProcessors
   setNumCapabilities np
 
+  (logDB, killDB) <- logToSQLiteDatabase "test.db"
+
   defLogOptions <- logOptionsHandle stdout True
   let logOptions = setLogMinLevel LevelError defLogOptions
   withLogFunc logOptions $ \logFunc -> do
@@ -120,7 +128,7 @@ main = do
       logFunc
       (\ev -> T.putStrLn ("Event: " <> T.pack (show ev)))
 
-    runRIO state $ do
+    runRIO state $ prependLogger logDB $ do
       let chain =
             sourceList (packets 1000)
               .| tcPktEncoderC defaultMissionSpecific
@@ -133,9 +141,4 @@ main = do
               .| cltuToNcduC
               .| encodeTcNcduC
 
-          showConduit = awaitForever $ \_ -> pure ()
-
-      runGeneralTCPClient (clientSettings 32111 "localhost") $ \app ->
-        void $ concurrently
-          (runConduitRes (chain .| appSink app))
-          (runConduitRes (appSource app .| receiveTcNcduC .| showConduit))
+      runConduitRes (chain .| showConduit .| C.sinkNull)
