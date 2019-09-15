@@ -46,6 +46,7 @@ module Data.PUS.TMFrame
     , tmFrameParser
     , makeTMFrame
     , tmFrameMaxDataLen
+    , tmFrameMaxDataLenFlag
     , tmFrameMinLen
     , tmFrameGetPrevAndRest
     , decodeFrame
@@ -160,7 +161,7 @@ tmFrameNoFirstHeader = 0x7FF
 data TMFrame = TMFrame {
     _tmFrameHdr :: TMFrameHeader,
     _tmFrameData :: !ByteString,
-    _tmFrameOCF :: Maybe CLCW,
+    _tmFrameOCF :: Maybe Word32,
     _tmFrameFECW :: Maybe CRC
 } deriving (Show, Read, Generic)
 makeLenses ''TMFrame
@@ -236,31 +237,38 @@ tmFrameBuilder f =
     tmFrameHeaderBuilder (_tmFrameHdr f)
         <> bytes (_tmFrameData f)
         <> case _tmFrameOCF f of
-               Just c  -> clcwBuilder c
+               Just c  -> word32BE c
                Nothing -> mempty
 
 
 
 {-# INLINABLE makeTMFrame #-}
-makeTMFrame :: TMFrameHeader -> ByteString -> TMFrame
-makeTMFrame hdr pl = TMFrame hdr pl Nothing Nothing
+makeTMFrame :: Maybe Word32 -> TMFrameHeader -> ByteString -> TMFrame
+makeTMFrame clcw hdr pl = TMFrame hdr pl clcw Nothing
 
 
 {-# INLINABLE tmFrameMaxDataLen #-}
 tmFrameMaxDataLen :: Config -> PUSMissionSpecific -> TMFrameHeader -> Int
 tmFrameMaxDataLen cfg missionSpecific hdr =
+    tmFrameMaxDataLenFlag cfg missionSpecific (_tmFrameOpControl hdr)
+
+
+{-# INLINABLE tmFrameMaxDataLenFlag #-}
+tmFrameMaxDataLenFlag :: Config -> PUSMissionSpecific -> Bool -> Int
+tmFrameMaxDataLenFlag cfg missionSpecific useCLCW =
     fromIntegral (cfgMaxTMFrameLen cfg)
         - fixedSizeOf @TMFrameHeader
         - dfhLen
         - opLen
         - fecLen
-  where
-    opLen  = if _tmFrameOpControl hdr then fixedSizeOf @CLCW else 0
+    where
+    opLen  = if useCLCW then fixedSizeOf @CLCW else 0
     fecLen = if cfgTMFrameHasCRC cfg then fixedSizeOf @CRC else 0
     dfhLen = case missionSpecific ^. pmsTMFrameDataFieldHeader of
         Just h  -> tmFrameDfhLength h
         Nothing -> 0
-
+        
+        
 
 {-# INLINABLE tmFrameMaxPayloadLen #-}
 tmFrameMaxPayloadLen :: Config -> TMFrameHeader -> Int
@@ -375,7 +383,7 @@ tmFrameParser cfg = do
     payload <- A.take payloadLen
 
     clcw    <- if _tmFrameOpControl hdr
-        then Just <$> clcwParser
+        then Just <$> A.anyWord32be
         else return Nothing
 
     crc <- if cfgTMFrameHasCRC cfg then Just <$> crcParser else return Nothing
@@ -389,11 +397,11 @@ tmFrameGetPrevAndRest frame =
     let hdrPtr = frame ^. tmFrameHdr . tmFrameFirstHeaderPtr
         dat    = frame ^. tmFrameData
         prev   = if
-            | hdrPtr == tmFrameNoFirstHeader -> B.empty
+            | hdrPtr == tmFrameNoFirstHeader -> dat
             | hdrPtr == tmFrameIdlePtr       -> B.empty
             | otherwise                      -> B.take (fromIntegral hdrPtr) dat
         rest = if
-            | hdrPtr == tmFrameNoFirstHeader -> dat
+            | hdrPtr == tmFrameNoFirstHeader -> B.empty
             | hdrPtr == tmFrameIdlePtr       -> B.empty
             | otherwise                      -> B.drop (fromIntegral hdrPtr) dat
     in  (prev, rest)

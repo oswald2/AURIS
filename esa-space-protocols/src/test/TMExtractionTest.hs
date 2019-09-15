@@ -55,7 +55,7 @@ makeTMFrames cfg missionSpecific hdr pl =
         frameData = chunkedByBS len pl
         hdrs      = map upd [0 ..]
         upd x = hdr & tmFrameVCFC .~ x & tmFrameMCFC .~ x
-        frames = zipWith makeTMFrame hdrs frameData
+        frames = zipWith (makeTMFrame (Just (packValues defaultCLCW))) hdrs frameData 
     in  frames
 
 
@@ -165,7 +165,7 @@ testFrameExtraction2 = do
                                  }
             , _tmFrameData =
                 "\b\DC1\192\ETX\NUL\SI\DLE\SOH\SOH\NULJ\158\US\SUB\252\ESC\NUL\NUL\NUL\NUL|\143\a\255\208\213\EOT2UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU=\GS"
-            , _tmFrameOCF  = Just CLCW { _clcwType        = False
+            , _tmFrameOCF  = Just $ packValues CLCW { _clcwType        = False
                                        , _clcwVersion     = 0
                                        , _clcwStatus      = 0
                                        , _clcwCopInEffect = 1
@@ -227,6 +227,53 @@ testFrameExtraction2 = do
     return ()
 
 
+missingFrame :: Config -> IO ()
+missingFrame cfg = do
+    let pusPkt = PUSPacket pusHdr' pusDfh' Nothing payload
+        pusHdr' =
+            PUSHeader 0 0 PUSTM True (APID 256) SegmentStandalone (mkSSC 10) 0 0
+        pusDfh'   = PUSTMStdHeader 0 3 25 (mkSourceID 0) nullCUCTime
+        payload   = B.pack (take 4096 (cycle [0 .. 255]))
+        encPusPkt = encodePUSPacket pusPkt
+
+        len       = tmFrameMaxDataLen cfg defaultMissionSpecific tmFrameDefaultHeader
+        frameData = chunkedByBS len encPusPkt
+        hdrs      = map upd [0 ..]
+        upd x = tmFrameDefaultHeader & tmFrameVCFC .~ x & tmFrameMCFC .~ x
+        frames'' = zipWith (makeTMFrame (Just (packValues defaultCLCW))) hdrs frameData 
+
+        fhps [] _ = []
+        fhps [x] _ = [fromIntegral (B.length x)] 
+        fhps (_x:xs) True = 0 : fhps xs False 
+        fhps (_x:xs) False = tmFrameNoFirstHeader : fhps xs False 
+
+        fhps' = fhps frameData True
+        updFhp x f = x & tmFrameHdr . tmFrameFirstHeaderPtr .~ f  
+        frames' = zipWith updFhp frames'' fhps'
+
+        frames = drop2nd frames'
+
+        drop2nd [] = []
+        drop2nd [x] = [x]
+        drop2nd (x : _y : xs) = x : xs 
+
+        conduit =
+            C.sourceList frames
+                .| tmFrameExtraction defaultMissionSpecific IF_NCTRS
+                .| C.consume
+
+    -- T.putStrLn $ "Frames:\n" <> T.pack (show frames')
+    -- T.putStrLn $ "Frames (drop):\n" <> T.pack (show frames)
+
+    result <- runRIOTestAction (runConduit conduit)
+
+    T.putStrLn $ "Result: " <> T.pack (show result)
+
+    length result `shouldBe` 0
+    return ()
+
+
+
 
 main :: IO ()
 main = hspec $ do
@@ -241,4 +288,7 @@ main = hspec $ do
             pusPacketExtraction cfg
         it "Frame Extraction2" $ do
             testFrameExtraction2
-
+        it "Missing Frame" $ do
+            missingFrame cfg
+            
+            

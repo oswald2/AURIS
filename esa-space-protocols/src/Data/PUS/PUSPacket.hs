@@ -338,12 +338,17 @@ pusPktHdrLenOnlyParser = do
    
 
 
+{-# INLINABLE headPacket #-}
 headPacket :: ByteString -> (ByteString, ByteString)
 headPacket bs = 
     case A.parseOnly pusPktHdrLenOnlyParser bs of 
         Left _ -> (B.empty, bs)
-        Right len -> B.splitAt (fromIntegral len + 1 + 6) bs 
+        Right len -> 
+            let splitPoint = fromIntegral len + 1 + 6 in
+            if splitPoint > B.length bs then (B.empty, bs)
+                else B.splitAt splitPoint bs 
 
+{-# INLINABLE chunkPackets #-}
 chunkPackets :: ByteString -> ([ByteString], ByteString)
 chunkPackets bs = go bs []
     where 
