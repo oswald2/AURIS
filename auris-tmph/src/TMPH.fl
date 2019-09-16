@@ -1,0 +1,59 @@
+# data file for the Fltk User Interface Designer (fluid)
+version 1.0304
+header_name {.h}
+code_name {.cxx}
+decl {import GUI.MainWindow} {private local
+}
+
+decl {import Graphics.UI.FLTK.LowLevel.FLTKHS} {private local
+}
+
+Function {makeWindow(IO(MainWindowFluid))} {open
+} {
+  Fl_Window mainWindow {
+    label {Telemetry Packet History} open
+    xywh {369 84 1230 715} type Double color 30 labelcolor 6 visible
+  } {
+    Fl_Group textViewGroup {open
+      xywh {5 25 1225 30}
+    } {
+      Fl_Button buttonArm {
+        label ARM
+        xywh {990 25 115 25} color 30 labelcolor 6
+      }
+      Fl_Button buttonGo {
+        label GO
+        xywh {1110 25 115 25} color 30 labelcolor 6
+      }
+    }
+    Fl_Menu_Bar menuBar {open
+      xywh {0 0 1225 25} color 30 labelcolor 6 textcolor 6
+    } {
+      Submenu menuFile {
+        label {&File} open
+        xywh {0 0 70 21}
+      } {
+        MenuItem menuSaveFile {
+          label {Save File}
+          xywh {0 0 36 21}
+        }
+        MenuItem menuOpenFile {
+          label {&Open}
+          xywh {0 0 36 21}
+        }
+      }
+    }
+    Fl_Group tableGroup {open
+      xywh {5 95 1225 610}
+    } {}
+  }
+  code {let { window = MainWindowFluid { _mfWindow = mainWindow
+    , _mfOpenFile = menuOpenFile
+    , _mfSaveFile = menuSaveFile
+    , _mfArmButton = buttonArm
+    , _mfGoButton = buttonGo
+    , _mfTableGroup = tableGroup
+    }};
+    return window} {selected
+  }
+}

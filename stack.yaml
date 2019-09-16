@@ -35,6 +35,7 @@ packages:
 - esa-db
 - esa-tm-model
 - mcs-interface
+- auris-tmph
 
 # Dependency packages to be pulled from upstream that are not in the resolver.
 # These entries can reference officially published versions as well as
