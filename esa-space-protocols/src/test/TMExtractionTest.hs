@@ -72,27 +72,6 @@ runRIOTestAction action = do
 
         runRIO state action
 
-goodExtraction :: Config -> IO ()
-goodExtraction cfg = do
-    let payload = B.pack (take 4096 (cycle [0 .. 255]))
-    let frames = map ep $ makeTMFrames cfg
-                                       defaultMissionSpecific
-                                       tmFrameDefaultHeader
-                                       payload
-        ep x = ExtractedDU { _epQuality = toFlag Good True
-                           , _epGap     = Nothing
-                           , _epSource  = IF_NCTRS
-                           , _epDU      = x
-                           }
-        conduit =
-            C.sourceList frames
-                .| extractPktFromTMFramesC defaultMissionSpecific IF_NCTRS
-                .| C.consume
-    result <- runRIOTestAction (runConduit conduit)
-
-    -- length result `shouldBe` 3
-    B.concat result `shouldBe` payload
-    return ()
 
 
 pusPacketEncoding :: Config -> IO ()
@@ -280,8 +259,6 @@ main = hspec $ do
     let cfg = defaultConfig
 
     describe "TM Frame Extraction" $ do
-        it "good extraction" $ do
-            goodExtraction cfg
         it "PUS Packet encoding" $ do
             pusPacketEncoding cfg
         it "PUS Packet extraction" $ do
