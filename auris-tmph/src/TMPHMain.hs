@@ -73,7 +73,8 @@ createMainWindow MainWindowFluid {..} = do
                               , _mwGoButton     = _mfGoButton
                               , _mwOpenFile     = _mfOpenFile
                               , _mwSaveFile     = _mfSaveFile
-                              , _mwCommandTable = table
+                              , _mwPacketTable = table
+                              , _mwModel        = model
                               }
   pure mainWindow
 

@@ -6,6 +6,7 @@
 #-}
 module GUI.PUSPacketTable
   ( setupTable
+  , addRow
   )
 where
 
@@ -24,6 +25,11 @@ import           GUI.Colors
 
 import           Model.PUSPacketModel
 
+import Data.PUS.PUSPacket 
+import Data.PUS.ExtractedDU 
+
+
+
 
 setupTable :: Ref Group -> TVar PUSPacketModel -> IO (Ref TableRow)
 setupTable group model = do
@@ -34,18 +40,15 @@ setupTable group model = do
                        (drawCell model)
                        defaultCustomWidgetFuncs
                        defaultCustomTableFuncs
-  initializeTable table
+  initializeTable table model 
   add group table
 
   pure table
 
 
-maxRows :: Int
-maxRows = 500
 
-
-initializeTable :: Ref TableRow -> IO ()
-initializeTable table = do
+initializeTable :: Ref TableRow -> TVar PUSPacketModel -> IO ()
+initializeTable table model = do
   begin table
 
   -- set colors
@@ -56,7 +59,8 @@ initializeTable table = do
   setRowHeaderColor table mcsWidgetBG
 
   -- set properties
-  setRows table (Rows maxRows)
+  nRows <- S.length <$> readTVarIO model 
+  setRows table (Rows nRows)
   setRowHeader table False
   setRowHeightAll table 20
   setRowResize table False
@@ -72,6 +76,15 @@ initializeTable table = do
   setColResize table True
 
   end table
+
+
+addRow :: Ref TableRow -> TVar PUSPacketModel -> ExtractedDU PUSPacket -> IO () 
+addRow table model pkt = do
+    (Rows nRows) <- getRows table 
+    when (nRows < modelMaxRows) $ setRows table (Rows (nRows + 1))
+    atomically $ modifyTVar model (addPacketToModel pkt)
+    redraw table 
+
 
 
 colNames :: Vector Text

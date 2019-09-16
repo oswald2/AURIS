@@ -4,22 +4,25 @@
     , NoImplicitPrelude
 #-}
 module GUI.MainWindow
-    (
-        MainWindowFluid(..)
-        , MainWindow(..)
-        , mwWindow
-        , mwOpenFile
-        , mwSaveFile
-        , mwArmButton
-        , mwGoButton
-    )
+  ( MainWindowFluid(..)
+  , MainWindow(..)
+  , mwWindow
+  , mwOpenFile
+  , mwSaveFile
+  , mwArmButton
+  , mwGoButton
+  , mwPacketTable
+  , mwModel
+  )
 where
 
-import RIO
+import           RIO
 
-import Control.Lens (makeLenses)
+import           Control.Lens                   ( makeLenses )
 
-import Graphics.UI.FLTK.LowLevel.FLTKHS
+import           Graphics.UI.FLTK.LowLevel.FLTKHS
+
+import           Model.PUSPacketModel
 
 
 data MainWindowFluid = MainWindowFluid {
@@ -39,7 +42,8 @@ data MainWindow = MainWindow {
     , _mwGoButton :: Ref Button
     , _mwOpenFile :: Ref MenuItemBase
     , _mwSaveFile :: Ref MenuItemBase
-    , _mwCommandTable :: Ref TableRow
+    , _mwPacketTable :: Ref TableRow
+    , _mwModel :: TVar PUSPacketModel
     }
 makeLenses ''MainWindow
 
