@@ -38,9 +38,7 @@ setupCallbacks :: MainWindow -> IO ()
 setupCallbacks window = do
     -- buff <- textBufferNew Nothing Nothing
     -- setBuffer (window ^. mwTextEditor) (Just buff)
-
   setCallback (window ^. mwArmButton) (armCB window)
-
   pure ()
 
 
@@ -55,7 +53,7 @@ armCB window _btn = do
         pusDfh' = PUSTMStdHeader 0 3 25 (mkSourceID 0) nullCUCTime
         payload = B.pack [0 .. 255]
 
-      epu x = ExtractedDU (toFlag Good True) Nothing IF_NCTRS x
+      epu = ExtractedDU (toFlag Good True) Nothing IF_NCTRS 
 
   addRow table model (epu (pusPkt 100))
 

@@ -30,7 +30,7 @@ type PUSPacketModel = Seq (ExtractedDU PUSPacket)
 
 
 modelMaxRows :: Int
-modelMaxRows = 500
+modelMaxRows = 20
 
 
 addPacketToModel :: ExtractedDU PUSPacket -> PUSPacketModel -> PUSPacketModel
