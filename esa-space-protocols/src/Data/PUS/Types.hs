@@ -77,6 +77,9 @@ import qualified Data.Attoparsec.ByteString    as A
 import qualified Data.Attoparsec.Binary        as A
 import           Data.Bits
 
+import           Formatting
+
+
 -- | Virtual Channel ID
 newtype VCID = VCID { getVCID :: Word8 }
     deriving (Eq, Ord, Num, Show, Read, Generic)
@@ -235,6 +238,11 @@ newtype PUSType = PUSType Word8
 mkPUSType :: Word8 -> PUSType
 mkPUSType = PUSType
 
+
+instance Display PUSType where
+    textDisplay (PUSType x) = sformat int x
+
+
 -- | PUS Sub Type
 newtype PUSSubType = PUSSubType Word8
     deriving (Eq, Ord, Num, Show, Read, Generic)
@@ -242,6 +250,10 @@ newtype PUSSubType = PUSSubType Word8
 -- | Smart constructor for the 'PUSSubType'
 mkPUSSubType :: Word8 -> PUSSubType
 mkPUSSubType = PUSSubType
+
+instance Display PUSSubType where
+    textDisplay (PUSSubType x) = sformat int x
+
 
 -- | Builder for the 'PUSType'
 pusTypeBuilder :: PUSType -> Builder

@@ -68,6 +68,7 @@ module Data.PUS.PUSDfh
     , pusGetTypes
     , dfhTypes
     , dfhSourceID
+    , pusPktTime
     )
 where
 
@@ -221,7 +222,9 @@ pusAckFlags PUSTMStdHeader{} = (False, False, False, False)
 pusAckFlags PUSCnCTCHeader{} = (False, False, False, False)
 
 
-
+pusPktTime :: DataFieldHeader -> Maybe CUCTime 
+pusPktTime PUSTMStdHeader {_stdTmOBTime = t} = Just t
+pusPktTime _ = Nothing
 
 -- | returns the length of the data field header when encoded in bytes
 dfhLength :: DataFieldHeader -> Int

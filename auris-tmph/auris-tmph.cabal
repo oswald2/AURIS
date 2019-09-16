@@ -42,6 +42,7 @@ Executable TMPHDisplay
     GUI.MainWindowCallbacks
     GUI.PUSPacketTable
     GUI.Colors
+    Model.PUSPacketModel
 
   Hs-Source-Dirs: src/
   Build-Depends:
@@ -49,7 +50,10 @@ Executable TMPHDisplay
     fltkhs >= 0.8.0.0,
     text >= 1.2.2.0,
     rio,
-    lens
+    lens,
+    containers,
+    esa-base, 
+    esa-space-protocols
 
 
   default-language: Haskell2010
