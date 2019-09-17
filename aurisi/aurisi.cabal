@@ -42,6 +42,9 @@ Executable AURISi
     GUI.MainWindow
     GUI.MainWindowCallbacks
     AurisInterface 
+    AurisProcessing
+    AurisConfig
+    AurisMissionSpecific
 
   Hs-Source-Dirs: src/
   Build-Depends:
@@ -55,7 +58,13 @@ Executable AURISi
     esa-space-protocols,
     gui-base,
     auris-tmph,
-    mcs-interface 
+    mcs-interface,
+    optparse-generic,
+    gitrev,
+    aeson,
+    conduit,
+    conduit-extra,
+    directory
 
   Other-Modules: AURISi
 

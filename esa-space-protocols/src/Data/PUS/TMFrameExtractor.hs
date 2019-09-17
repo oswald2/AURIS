@@ -29,6 +29,7 @@ module Data.PUS.TMFrameExtractor
   , tmFrameEncodeC
   , tmFrameDecodeC
   , storeFrameC
+  , raisePUSPacketC
   )
 where
 
@@ -62,7 +63,7 @@ import           General.Time
 import           Protocol.ProtocolInterfaces
 import           Protocol.SizeOf
 
-import           General.Hexdump
+--import           General.Hexdump
 
 
 data RestartVCException = RestartVCException
@@ -280,11 +281,12 @@ extractPktFromTMFramesC missionSpecific pIf = loop True B.empty
                 -- when we have no gap, just continue processing
             if initial
               then do
-                let pdat = if frame' ^. tmFrameHdr . tmFrameFirstHeaderPtr == 0
-                      then frame' ^. tmFrameData
-                      else
-                        let (_prev, rest) = tmFrameGetPrevAndRest frame'
-                        in  rest
+                let pdat =
+                      if frame' ^. tmFrameHdr . tmFrameFirstHeaderPtr == 0
+                        then frame' ^. tmFrameData
+                        else
+                          let (_prev, rest) = tmFrameGetPrevAndRest frame'
+                          in  rest
                     (pkts, spill) = chunkPackets pdat
 
                 -- traceM
@@ -652,3 +654,13 @@ packetBody hdr segLen = do
   let len       = hdr ^. pusHdrTcLength + 1
       lenToTake = min len (fromIntegral (tmSegmentLength segLen))
   A.take (fromIntegral lenToTake)
+
+
+raisePUSPacketC
+  :: (MonadIO m, MonadReader env m, HasGlobalState env)
+  => ConduitT (ExtractedDU PUSPacket) (ExtractedDU PUSPacket) m ()
+raisePUSPacketC = do
+  env <- ask
+  awaitForever $ \pkt -> do
+    liftIO $ raiseEvent env (EVTelemetry (EVTMPUSPacketReceived pkt))
+    yield pkt
