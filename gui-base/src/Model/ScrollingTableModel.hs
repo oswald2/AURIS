@@ -7,6 +7,7 @@
 module Model.ScrollingTableModel
   ( ToCellText(..)
   , modelMaxRows
+  , ColumnDefinition(..)
   )
 where
 
@@ -17,7 +18,13 @@ import qualified RIO.Text                      as T
 
 
 modelMaxRows :: Int
-modelMaxRows = 20
+modelMaxRows = 200
+
+
+data ColumnDefinition = ColumnDefinition {
+    _columnName :: Text,
+    _columnWidth :: Int
+} 
 
 
 

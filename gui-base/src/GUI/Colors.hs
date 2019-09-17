@@ -52,3 +52,17 @@ mcsButtonSetColor w = do
     setColor w mcsWidgetBG
     setColorWithBgSel w mcsWidgetBG mcsTableBG
     setLabelcolor w mcsFontColor
+
+
+mcsTabsSetColor :: Ref Tabs -> IO ()
+mcsTabsSetColor w = do
+    setColor w mcsWidgetBG
+    setColorWithBgSel w mcsWidgetBG mcsTableBG
+    setLabelcolor w mcsFontColor
+    
+mcsGroupSetColor :: Ref Group -> IO ()
+mcsGroupSetColor w = do
+    setColor w mcsWidgetBG
+    setColorWithBgSel w mcsWidgetBG mcsTableBG
+    setLabelcolor w mcsFontColor
+    

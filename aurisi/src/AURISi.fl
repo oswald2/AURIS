@@ -11,8 +11,8 @@ decl {import Graphics.UI.FLTK.LowLevel.FLTKHS} {private local
 Function {makeWindow(IO(MainWindowFluid))} {open
 } {
   Fl_Window mainWindow {
-    label {Telemetry Packet History} open
-    xywh {330 82 1230 755} type Double color 30 labelcolor 6 resizable visible
+    label AURISi open
+    xywh {223 103 1230 755} type Double color 30 labelcolor 6 resizable visible
   } {
     Fl_Menu_Bar menuBar {open
       xywh {0 5 1230 30} color 30 labelcolor 6 textcolor 6
@@ -39,11 +39,15 @@ Function {makeWindow(IO(MainWindowFluid))} {open
     } {
       Fl_Group tabTMFrames {
         label {TM Frames} open
-        xywh {25 60 1205 675} hide
-      } {}
+        xywh {0 60 1230 675}
+      } {
+        Fl_Group tableTMFrames {open selected
+          xywh {0 85 1230 650} resizable
+        } {}
+      }
       Fl_Group tabTMPackets {
         label {TM Packets} open
-        xywh {0 60 1230 675} resizable
+        xywh {0 60 1230 675} hide resizable
       } {
         Fl_Group tableTMPackets {open
           xywh {0 85 1230 650}

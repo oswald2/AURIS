@@ -69,6 +69,7 @@ data EventTelemetry =
     | EVTMGarbledSpillOver [Word8]
     | EVTMRejectedSpillOverPkt PUSPacket
     | EVTMFrameReceived (ExtractedDU TMFrame)
+    | EVTMPUSPacketReceived (ExtractedDU PUSPacket)
     deriving (Show, Generic)
 
 instance Serialise EventTelemetry

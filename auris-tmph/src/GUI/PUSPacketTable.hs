@@ -24,6 +24,7 @@ import           Graphics.UI.FLTK.LowLevel.Fl_Enumerations
 import           GUI.Colors
 
 import           Model.PUSPacketModel
+import           Model.ScrollingTableModel
 
 import           Data.PUS.PUSPacket
 import           Data.PUS.ExtractedDU
@@ -42,6 +43,7 @@ setupTable group model = do
                        defaultCustomTableFuncs
   initializeTable table model
   add group table
+  mcsGroupSetColor group
 
   pure table
 
@@ -66,11 +68,11 @@ initializeTable table model = do
   setRowResize table False
   setType table SelectMulti
 
-  let nCols = V.length colNames
+  let nCols = V.length colDefinitions
   setCols table (Columns nCols)
   setColHeader table True
 
-  mapM_ (\i -> setColWidth table (Column i) (colWidth V.! i)) [0 .. nCols - 1]
+  mapM_ (\i -> setColWidth table (Column i) (_columnWidth (colDefinitions V.! i))) [0 .. nCols - 1]
 
   --setColWidthAll table 80
   setColResize table True
@@ -82,17 +84,29 @@ addRow :: Ref TableRow -> PUSPacketModel -> ExtractedDU PUSPacket -> IO ()
 addRow table model pkt = do
   (Rows nRows) <- getRows table
   when (nRows < modelMaxRows) $ setRows table (Rows (nRows + 1))
-  addPacketToModel pkt model
+  void $ addPacketToModel pkt model
   redraw table
 
 
 
-colNames :: Vector Text
-colNames =
-  V.fromList ["Generation Time", "ERT", "APID", "T", "ST", "SSC", "Data"]
+-- colNames :: Vector Text
+-- colNames =
+--   V.fromList ["Generation Time", "ERT", "APID", "T", "ST", "SSC", "Data"]
 
-colWidth :: Vector Int
-colWidth = V.fromList [200, 200, 60, 30, 30, 30, 800]
+-- colWidth :: Vector Int
+-- colWidth = V.fromList [200, 200, 60, 30, 30, 30, 800]
+
+colDefinitions :: Vector ColumnDefinition
+colDefinitions = V.fromList
+  [ ColumnDefinition "Generation Time" 200
+  , ColumnDefinition "ERT"             200
+  , ColumnDefinition "APID"            60
+  , ColumnDefinition "T"               30
+  , ColumnDefinition "ST"              30
+  , ColumnDefinition "SSC"             50
+  , ColumnDefinition "Data"            800
+  ]
+
 
 
 drawCell
@@ -108,9 +122,9 @@ drawCell model table context tc@(TableCoordinate (Row row) (Column col)) rectang
       ContextStartPage -> do
         flcSetFont helvetica (FontSize 14)
         takeMVar (model ^. pusPktModelLock)
-      ContextEndPage -> do 
-        putMVar (model ^. pusPktModelLock) () 
-      ContextColHeader -> drawHeader table (colNames V.! col) rectangle
+      ContextEndPage -> do
+        putMVar (model ^. pusPktModelLock) ()
+      ContextColHeader -> drawHeader table (_columnName (colDefinitions V.! col)) rectangle
       ContextRowHeader -> drawHeader table (T.pack (show row)) rectangle
       ContextCell      -> drawData table model tc rectangle
       _                -> pure ()
@@ -127,11 +141,7 @@ drawHeader table s rectangle = do
 
 
 drawData
-  :: Ref TableRow
-  -> PUSPacketModel
-  -> TableCoordinate
-  -> Rectangle
-  -> IO ()
+  :: Ref TableRow -> PUSPacketModel -> TableCoordinate -> Rectangle -> IO ()
 drawData table model (TableCoordinate (Row row) (Column col)) rectangle = do
   flcPushClip rectangle
   flcSetColor mcsTableBG

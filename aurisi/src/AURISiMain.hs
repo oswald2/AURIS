@@ -37,12 +37,13 @@ import           Protocol.ProtocolInterfaces
 import           GUI.PUSPacketTable
 
 
-ui :: IO ()
+ui :: IO MainWindow
 ui = do
   window     <- makeWindow
   mainWindow <- createMainWindow window
   setupCallbacks mainWindow
   showWidget (_mwWindow mainWindow)
+  pure mainWindow
 
 
 
@@ -50,6 +51,7 @@ createMainWindow :: MainWindowFluid -> IO MainWindow
 createMainWindow MainWindowFluid {..} = do
   tmpTab <- createTMPTab _mfTMPTab
   mcsWindowSetColor _mfWindow
+  mcsTabsSetColor _mfTabs
   -- mcsWidgetSetColor _mfOpenFile
   -- mcsWidgetSetColor _mfSaveFile
 --   mcsButtonSetColor _mfArmButton
@@ -65,7 +67,9 @@ createMainWindow MainWindowFluid {..} = do
 
 
 main :: IO ()
-main = ui >> FL.run >> FL.flush
+main = do 
+    mainWindow <- ui 
+    FL.run >> FL.flush
 
 replMain :: IO ()
 replMain = ui >> FL.replRun

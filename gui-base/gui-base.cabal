@@ -53,6 +53,7 @@ library
   -- Modules exported by the library.
   exposed-modules:
     GUI.Colors 
+    GUI.Utils
     Model.ScrollingTableModel
 
   -- Modules included in this library but not exported.
