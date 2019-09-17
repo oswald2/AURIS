@@ -1,8 +1,8 @@
-name : auris-tmph
+name : aurisi
 version : 0.0.0.1
-synopsis : A telemetry packet history for AURIS
+synopsis : Integrated GUI for the AURIS mission control system
 description:
-    A commanding application for mission control
+    The graphical user interface for the (integrated) version of AURIS
 license : BSD3
 license-file : LICENSE
 author : Michael Oswald
@@ -11,6 +11,8 @@ maintainer: michael.oswald@onikudaki.net
 homepage:
 category: UI,Graphics
 cabal-version: >=2.0
+extra-source-files: 
+    src/AURISi.fl
 
 
 source-repository head
@@ -34,23 +36,26 @@ flag llvm
     default: False
 
 
-library 
-
-  exposed-modules:
-    GUI.PUSPacketTable
-    Model.PUSPacketModel
+Executable AURISi
+  Main-Is: AURISiMain.hs
+  Other-modules:
+    GUI.MainWindow
+    GUI.MainWindowCallbacks
 
   Hs-Source-Dirs: src/
   Build-Depends:
     base == 4.*,
-    fltkhs >= 0.8.0.0,
+    fltkhs >= 0.8.0.2,
     text >= 1.2.2.0,
     rio,
     lens,
     containers,
     esa-base, 
     esa-space-protocols,
-    gui-base
+    gui-base,
+    auris-tmph
+
+  Other-Modules: AURISi
 
 
   default-language: Haskell2010
@@ -65,7 +70,6 @@ library
 
   if impl(ghc >= 7.10) && flag(FastCompile)
      ghc-Options: -fno-specialise -fmax-simplifier-iterations=0 -fsimplifier-phases=0
-
   if os(windows)
     ghc-Options: -optl-mwindows
     ghc-Options: -pgml g++ "-optl-Wl,--allow-multiple-definition" "-optl-Wl,--whole-archive" "-optl-Wl,-Bstatic" "-optl-Wl,-lfltkc" "-optl-Wl,-Bdynamic" "-optl-Wl,--no-whole-archive"

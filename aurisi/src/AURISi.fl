@@ -1,0 +1,72 @@
+# data file for the Fltk User Interface Designer (fluid)
+version 1.0304
+header_name {.h}
+code_name {.cxx}
+decl {import GUI.MainWindow} {private local
+}
+
+decl {import Graphics.UI.FLTK.LowLevel.FLTKHS} {private local
+}
+
+Function {makeWindow(IO(MainWindowFluid))} {open
+} {
+  Fl_Window mainWindow {
+    label {Telemetry Packet History} open
+    xywh {330 82 1230 755} type Double color 30 labelcolor 6 resizable visible
+  } {
+    Fl_Menu_Bar menuBar {open
+      xywh {0 5 1230 30} color 30 labelcolor 6 textcolor 6
+    } {
+      Submenu menuFile {
+        label {&File} open
+        xywh {0 0 70 21}
+      } {
+        MenuItem menuSaveFile {
+          label {Save File}
+          xywh {0 0 36 21}
+        }
+        MenuItem menuOpenFile {
+          label {&Open}
+          xywh {0 0 36 21}
+        }
+      }
+    }
+    Fl_Progress mainProgress {
+      xywh {0 735 1230 20}
+    }
+    Fl_Tabs mainTab {open
+      xywh {0 35 1230 700} resizable
+    } {
+      Fl_Group tabTMFrames {
+        label {TM Frames} open
+        xywh {25 60 1205 675} hide
+      } {}
+      Fl_Group tabTMPackets {
+        label {TM Packets} open
+        xywh {0 60 1230 675} resizable
+      } {
+        Fl_Group tableTMPackets {open
+          xywh {0 85 1230 650}
+        } {}
+        Fl_Button buttonAdd {
+          label Add
+          xywh {1120 60 110 25}
+        }
+      }
+    }
+  }
+  code {let { tmpTab = TMPacketTabFluid {
+     _tmpfTabButtonAdd = buttonAdd
+     , _tmpfTabGroup = tableTMPackets
+    }
+
+    };
+let { window = MainWindowFluid { _mfWindow = mainWindow
+    , _mfOpenFile = menuOpenFile
+    , _mfSaveFile = menuSaveFile
+    , _mfProgress = mainProgress
+    , _mfTabs = mainTab
+    , _mfTMPTab = tmpTab
+    }};
+    return window} {}
+}

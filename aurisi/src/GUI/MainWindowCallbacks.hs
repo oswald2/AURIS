@@ -38,14 +38,14 @@ setupCallbacks :: MainWindow -> IO ()
 setupCallbacks window = do
     -- buff <- textBufferNew Nothing Nothing
     -- setBuffer (window ^. mwTextEditor) (Just buff)
-  setCallback (window ^. mwArmButton) (armCB window)
+  setCallback (window ^. mwTMPTab . tmpTabButtonAdd) (addCB window)
   pure ()
 
 
-armCB :: MainWindow -> Ref Button -> IO ()
-armCB window _btn = do
-  let table = window ^. mwPacketTable
-      model = window ^. mwModel
+addCB :: MainWindow -> Ref Button -> IO ()
+addCB window _btn = do
+  let table = window ^. mwTMPTab . tmpTable
+      model = window ^. mwTMPTab . tmpModel
       pusPkt x = PUSPacket pusHdr' pusDfh' Nothing payload
        where
         pusHdr' =
@@ -53,7 +53,7 @@ armCB window _btn = do
         pusDfh' = PUSTMStdHeader 0 3 25 (mkSourceID 0) nullCUCTime
         payload = B.pack [0 .. 255]
 
-      epu = ExtractedDU (toFlag Good True) Nothing IF_NCTRS 
+      epu = ExtractedDU (toFlag Good True) Nothing IF_NCTRS
 
   addRow table model (epu (pusPkt 100))
 

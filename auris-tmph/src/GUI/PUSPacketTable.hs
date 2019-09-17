@@ -25,13 +25,13 @@ import           GUI.Colors
 
 import           Model.PUSPacketModel
 
-import Data.PUS.PUSPacket 
-import Data.PUS.ExtractedDU 
+import           Data.PUS.PUSPacket
+import           Data.PUS.ExtractedDU
 
 
 
 
-setupTable :: Ref Group -> TVar PUSPacketModel -> IO (Ref TableRow)
+setupTable :: Ref Group -> PUSPacketModel -> IO (Ref TableRow)
 setupTable group model = do
   rect  <- getRectangle group
   table <- tableRowNew rect
@@ -40,14 +40,14 @@ setupTable group model = do
                        (drawCell model)
                        defaultCustomWidgetFuncs
                        defaultCustomTableFuncs
-  initializeTable table model 
+  initializeTable table model
   add group table
 
   pure table
 
 
 
-initializeTable :: Ref TableRow -> TVar PUSPacketModel -> IO ()
+initializeTable :: Ref TableRow -> PUSPacketModel -> IO ()
 initializeTable table model = do
   begin table
 
@@ -59,7 +59,7 @@ initializeTable table model = do
   setRowHeaderColor table mcsWidgetBG
 
   -- set properties
-  nRows <- S.length <$> readTVarIO model 
+  nRows <- pusPacketModelSize model
   setRows table (Rows nRows)
   setRowHeader table False
   setRowHeightAll table 20
@@ -78,12 +78,12 @@ initializeTable table model = do
   end table
 
 
-addRow :: Ref TableRow -> TVar PUSPacketModel -> ExtractedDU PUSPacket -> IO () 
+addRow :: Ref TableRow -> PUSPacketModel -> ExtractedDU PUSPacket -> IO ()
 addRow table model pkt = do
-    (Rows nRows) <- getRows table 
-    when (nRows < modelMaxRows) $ setRows table (Rows (nRows + 1))
-    atomically $ modifyTVar model (addPacketToModel pkt)
-    redraw table 
+  (Rows nRows) <- getRows table
+  when (nRows < modelMaxRows) $ setRows table (Rows (nRows + 1))
+  addPacketToModel pkt model
+  redraw table
 
 
 
@@ -96,7 +96,7 @@ colWidth = V.fromList [200, 200, 60, 30, 30, 30, 800]
 
 
 drawCell
-  :: TVar PUSPacketModel
+  :: PUSPacketModel
   -> Ref TableRow
   -> TableContext
   -> TableCoordinate
@@ -105,7 +105,11 @@ drawCell
 drawCell model table context tc@(TableCoordinate (Row row) (Column col)) rectangle
   = do
     case context of
-      ContextStartPage -> flcSetFont helvetica (FontSize 14)
+      ContextStartPage -> do
+        flcSetFont helvetica (FontSize 14)
+        takeMVar (model ^. pusPktModelLock)
+      ContextEndPage -> do 
+        putMVar (model ^. pusPktModelLock) () 
       ContextColHeader -> drawHeader table (colNames V.! col) rectangle
       ContextRowHeader -> drawHeader table (T.pack (show row)) rectangle
       ContextCell      -> drawData table model tc rectangle
@@ -122,13 +126,9 @@ drawHeader table s rectangle = do
   flcPopClip
 
 
-
-
-
-
 drawData
   :: Ref TableRow
-  -> TVar PUSPacketModel
+  -> PUSPacketModel
   -> TableCoordinate
   -> Rectangle
   -> IO ()
@@ -138,9 +138,10 @@ drawData table model (TableCoordinate (Row row) (Column col)) rectangle = do
   flcRectf rectangle
   flcSetColor mcsTableFG
 
-  s <- atomically $ readTVar model
-  let pkt = s S.!? row
-      txt = toCellText pkt col
+--   s <- readIORef (model ^. pusPktModelData)
+--   let pkt = s S.!? row
+--       txt = toCellText pkt col
+  txt <- pusPacketQueryUnlocked model (\s -> toCellText (s S.!? row) col)
   flcDrawInBox txt rectangle alignLeft Nothing Nothing
 
   color' <- getColor table

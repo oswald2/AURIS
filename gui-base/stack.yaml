@@ -17,7 +17,7 @@
 #
 # resolver: ./custom-snapshot.yaml
 # resolver: https://example.com/snapshots/2018-01-01.yaml
-resolver: lts-14.0
+resolver: lts-14.4
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -29,16 +29,7 @@ resolver: lts-14.0
 #   - auto-update
 #   - wai
 packages:
-- esa-base
-- esa-mib
-- esa-space-protocols
-- esa-db
-- esa-tm-model
-- mcs-interface
-- gui-base
-- auris-tmph
-- aurisi
-
+- .
 # Dependency packages to be pulled from upstream that are not in the resolver.
 # These entries can reference officially published versions as well as
 # forks / in-progress versions pinned to a git hash. For example:
@@ -48,18 +39,10 @@ packages:
 # - git: https://github.com/commercialhaskell/stack.git
 #   commit: e7b331f14bcffb8367cd58fbfc8b40ec7642100a
 #
-extra-deps:
-- attoparsec-data-1.0.4.1
-- closed-0.2.0.1
-- attoparsec-time-1
-- bytestring-to-vector-0.3.0.1
-- fltkhs-0.8.0.2
-- hw-prim-bits-0.1.0.4
+# extra-deps: []
 
 # Override default flag values for local packages and extra-deps
-flags:
-   fltkhs:
-     bundled: true
+# flags: {}
 
 # Extra package databases containing global packages
 # extra-package-dbs: []
