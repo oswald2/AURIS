@@ -153,7 +153,7 @@ main = do
 
 
       -- need to call it once in main before the GUI is started
-      --void $ FL.lock
+      void $ FL.lock
 
       -- create the main window
       mainWindow               <- ui

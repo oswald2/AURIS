@@ -14,6 +14,7 @@ import           RIO
 
 import           Conduit
 import           Data.Conduit.Network
+import           Conduit.SocketConnector
 
 import           Data.PUS.GlobalState
 import           Data.PUS.MissionSpecific.Definitions
@@ -22,7 +23,7 @@ import           Data.PUS.NcduToTMFrame
 import           Protocol.NCTRS
 import           Protocol.ProtocolInterfaces
 
---import           General.ShowConduit
+import           General.ShowConduit
 
 import           Interface.Interface
 import           Interface.Events
@@ -43,19 +44,26 @@ runProcessing cfg missionSpecific interface = do
                             (ifRaiseEvent interface . EventPUS)
 
     runRIO state $ do
-      let chain =
-            receiveTmNcduC
-              .| ncduToTMFrameC
-              .| storeFrameC
-              .| tmFrameExtraction defaultMissionSpecific IF_NCTRS
-              .| raisePUSPacketC
+      runTMChain cfg missionSpecific
+    pure ()
 
-          ignoreConduit = awaitForever $ \_ -> pure ()
 
-      runGeneralTCPClient (clientSettings 2502 "localhost") $ \app ->
-        void $ concurrently
-          ({- runConduitRes (chain .| appSink app)-}
-           return ())
-          (runConduitRes (appSource app .| chain .| ignoreConduit))
+runTMChain :: AurisConfig -> PUSMissionSpecific -> RIO GlobalState ()
+runTMChain cfg missionSpecific = do
+  let chain =
+        receiveTmNcduC
+          .| ncduToTMFrameC
+          .| storeFrameC
+          .| tmFrameExtraction missionSpecific IF_NCTRS
+          .| raisePUSPacketC
 
+      ignoreConduit = awaitForever $ \_ -> pure ()
+
+  runGeneralTCPReconnectClient
+      (clientSettings (aurisNctrsTMPort cfg) (encodeUtf8 (aurisNctrsHost cfg))) 200000
+    $ \app -> void $ runConduitRes (appSource app .| chain .| ignoreConduit)
+    -- $ \app -> void $ concurrently
+    --     ({- runConduitRes (chain .| appSink app)-}
+    --      return ())
+    --     (runConduitRes (appSource app .| chain .| ignoreConduit))
 

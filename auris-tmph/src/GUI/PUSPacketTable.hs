@@ -85,7 +85,6 @@ addRow table model pkt = do
   (Rows nRows) <- getRows table
   when (nRows < modelMaxRows) $ setRows table (Rows (nRows + 1))
   void $ addPacketToModel pkt model
-  redraw table
 
 
 

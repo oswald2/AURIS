@@ -73,11 +73,11 @@ Executable AURISi
   if flag(llvm)
     ghc-Options: -O -Wall -Wcompat -Widentities -Wincomplete-record-updates
                       -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
-                      -funbox-strict-fields -threaded -fllvm
+                      -funbox-strict-fields -threaded -rtsopts -fllvm
   else
     ghc-Options: -O -Wall -Wcompat -Widentities -Wincomplete-record-updates
                       -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
-                      -funbox-strict-fields -threaded 
+                      -funbox-strict-fields -threaded -rtsopts
 
   if impl(ghc >= 7.10) && flag(FastCompile)
      ghc-Options: -fno-specialise -fmax-simplifier-iterations=0 -fsimplifier-phases=0

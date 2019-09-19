@@ -26,7 +26,7 @@ actionTable =
 
 
 aurisEventHandler :: TBQueue IfEvent -> IfEvent -> IO ()
-aurisEventHandler queue event = forever $ atomically $ writeTBQueue queue event
+aurisEventHandler queue event = atomically $ writeTBQueue queue event
 
 
 eventProcessorThread :: MainWindow -> TBQueue IfEvent -> IO ()
@@ -38,7 +38,9 @@ eventProcessor :: MainWindow -> IfEvent -> IO ()
 eventProcessor _g (EventPUS (EVTelemetry (EVTMFrameReceived _frame))) =
   pure ()
 eventProcessor g (EventPUS (EVTelemetry (EVTMPUSPacketReceived pkt))) = do
-  withFLLock (mwAddPUSPacket g pkt)
+    traceM "eventProcessor: PUS Packet received"
+    withFLLock (mwAddPUSPacket g pkt)
+    traceM "eventProcesser: leaves"
 eventProcessor _ _ = pure ()
 
 
