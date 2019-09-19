@@ -75,8 +75,10 @@ addPacketToModel pkt model = do
 
   let len    = S.length dat
       newDat = if len < modelMaxRows
-        then dat S.|> ModelValue pkt
-        else (S.drop 1 dat) S.|> ModelValue pkt
+        then ModelValue pkt S.<| dat  
+        else case dat of 
+                dropped S.:|> _x -> ModelValue pkt S.<| dropped
+                S.Empty -> S.singleton (ModelValue pkt)
 
   writeIORef (model ^. pusPktModelData) newDat
   putMVar (model ^. pusPktModelLock) ()
