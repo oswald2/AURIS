@@ -38,9 +38,7 @@ eventProcessor :: MainWindow -> IfEvent -> IO ()
 eventProcessor _g (EventPUS (EVTelemetry (EVTMFrameReceived _frame))) =
   pure ()
 eventProcessor g (EventPUS (EVTelemetry (EVTMPUSPacketReceived pkt))) = do
-    traceM "eventProcessor: PUS Packet received"
     withFLLock (mwAddPUSPacket g pkt)
-    traceM "eventProcesser: leaves"
 eventProcessor _ _ = pure ()
 
 
