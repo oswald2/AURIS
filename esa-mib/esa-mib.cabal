@@ -60,6 +60,9 @@ library
     Data.MIB.PCF
     Data.MIB.PIC
     Data.MIB.PID
+    Data.MIB.PLF
+    Data.MIB.TPCF
+    Data.MIB.VPD
 
   -- Modules included in this library but not exported.
   -- other-modules:
@@ -87,7 +90,7 @@ library
     , lens
     , esa-base
     , text-short
-    
+
   -- Directories containing source files.
   hs-source-dirs:      src
 

@@ -25,7 +25,7 @@ where
 import           RIO
 import qualified RIO.ByteString                as B
 
-import           Control.Monad.ST
+--import           Control.Monad.ST
 
 import qualified Data.Vector.Storable.Mutable  as VS
 import           Data.Bits
