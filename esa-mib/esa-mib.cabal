@@ -86,7 +86,8 @@ library
     , directory
     , lens
     , esa-base
-
+    , text-short
+    
   -- Directories containing source files.
   hs-source-dirs:      src
 

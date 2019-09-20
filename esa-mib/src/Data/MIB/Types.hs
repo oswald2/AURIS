@@ -18,11 +18,13 @@ module Data.MIB.Types
         PTC(..)
         , PFC(..)
         , DefaultTo(..)
+        , DefaultToNothing(..)
     )
 where
 
 
 import RIO
+import Data.Hashable
 
 import Data.Binary
 import Data.Aeson
@@ -62,3 +64,18 @@ instance KnownNat a => FromField (DefaultTo a) where
 
 instance ToField (DefaultTo a) where
     toField (DefaultTo n) = toField n
+
+
+
+newtype DefaultToNothing a =
+    DefaultToNothing (Maybe a)
+        deriving (Eq, Ord, Show, Read)
+      
+instance FromField a => FromField (DefaultToNothing a) where
+    parseField s = case runParser (parseField s) of
+        Left  _ -> pure $ DefaultToNothing Nothing
+        Right n -> pure $ DefaultToNothing n
+
+instance Hashable a => Hashable (DefaultToNothing a) where
+    hashWithSalt s (DefaultToNothing d) = s `hashWithSalt` d
+        

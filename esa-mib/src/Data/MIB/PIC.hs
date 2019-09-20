@@ -42,6 +42,10 @@ import           Data.Vector.Algorithms.Merge  as V
 import           System.Directory
 import           System.FilePath
 
+import Data.MIB.Types
+
+
+
 data PICentry = PICentry
   { picType :: !Word8
   , picSubType :: !Word8
@@ -49,30 +53,13 @@ data PICentry = PICentry
   , picPI1Width :: !Word16
   , picPI2Off :: !Int
   , picPI2Width :: !Word16
-  , picApid :: DefaultToNothing
+  , picApid :: DefaultToNothing Word16 
 } deriving (Show, Read)
 
 defaultPIC :: PICentry
 defaultPIC = PICentry 0 0 (-1) 0 (-1) 0 (DefaultToNothing Nothing)
 
-newtype DefaultToNothing =
-  DefaultToNothing (Maybe Word16)
-    deriving (Eq, Ord, Show, Read)
 
-instance FromField DefaultToNothing where
-    parseField s = case runParser (parseField s) of
-        Left  _ -> pure $ DefaultToNothing Nothing
-        Right n -> pure $ DefaultToNothing n
-
-{-instance Show DefaultToNothing where
-  show (DefaultToNothing x) = show x
-
-instance Ord DefaultToNothing where
-  compare (DefaultToNothing d1) (DefaultToNothing d2) = compare d1 d2
-
-instance Eq DefaultToNothing where
-  DefaultToNothing d1 == DefaultToNothing d2 = d1 == d2
--}
 instance Eq PICentry where
     PICentry { picType = t1, picSubType = p1, picApid = a1 } == PICentry { picType = t2, picSubType = p2, picApid = a2 }
         = (t1 == t2) && (p1 == p2) && (a1 == a2)
@@ -87,8 +74,6 @@ instance Ord PICentry where
                               EQ -> compare a1 a2
                               _  -> res2
                   _ -> res1
-instance Hashable DefaultToNothing where
-    hashWithSalt s (DefaultToNothing d) = s `hashWithSalt` d
 
 instance Hashable PICentry where
     hashWithSalt s PICentry { picType = t1, picSubType = p1, picApid = a1 } =

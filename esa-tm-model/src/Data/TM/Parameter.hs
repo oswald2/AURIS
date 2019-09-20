@@ -9,6 +9,7 @@ module Data.TM.Parameter
 where
 
 import           RIO
+import           Data.Text.Short
 
 import           General.Time
 import           Data.TM.Value
@@ -17,7 +18,7 @@ import           Data.TM.Validity
 
 
 data TMParameter = TMParameter {
-    _pName :: !Text
+    _pName :: !ShortText
     , _pTime :: !SunTime
     , _pValue :: TMValueSimple
     , _pEngValue :: TMValueSimple
