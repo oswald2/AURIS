@@ -4,25 +4,23 @@
     , NoImplicitPrelude
 #-}
 module Data.TM.Parameter
-(
-    TMParameter(..)
-)
+  ( TMParameter(..)
+  )
 where
 
-import RIO
+import           RIO
 
-import General.Time
-
-
-newtype Validity = Validity { getRawValidity :: Word32 }
-    deriving (Eq, Show, Read)
+import           General.Time
+import           Data.TM.Value
+import           Data.TM.Validity
 
 
-data TMParameter a b = TMParameter {
+
+data TMParameter = TMParameter {
     _pName :: !Text
     , _pTime :: !SunTime
-    , _pValue :: a
-    , _pEngValue :: b
+    , _pValue :: TMValueSimple
+    , _pEngValue :: TMValueSimple
     , _pValidity :: Validity
 } deriving (Show)
 

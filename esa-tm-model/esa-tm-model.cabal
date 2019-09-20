@@ -60,6 +60,7 @@ library
     Data.TM.Value
     Data.TM.Parameter
     Data.TM.Calibration
+    Data.TM.Validity
 
   -- Modules included in this library but not exported.
   -- other-modules:

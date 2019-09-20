@@ -1,23 +1,43 @@
 module Data.TM.Calibration
-  ( CalibrationTextual
-  , CalibrationNumerical
-  , CalibrationPolynomial
-  , CalibrationLogarithmic
+  ( Calibration(..)
+  , CalibPoint(..)
+  , TextCalibPoint(..)
   )
 where
 
-import           Data.TM.Parameter
+import           RIO
+
+--import           Data.TM.Parameter
 
 
-data CalibrationTextual = CalibrationTextual
 
-data CalibrationNumerical = CalibrationNumerical
-
-data CalibrationPolynomial = CalibrationPolynomial
-
-data CalibrationLogarithmic = CalibrationLogarithmic
+data CalibPoint = CalibPoint {
+    _x :: !Double
+    , y :: !Double
+}
 
 
-class CalibrationEval a where
-    calibrate :: a -> TMParameter a b -> TMParameter a b
-    deCalibrate :: b -> TMParameter a b -> TMParameter a b
+data TextCalibPoint = TextCalibPoint {
+    _txpLower :: !Int64
+    , _txpUpper :: !Int64
+    , _txpText :: !Text
+    }
+
+
+data Calibration =
+    CalibrationNumerical (Vector CalibPoint)
+    | CalibrationPolynomial {
+        _a0 :: !Double
+        , _a1 :: !Double
+        , _a2 :: !Double
+        , _a3 :: !Double
+        , _a4 :: !Double
+    }
+    | CalibrationLogarithmic {
+        _l0 :: !Double
+        , _l1 :: !Double
+        , _l2 :: !Double
+        , _l3 :: !Double
+        , _l4 :: !Double
+    }
+    | CalibrationTextual (Vector TextCalibPoint)
