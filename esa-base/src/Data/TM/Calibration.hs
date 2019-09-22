@@ -8,7 +8,7 @@ where
 import           RIO
 
 --import           Data.TM.Parameter
-
+import           Data.Text.Short                ( ShortText )
 
 
 data CalibPoint = CalibPoint {
@@ -27,14 +27,18 @@ data TextCalibPoint = TextCalibPoint {
 data Calibration =
     CalibrationNumerical (Vector CalibPoint)
     | CalibrationPolynomial {
-        _a0 :: !Double
+        _calPName :: !ShortText
+        , _calPDescription :: !ShortText
+        , _a0 :: !Double
         , _a1 :: !Double
         , _a2 :: !Double
         , _a3 :: !Double
         , _a4 :: !Double
     }
     | CalibrationLogarithmic {
-        _l0 :: !Double
+        _calLName :: !ShortText
+        , _calLDescription :: !ShortText
+        , _l0 :: !Double
         , _l1 :: !Double
         , _l2 :: !Double
         , _l3 :: !Double
