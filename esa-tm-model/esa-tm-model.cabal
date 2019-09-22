@@ -56,11 +56,7 @@ flag llvm
 
 library
   -- Modules exported by the library.
-  exposed-modules:
-    Data.TM.Value
-    Data.TM.Parameter
-    Data.TM.Calibration
-    Data.TM.Validity
+  --  exposed-modules:
 
   -- Modules included in this library but not exported.
   -- other-modules:

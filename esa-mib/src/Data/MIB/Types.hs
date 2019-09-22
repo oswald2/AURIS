@@ -18,6 +18,7 @@ module Data.MIB.Types
   , PFC(..)
   , DefaultTo(..)
   , DefaultToNothing(..)
+  , CharDefaultTo(..)
   )
 where
 
@@ -60,7 +61,7 @@ instance ToJSON SPID where
     toEncoding = genericToEncoding A.defaultOptions
 
 newtype DefaultTo (a :: Nat) = DefaultTo { getDefaultInt :: Int }
-    deriving (Show, Read)
+    deriving (Eq, Show, Read)
 
 
 instance KnownNat a => FromField (DefaultTo a) where
@@ -71,6 +72,19 @@ instance KnownNat a => FromField (DefaultTo a) where
 instance ToField (DefaultTo a) where
   toField (DefaultTo n) = toField n
 
+
+newtype CharDefaultTo (a :: Symbol) = CharDefaultTo { getDefaultChar :: Char }
+    deriving (Eq, Show, Read)
+
+instance KnownSymbol a => FromField (CharDefaultTo a) where
+    parseField s = case runParser (parseField s) of 
+        Left _ -> pure $ CharDefaultTo $ case symbolVal (Proxy :: Proxy a) of 
+            "" -> 'N'
+            (x:_) -> x 
+        Right x -> pure $ CharDefaultTo x 
+
+instance ToField (CharDefaultTo a) where
+    toField (CharDefaultTo x) = toField x
 
 
 newtype DefaultToNothing a =

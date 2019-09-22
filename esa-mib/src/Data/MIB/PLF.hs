@@ -11,16 +11,12 @@ where
 
 import           RIO
 
-import           Data.ByteString.Lazy          as B
-import           Data.ByteString.Lazy.Char8    as BC
-import           Data.Text                     as T
 import           Data.Text.Short                ( ShortText )
 import           Data.Csv
-import           Data.Char
-import           Data.Vector                   as V
+import qualified RIO.Vector                    as V
 
-import           System.FilePath
-import           System.Directory
+import           Data.MIB.Load
+
 
 
 data PLFentry = PLFentry {
@@ -71,22 +67,12 @@ instance FromRecord PLFentry where
     = mzero
 
 
-myOptions :: DecodeOptions
-myOptions = defaultDecodeOptions { decDelimiter = fromIntegral (ord '\t') }
-
 fileName :: FilePath
 fileName = "plf.dat"
 
+loadFromFile
+  :: (MonadIO m, MonadReader env m, HasLogFunc env, HasCallStack)
+  => FilePath
+  -> m (Either Text (Vector PLFentry))
+loadFromFile mibPath = loadFromFileGen mibPath fileName
 
-loadFromFile :: FilePath -> IO (Either Text (Vector PLFentry))
-loadFromFile mibPath = do
-  let file = mibPath </> fileName
-  ex <- doesFileExist file
-  if ex 
-    then do
-      content <- B.readFile file
-      case decodeWith myOptions NoHeader (BC.filter isAscii content) of
-        Left  err -> pure $ Left (T.pack err)
-        Right x   -> pure $ Right x
-    else do
-      return $! Left $ "File " <> T.pack file <> " does not exist."

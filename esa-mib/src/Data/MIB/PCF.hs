@@ -37,32 +37,26 @@ module Data.MIB.PCF
 where
 
 import           RIO
+import qualified RIO.Vector                    as V
+import           RIO.HashMap                   as HM
 
 import           Control.Lens                   ( makeLenses )
 
-import qualified Data.ByteString.Lazy          as BL
-import qualified Data.ByteString.Lazy.Char8    as BC
-import qualified Data.Text                     as T
 import           Data.Text.Short                ( ShortText )
 import           Data.Csv
-import           Data.Char
-import qualified Data.Vector                   as V
-import           Data.HashMap.Lazy             as HM
-
-import           System.FilePath
-import           System.Directory
 
 import           Data.MIB.Types
+import           Data.MIB.Load
 
 
 data PCFentry = PCFentry {
     _pcfName :: !ShortText,
     _pcfDescr :: !ShortText,
-    _pcfPID :: !ShortText,
+    _pcfPID :: !Word32,
     _pcfUnit :: !ShortText,
     _pcfPTC :: !Int,
     _pcfPFC :: !Int,
-    _pcfWidth :: !ShortText,
+    _pcfWidth :: Maybe Word32,
     _pcfValid :: !ShortText,
     _pcfRelated :: !ShortText,
     _pcfCateg :: Maybe Char,
@@ -193,10 +187,6 @@ instance FromRecord PCFentry where
 
 
 
-myOptions :: DecodeOptions
-myOptions = defaultDecodeOptions { decDelimiter = fromIntegral (ord '\t') }
-
-
 fileName :: FilePath
 fileName = "pcf.dat"
 
@@ -205,21 +195,8 @@ loadFromFile
   :: (MonadIO m, MonadReader env m, HasLogFunc env, HasCallStack)
   => FilePath
   -> m (Either Text (Vector PCFentry))
-loadFromFile mibPath = do
-  let file = mibPath </> fileName
-  ex <- liftIO $ doesFileExist file
-  if ex
-    then do
-      logInfo $ "Reading file " <> display (T.pack fileName)
-      content <- liftIO $ BL.readFile file
-      logInfo "File read. Parsing..."
-      let r = decodeWith myOptions NoHeader (BC.filter isAscii content)
-      logInfo "Parsing Done."
-      case r of
-        Left  err -> pure $ Left (T.pack err)
-        Right x   -> pure $ Right x
-    else do
-      return $! Left $ "File " <> T.pack file <> " does not exist."
+loadFromFile mibPath = loadFromFileGen mibPath fileName
+
 
 
 getPCFMap :: Vector PCFentry -> HashMap ShortText PCFentry

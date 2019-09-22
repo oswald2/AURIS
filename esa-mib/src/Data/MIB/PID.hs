@@ -11,17 +11,11 @@ where
 
 import           RIO
 
-import qualified Data.ByteString.Lazy          as B
-import qualified Data.ByteString.Lazy.Char8    as BC
-import qualified Data.Text                     as T
 import           Data.Text.Short                ( ShortText )
---import qualified Data.Text.Short               as ST
 import           Data.Csv
-import           Data.Char
-import qualified Data.Vector                   as V
+import qualified RIO.Vector                   as V
 
-import           System.FilePath
-import           System.Directory
+import           Data.MIB.Load
 
 
 data PIDentry = PIDentry {
@@ -101,23 +95,15 @@ instance FromRecord PIDentry where
     = mzero
 
 
-myOptions :: DecodeOptions
-myOptions = defaultDecodeOptions { decDelimiter = fromIntegral (ord '\t') }
+
 
 fileName :: FilePath
 fileName = "pid.dat"
 
+loadFromFile
+  :: (MonadIO m, MonadReader env m, HasLogFunc env, HasCallStack)
+  => FilePath
+  -> m (Either Text (Vector PIDentry))
+loadFromFile mibPath = loadFromFileGen mibPath fileName
 
-loadFromFile :: (MonadIO m) => FilePath -> m (Either Text (Vector PIDentry))
-loadFromFile mibPath = do
-  let file = mibPath </> fileName
-  ex <- liftIO $ doesFileExist file
-  if ex
-    then do
-      content <- liftIO $ B.readFile file
-      let result = decodeWith myOptions NoHeader (BC.filter isAscii content)
-      case result of
-        Left  err -> pure $ Left (T.pack err)
-        Right x   -> pure $ Right x
-    else return $ Left $ "File " <> T.pack file <> " does not exist."
 

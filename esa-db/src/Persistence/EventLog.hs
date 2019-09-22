@@ -31,10 +31,10 @@ data EventLog = EventLog
 type EventLogger = EventLog -> IO ()
 
 mkLoggerF :: EventLogger -> LogFunc
-mkLoggerF log = mkLogFunc $ \_ _ ll t -> do
+mkLoggerF log' = mkLogFunc $ \_ _ ll t -> do
     time <- getCurrentTime
-    log $ EventLog time ll $ textDisplay t
+    log' $ EventLog time ll $ textDisplay t
 
 prependLogger :: (MonadReader e m, HasLogFunc e) => EventLogger -> m b -> m b
-prependLogger log = local (over logFuncL $ mappend $ mkLoggerF log) 
+prependLogger log' = local (over logFuncL $ mappend $ mkLoggerF log') 
 

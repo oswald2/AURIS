@@ -59,6 +59,10 @@ library
     General.Padding 
     General.SetBitField
     General.ShowConduit
+    Data.TM.Value
+    Data.TM.Parameter
+    Data.TM.Calibration
+    Data.TM.Validity
 
   -- Modules included in this library but not exported.
   -- other-modules:
@@ -79,6 +83,7 @@ library
     , serialise 
     , binary-ieee754
     , conduit
+    , text-short
 
   -- Directories containing source files.
   hs-source-dirs:      src

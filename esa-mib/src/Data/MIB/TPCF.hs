@@ -12,17 +12,12 @@ where
 
 import           RIO
 
-import           Data.ByteString.Lazy          as B
-import           Data.ByteString.Lazy.Char8    as BC
-import           Data.Text                     as T
 import           Data.Text.Short                ( ShortText )
 import           Data.Csv
-import           Data.Char
-import           Data.Vector                   as V
-import           RIO.HashMap                   as HM
+import qualified RIO.Vector                    as V
+import qualified RIO.HashMap                   as HM
 
-import           System.FilePath
-import           System.Directory
+import           Data.MIB.Load
 
 
 data TPCFentry = TPCFentry {
@@ -43,25 +38,16 @@ instance FromRecord TPCFentry where
 
 
 
-myOptions :: DecodeOptions
-myOptions = defaultDecodeOptions { decDelimiter = fromIntegral (ord '\t') }
-
 fileName :: FilePath
 fileName = "tpcf.dat"
 
 
-loadFromFile :: FilePath -> IO (Either Text (Vector TPCFentry))
-loadFromFile mibPath = do
-  let file = mibPath </> fileName
-  ex <- doesFileExist file
-  if ex 
-    then do
-      content <- B.readFile file
-      case decodeWith myOptions NoHeader (BC.filter isAscii content) of
-        Left  err -> pure $ Left (T.pack err)
-        Right x   -> pure (Right x)
-    else do
-      return $! Left $ "File " <> T.pack file <> " does not exist."
+loadFromFile
+  :: (MonadIO m, MonadReader env m, HasLogFunc env, HasCallStack)
+  => FilePath
+  -> m (Either Text (Vector TPCFentry))
+loadFromFile mibPath = loadFromFileGen mibPath fileName
+
 
 getTPCFMap :: Vector TPCFentry -> HashMap Word32 TPCFentry
 getTPCFMap = V.foldl (\m e -> HM.insert (tpcfSPID e) e m) HM.empty

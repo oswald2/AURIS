@@ -56,6 +56,7 @@ flag llvm
 library
   -- Modules exported by the library.
   exposed-modules:
+    Data.MIB.Load
     Data.MIB.Types
     Data.MIB.PCF
     Data.MIB.PIC
@@ -63,6 +64,12 @@ library
     Data.MIB.PLF
     Data.MIB.TPCF
     Data.MIB.VPD
+    Data.MIB.VDF
+    Data.MIB.CUR
+    Data.MIB.CAF
+    Data.Model.CalibrationDef
+    Data.Model.TMPacket
+    Data.Model.TMParameterDef
 
   -- Modules included in this library but not exported.
   -- other-modules:
