@@ -67,6 +67,11 @@ library
     Data.MIB.VDF
     Data.MIB.CUR
     Data.MIB.CAF
+    Data.MIB.CAP
+    Data.MIB.TXF
+    Data.MIB.TXP
+    Data.MIB.MCF
+    Data.MIB.LGF
     Data.Model.CalibrationDef
     Data.Model.TMPacket
     Data.Model.TMParameterDef
