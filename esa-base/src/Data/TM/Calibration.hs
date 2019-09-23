@@ -1,47 +1,43 @@
+{-# LANGUAGE OverloadedStrings
+    , BangPatterns
+    , GeneralizedNewtypeDeriving
+    , DeriveGeneric
+    , RecordWildCards
+    , NoImplicitPrelude
+    , BinaryLiterals
+    , NumericUnderscores
+    , FlexibleInstances
+    , GADTs
+    , ExistentialQuantification
+    , MultiWayIf
+    , TemplateHaskell
+#-}
 module Data.TM.Calibration
   ( Calibration(..)
-  , CalibPoint(..)
-  , TextCalibPoint(..)
   )
 where
 
-import           RIO
+--import           RIO
 
---import           Data.TM.Parameter
-import           Data.Text.Short                ( ShortText )
+--import           Control.Lens                   ( makeLenses )
 
+import           Data.TM.CalibrationTypes
+import           Data.TM.NumericalCalibration
+import           Data.TM.TextualCalibration
+import           Data.TM.PolynomialCalibration
+import           Data.TM.LogarithmicCalibration
 
-data CalibPoint = CalibPoint {
-    _x :: !Double
-    , y :: !Double
-}
-
-
-data TextCalibPoint = TextCalibPoint {
-    _txpLower :: !Int64
-    , _txpUpper :: !Int64
-    , _txpText :: !Text
-    }
 
 
 data Calibration =
-    CalibrationNumerical (Vector CalibPoint)
-    | CalibrationPolynomial {
-        _calPName :: !ShortText
-        , _calPDescription :: !ShortText
-        , _a0 :: !Double
-        , _a1 :: !Double
-        , _a2 :: !Double
-        , _a3 :: !Double
-        , _a4 :: !Double
-    }
-    | CalibrationLogarithmic {
-        _calLName :: !ShortText
-        , _calLDescription :: !ShortText
-        , _l0 :: !Double
-        , _l1 :: !Double
-        , _l2 :: !Double
-        , _l3 :: !Double
-        , _l4 :: !Double
-    }
-    | CalibrationTextual (Vector TextCalibPoint)
+    CalibNum NumericalCalibration
+    | CalibText TextualCalibration
+    | CalibPoly PolynomialCalibration
+    | CalibLog LogarithmicCalibration
+
+
+instance Calibrate Calibration where
+  calibrate (CalibNum  x) = calibrate x
+  calibrate (CalibText x) = calibrate x
+  calibrate (CalibPoly x) = calibrate x
+  calibrate (CalibLog  x) = calibrate x

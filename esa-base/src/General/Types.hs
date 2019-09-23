@@ -47,6 +47,7 @@ module General.Types
   , nextByteAligned
   , isByteAligned
   , bitSizeToOffset
+  , ToDouble(..)
   )
 where
 
@@ -273,3 +274,9 @@ instance OffsetCalculations Offset BitOffset where
 instance OffsetCalculations Offset BitSize where
   off .+. (BitSize x) = off `addOff` toOffset (BitOffset x)
   off .-. (BitSize x) = off `subOff` toOffset (BitOffset x)
+
+
+
+class ToDouble a where
+    toDouble :: a -> Double
+

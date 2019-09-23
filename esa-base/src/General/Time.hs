@@ -48,6 +48,8 @@ import           RIO
 import           Data.Coerce
 import           Data.Bits
 
+import           General.Types (ToDouble(..))
+
 
 data Hours = Hours
 data Minutes = Minutes
@@ -174,12 +176,16 @@ data SunTime = SunTime {
     }
     deriving (Eq, Show, Read)
 
+-- | converts the time into a 'Double' represinting the seconds
+-- from the Unix epoch. The fractional part are the subseconds
+instance ToDouble SunTime where
+  toDouble (SunTime msecs _) = fromIntegral msecs / 1_000_000
 
 instance Ord SunTime where
-    SunTime t1 False `compare` SunTime t2 False = t1 `compare` t2
-    SunTime t1 True `compare` SunTime t2 True = t1 `compare` t2
-    SunTime _t1 False `compare` SunTime _t2 True = GT
-    SunTime _t1 True `compare` SunTime _t2 False = LT
+  SunTime t1  False `compare` SunTime t2  False = t1 `compare` t2
+  SunTime t1  True  `compare` SunTime t2  True  = t1 `compare` t2
+  SunTime _t1 False `compare` SunTime _t2 True  = GT
+  SunTime _t1 True  `compare` SunTime _t2 False = LT
 
 
 
