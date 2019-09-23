@@ -89,6 +89,7 @@ library
     , binary-ieee754
     , conduit
     , text-short
+    , lens
 
   -- Directories containing source files.
   hs-source-dirs:      src

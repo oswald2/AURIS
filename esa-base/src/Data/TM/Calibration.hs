@@ -19,7 +19,7 @@ where
 
 --import           RIO
 
---import           Control.Lens                   ( makeLenses )
+import           Control.Lens                   ( makePrisms )
 
 import           Data.TM.CalibrationTypes
 import           Data.TM.NumericalCalibration
@@ -34,6 +34,8 @@ data Calibration =
     | CalibText TextualCalibration
     | CalibPoly PolynomialCalibration
     | CalibLog LogarithmicCalibration
+makePrisms ''Calibration
+
 
 
 instance Calibrate Calibration where
