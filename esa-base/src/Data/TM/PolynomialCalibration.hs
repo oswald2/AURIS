@@ -63,8 +63,8 @@ instance Calibrate PolynomialCalibration where
 
 interpolate :: PolynomialCalibration -> Double -> Double
 interpolate PolynomialCalibration {..} x =
-  let !xx   = x * x
-      !xxx  = xx * x
-      !xxxx = xxx * x
+  let !xx     = x * x
+      !xxx    = xx * x
+      !xxxx   = xxx * x
       !result = _pa0 + _pa1 * x + _pa2 * xx + _pa3 * xxx + _pa4 * xxxx
-  in result 
+  in  result
