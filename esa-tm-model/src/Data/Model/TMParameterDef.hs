@@ -83,6 +83,7 @@ data TMParameterDef = FixedParam {
     , _fpValid :: Maybe TMParameterDef
     , _fpRelated :: Maybe TMParameterDef
     , _fpCalib :: !CalibrationDef
+    , _fpCalibs :: [CalibrationDef]
     , _fpNatur :: !ParamNatur
     , _fpInterpolation :: !InterpolationType
     , _fpStatusConsistency :: !StatusConsistency
@@ -91,7 +92,7 @@ data TMParameterDef = FixedParam {
     , _fpSubsys :: !ShortText
     , _fpValidityValue :: !TMValue
     , _fpOBTID :: Maybe Int
-    , _fpEndian :: !Endian
+    , _fpEndian :: Endian
     }
     deriving(Show, Generic)
 

@@ -72,9 +72,6 @@ library
     Data.MIB.TXP
     Data.MIB.MCF
     Data.MIB.LGF
-    Data.Model.CalibrationDef
-    Data.Model.TMPacket
-    Data.Model.TMParameterDef
 
   -- Modules included in this library but not exported.
   -- other-modules:
@@ -101,6 +98,7 @@ library
     , directory
     , lens
     , esa-base
+    , esa-tm-model
     , text-short
 
   -- Directories containing source files.
