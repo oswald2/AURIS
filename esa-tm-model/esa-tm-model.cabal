@@ -56,7 +56,10 @@ flag llvm
 
 library
   -- Modules exported by the library.
-  --  exposed-modules:
+  exposed-modules:
+    Data.Model.CalibrationDef
+    Data.Model.TMPacket
+    Data.Model.TMParameterDef
 
   -- Modules included in this library but not exported.
   -- other-modules:

@@ -90,6 +90,7 @@ library
     , conduit
     , text-short
     , lens
+    , megaparsec
 
   -- Directories containing source files.
   hs-source-dirs:      src

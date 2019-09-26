@@ -59,18 +59,18 @@ data PCFentry = PCFentry {
     _pcfWidth :: Maybe Word32,
     _pcfValid :: !ShortText,
     _pcfRelated :: !ShortText,
-    _pcfCateg :: Maybe Char,
-    _pcfNatur :: Maybe Char,
+    _pcfCateg :: !Char,
+    _pcfNatur :: !Char,
     _pcfCurTx :: !ShortText,
-    _pcfInter :: !ShortText,
-    _pcfUscon :: !ShortText,
-    _pcfDecim :: !ShortText,
+    _pcfInter :: CharDefaultTo "F",
+    _pcfUscon :: CharDefaultTo "N",
+    _pcfDecim :: Maybe Int,
     _pcfParVal :: !ShortText,
     _pcfSubSys :: !ShortText,
     _pcfValPar :: DefaultTo 1,
     _pcfSpType :: !ShortText,
-    _pcfCorr :: Maybe Char,
-    _pcfOBTID :: Maybe Int,
+    _pcfCorr :: CharDefaultTo "Y",
+    _pcfOBTID :: DefaultTo 1,
     _pcfDARC :: Maybe Char,
     _pcfEndian :: Maybe Char
 } deriving (Show, Read)
@@ -178,8 +178,8 @@ instance FromRecord PCFentry where
       .!  17
       <*> v
       .!  18
-      <*> pure Nothing
-      <*> pure Nothing
+      <*> pure (CharDefaultTo 'Y')
+      <*> pure (DefaultTo 1)
       <*> pure Nothing
       <*> pure Nothing
     | otherwise

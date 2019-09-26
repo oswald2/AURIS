@@ -13,15 +13,14 @@ import           Data.Text.Short
 
 import           General.Time
 import           Data.TM.Value
-import           Data.TM.Validity
+
 
 
 
 data TMParameter = TMParameter {
     _pName :: !ShortText
     , _pTime :: !SunTime
-    , _pValue :: TMValueSimple
-    , _pEngValue :: TMValueSimple
-    , _pValidity :: Validity
+    , _pValue :: TMValue
+    , _pEngValue :: Maybe TMValue
 } deriving (Show)
 
