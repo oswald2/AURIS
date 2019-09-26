@@ -1,0 +1,144 @@
+S2KTC001	TC(2,1)	Distribute On-Off Commands		N	S2KHDR02	2	1	17	3	N	Y	N	C		N	1	S2KPSV01	1000	1	
+S2KTC002	TC(2,2)	Distribute Register Load Commands		Y	S2KHDR02	2	2	17	4	N	Y	L	A	1	N	1		2047	1	1
+S2KTC003	TC(2,3)	Distribute CPDU Commands		Y	S2KHDR01			28	2	N	Y	N	C	1	Y	0		1		1
+S2KTC004	TC(2,3)	Distribute CPDU Commands		Y	S2KHDR01			17	2	N	Y	S	O	1	Y	0		1		1
+S2KTC005	TC(3,1)	Define New Housekeeping Parameter Report		N	S2KHDR02	3	1	17	3	N	Y	N	C	100	N	1		1	9	100
+S2KTC006	TC(3,2)	Define New Diagnostic Parameter Report		N	S2KHDR02	3	2	17	4	A	Y	N	C	100	N	1		1	9	100
+S2KTC007	TC(3,3)	Clear Housekeeping Parameter Report Definitions		N	S2KHDR02	3	3	17	1	A	Y	S	R	100	N	1		1	9	100
+S2KTC008	TC3,4)	Clear Diagnostic Parameter Report Definitions		N	S2KHDR02	3	4	28	1	A	Y	S	R	100	N	1		1	9	100
+S2KTC009	TC(3,5)	Enable Housekeeping Parameter Report Generation		N	S2KHDR02	3	5	28	1	A	Y	N	C	100	N	1		1	9	100
+S2KTC010	TC(3,6)	Disable Housekeeping Parameter Report Generation		N	S2KHDR02	3	6	28	1	A	Y	N	C	100	N	1		1	9	100
+S2KTC011	TC(3,7)	Enable Diagnostic Parameter Report Generation		N	S2KHDR02	3	7	28	1	A	Y	N	C	255	N	1		1	9	255
+S2KTC012	TC(3,8)	Disable Diagnostic Parameter Report Generation		N	S2KHDR02	3	8	28	1	A	Y	N	C	255	N	1		1	9	255
+S2KTC013	TC(3,9)	Report Housekeeping Parameter Report Definitions		N	S2KHDR02	3	9	28	1	A	Y	N	C	255	N	1		1	9	255
+S2KTC014	TC(3,11)	Report Diagnostic Parameter Report Definitions		N	S2KHDR02	3	11	28	1	A	Y	N	C	255	N	1		1	9	255
+S2KTC015	TC(3,13)	Report Housekeeping Parameter Sampling Time Offsets		N	S2KHDR02	3	13	28	1	A	Y	N	C	255	N	1		1	9	255
+S2KTC016	TC(3,14)	Report Diagnostic Parameter Sampling Time Offsets		N	S2KHDR02	3	14	28	1	A	Y	N	C	255	N	1		1	9	255
+S2KTC017	TC(3,17)	Select Periodic Housekeeping Parameter Report Generation Mode		N	S2KHDR02	3	17	28	1	A	Y	N	C	255	N	1		1	9	255
+S2KTC018	TC(3,18)	Select Periodic Diagnostic Parameter Report Generation Mode		N	S2KHDR02	3	18	28	1	A	Y	N	C	255	N	1		1	9	255
+S2KTC019	TC(3,19)	Select Filtered Housekeeping Parameter Report Generation Mode		N	S2KHDR02	3	19	28	3	A	Y	N	C	255	N	1		1	9	255
+S2KTC020	TC(3,20)	Select Filtered Diagnostic Parameter Report Generation Mode		N	S2KHDR02	3	20	28	3	A	Y	N	C	255	N	1		1	9	255
+S2KTC021	TC(3,21)	Report Unfiltered Housekeeping Parameters		N	S2KHDR02	3	21	28	1	A	Y	N	C	255	N	1		1	9	255
+S2KTC022	TC(3,22)	Report Unfiltered Diagnostic Parameters		N	S2KHDR02	3	22	28	1	A	Y	N	C	255	N	1		1	9	255
+S2KTC023	TC(4,1)	Report Parameter Statistics		N	S2KHDR02	4	1	33	1	F	Y	N	C	1	N	1	S2KPSV03	1	9	1
+S2KTC024	TC(4,3)	Reset Parameter Statistics Reporting		N	S2KHDR02	4	3	33	0	F	Y	N	C	1	N	1		1	9	1
+S2KTC025	TC(4,4)	Enable Periodic Parameter Statistics Reporting		N	S2KHDR02	4	4	33	0	F	Y	N	C	1	N	1		1	9	1
+S2KTC026	TC(4,5)	Disable Periodic Parameter Statistics Reporting		N	S2KHDR02	4	5	33	0	F	Y	N	C	1	N	1		1	9	1
+S2KTC027	TC(4,6)	Add Parameters To Parameter Statistics List		N	S2KHDR02	4	6	33	1	F	Y	N	C	1	N	1		1	9	1
+S2KTC028	TC(4,7)	Delete Parameters To Parameter Statistics List		N	S2KHDR02	4	7	33	1	F	Y	N	C	1	N	1		1	9	1
+S2KTC029	TC(4,8)	Report Parameter Statistics List		N	S2KHDR02	4	8	33	0	F	Y	N	C	1	N	1		1	9	1
+S2KTC030	TC(4,10)	Clear Parameter Statistics List		N	S2KHDR02	4	10	33	0	F	Y	N	C	1	N	1		1	9	1
+S2KTC031	TC(5,5)	Enable Event Report Generation		N	S2KHDR02	5	5	49	1	S	N	N	C	1	N	1		1	9	1
+S2KTC032	TC(5,6)	Disable Event Report Generation		N	S2KHDR02	5	6	49	1	S	N	N	C	1	N	1		1	9	1
+S2KTC033	TC(6,1)	Load Memory Using Base Address Plus Offsets		N	S2KHDR02	6	1	65	6	N	Y	N	C	1	N	1		1	9	1
+S2KTC034	TC(6,2)	Load Memory Using Absolute Addresses		N	S2KHDR02	6	2	65	5	N	Y	N	C	1	N	1		1	9	1
+S2KTC035	TC(6,3)	Dump Memory Using Base Address Plus Offsets		N	S2KHDR02	6	3	65	5	N	Y	N	C	1	N	1		1	9	1
+S2KTC036	TC(6,5)	Dump Memory Using Absolute Addresses		N	S2KHDR02	6	5	65	4	N	Y	N	C	1	N	1		1	9	1
+S2KTC037	TC(6,7)	Check Memory Using Base Address Plus Offsets		N	S2KHDR02	6	7	65	5	N	Y	N	C	1	N	1		1	9	1
+S2KTC038	TC(6,9)	Check Memory Using Absolute Addresses		N	S2KHDR02	6	9	65	4	N	Y	N	C	1	N	1		1	9	1
+S2KTC039	TC(8,1)	Perform Function		N	S2KHDR02	8	1	17	3	N	Y	N	C	1	N	1		1	9	1
+S2KTC040	TC(9,1)	Change Time Report Generation Rate		N	S2KHDR02	9	1	28	1	N	Y	N	C	1	N	1		1	9	1
+S2KTC041	TC(11,1)	Enable Release Of Telecommands		N	S2KHDR02	11	1	28	1	N	Y	N	C	1	N	1		1	9	1
+S2KTC042	TC(11,2)	Disable Release Of Telecommands		N	S2KHDR02	11	2	28	1	N	Y	N	C	1	N	1		1	9	1
+S2KTC043	TC(11,3)	Reset Command Schedule		N	S2KHDR02	11	3	28	0	N	Y	N	C	1	N	1		1	9	1
+S2KTC044	TC(11,4)	Insert Telecommands In Command Schedule		N	S2KHDR02	11	4	28	3	N	Y	N	C	1	N	1		1	9	1
+S2KTC045	TC(11,5)	Delete Telecommands		N	S2KHDR02	11	5	28	4	N	Y	N	C	1	N	1		1	9	1
+S2KTC046	TC(11,6)	Delete Telecommands Over Time Period		N	S2KHDR02	11	6	28	5	N	Y	N	C	1	N	1		1	9	1
+S2KTC047	TC(11,7)	Time-Shift Selected Telecommands		N	S2KHDR02	11	7	28	9	N	Y	N	C		N	1		1	9	
+S2KTC048	TC(11,8)	Time-Shift Selected Telecommands Over Time Period		N	S2KHDR02	11	8	28	8	N	Y	N	C	1	N	1		1	9	1
+S2KTC049	TC(11,9)	Report Subset Of Command Schedule In Detailed Form		N	S2KHDR02	11	9	28	4	N	Y	N	C	1	N	1		1	9	1
+S2KTC050	TC(11,11)	Report Subset Of Schedule In Detailed Form Over Time Period		N	S2KHDR02	11	11	28	5	N	Y	N	C	1	N	1		1	9	1
+S2KTC051	TC(11,12)	Report Subset Of Command Schedule In Summary Form		N	S2KHDR02	11	12	28	0	N	Y	N	C	1	N	1		1	9	1
+S2KTC052	TC(11,14)	Report Subset Of Schedule In Summary Form Over Time Period		N	S2KHDR02	11	14	28	5	N	Y	N	C	1	N	1		1	9	1
+S2KTC053	TC(11,15)	Time Shift All Telecommands		N	S2KHDR02	11	15	28	9	N	Y	N	C	1	N	1		1	9	1
+S2KTC054	TC(11,16)	Report Command Schedule In Detailed Form		N	S2KHDR02	11	16	28	0	N	Y	N	C	1	N	1		1	9	1
+S2KTC055	TC(11,17)	Report Command Schedule In Summary Form		N	S2KHDR02	11	17	28	0	N	Y	N	C	1	N	1		1	9	1
+S2KTC056	TC(11,18)	Report Status Of Command Schedule		N	S2KHDR02	11	18	28	0	N	Y	N	C	1	N	1		1	9	1
+S2KTC057	TC(12,1)	Enable Monitoring Of Parameters		N	S2KHDR02	12	1	28	2	N	Y	N	C	1	N	1		1	9	1
+S2KTC058	TC(12,2)	Disable Monitoring Of Parameters		N	S2KHDR02	12	2	28	2	N	Y	N	C	1	N	1		1	9	1
+S2KTC059	TC(12,3)	Change Maximum Reporting Delay		N	S2KHDR02	12	3	28	0	N	Y	N	C	1	N	1		1	9	1
+S2KTC060	TC(12,4)	Clear Monitoring List		N	S2KHDR02	12	4	28	0	N	Y	N	C	1	N	1		1	9	1
+S2KTC061	TC(12,5)	Add Parameters To Monitoring List		N	S2KHDR02	12	5	28	6	N	Y	N	C	1	N	1		1	9	1
+S2KTC062	TC(12,6)	Delete Parameters From Monitoring List		N	S2KHDR02	12	6	28	1	N	Y	N	C	1	N	1		1	9	1
+S2KTC063	TC(12,7)	Modify Parameter Checking Information		N	S2KHDR02	12	7	28	6	N	Y	N	C	1	N	1		1	9	1
+S2KTC064	TC(12,8)	Report Current Monitoring List		N	S2KHDR02	12	8	28	0	N	Y	N	C	1	N	1		1	9	1
+S2KTC065	TC(12,10)	Report Current Parameter Out-Of-Limit List		N	S2KHDR02	12	10	28	0	N	Y	N	C	1	N	1		1	9	1
+S2KTC066	TC(13,5)	Downlink Reception Acknowledgement		N	S2KHDR02	13	5	28	1	N	Y	N	C	1	N	1		1	9	1
+S2KTC067	TC(13,6)	Repeat Parts		N	S2KHDR02	13	6	28	2	N	Y	N	C	1	N	1		1	9	1
+S2KTC068	TC(13,8)	Abort Downlink		N	S2KHDR02	13	8	28	0	N	Y	N	C	1	N	1		1	9	1
+S2KTC069	TC(13,9)	Accept First Uplink Part		N	S2KHDR02	13	9	28	2	N	Y	N	C	1	N	1		1	9	1
+S2KTC070	TC(13,10)	Accept Intermediate Uplink Part		N	S2KHDR02	13	10	28	2	N	Y	N	C	1	N	1		1	9	1
+S2KTC071	TC(13,11)	Accept Last Uplink Part		N	S2KHDR02	13	11	28	2	N	Y	N	C	1	N	1		1	9	1
+S2KTC072	TC(13,12)	Accept Repeated Part		N	S2KHDR02	13	12	28	2	N	Y	N	C	1	N	1		1	9	1
+S2KTC073	TC(13,13)	Abort Reception Of Uplinked Data		N	S2KHDR02	13	13	28	0	N	Y	N	C	1	N	1		1	9	1
+S2KTC074	TC(14,1)	Enable Forwarding Of Telemetry Source Packets		N	S2KHDR02	14	1	28	6	N	Y	N	C	1	N	1		1	9	1
+S2KTC075	TC(14,2)	Disable Forwarding Of Telemetry Source Packets		N	S2KHDR02	14	2	28	6	N	Y	N	C	1	N	1		1	9	1
+S2KTC076	TC(14,3)	Report Enabled Telemetry Source Packets		N	S2KHDR02	14	3	28	0	N	Y	N	C	1	N	1		1	9	1
+S2KTC077	TC(14,5)	Enable Forwarding Of Housekeeping Packets		N	S2KHDR02	14	5	28	3	N	Y	N	C	1	N	1		1	9	1
+S2KTC078	TC(14,6)	Disable Forwarding Of Housekeeping Packets		N	S2KHDR02	14	6	28	3	N	Y	N	C	1	N	1		1	9	1
+S2KTC079	TC(14,7)	Report Enabled Housekeeping Packets		N	S2KHDR02	14	7	28	0	N	Y	N	C	1	N	1		1	9	1
+S2KTC080	TC(14,9)	Enable Forwarding Of Diagnostic Packets		N	S2KHDR02	14	9	28	3	N	Y	N	C		N	1		1	9	
+S2KTC081	TC(14,10)	Disable Forwarding Of Diagnostic Packets		N	S2KHDR02	14	10	28	3	N	Y	N	C	1	N	1		1	9	1
+S2KTC082	TC(14,11)	Report Enabled Diagnostic Packets		N	S2KHDR02	14	11	28	0	N	Y	N	C	1	N	1		1	9	1
+S2KTC083	TC(14,13)	Enable Forwarding Of Event Report Packets		N	S2KHDR02	14	13	28	3	N	Y	N	C	1	N	1		1	9	1
+S2KTC084	TC(14,14)	Disable Forwarding Of Event Report Packets		N	S2KHDR02	14	14	28	3	N	Y	N	C	1	N	1		1	9	1
+S2KTC085	TC(14,15)	Report Enabled Event Report Packets		N	S2KHDR02	14	15	28	0	N	Y	N	C	1	N	1		1	9	1
+S2KTC086	TC(15,1)	Enable Storage In Packet Stores		N	S2KHDR02	15	1	28	1	N	Y	N	C	1	N	1		1	9	1
+S2KTC087	TC(15,2)	Disable Storage In Packet Stores		N	S2KHDR02	15	2	28	1	N	Y	N	C	1	N	1		1	9	1
+S2KTC088	TC(15,3)	Add Packets To Storage Selection Definition		N	S2KHDR02	15	3	28	6	N	Y	N	C	1	N	1		1	9	1
+S2KTC089	TC(15,4)	Remove Packets From Storage Selection Definition		N	S2KHDR02	15	4	28	6	N	Y	N	C	1	N	1		1	9	1
+S2KTC090	TC(15,5)	Report Storage Selection Definition		N	S2KHDR02	15	5	28	1	N	Y	N	C	1	N	1		1	9	1
+S2KTC091	TC(15,7)	Downlink Packet Store Contents For Packet Range		N	S2KHDR02	15	7	28	5	N	Y	N	C	1	N	1		1	9	1
+S2KTC092	TC(15,9)	Downlink Packet Store Contents For Time Period		N	S2KHDR02	15	9	28	2	N	Y	N	C	1	N	1		1	9	1
+S2KTC093	TC(15,10)	Delete Packet Stores Contents Up To Specified Packet		N	S2KHDR02	15	10	28	3	N	Y	N	C	1	N	1		1	9	1
+S2KTC094	TC(15,11)	Delete Packet Stores Contents Up To Specified Storage Time		N	S2KHDR02	15	11	28	1	N	Y	N	C	1	N	1		1	9	1
+S2KTC095	TC(15,12)	Report Catalogues For Selected Packet Stores		N	S2KHDR02	15	12	28	0	N	Y	N	C	1	N	1		1	9	1
+S2KTC096	TC(17,1)	Perform Connection Test		N	S2KHDR02	17	1	28	0	N	Y	L	U	1	N	1		1	1	1
+S2KTC097	TC(18,1)	Load Procedure		N	S2KHDR02	18	1	28	3	N	Y	N	C	1	N	1		1	9	1
+S2KTC098	TC(18,2)	Delete Procedure		N	S2KHDR02	18	2	28	1	N	Y	N	C	1	N	1		1	9	1
+S2KTC099	TC(18,3)	Start Procedure		N	S2KHDR02	18	3	28	1	N	Y	N	C	1	N	1		1	9	1
+S2KTC100	TC(18,4)	Stop Procedure		N	S2KHDR02	18	4	28	1	N	Y	N	C	1	N	1		1	9	1
+S2KTC101	TC(18,5)	Suspend Procedure		N	S2KHDR02	18	5	28	1	N	Y	N	C	1	N	1		1	9	1
+S2KTC102	TC(18,6)	Resume Procedure		N	S2KHDR02	18	6	28	1	N	Y	N	C	1	N	1		1	9	1
+S2KTC103	TC(18,7)	Communicate Parameters To A Procedure		N	S2KHDR02	18	7	28	4	N	Y	N	C	1	N	1		1	9	1
+S2KTC104	TC(18,8)	Report List Of On-board Operations Procedures		N	S2KHDR02	18	8	28	0	N	Y	N	C	1	N	1		1	9	1
+S2KTC105	TC(18,10)	Report List Of Active On-board Operations Procedures		N	S2KHDR02	18	10	28	0	N	Y	N	C	1	N	1		1	9	1
+S2KTC106	TC(18,12)	Abort Procedure		N	S2KHDR02	18	12	28	1	N	Y	N	C	1	N	1		1	9	1
+S2KTC107	TC(19,1)	Add Events To The Detection List		N	S2KHDR02	19	1	28	3	N	Y	N	C	1	N	1		1	9	1
+S2KTC108	TC(19,2)	Delete Events From The Detection List		N	S2KHDR02	19	2	28	2	N	Y	N	C	1	N	1		1	9	1
+S2KTC109	TC(19,3)	Clear The Event Detection List		N	S2KHDR02	19	3	28	0	N	Y	N	C	1	N	1		1	9	1
+S2KTC110	TC(19,4)	Enable Actions		N	S2KHDR02	19	4	28	2	N	Y	N	C	1	N	1		1	9	1
+S2KTC111	TC(19,5)	Disable Actions		N	S2KHDR02	19	5	28	2	N	Y	N	C	1	N	1		1	9	1
+S2KTC112	TC(19,6)	Report The Event Detection List		N	S2KHDR02	19	6	28	0	N	Y	N	C	1	N	1		1	9	1
+S2KTC113	TC(8,1)	Perform Function		N	S2KHDR02	8	1	28	4	N	Y	N	C		N	1		1	9	
+S2KTC301	TC(11,1) - Rosetta	Enable Release Of Telecommands (Rosetta compatibility)		N	S2KHDR02	11	1	28	4	N	Y	N	C		N	1		1	9	
+S2KTC302	TC(11,2) - Rosetta	Disable Release Of Selected TCs (Rosetta compatibility)		N	S2KHDR02	11	2	28	4	N	Y	N	C		N	1		1	9	
+S2KTC303	TC(11,3) - Rosetta	Reset Command Schedule (Rosetta compatibility)		N	S2KHDR02	11	3	28	0	N	Y	N	C		N	1		1	9	
+S2KTC304	TC(11,4) - Rosetta	Insert TCs In Command Schedule (Rosetta compatibility)		N	S2KHDR02	11	4	28	4	N	Y	N	C		N	1		1	9	
+S2KTC305	TC(11,5) - Rosetta	Delete TCs by APID and Sequence Counter  (Rosetta compatibility)		N	S2KHDR02	11	5	28	6	N	Y	N	C		N	1		1	9	
+S2KTC306	TC(11,6) - Rosetta	Delete TCs over Time Period (Rosetta compatibility)		N	S2KHDR02	11	6	28	8	N	Y	N	C		N	1		1	9	
+S2KTC308	TC(11,8) - Rosetta	Time-Shift TCs over Time Period (Rosetta compatibility)		N	S2KHDR02	11	8	28	9	N	Y	N	C		N	1		1	9	
+S2KTC501	Unlock Control Command	FARM Directives: Unlock Control Command	F	N	S2KNOHDR	10	1	9	1	N	Y	N	C		N			1	9	
+S2KTC502	SetV(R) Control Command	FARM directive: Set V(R) Control Command	F	N	S2KNOHDR	10	1	8	3	N	Y	N	C		N			1	8	
+S2KTC114	TC(17,1) - Header 3	Perform connection test using Header type 3	S	N	S2KHDR03	17	1	40	1	A	Y	B	C	255	N				1	255
+S2KTC115	TC (17,1) - Enum param	Test command, using enumerated parameters		N	S2KHDR02	17	1	1	7	A	Y	B	C	255	N				9	255
+S2KTC116	TC(3,6)	Set PUS ACK Flag=0		N	S2KHDR02	3	6	28	1	A	Y	N	C	1	N	1		1	0	
+S2KTC117	TC(3,6)	Test CVE_CHECK		N	S2KHDR02	3	6	28	1	A	Y	N	C	1	N	1		1	9	
+S2KTC118	Test I/L for SCC only			N	S2KHDR02	3	6	28	1	N	Y	L	A		N	1		1	9	
+S2KTC119	Dynamic Defaults			Y	S2KHDR01			28	2	N	Y	S	O	1	Y	0		1		
+S2KTC120	Editable repeated param			N	S2KHDR02	15	2	28	2	N	Y	N	C	1	N	1		1	9	
+S2KTC121	Very Large TC			N	S2KHDR02	15	3	28	2	N	Y	N	C	1	N	1		1	9	
+S2KTC122	TC(7,16) Gaps			N	S2KHDR02	7	16	28	3	N	Y	N	C	1	N	1		1	9	
+S2KTC123	Multiple Echo Verif			N	S2KHDR02	8	1	28	3	N	Y	N	C	1	N	1		1	15	
+S2KTC503	Reset MAP	Reset MAP command	R	N	S2KNOHDR	10	2	99	2	A	Y	N	C		N				1	
+S2KTC601	TC(8,1) signed pars	Perform function command containing signed params		N	S2KHDR02	8	1	17	13	N	Y	N	C		N				15	
+S2KTC602	TC(18,1) time params	Perform function, time parameters		N	S2KHDR02	18	1	17	15	N	Y	N	C		N				9	
+S2KTC603	TC(255,255)	A command reaching the range limits (out of PUS services)		N	S2KHDR02	255	255	65535	14	N	Y	N	C	255	N				9	255
+S2KTC604	TC(255,64)	Large list of unsigned params. Out of PUS services		N	S2KHDR02	255	64	28	22	N	Y	N	C		N				8	
+S2KTC700	Command ID			N	S2KHDR02	3	1	76	1	N	Y	N	C		N	0			0	
+S2KTC701	Command ID default			N	S2KHDR02	3	1	76	1	N	Y	N	C		N	0			0	
+S2KTC702	Parameter ID			N	S2KHDR02	3	1	76	1	N	Y	N	C		N	0			0	
+S2KTC703	Parameter ID default			N	S2KHDR02	3	1	76	1	N	Y	N	C		N	0			0	
+S2KTC704	Cmd ID & Param ID	Invalid default values		N	S2KHDR02	3	1	76	2	N	Y	N	C		N	0			0	
+S2KTCTE1	ThrowEvent Test1		T	N	S2KNOHDR			65535	2	A	Y	N	C		N				0	
+S2KTCTE2	ThrowEvent Test2		T	N	S2KNOHDR			65535	2	A	Y	N	R		N				0	

@@ -1,0 +1,2 @@
+VAR:=2*S2KSPSDL;
+return(VAR);

@@ -1,0 +1,9 @@
+if (system_time > S2KTP501.time) then
+  return(S2KTP501.raw);
+else
+  return(0);
+endif;
+
+
+
+

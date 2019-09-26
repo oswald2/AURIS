@@ -1,0 +1,15 @@
+VAR_T1 := S2KTP406 * 6.2832 / 360;
+if (S2KUPDC1==0) then
+  return((sin(VAR_T1))**2+(cos(VAR_T1))**2);
+else
+  if (S2KUPDC1==1) then
+      return(sin(VAR_T1));
+  else
+     return(cos(VAR_T1));
+  endif;
+endif;
+
+
+
+
+

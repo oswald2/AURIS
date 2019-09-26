@@ -1,0 +1,23 @@
+# sid	vid	ddsType	hfaDsId	filing	distr.	tfSize	hasSHdr	hasFECW	check	Timeout	OBTint	disableOBT
+151	0	ONT	65535	y	y	-1	y	y	y	0	0	n
+151	0	ONC	65535	y	y	-1	y	y	y	0	0	n
+151	0	OFF	248	y	y	-1	y	y	y	0	0	n
+151	1	ONT	4	y	y	-1	y	y	y	0	0	n
+151	1	ONC	4000	y	y	-1	y	y	y	0	0	n
+151	1	OFF	248	y	y	-1	y	y	y	0	0	n
+151	7	ONT	65535	y	y	-1	y	y	y	0	0	n
+152	0	ONT	65535	y	y	-1	y	y	y	0	0	n
+152	0	ONC	65535	y	y	-1	y	y	y	0	0	n
+152	0	OFF	248	y	y	-1	y	y	y	0	0	n
+152	1	ONT	4	y	y	-1	y	y	y	0	0	n
+152	1	ONC	4000	y	y	-1	y	y	y	0	0	n
+152	1	OFF	248	y	y	-1	y	y	y	0	0	n
+152	7	ONT	65535	y	y	-1	y	y	y	0	0	n
+250	0	OFF	65535	y	y	-1	n	y	y	0	0	n
+3	0	ONT	65535	y	y	-1	y	y	y	0	0	n
+3	0	ONC	65535	y	y	-1	y	y	y	0	0	n
+3	0	OFF	248	y	y	-1	y	y	y	0	0	n
+3	1	ONT	4	y	y	-1	y	y	y	0	0	n
+3	1	ONC	4000	y	y	-1	y	y	y	0	0	n
+3	1	OFF	248	y	y	-1	y	y	y	0	0	n
+3	7	ONT	65535	y	y	-1	y	y	y	0	0	n

@@ -1,0 +1,7 @@
+S2KHP001	Ack Flags	U
+S2KHP002	APID	U
+S2KHP003	Pkt Length	U
+S2KHP004	Sequence Count	U
+S2KHP005	Service Type	U
+S2KHP006	Service Subtype	U
+S2KHP007	Integer sequence count	I

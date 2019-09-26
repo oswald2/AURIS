@@ -1,0 +1,8 @@
+if (S2KTP201 == 1) then
+ S2KTP208.time;
+endif;
+
+
+
+
+

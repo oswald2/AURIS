@@ -1,0 +1,9 @@
+1	TM Num Curve 1	R	U	D	Amp	2
+2	TM Num Curve 2	R	U	H	Amp	2
+3	TM Num Curve 3	R	U	O	Amp	2
+4	TM Num Curve 4	R	I	D	Volt	3
+5	TM Num Curve 5	R	R	D	Ohm	2
+6	TM calib UINT	U	U	D	CTS	11
+7	Calib curve INT	I	U	D	CTS	3
+8	TM Num Curve 8	R	I	D	Watt	3
+9999	TM Num curve 9999	R	I	D	Watt	3
