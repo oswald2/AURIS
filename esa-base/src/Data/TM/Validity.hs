@@ -7,6 +7,7 @@ module Data.TM.Validity
 (
     Validity
     , isValid
+    , clearValidity
     , isWrongType
     , validitySetWrongType
     , isOutOfCalibRange
@@ -26,6 +27,9 @@ newtype Validity = Validity { getRawValidity :: Word32 }
 
 isValid :: Validity -> Bool 
 isValid v@(Validity x) = x == 0 || isExtrapolated v
+
+clearValidity :: Validity 
+clearValidity = Validity 0
 
 wrongType :: Word32
 wrongType = 0x00000001

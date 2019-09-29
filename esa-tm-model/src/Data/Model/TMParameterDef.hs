@@ -49,6 +49,7 @@ data CorrelationType = CorrelationYes | CorrelationNo
 
 
 data ParamType =
+
     ParamInteger Int
     | ParamUInteger Int
     | ParamDouble DoubleType
@@ -82,7 +83,6 @@ data TMParameterDef = FixedParam {
     , _fpWidth :: Maybe Word32
     , _fpValid :: Maybe TMParameterDef
     , _fpRelated :: Maybe TMParameterDef
-    , _fpCalib :: !CalibrationDef
     , _fpCalibs :: [CalibrationDef]
     , _fpNatur :: !ParamNatur
     , _fpInterpolation :: !InterpolationType

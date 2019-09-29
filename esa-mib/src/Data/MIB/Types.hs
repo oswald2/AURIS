@@ -19,6 +19,7 @@ module Data.MIB.Types
   , DefaultTo(..)
   , DefaultToNothing(..)
   , CharDefaultTo(..)
+  , ShortTextDefaultTo(..)
   )
 where
 
@@ -26,9 +27,11 @@ where
 import           RIO
 import           Data.Hashable
 
-import           Data.Aeson as A
+import           Data.Aeson                    as A
 import           Codec.Serialise
 import           Data.Csv
+import           Data.Text.Short (ShortText)
+import qualified Data.Text.Short as ST
 
 import           GHC.TypeLits
 
@@ -58,7 +61,7 @@ newtype SPID = SPID Word32
 instance Serialise SPID
 instance FromJSON SPID
 instance ToJSON SPID where
-    toEncoding = genericToEncoding A.defaultOptions
+  toEncoding = genericToEncoding A.defaultOptions
 
 newtype DefaultTo (a :: Nat) = DefaultTo { getDefaultInt :: Int }
     deriving (Eq, Show, Read)
@@ -77,14 +80,26 @@ newtype CharDefaultTo (a :: Symbol) = CharDefaultTo { getDefaultChar :: Char }
     deriving (Eq, Show, Read)
 
 instance KnownSymbol a => FromField (CharDefaultTo a) where
-    parseField s = case runParser (parseField s) of 
-        Left _ -> pure $ CharDefaultTo $ case symbolVal (Proxy :: Proxy a) of 
-            "" -> 'N'
-            (x:_) -> x 
-        Right x -> pure $ CharDefaultTo x 
+  parseField s = case runParser (parseField s) of
+    Left _ -> pure $ CharDefaultTo $ case symbolVal (Proxy :: Proxy a) of
+      ""      -> 'N'
+      (x : _) -> x
+    Right x -> pure $ CharDefaultTo x
 
 instance ToField (CharDefaultTo a) where
-    toField (CharDefaultTo x) = toField x
+  toField (CharDefaultTo x) = toField x
+
+
+newtype ShortTextDefaultTo (a :: Symbol) = ShortTextDefaultTo { getDefaultShortText :: ShortText }
+    deriving (Eq, Show, Read)
+
+instance KnownSymbol a => FromField (ShortTextDefaultTo a) where
+  parseField s = case runParser (parseField s) of
+    Left  _ -> pure $ ShortTextDefaultTo (ST.fromString (symbolVal (Proxy :: Proxy a)))
+    Right x -> pure $ ShortTextDefaultTo x
+
+instance ToField (ShortTextDefaultTo a) where
+  toField (ShortTextDefaultTo x) = toField x
 
 
 newtype DefaultToNothing a =

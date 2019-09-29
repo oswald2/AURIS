@@ -12,6 +12,8 @@
 #-}
 module Data.Conversion.Calibration
   ( convertNumCalib
+  , convertPolyCalib
+  , convertLogCalib
   )
 where
 
@@ -21,12 +23,22 @@ import qualified RIO.Vector                    as V
 import           RIO.List                       ( sortBy
                                                 , intersperse
                                                 )
+import           Data.Text.Short                ( toText )
 
+import           Data.MIB.Types
 import           Data.MIB.CAF
 import           Data.MIB.CAP
+import           Data.MIB.MCF
+import           Data.MIB.LGF
 
 import           Data.TM.CalibrationTypes
 import           Data.TM.NumericalCalibration
+import           Data.TM.PolynomialCalibration
+import           Data.TM.LogarithmicCalibration
+
+import           Control.Monad.Trans.Except
+
+
 
 
 -- | Convert from MIB structure to a TM model structure. In this case 
@@ -48,7 +60,12 @@ convertNumCalib CAFentry {..} caps =
                   , _calibNPoints        = V.fromList points'
                   }
                 )
-        else Left $ T.concat . intersperse "\n" $ (lefts points)
+        else
+          Left
+          $  T.concat
+          .  intersperse "\n"
+          $  ["Conversion to NumericalCalibration " <> toText _cafNumbr]
+          <> lefts points
  where
   getCaps =
     let v1 = map conv . sortBy s . filter f $ V.toList caps
@@ -66,3 +83,67 @@ convertNumCalib CAFentry {..} caps =
                 chk (Right x1) (Right y1) = Right $ CalibPoint x1 y1
             in  chk x y
     in  v1
+
+
+convertTextCalib :: TXFentry -> Vector TCPentry -> Either Text TextualCalibration
+convertTextCalib TCFentry {..} vec = 
+    where
+        getPoints = 
+            let v1 = filter f $ V.toList vec
+
+            
+
+-- | Convert a 'MCFentry' to the 'PolynomialCalibration' type. Returns
+-- an error message if the data cannot be parsed
+convertPolyCalib :: MCFentry -> Either Text PolynomialCalibration
+convertPolyCalib MCFentry {..} = case conv of
+  Left err ->
+    Left $ "Conversion to PolynomialCalibration " <> toText _mcfIdent <> err
+  Right (a0, a1, a2, a3, a4) -> Right $ PolynomialCalibration
+    { _calibPName  = _mcfIdent
+    , _calibPDescr = _mcfDescr
+    , _pa0         = a0
+    , _pa1         = a1
+    , _pa2         = a2
+    , _pa3         = a3
+    , _pa4         = a4
+    }
+ where
+  f    = except . parseShortTextToDouble NumDouble Decimal . getDefaultShortText
+  conv = runExcept $ do
+    a0 <- f _mcfPol1
+    a1 <- f _mcfPol2
+    a2 <- f _mcfPol3
+    a3 <- f _mcfPol4
+    a4 <- f _mcfPol5
+    pure (a0, a1, a2, a3, a4)
+
+
+
+
+
+convertLogCalib :: LGFentry -> Either Text LogarithmicCalibration
+convertLogCalib LGFentry {..} = case conv of
+  Left err ->
+    Left $ "Conversion to LogarithmicCalibration " <> toText _lgfIdent <> err
+  Right (a0, a1, a2, a3, a4) -> Right $ LogarithmicCalibration
+    { _calibLName  = _lgfIdent
+    , _calibLDescr = _lgfDescr
+    , _la0         = a0
+    , _la1         = a1
+    , _la2         = a2
+    , _la3         = a3
+    , _la4         = a4
+    }
+ where
+  f    = except . parseShortTextToDouble NumDouble Decimal . getDefaultShortText
+  conv = runExcept $ do
+    a0 <- f _lgfPol1
+    a1 <- f _lgfPol2
+    a2 <- f _lgfPol3
+    a3 <- f _lgfPol4
+    a4 <- f _lgfPol5
+    pure (a0, a1, a2, a3, a4)
+
+
+

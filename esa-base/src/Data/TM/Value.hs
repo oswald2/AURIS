@@ -16,7 +16,6 @@ module Data.TM.Value
   , setValidity
   , tmvalValue
   , tmvalValidity
-
   )
 where
 
@@ -24,6 +23,7 @@ import           RIO
 
 import           Control.Lens                   ( makeLenses )
 import           General.Time
+import           Data.Text.Short                ( ShortText )
 
 import           Data.TM.Validity
 import           General.Types
@@ -35,7 +35,7 @@ data TMValueSimple =
     | TMValUInt !Word64
     | TMValDouble !Double
     | TMValTime !SunTime
-    | TMValString !Text
+    | TMValString !ShortText
     | TMValOctet !ByteString
     deriving(Show, Generic)
 
