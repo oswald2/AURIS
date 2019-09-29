@@ -45,7 +45,8 @@ import           Data.TM.Validity        hiding ( isValid )
 data CalibPoint = CalibPoint {
     _cx :: !Double
     , _cy :: !Double
-}
+    }
+    deriving (Show)
 makeLenses ''CalibPoint
 
 
@@ -56,6 +57,7 @@ data NumericalCalibration = NumericalCalibration {
     , _calibNInterpolation :: !CalibInterpolation
     , _calibNPoints :: Vector CalibPoint
     }
+    deriving (Show)
 makeLenses ''NumericalCalibration
 
 -- | This type specifies, if the interpolation is done within an interval 

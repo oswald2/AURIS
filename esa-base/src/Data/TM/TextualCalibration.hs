@@ -37,6 +37,7 @@ data TextCalibPoint = TextCalibPoint {
     , _txpUpper :: !Int64
     , _txpText :: !ShortText
     }
+    deriving (Show)
 makeLenses ''TextCalibPoint
 
 
@@ -46,6 +47,7 @@ data TextualCalibration = TextualCalibration {
         , _calibTRawFmt :: !NumType
         , _calibTPoints :: Vector TextCalibPoint
     }
+    deriving (Show)
 
 
 

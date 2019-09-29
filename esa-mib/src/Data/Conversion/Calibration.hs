@@ -85,13 +85,13 @@ convertNumCalib CAFentry {..} caps =
     in  v1
 
 
-convertTextCalib :: TXFentry -> Vector TCPentry -> Either Text TextualCalibration
-convertTextCalib TCFentry {..} vec = 
-    where
-        getPoints = 
-            let v1 = filter f $ V.toList vec
+-- convertTextCalib :: TXFentry -> Vector TCPentry -> Either Text TextualCalibration
+-- convertTextCalib TCFentry {..} vec = 
+--     where
+--         getPoints = 
+--             let v1 = filter f $ V.toList vec
 
-            
+
 
 -- | Convert a 'MCFentry' to the 'PolynomialCalibration' type. Returns
 -- an error message if the data cannot be parsed

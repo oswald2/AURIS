@@ -17,7 +17,7 @@ module Data.TM.Calibration
   )
 where
 
---import           RIO
+import           RIO
 
 import           Control.Lens                   ( makePrisms )
 
@@ -34,6 +34,7 @@ data Calibration =
     | CalibText TextualCalibration
     | CalibPoly PolynomialCalibration
     | CalibLog LogarithmicCalibration
+    deriving (Show)
 makePrisms ''Calibration
 
 

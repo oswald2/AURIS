@@ -11,7 +11,7 @@
     , GADTs
     , ExistentialQuantification
 #-}
-module Data.Model.TMParameterDef
+module Data.TM.TMParameterDef
   ( DoubleType(..)
   , TimeType(..)
   , ParamType(..)
@@ -24,9 +24,10 @@ import           RIO
 
 import           Data.Text.Short                ( ShortText )
 
-import           Data.Model.CalibrationDef
 
 import           Data.TM.Value
+import           Data.TM.Calibration
+
 import           General.Types
 
 
@@ -49,7 +50,6 @@ data CorrelationType = CorrelationYes | CorrelationNo
 
 
 data ParamType =
-
     ParamInteger Int
     | ParamUInteger Int
     | ParamDouble DoubleType
@@ -83,7 +83,7 @@ data TMParameterDef = FixedParam {
     , _fpWidth :: Maybe Word32
     , _fpValid :: Maybe TMParameterDef
     , _fpRelated :: Maybe TMParameterDef
-    , _fpCalibs :: [CalibrationDef]
+    , _fpCalibs :: [Calibration]
     , _fpNatur :: !ParamNatur
     , _fpInterpolation :: !InterpolationType
     , _fpStatusConsistency :: !StatusConsistency
