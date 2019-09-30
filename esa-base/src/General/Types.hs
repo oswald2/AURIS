@@ -48,6 +48,7 @@ module General.Types
   , isByteAligned
   , bitSizeToOffset
   , ToDouble(..)
+  , splitBitOffset
   )
 where
 
@@ -102,6 +103,10 @@ mkBitOffset = BitOffset
 -- | get the number out of the bit offset
 unBitOffset :: BitOffset -> Int
 unBitOffset (BitOffset x) = x
+
+-- | splits the bit offset in the byte offset and the bits
+splitBitOffset :: BitOffset -> (Int, Int)
+splitBitOffset (BitOffset x) = (x `shiftR` 3, x .&. 0x07)
 
 -- | a general offset, which contains a byte offset and a bit offset
 data Offset = Offset ByteOffset BitOffset
