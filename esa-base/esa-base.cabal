@@ -58,6 +58,7 @@ library
     General.Hexdump 
     General.Padding 
     General.SetBitField
+    General.GetBitField
     General.ShowConduit
     Data.TM.Value
     Data.TM.Parameter
