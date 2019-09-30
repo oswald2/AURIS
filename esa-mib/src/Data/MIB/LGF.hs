@@ -2,6 +2,7 @@
     OverloadedStrings
     , BangPatterns
     , NoImplicitPrelude
+    , DataKinds
 #-}
 module Data.MIB.LGF
   ( LGFentry(..)
@@ -17,16 +18,17 @@ import           Data.Text.Short                ( ShortText )
 import           Data.Csv
 
 import           Data.MIB.Load
+import           Data.MIB.Types
 
 
 data LGFentry = LGFentry {
     _lgfIdent :: !ShortText
     , _lgfDescr :: !ShortText
-    , _lgfPol1 :: !ShortText
-    , _lgfPol2 :: !ShortText
-    , _lgfPol3 :: !ShortText
-    , _lgfPol4 :: !ShortText
-    , _lgfPol5 :: !ShortText
+    , _lgfPol1 :: ShortTextDefaultTo "0"
+    , _lgfPol2 :: ShortTextDefaultTo "0"
+    , _lgfPol3 :: ShortTextDefaultTo "0"
+    , _lgfPol4 :: ShortTextDefaultTo "0"
+    , _lgfPol5 :: ShortTextDefaultTo "0"
 } deriving (Eq, Show)
 
 

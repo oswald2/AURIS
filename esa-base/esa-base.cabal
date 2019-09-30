@@ -69,6 +69,7 @@ library
     Data.TM.PolynomialCalibration
     Data.TM.LogarithmicCalibration
     Data.TM.Validity
+    Data.TM.TMParameterDef
 
   -- Modules included in this library but not exported.
   -- other-modules:

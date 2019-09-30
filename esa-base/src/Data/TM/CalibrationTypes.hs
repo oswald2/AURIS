@@ -36,18 +36,20 @@ data Radix =
     Decimal
     | Octal
     | Hex
-
+    deriving (Eq, Ord, Enum, Show, Read)
 
 data NumType =
     NumInteger
     | NumUInteger
     | NumDouble
+    deriving (Eq, Ord, Enum, Show, Read)
 
 data CalibInterpolation =
     CalibExtrapolate
     | CalibFail
-    deriving (Show)
+    deriving (Eq, Ord, Enum, Show, Read)
 
+    
 toCalibInterpolation :: Char -> CalibInterpolation
 toCalibInterpolation 'P' = CalibExtrapolate
 toCalibInterpolation _   = CalibFail

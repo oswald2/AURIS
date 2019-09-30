@@ -2,6 +2,7 @@
     OverloadedStrings
     , BangPatterns
     , NoImplicitPrelude
+    , DataKinds
 #-}
 module Data.MIB.MCF
   ( MCFentry(..)
@@ -17,16 +18,17 @@ import           Data.Text.Short                ( ShortText )
 import           Data.Csv
 
 import           Data.MIB.Load
+import           Data.MIB.Types
 
 
 data MCFentry = MCFentry {
     _mcfIdent :: !ShortText
     , _mcfDescr :: !ShortText
-    , _mcfPol1 :: !ShortText
-    , _mcfPol2 :: !ShortText
-    , _mcfPol3 :: !ShortText
-    , _mcfPol4 :: !ShortText
-    , _mcfPol5 :: !ShortText
+    , _mcfPol1 :: ShortTextDefaultTo "0"
+    , _mcfPol2 :: ShortTextDefaultTo "0"
+    , _mcfPol3 :: ShortTextDefaultTo "0"
+    , _mcfPol4 :: ShortTextDefaultTo "0"
+    , _mcfPol5 :: ShortTextDefaultTo "0"
 } deriving (Eq, Show)
 
 

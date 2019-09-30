@@ -48,6 +48,7 @@ data PolynomialCalibration = PolynomialCalibration {
     , _pa3 :: !Double
     , _pa4 :: !Double
     }
+    deriving (Show)
 makeLenses ''PolynomialCalibration
 
 

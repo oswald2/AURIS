@@ -50,6 +50,7 @@ data LogarithmicCalibration = LogarithmicCalibration {
     , _la3 :: !Double
     , _la4 :: !Double
     }
+    deriving(Show)
 makeLenses ''LogarithmicCalibration
 
 
