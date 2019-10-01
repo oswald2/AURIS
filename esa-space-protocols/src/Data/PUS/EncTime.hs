@@ -25,6 +25,9 @@ module Data.PUS.EncTime
     , cdsTimeBuilder
     , cucTimeParser
     , cucTimeLen
+    , cucTimeFromBinary
+    , cucTimeIsDelta
+    , cucTimeSetDelta
     )
 where
 
@@ -45,6 +48,10 @@ import           General.Time
 import           Protocol.SizeOf
 
 import           General.SetBitField
+import           General.GetBitField
+import           General.Types
+
+
 
 -- | Time types. CUC Time is standard unix time with normal encoding of
 -- | 4 bytes coards and 2 bytes fine time
@@ -90,6 +97,14 @@ mkCUCTime sec usec delta =
         newMicro         = usec'
     in  CUCTime (sign * newSec) (fromIntegral sign * newMicro) delta
 
+
+{-# INLINABLE cucTimeIsDelta #-}
+cucTimeIsDelta :: CUCTime -> Bool
+cucTimeIsDelta (CUCTime _ _ x) = x
+
+{-# INLINABLE cucTimeSetDelta #-}
+cucTimeSetDelta :: CUCTime -> Bool -> CUCTime
+cucTimeSetDelta (CUCTime s m _) x = (CUCTime s m x)
 
 
 {-# INLINABLE mkCDSTime #-}
@@ -164,6 +179,16 @@ instance SetValue CUCTime where
         setValue vec off       endian s
         setValue vec (off + 4) endian m
 
+instance GetValue CUCTime where
+    {-# INLINABLE getValue #-}
+    getValue byts off BiE =
+        let se = getValue byts off BiE
+            m  = getValue byts (off + 4) BiE
+        in  cucTimeFromBinary se m False
+    getValue byts off LiE =
+        let se = getValue byts (off + 2) LiE
+            m  = getValue byts off LiE
+        in  cucTimeFromBinary se m False
 
 
 {-# INLINABLE cdsTimeBuilder #-}
@@ -208,20 +233,24 @@ cucTimeParser :: CUCTime -> Parser CUCTime
 cucTimeParser (CUCTime _ _ delta) = do
     se <- A.anyWord32be
     m  <- A.anyWord16be
+    pure (cucTimeFromBinary se m delta)
 
+{-# INLINABLE cucTimeFromBinary #-}
+cucTimeFromBinary :: Word32 -> Word16 -> Bool -> CUCTime
+cucTimeFromBinary se m delta =
     let val :: Word64
         val = fromIntegral se `shiftL` 16 .|. fromIntegral m
         (s, val') =
-            let s' = val .&. 0x800000000000 /= 0
-            in  if s'
-                    then (s', complement ((val .|. 0xFFFF000000000000) - 1))
-                    else (s', val)
+                let s' = val .&. 0x800000000000 /= 0
+                in  if s'
+                        then (s', complement ((val .|. 0xFFFF000000000000) - 1))
+                        else (s', val)
         sec = sign * fromIntegral (val' `shiftR` 16) .&. 0xFFFFFFFF
         micro :: Double
         micro  = fromIntegral (val' .&. 0xFFFF)
         micro' = sign * round (micro * 65536.0 * 1000000.0)
         sign   = if s then (-1) else 1
-    return $ CUCTime (sign * sec) (fromIntegral micro') delta
+    in  CUCTime (sign * sec) (fromIntegral micro') delta
 
 
 instance TimeRepConversion CUCTime where

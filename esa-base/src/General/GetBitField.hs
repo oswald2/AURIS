@@ -116,6 +116,9 @@ instance GetValue Float where
     getValue bytes off endian = wordToFloat (getValue bytes off endian)
     {-# INLINABLE getValue #-}
 
+
+
+
 -- | Get a octet string out of a 'ByteString' with the defined length
 getValueOctetLen :: ByteString -> ByteOffset -> Int -> ByteString
 getValueOctetLen bytes (ByteOffset idx) len = B.take len (B.drop idx bytes)
@@ -132,23 +135,23 @@ getValueOctet bytes (ByteOffset idx) = B.drop idx bytes
 -- value is not byte-aligned (has a bit-offset)
 -- The value has a lenght of 'BitSize', which must be less than 64
 {-# INLINABLE getBitFieldInt #-}
-getBitFieldInt :: ByteString -> Offset -> BitSize -> Int64
-getBitFieldInt bytes off bits = fromIntegral (getBitField bytes off bits)
+getBitFieldInt :: ByteString -> Offset -> BitSize -> Endian -> Int64
+getBitFieldInt bytes off bits endian = fromIntegral (getBitField bytes off bits endian)
 
 -- | This function gets a 'Double' out of a 'ByteString' in case the
 -- value is not byte-aligned (has a bit-offset)
 -- The value has a lenght of 'BitSize', which must be less than 64
 {-# INLINABLE getBitFieldDouble #-}
-getBitFieldDouble :: ByteString -> Offset -> BitSize -> Double
-getBitFieldDouble bytes off bits = wordToDouble (getBitField bytes off bits)
+getBitFieldDouble :: ByteString -> Offset -> Endian -> Double
+getBitFieldDouble bytes off endian = wordToDouble (getBitField bytes off (BitSize 64) endian)
 
 
 -- | This function gets a 'Word64' out of a 'ByteString' in case the
 -- value is not byte-aligned (has a bit-offset).
 -- The value has a lenght of 'BitSize', which must be less than 64
 {-# INLINABLE getBitField #-}
-getBitField :: ByteString -> Offset -> BitSize -> Word64
-getBitField bytes off (BitSize nBits) =
+getBitField :: ByteString -> Offset -> BitSize -> Endian -> Word64
+getBitField bytes off (BitSize nBits) endian =
     let
         (ByteOffset idx, BitOffset bitNr) = offsetParts off
         value1 :: Word64
@@ -175,5 +178,7 @@ getBitField bytes off (BitSize nBits) =
                                 ((bytes `B.index` ix) `shiftR` (8 - nb))
                         else val
     in
-        value2
+        case endian of
+            BiE -> value2
+            LiE -> byteSwap64 value2
 
