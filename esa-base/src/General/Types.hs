@@ -32,6 +32,7 @@ module General.Types
   , mkBitOffset
   , unBitOffset
   , mkOffset
+  , offsetParts
   , ByteSize(..)
   , BitSize(..)
   , mkByteSize
@@ -124,6 +125,10 @@ mkOffset (ByteOffset x) (BitOffset y) =
 -- | a null offset
 nullOffset :: Offset
 nullOffset = Offset (ByteOffset 0) (BitOffset 0)
+
+-- | Return the parts constituting the 'Offset'
+offsetParts :: Offset -> (ByteOffset, BitOffset)
+offsetParts (Offset bo bi) = (bo, bi)
 
 
 instance Ord Offset where

@@ -52,11 +52,11 @@ extra-source-files:  CHANGELOG.md, README.md
 library
   -- Modules exported by the library.
   exposed-modules:
-    General.Types 
+    General.Types
     General.Time
-    General.Chunks 
-    General.Hexdump 
-    General.Padding 
+    General.Chunks
+    General.Hexdump
+    General.Padding
     General.SetBitField
     General.GetBitField
     General.ShowConduit
@@ -81,18 +81,19 @@ library
   build-depends:       base ^>=4.12.0.0
     , bytestring
     , vector
-    , text 
+    , text
     , rio
     , binary
     , aeson
     , formatting
     , text-show
-    , serialise 
+    , serialise
     , binary-ieee754
     , conduit
     , text-short
     , lens
     , megaparsec
+    , reinterpret-cast
 
   -- Directories containing source files.
   hs-source-dirs:      src
