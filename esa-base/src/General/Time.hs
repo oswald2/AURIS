@@ -47,6 +47,19 @@ module General.Time
   , obtToMcsTim
   , uttObtLeap
   , obtUttLeap
+  , makeEpoch
+  , getEpoch
+  , nullEpochTime
+  , nullGPSTime
+  , nullTAITime
+  , nullEpochTimeRel
+  , nullGPSTimeRel
+  , nullTAITimeRel
+  , oneMicroSecondEpoch
+  , oneMicroSecondGPS
+  , defaultEpoch
+  , epochTimeToSunTime
+  , sunTimeToEpochTime
   )
 where
 
@@ -74,7 +87,7 @@ import           General.Types                  ( ToDouble(..) )
 type Parser = Parsec Void Text
 
 
-{-# INLINEABLE microSecs #-}
+{-# INLINABLE microSecs #-}
 microSecs :: Int64
 microSecs = 1_000_000
 
@@ -142,7 +155,7 @@ data SunTime = SunTime {
 instance ToDouble SunTime where
   toDouble (SunTime msecs _) = fromIntegral msecs / 1_000_000
 
-{-# INLINEABLE fromDouble #-}
+{-# INLINABLE fromDouble #-}
 fromDouble :: Double -> Bool -> SunTime
 fromDouble secs = SunTime (round (secs * 1_000_000))
 
@@ -153,7 +166,7 @@ instance Ord SunTime where
   SunTime _t1 True  `compare` SunTime _t2 False = LT
 
 
-{-# INLINEABLE makeTime #-}
+{-# INLINABLE makeTime #-}
 makeTime :: Int64 -> Int32 -> Bool -> SunTime
 makeTime sec usec delta =
   let (restsec, usec') = abs usec `quotRem` fromIntegral microSecInt
@@ -162,27 +175,27 @@ makeTime sec usec delta =
       newMicro         = newSec * microSecInt + fromIntegral usec'
   in  SunTime (sign * newMicro) delta
 
-{-# INLINEABLE tdsSecs #-}
+{-# INLINABLE tdsSecs #-}
 tdsSecs :: SunTime -> Int64
 tdsSecs (SunTime micro _) = micro `quot` microSecInt
 
-{-# INLINEABLE tdsMicro #-}
+{-# INLINABLE tdsMicro #-}
 tdsMicro :: SunTime -> Int32
 tdsMicro (SunTime micro _) = fromIntegral (micro `rem` microSecInt)
 
 
 -- | the null time for standard unix time
-{-# INLINEABLE nullTime #-}
+{-# INLINABLE nullTime #-}
 nullTime :: SunTime
 nullTime = SunTime 0 False
 
-{-# INLINEABLE nullRelTime #-}
+{-# INLINABLE nullRelTime #-}
 nullRelTime :: SunTime
 nullRelTime = SunTime 0 True
 
 
 -- | one micro second in unix time
-{-# INLINEABLE oneMicroSecond #-}
+{-# INLINABLE oneMicroSecond #-}
 oneMicroSecond :: SunTime
 oneMicroSecond = SunTime 1 True
 
@@ -414,7 +427,7 @@ timeStr = do
   minute <- read <$> count 2 digitChar
   void $ Text.Megaparsec.Char.char '.'
   second' <- read <$> count 2 digitChar
-  sub    <- optional subsecs
+  sub     <- optional subsecs
 
   let sec = daySegmToSeconds year day hour minute second'
       secRel sgn = daysSegmToSecondsRel sgn year day hour minute second'
@@ -515,17 +528,16 @@ subTimes :: SunTime -> SunTime -> SunTime
 subTimes t1 t2 = addTimes t1 (negTime t2)
 
 instance TimeRepConversion SunTime where
-    {-# INLINABLE timeToWord64 #-}
-    timeToWord64 t = timeToWord64' (tdsSecs t) (tdsMicro t) (tdsDelta t)
-    {-# INLINABLE word64ToTime #-}
-    word64ToTime val delta =
-        let (sec, mic) = word64ToTime' val in
-        makeTime sec mic delta
+  {-# INLINABLE timeToWord64 #-}
+  timeToWord64 t = timeToWord64' (tdsSecs t) (tdsMicro t) (tdsDelta t)
+  {-# INLINABLE word64ToTime #-}
+  word64ToTime val delta =
+    let (sec, mic) = word64ToTime' val in makeTime sec mic delta
 
-    {-# INLINABLE timeToMicro #-}
-    timeToMicro (SunTime usec _) = usec
-    {-# INLINABLE microToTime #-}
-    microToTime = SunTime 
+  {-# INLINABLE timeToMicro #-}
+  timeToMicro (SunTime usec _) = usec
+  {-# INLINABLE microToTime #-}
+  microToTime = SunTime
 
 
 class DeltaTime a where
@@ -533,10 +545,10 @@ class DeltaTime a where
     setDelta :: Bool -> a -> a
 
 instance DeltaTime SunTime where
-    {-# INLINABLE isDelta #-}
-    isDelta = tdsDelta
-    {-# INLINABLE setDelta #-}
-    setDelta val t = t {tdsDelta = val}
+  {-# INLINABLE isDelta #-}
+  isDelta = tdsDelta
+  {-# INLINABLE setDelta #-}
+  setDelta val t = t { tdsDelta = val }
 
 
 
@@ -551,7 +563,7 @@ data CorrCoefficients = CorrCoefficients {
 -- | creates a coefficients data structure out of two real values (gradient and offset)
 {-# INLINABLE createCoeffs #-}
 createCoeffs :: Double -> Double -> CorrCoefficients
-createCoeffs = CorrCoefficients 
+createCoeffs = CorrCoefficients
 
 -- | the default coefficients are gradient = 1.0, offset = 0
 {-# INLINABLE defaultCoeffs #-}
@@ -559,7 +571,7 @@ defaultCoeffs :: CorrCoefficients
 defaultCoeffs = CorrCoefficients 1 0
 
 
-newtype LeapSeconds = LeapSeconds { unLeapSeconds :: Int }
+newtype LeapSeconds = LeapSeconds { fromLeaps :: Int }
     deriving (Eq, Ord, Num, Real, Enum, Integral, Show, Read)
 
 
@@ -568,33 +580,33 @@ newtype LeapSeconds = LeapSeconds { unLeapSeconds :: Int }
 {-# INLINABLE mcsTimeToOBT #-}
 mcsTimeToOBT :: SunTime -> CorrCoefficients -> SunTime
 mcsTimeToOBT curTime coeff
-    | isDelta curTime
-    = curTime
-    | otherwise
-    = let tim  = toDouble curTime
-          obt' = tim * timCoeffGradient coeff + timCoeffOffset coeff
-          obt  = fromDouble obt' False
-      in  obt
+  | isDelta curTime
+  = curTime
+  | otherwise
+  = let tim  = toDouble curTime
+        obt' = tim * timCoeffGradient coeff + timCoeffOffset coeff
+        obt  = fromDouble obt' False
+    in  obt
 
 -- | correlation of a given on-board time relative to a start time into
 -- | ground time
 {-# INLINABLE obtToMcsTim #-}
 obtToMcsTim :: SunTime -> CorrCoefficients -> SunTime
 obtToMcsTim obt coeff
-    | isDelta obt
-    = obt
-    | otherwise
-    = let obt' = toDouble obt
-          tim  = (obt' - timCoeffOffset coeff) / timCoeffGradient coeff
-          utt  = fromDouble tim False
-      in  utt
+  | isDelta obt
+  = obt
+  | otherwise
+  = let obt' = toDouble obt
+        tim  = (obt' - timCoeffOffset coeff) / timCoeffGradient coeff
+        utt  = fromDouble tim False
+    in  utt
 
 -- | Perform leap second correction to a given time. This is for the
 -- | converstion from ground time to OBT
 {-# INLINABLE uttObtLeap #-}
 uttObtLeap :: LeapSeconds -> SunTime -> SunTime
 uttObtLeap leaps (SunTime mic delta) =
-    SunTime (mic + fromIntegral leaps * microSecInt) delta
+  SunTime (mic + fromIntegral leaps * microSecInt) delta
 
 
 
@@ -603,4 +615,145 @@ uttObtLeap leaps (SunTime mic delta) =
 {-# INLINABLE obtUttLeap #-}
 obtUttLeap :: LeapSeconds -> SunTime -> SunTime
 obtUttLeap leaps (SunTime mic delta) =
-    SunTime (mic - fromIntegral leaps * microSecInt) delta
+  SunTime (mic - fromIntegral leaps * microSecInt) delta
+
+
+
+
+
+-- | Epoch, which specifies the used mission epoch
+data Epoch = Epoch {
+    epEpoch :: !Int64,
+    epLeapSeconds :: !LeapSeconds
+    }
+    deriving (Show, Read, Eq)
+
+instance Ord Epoch where
+  compare (Epoch e1 _) (Epoch e2 _) = compare e1 e2
+
+
+-- | constructor of an epoch. Takes the seconds for the epoch (in relation
+-- | to Unix time 1.1.1970) and the leap seconds. Both can be negative
+-- | (e.g. for TAI time, the epoch is negative since 1958 < 1970
+{-# INLINABLE makeEpoch #-}
+makeEpoch :: Int64 -> LeapSeconds -> Epoch
+makeEpoch seconds leaps =
+  Epoch (seconds * microSecInt) (leaps * fromIntegral microSecInt)
+
+
+-- | Epoch time is encoded with a given epoch. The epoch is completely free,
+-- | some values have been specified as default (GPS, TAI and Year2000)
+data EpochTime = EpochTime {
+    eptTime :: !Int64,
+    eptDelta :: !Bool,
+    eptEpoch :: !Epoch
+    }
+    deriving (Eq, Show, Read)
+
+-- | The Epoch type
+data EpochType =
+    UnixTime
+    | GPSTime
+    | TAITime
+    | Year2000
+    deriving (Eq, Ord, Enum, Show, Read)
+
+{-# INLINABLE getEpoch #-}
+getEpoch :: EpochType -> LeapSeconds -> Epoch
+getEpoch UnixTime leaps = epochUnix leaps
+getEpoch GPSTime  leaps = epochGPS leaps
+getEpoch TAITime  leaps = epoch1958 leaps
+getEpoch Year2000 leaps = epoch2000 leaps
+
+-- | the null time for a time with an epoch
+nullEpochTime :: Epoch -> EpochTime
+nullEpochTime = EpochTime 0 False
+
+
+-- | the null time for GPS
+nullGPSTime :: LeapSeconds -> EpochTime
+nullGPSTime leaps = EpochTime 0 False (epochGPS leaps)
+-- | the null time for TAI
+nullTAITime :: LeapSeconds -> EpochTime
+nullTAITime leaps = EpochTime 0 False (epoch1958 leaps)
+
+
+-- | the null time for a time with an epoch
+nullEpochTimeRel :: Epoch -> EpochTime
+nullEpochTimeRel = EpochTime 0 True
+
+
+-- | the null time for GPS
+nullGPSTimeRel :: LeapSeconds -> EpochTime
+nullGPSTimeRel leaps = EpochTime 0 True (epochGPS leaps)
+-- | the null time for TAI
+nullTAITimeRel :: LeapSeconds -> EpochTime
+nullTAITimeRel leaps = EpochTime 0 True (epoch1958 leaps)
+
+-- | one micro second in epoch time
+oneMicroSecondEpoch :: Epoch -> EpochTime
+oneMicroSecondEpoch = EpochTime 1 True
+
+-- | one micro second GPS Time
+oneMicroSecondGPS :: LeapSeconds -> EpochTime
+oneMicroSecondGPS leaps = EpochTime 1 True (epochGPS leaps)
+
+
+-- | the epoch of TAI time (01.01.1958)
+epoch1958 :: LeapSeconds -> Epoch
+epoch1958 leaps =
+  Epoch ((-378691200) * microSecInt) (leaps * fromIntegral microSecInt)
+
+-- | the epoch of GPS time (06.01.1980)
+epochGPS :: LeapSeconds -> Epoch
+epochGPS leaps =
+  Epoch (315964800 * microSecInt) (leaps * fromIntegral microSecInt)
+-- | the epoch of unix time (01.01.1970)
+epochUnix :: LeapSeconds -> Epoch
+epochUnix leaps = Epoch 0 (leaps * fromIntegral microSecInt)
+-- | the epoch of the year 2000
+epoch2000 :: LeapSeconds -> Epoch
+epoch2000 leaps =
+  Epoch (946684800 * microSecInt) (leaps * fromIntegral microSecInt)
+
+-- | the default epoch is the unix epoch
+defaultEpoch :: Epoch
+defaultEpoch = epochUnix 0
+
+
+instance DeltaTime EpochTime where
+  {-# INLINABLE isDelta #-}
+  isDelta (EpochTime _ delta _) = delta
+  {-# INLINABLE setDelta #-}
+  setDelta val (EpochTime mic _ ep) = EpochTime mic val ep
+
+
+instance ToDouble EpochTime where 
+    {-# INLINABLE toDouble #-}
+    toDouble (EpochTime mic _ _) = fromIntegral mic / microSecond
+
+
+-- | we need to handle EpochTime differently as it is the intermediate
+-- | layer and needs the Epoch in the back-conversion as input
+
+-- {-# INLINABLE epochTimeToMicro #-}
+-- epochTimeToMicro :: EpochTime -> Int64
+-- epochTimeToMicro (EpochTime usec _ _) = usec
+-- {-# INLINABLE microToEpochTime #-}
+-- microToEpochTime :: Int64 -> Epoch -> Bool -> EpochTime
+-- microToEpochTime val ep delta = EpochTime val delta ep
+
+
+
+{-# INLINABLE epochTimeToSunTime #-}
+epochTimeToSunTime :: EpochTime -> SunTime
+epochTimeToSunTime (EpochTime m d (Epoch e l))
+  | d         = SunTime m d
+  | otherwise = SunTime (m + e - fromIntegral l) d
+
+{-# INLINABLE sunTimeToEpochTime #-}
+sunTimeToEpochTime :: Epoch -> SunTime -> EpochTime
+sunTimeToEpochTime ep@(Epoch e l) (SunTime mic delta) =
+  let newmic | delta     = mic
+             | otherwise = (mic - e + fromIntegral l)
+  in  EpochTime newmic delta ep
