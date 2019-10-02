@@ -41,6 +41,7 @@ module General.Time
   , subTimes
   , negTime
   , LeapSeconds(..)
+  , CorrelationCoefficients
   , createCoeffs
   , defaultCoeffs
   , mcsTimeToOBT
@@ -60,6 +61,9 @@ module General.Time
   , defaultEpoch
   , epochTimeToSunTime
   , sunTimeToEpochTime
+  , Epoch
+  , EpochType(..)
+  , EpochTime(..)
   )
 where
 
@@ -555,20 +559,20 @@ instance DeltaTime SunTime where
 
 
 -- | Data structure which contains the coefficients for correlation
-data CorrCoefficients = CorrCoefficients {
+data CorrelationCoefficients = CorrelationCoefficients {
     timCoeffGradient :: !Double,
     timCoeffOffset :: !Double
     } deriving (Show, Read)
 
 -- | creates a coefficients data structure out of two real values (gradient and offset)
 {-# INLINABLE createCoeffs #-}
-createCoeffs :: Double -> Double -> CorrCoefficients
-createCoeffs = CorrCoefficients
+createCoeffs :: Double -> Double -> CorrelationCoefficients
+createCoeffs = CorrelationCoefficients
 
 -- | the default coefficients are gradient = 1.0, offset = 0
 {-# INLINABLE defaultCoeffs #-}
-defaultCoeffs :: CorrCoefficients
-defaultCoeffs = CorrCoefficients 1 0
+defaultCoeffs :: CorrelationCoefficients
+defaultCoeffs = CorrelationCoefficients 1 0
 
 
 newtype LeapSeconds = LeapSeconds { fromLeaps :: Int }
@@ -578,7 +582,7 @@ newtype LeapSeconds = LeapSeconds { fromLeaps :: Int }
 -- | correlation of the given ground time relative to a start time.
 -- | This function is only
 {-# INLINABLE mcsTimeToOBT #-}
-mcsTimeToOBT :: SunTime -> CorrCoefficients -> SunTime
+mcsTimeToOBT :: SunTime -> CorrelationCoefficients -> SunTime
 mcsTimeToOBT curTime coeff
   | isDelta curTime
   = curTime
@@ -591,7 +595,7 @@ mcsTimeToOBT curTime coeff
 -- | correlation of a given on-board time relative to a start time into
 -- | ground time
 {-# INLINABLE obtToMcsTim #-}
-obtToMcsTim :: SunTime -> CorrCoefficients -> SunTime
+obtToMcsTim :: SunTime -> CorrelationCoefficients -> SunTime
 obtToMcsTim obt coeff
   | isDelta obt
   = obt

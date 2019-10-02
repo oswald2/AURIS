@@ -28,6 +28,14 @@ module Data.PUS.EncTime
     , cucTimeFromBinary
     , cucTimeIsDelta
     , cucTimeSetDelta
+    , cucTimeToEpochTime
+    , epochTimeToCUCTime 
+    , sunTimeToCUCTime 
+    , cucTimeToSunTime
+    , cdsTimeToEpochTime 
+    , epochTimeToCDSTime
+    , sunTimeToCDSTime 
+    , cdsTimeToSunTime
     )
 where
 
@@ -264,3 +272,74 @@ instance TimeRepConversion CUCTime where
     {-# INLINABLE microToTime #-}
     microToTime val delta =
         let (sec, mic) = microToTime' val in CUCTime sec mic delta
+
+
+
+
+instance DeltaTime CUCTime where
+    {-# INLINABLE isDelta #-}
+    isDelta (CUCTime _ _ delta) = delta
+    {-# INLINABLE setDelta #-}
+    setDelta val (CUCTime sec mic _) = CUCTime sec mic val
+
+instance DeltaTime CDSTime where 
+    isDelta _ = False 
+    setDelta _ t = t
+
+
+-- | convert a time into a epoch time
+{-# INLINABLE cucTimeToEpochTime #-}
+cucTimeToEpochTime :: Epoch -> CUCTime -> EpochTime
+cucTimeToEpochTime ep t@(CUCTime _ _ delta) =
+    let newmic = timeToMicro t in EpochTime newmic delta ep
+
+{-# INLINABLE epochTimeToCUCTime #-}
+epochTimeToCUCTime :: EpochTime -> CUCTime
+epochTimeToCUCTime (EpochTime mic delta _) =
+    let newsec = mic `quot` microSecInt
+        newmic = fromIntegral $ mic `rem` microSecInt
+    in  CUCTime newsec newmic delta
+
+{-# INLINABLE sunTimeToCUCTime #-}
+sunTimeToCUCTime :: Epoch -> SunTime -> CUCTime
+sunTimeToCUCTime ep = epochTimeToCUCTime . sunTimeToEpochTime ep
+
+{-# INLINABLE cucTimeToSunTime #-}
+cucTimeToSunTime :: Epoch -> CUCTime -> SunTime
+cucTimeToSunTime ep = epochTimeToSunTime . cucTimeToEpochTime ep
+
+
+{-# INLINABLE cdsTimeToEpochTime #-}
+cdsTimeToEpochTime :: Epoch -> CDSTime -> EpochTime
+cdsTimeToEpochTime ep (CDSTime days milli micro) = EpochTime mic False ep
+  where
+    sec =
+        (fromIntegral days * secsInDay + fromIntegral (milli `quot` 1000))
+            * microSecInt
+    mic =
+        sec
+            + (fromIntegral $ (milli `rem` 1000) * 1000 + fromIntegral
+                  (fromMaybe 0 micro)
+              )
+
+-- | convert a epoch time to a CDS time
+{-# INLINABLE epochTimeToCDSTime #-}
+epochTimeToCDSTime :: EpochTime -> CDSTime
+epochTimeToCDSTime (EpochTime mic _ _) = CDSTime days milli micro
+  where
+    (!abss , !absm ) = (abs mic) `quotRem` microSecInt
+    (days' , secs' ) = abss `quotRem` secsInDay
+    (milli', micro') = absm `quotRem` 1000
+    days             = fromIntegral days'
+    milli            = fromIntegral $ secs' * 1000 + milli'
+    micro            = Just (fromIntegral micro')
+
+
+{-# INLINABLE sunTimeToCDSTime #-}
+sunTimeToCDSTime :: Epoch -> SunTime -> CDSTime
+sunTimeToCDSTime ep = epochTimeToCDSTime . sunTimeToEpochTime ep
+
+
+{-# INLINABLE cdsTimeToSunTime #-}
+cdsTimeToSunTime :: Epoch -> CDSTime -> SunTime
+cdsTimeToSunTime ep = epochTimeToSunTime . cdsTimeToEpochTime ep
