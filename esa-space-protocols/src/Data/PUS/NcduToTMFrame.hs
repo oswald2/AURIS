@@ -18,6 +18,7 @@ import           Conduit
 
 import           Data.PUS.TMFrameExtractor
 import           Data.PUS.TMStoreFrame
+import           Data.PUS.EncTime
 
 import           Control.PUS.Classes
 
@@ -30,7 +31,7 @@ ncduToTMFrameC
   => ConduitT NcduTmDu TMStoreFrame m ()
 ncduToTMFrameC = ncduTmLoadC .| tmFrameDecodeC
 
-ncduTmLoadC :: (MonadIO m) => ConduitT NcduTmDu ByteString m ()
+ncduTmLoadC :: (MonadIO m) => ConduitT NcduTmDu (CDSTime, ByteString) m ()
 ncduTmLoadC = awaitForever $ \ncdu -> do
-  yield (ncdu ^. ncduTmData)
+  yield (ncdu ^. ncduTmHeader . ncduTmERT, ncdu ^. ncduTmData)
 

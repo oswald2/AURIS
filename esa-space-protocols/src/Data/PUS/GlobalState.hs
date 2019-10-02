@@ -92,7 +92,7 @@ newGlobalState
   -> (Event -> IO ())
   -> IO GlobalState
 newGlobalState cfg missionSpecific logErr raiseEvent = do
-  st <- defaultPUSState
+  st <- defaultPUSState cfg
   tv <- newTVarIO st
   cv <- newTVarIO defaultCoeffs
   let vcids = cfgVCIDs cfg

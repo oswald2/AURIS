@@ -59,6 +59,10 @@ module General.Time
   , oneMicroSecondEpoch
   , oneMicroSecondGPS
   , defaultEpoch
+  , epoch1958
+  , epochGPS
+  , epochUnix
+  , epoch2000
   , epochTimeToSunTime
   , sunTimeToEpochTime
   , Epoch
@@ -72,12 +76,14 @@ import           RIO.Partial                    ( read )
 import qualified RIO.Text                      as T
 
 import           Control.Lens.Iso
+import           Codec.Serialise
 
 import           Data.Bits
 import           Data.Thyme.Clock
 import           Data.Thyme.Time.Core
 import           Data.Thyme.Clock.POSIX
 import           Data.Thyme.Calendar.OrdinalDate
+import           Data.Aeson
 
 import           Formatting
 
@@ -576,7 +582,12 @@ defaultCoeffs = CorrelationCoefficients 1 0
 
 
 newtype LeapSeconds = LeapSeconds { fromLeaps :: Int }
-    deriving (Eq, Ord, Num, Real, Enum, Integral, Show, Read)
+    deriving (Eq, Ord, Num, Real, Enum, Integral, Show, Read, Generic)
+
+instance Serialise LeapSeconds
+instance FromJSON LeapSeconds
+instance ToJSON LeapSeconds where 
+    toEncoding = genericToEncoding defaultOptions
 
 
 -- | correlation of the given ground time relative to a start time.
@@ -660,7 +671,12 @@ data EpochType =
     | GPSTime
     | TAITime
     | Year2000
-    deriving (Eq, Ord, Enum, Show, Read)
+    deriving (Eq, Ord, Enum, Show, Read, Generic)
+
+instance Serialise EpochType
+instance FromJSON EpochType
+instance ToJSON EpochType where
+  toEncoding = genericToEncoding defaultOptions
 
 {-# INLINABLE getEpoch #-}
 getEpoch :: EpochType -> LeapSeconds -> Epoch
@@ -670,57 +686,72 @@ getEpoch TAITime  leaps = epoch1958 leaps
 getEpoch Year2000 leaps = epoch2000 leaps
 
 -- | the null time for a time with an epoch
+{-# INLINABLE nullEpochTime #-}
 nullEpochTime :: Epoch -> EpochTime
 nullEpochTime = EpochTime 0 False
 
 
 -- | the null time for GPS
+{-# INLINABLE nullGPSTime #-}
 nullGPSTime :: LeapSeconds -> EpochTime
 nullGPSTime leaps = EpochTime 0 False (epochGPS leaps)
 -- | the null time for TAI
+{-# INLINABLE nullTAITime #-}
 nullTAITime :: LeapSeconds -> EpochTime
 nullTAITime leaps = EpochTime 0 False (epoch1958 leaps)
 
 
 -- | the null time for a time with an epoch
+{-# INLINABLE nullEpochTimeRel #-}
 nullEpochTimeRel :: Epoch -> EpochTime
 nullEpochTimeRel = EpochTime 0 True
 
 
 -- | the null time for GPS
+{-# INLINABLE nullGPSTimeRel #-}
 nullGPSTimeRel :: LeapSeconds -> EpochTime
 nullGPSTimeRel leaps = EpochTime 0 True (epochGPS leaps)
 -- | the null time for TAI
+{-# INLINABLE nullTAITimeRel #-}
 nullTAITimeRel :: LeapSeconds -> EpochTime
 nullTAITimeRel leaps = EpochTime 0 True (epoch1958 leaps)
 
 -- | one micro second in epoch time
+{-# INLINABLE oneMicroSecondEpoch #-}
 oneMicroSecondEpoch :: Epoch -> EpochTime
 oneMicroSecondEpoch = EpochTime 1 True
 
 -- | one micro second GPS Time
+{-# INLINABLE oneMicroSecondGPS #-}
 oneMicroSecondGPS :: LeapSeconds -> EpochTime
 oneMicroSecondGPS leaps = EpochTime 1 True (epochGPS leaps)
 
 
 -- | the epoch of TAI time (01.01.1958)
+{-# INLINABLE epoch1958 #-}
 epoch1958 :: LeapSeconds -> Epoch
 epoch1958 leaps =
   Epoch ((-378691200) * microSecInt) (leaps * fromIntegral microSecInt)
 
 -- | the epoch of GPS time (06.01.1980)
+{-# INLINABLE epochGPS #-}
 epochGPS :: LeapSeconds -> Epoch
 epochGPS leaps =
   Epoch (315964800 * microSecInt) (leaps * fromIntegral microSecInt)
 -- | the epoch of unix time (01.01.1970)
+
+{-# INLINABLE epochUnix #-}
 epochUnix :: LeapSeconds -> Epoch
 epochUnix leaps = Epoch 0 (leaps * fromIntegral microSecInt)
 -- | the epoch of the year 2000
+
+{-# INLINABLE epoch2000 #-}
 epoch2000 :: LeapSeconds -> Epoch
 epoch2000 leaps =
   Epoch (946684800 * microSecInt) (leaps * fromIntegral microSecInt)
 
 -- | the default epoch is the unix epoch
+{-# INLINABLE defaultEpoch #-}
 defaultEpoch :: Epoch
 defaultEpoch = epochUnix 0
 
@@ -732,9 +763,9 @@ instance DeltaTime EpochTime where
   setDelta val (EpochTime mic _ ep) = EpochTime mic val ep
 
 
-instance ToDouble EpochTime where 
-    {-# INLINABLE toDouble #-}
-    toDouble (EpochTime mic _ _) = fromIntegral mic / microSecond
+instance ToDouble EpochTime where
+  {-# INLINABLE toDouble #-}
+  toDouble (EpochTime mic _ _) = fromIntegral mic / microSecond
 
 
 -- | we need to handle EpochTime differently as it is the intermediate

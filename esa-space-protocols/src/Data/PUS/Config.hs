@@ -46,6 +46,8 @@ import           GHC.Generics
 
 import           Data.PUS.Types
 
+import           General.Time
+
 
 
 data EDENConfig = EDENConfig {
@@ -81,6 +83,10 @@ data Config = Config {
     , cfgTMSegLength :: !TMSegmentLen
     -- | Specifies the configuration of an EDEN connection
     , cfgEDEN :: Maybe EDENConfig
+    -- | Specifies the time epoch to be used for time handling
+    , cfgEpoch :: EpochType
+    -- | Specified the used leap seconds
+    , cfgLeapSeconds :: LeapSeconds
 } deriving (Eq, Generic)
 
 instance FromJSON Config
@@ -122,6 +128,8 @@ defaultConfig = Config { cfgCltuBlockSize        = CltuBS_8
                        , cfgTMFrameHasCRC        = True
                        , cfgTMSegLength          = TMSegment65536
                        , cfgEDEN                 = Just defaultEdenConfig
+                       , cfgEpoch                = UnixTime
+                       , cfgLeapSeconds          = 17
                        }
 
 -- | write the config as a serialized string to a file. Uses the Show class for serizalization

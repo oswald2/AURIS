@@ -58,6 +58,8 @@ import           Data.PUS.MissionSpecific.Definitions
 import           Data.PUS.SegmentationFlags
 import           Data.PUS.ExtractedDU
 import           Data.PUS.TMStoreFrame
+import           Data.PUS.EncTime
+
 import           General.Time
 
 import           Protocol.ProtocolInterfaces
@@ -94,26 +96,22 @@ tmFrameEncodeC = awaitForever $ \frame -> do
 -- If the frame was ok, it is yield'ed to the next conduit.
 tmFrameDecodeC
   :: (MonadIO m, MonadReader env m, HasGlobalState env)
-  => ConduitT ByteString TMStoreFrame m ()
+  => ConduitT (CDSTime, ByteString) TMStoreFrame m ()
 tmFrameDecodeC = do
-  cfg <- view getConfig
-  conduitParserEither (A.match (tmFrameParser cfg)) .| proc cfg
- where
-  proc cfg = awaitForever $ \x -> do
-    st <- ask
-    case x of
-      Left err -> do
-        let msg = T.pack (errorMessage err)
-        liftIO $ raiseEvent st (EVAlarms (EVIllegalTMFrame msg))
-        proc cfg
-      Right (_, (bs, frame)) -> case tmFrameCheckCRC cfg bs of
+  env <- ask
+  let cfg = env ^. getConfig
+  awaitForever $ \(ert, x) -> do 
+    case A.parseOnly (A.match (tmFrameParser cfg)) x of 
         Left err -> do
-          liftIO $ raiseEvent st (EVTelemetry (EVTMFailedCRC err))
-          proc cfg
-        Right () -> do
-          let f = TMStoreFrame nullTime frame bs
-          yield f
-          proc cfg
+            let msg = T.pack err
+            liftIO $ raiseEvent env (EVAlarms (EVIllegalTMFrame msg))
+        Right (bs, frame) -> case tmFrameCheckCRC cfg bs of
+            Left err -> liftIO $ raiseEvent env (EVTelemetry (EVTMFailedCRC err))
+            Right () -> do 
+                let f = TMStoreFrame time frame bs 
+                    time = cdsTimeToSunTime (epoch1958 (LeapSeconds 0)) ert
+                yield f
+  
 
 
 storeFrameC :: (MonadIO m) => ConduitT TMStoreFrame TMFrame m ()

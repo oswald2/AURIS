@@ -23,7 +23,7 @@ import           Data.PUS.NcduToTMFrame
 import           Protocol.NCTRS
 import           Protocol.ProtocolInterfaces
 
-import           General.ShowConduit
+--import           General.ShowConduit
 
 import           Interface.Interface
 import           Interface.Events

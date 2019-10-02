@@ -24,6 +24,7 @@ module Data.PUS.EncTime
     , cucTimeBuilder
     , cdsTimeBuilder
     , cucTimeParser
+    , cdsTimeParser
     , cucTimeLen
     , cucTimeFromBinary
     , cucTimeIsDelta
@@ -205,6 +206,15 @@ cdsTimeBuilder (CDSTime days milli micro) =
         Just m  -> word16BE m
         Nothing -> mempty
 
+
+{-# INLINABLE cdsTimeParser #-}
+cdsTimeParser :: Parser CDSTime 
+cdsTimeParser = do 
+    days <- A.anyWord16be 
+    milli <- A.anyWord32be 
+    micro <- A.anyWord16be
+    pure  $ CDSTime days milli (Just micro)
+    
 
 -- {-# INLINABLE worker #-}
 -- worker :: Integer -> Int32 -> Bool -> BitPut ()
