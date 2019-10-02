@@ -313,7 +313,7 @@ instance GetInt Int64 where
     getInt (ValFixedOctet _ x) = case parseOnly anyWord64be x of
         Left  _   -> 0
         Right val -> fromIntegral val
-    getInt (ValCUCTime x) = fromIntegral $ timeToMicro x
+    getInt (ValCUCTime x) = timeToMicro x
     getInt ValUndefined   = 0
 
 
@@ -332,7 +332,7 @@ instance GetInt Integer where
         Right val -> val
     getInt (ValOctet x       ) = fromBytesToInteger BiE x
     getInt (ValFixedOctet _ x) = fromBytesToInteger BiE x
-    getInt (ValCUCTime x     ) = timeToMicro x
+    getInt (ValCUCTime x     ) = fromIntegral (timeToMicro x)
     getInt ValUndefined        = 0
 
 
@@ -353,7 +353,7 @@ instance SetInt Integer where
     setInt (ValOctet _) x = ValOctet (toBytes x)
     setInt (ValFixedOctet width _) x =
         ValOctet (rightPadded 0 (fromIntegral width) (toBytes x))
-    setInt (ValCUCTime _) x = ValCUCTime (microToTime x False)
+    setInt (ValCUCTime _) x = ValCUCTime (microToTime (fromIntegral x) False)
     setInt ValUndefined   _ = ValUndefined
 
 instance SetInt Word64 where

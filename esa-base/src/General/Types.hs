@@ -49,6 +49,7 @@ module General.Types
   , isByteAligned
   , bitSizeToOffset
   , ToDouble(..)
+  , FromDouble(..)
   , splitBitOffset
   )
 where
@@ -290,3 +291,5 @@ instance OffsetCalculations Offset BitSize where
 class ToDouble a where
     toDouble :: a -> Double
 
+class FromDouble a where 
+    fromDouble :: Double -> a

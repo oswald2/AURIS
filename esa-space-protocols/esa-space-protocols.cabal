@@ -126,6 +126,7 @@ library
         , esa-base
         , network
         , streaming-commons
+        , text-short
 
     if flag(llvm)
         ghc-options: -O0 -Wall -Wcompat -Widentities -Wincomplete-record-updates

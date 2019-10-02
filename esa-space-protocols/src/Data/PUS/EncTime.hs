@@ -43,10 +43,9 @@ import qualified Data.Attoparsec.Binary        as A
 
 import           Codec.Serialise
 
-import           General.Time
-
 import           Protocol.SizeOf
 
+import           General.Time
 import           General.SetBitField
 import           General.GetBitField
 import           General.Types
@@ -55,7 +54,7 @@ import           General.Types
 
 -- | Time types. CUC Time is standard unix time with normal encoding of
 -- | 4 bytes coards and 2 bytes fine time
-data CUCTime = CUCTime !Integer !Int32 !Bool
+data CUCTime = CUCTime !Int64 !Int32 !Bool
     deriving (Eq, Show, Read, Generic, NFData)
 
 instance Binary CUCTime
@@ -89,7 +88,7 @@ instance Display CUCTime where
     display = displayShow
 
 {-# INLINABLE mkCUCTime #-}
-mkCUCTime :: Integer -> Int32 -> Bool -> CUCTime
+mkCUCTime :: Int64 -> Int32 -> Bool -> CUCTime
 mkCUCTime sec usec delta =
     let (restsec, usec') = abs usec `quotRem` fromIntegral microSecInt
         sign             = if sec < 0 || usec < 0 then (-1) else 1
@@ -208,7 +207,7 @@ cdsTimeBuilder (CDSTime days milli micro) =
 
 
 {-# INLINABLE toEncoded #-}
-toEncoded :: Integer -> Int32 -> (Word32, Word16)
+toEncoded :: Int64 -> Int32 -> (Word32, Word16)
 toEncoded sec mic =
     let sign :: Int
         !sign = if sec < 0 || mic < 0 then (-1) else 1
