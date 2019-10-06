@@ -72,6 +72,8 @@ library
     Data.MIB.TXP
     Data.MIB.MCF
     Data.MIB.LGF
+    Data.MIB.LoadMIB
+    Data.MIB.MIB
     Data.Conversion.Calibration
 
   -- Modules included in this library but not exported.
