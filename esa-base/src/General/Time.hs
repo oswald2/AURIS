@@ -157,7 +157,12 @@ data SunTime = SunTime {
     tdsTime :: !Int64,
     tdsDelta :: !Bool
     }
-    deriving (Eq, Show, Read)
+    deriving (Eq, Show, Read, Generic)
+
+instance Serialise SunTime
+instance FromJSON SunTime
+instance ToJSON SunTime where
+    toEncoding = genericToEncoding defaultOptions
 
 
 -- | converts the time into a 'Double' represinting the seconds

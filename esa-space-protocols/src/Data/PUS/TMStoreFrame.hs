@@ -6,21 +6,20 @@
     , DeriveGeneric
 #-}
 module Data.PUS.TMStoreFrame
-(
-    TMStoreFrame(..)
-    , tmstTime
-    , tmstFrame
-    , tmstBinary
-
-)
+  ( TMStoreFrame(..)
+  , tmstTime
+  , tmstFrame
+  , tmstBinary
+  )
 where
 
-import RIO
+import           RIO
 
-import Control.Lens (makeLenses)
+import           Control.Lens                   ( makeLenses )
+import           Conduit.PayloadParser
 
-import General.Time
-import Data.PUS.TMFrame
+import           General.Time
+import           Data.PUS.TMFrame
 
 
 data TMStoreFrame = TMStoreFrame {
@@ -29,6 +28,7 @@ data TMStoreFrame = TMStoreFrame {
     , _tmstBinary :: !ByteString
     } deriving (Show, Generic)
 makeLenses ''TMStoreFrame
-    
-    
-    
+
+
+instance GetPayload TMStoreFrame where
+  getPayload frame = frame ^. tmstFrame . tmFrameData

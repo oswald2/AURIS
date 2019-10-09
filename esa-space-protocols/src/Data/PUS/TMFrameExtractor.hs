@@ -19,6 +19,7 @@ of the used 'Conduit' library automatically handles spillover-packets.
     , TypeApplications
     , DeriveGeneric
     , DeriveAnyClass
+    , FlexibleInstances
 #-}
 module Data.PUS.TMFrameExtractor
   ( extractPktFromTMFramesC
@@ -43,6 +44,7 @@ import           ByteString.StrictBuilder
 import           Conduit
 import           Data.Conduit.TQueue
 import           Data.Conduit.Attoparsec
+import           Conduit.PayloadParser
 import           Data.Attoparsec.ByteString     ( Parser )
 import qualified Data.Attoparsec.ByteString    as A
 
@@ -100,26 +102,27 @@ tmFrameDecodeC
 tmFrameDecodeC = do
   env <- ask
   let cfg = env ^. getConfig
-  awaitForever $ \(ert, x) -> do 
-    case A.parseOnly (A.match (tmFrameParser cfg)) x of 
-        Left err -> do
-            let msg = T.pack err
-            liftIO $ raiseEvent env (EVAlarms (EVIllegalTMFrame msg))
-        Right (bs, frame) -> case tmFrameCheckCRC cfg bs of
-            Left err -> liftIO $ raiseEvent env (EVTelemetry (EVTMFailedCRC err))
-            Right () -> do 
-                let f = TMStoreFrame time frame bs 
-                    time = cdsTimeToSunTime (epoch1958 (LeapSeconds 0)) ert
-                yield f
-  
+  awaitForever $ \(ert, x) -> do
+    case A.parseOnly (A.match (tmFrameParser cfg)) x of
+      Left err -> do
+        let msg = T.pack err
+        liftIO $ raiseEvent env (EVAlarms (EVIllegalTMFrame msg))
+      Right (bs, frame) -> case tmFrameCheckCRC cfg bs of
+        Left  err -> liftIO $ raiseEvent env (EVTelemetry (EVTMFailedCRC err))
+        Right ()  -> do
+          let f    = TMStoreFrame time frame bs
+              time = cdsTimeToSunTime (epoch1958 (LeapSeconds 0)) ert
+          yield f
 
 
-storeFrameC :: (MonadIO m) => ConduitT TMStoreFrame TMFrame m ()
+
+storeFrameC :: (MonadIO m) => ConduitT TMStoreFrame TMStoreFrame m ()
 storeFrameC = awaitForever $ \sf -> do
-  let frame = sf ^. tmstFrame
+  -- TODO
+    --let frame = sf ^. tmstFrame
   -- unless (isIdleTmFrame frame) $ do
       -- store value in database
-  yield frame
+  yield sf
 
 
 -- | Conduit for switching between multiple channels. It queries the 'Config'
@@ -142,7 +145,7 @@ tmFrameSwitchVC
   => PUSMissionSpecific
   -> ProtocolInterface
   -> TBQueue (ExtractedDU PUSPacket)
-  -> ConduitT TMFrame Void m ()
+  -> ConduitT TMStoreFrame Void m ()
 tmFrameSwitchVC missionSpecific interf outQueue = do
   st <- ask
   let vcids = cfgVCIDs (st ^. getConfig)
@@ -168,7 +171,9 @@ tmFrameSwitchVC missionSpecific interf outQueue = do
   -- This is the conduit itself, the previous was just setup.
   let
     conduit = awaitForever $ \frame -> do
-      let !vcid = fromIntegral $ getVCID (frame ^. tmFrameHdr . tmFrameVcID)
+      let
+        !vcid =
+          fromIntegral $ getVCID (frame ^. tmstFrame . tmFrameHdr . tmFrameVcID)
       case M.lookup vcid vcMap of
         Nothing -> do
           liftIO $ raiseEvent st $ EVAlarms
@@ -191,22 +196,24 @@ tmFrameSwitchVC missionSpecific interf outQueue = do
 checkFrameCountC
   :: (MonadIO m, MonadReader env m, HasGlobalState env)
   => ProtocolInterface
-  -> ConduitT TMFrame (ExtractedDU TMFrame) m ()
+  -> ConduitT TMStoreFrame (ExtractedDU TMFrame) m ()
 checkFrameCountC pIf = go Nothing
  where
   go
     :: (MonadIO m, MonadReader env m, HasGlobalState env)
     => Maybe Word8
-    -> ConduitT TMFrame (ExtractedDU TMFrame) m ()
+    -> ConduitT TMStoreFrame (ExtractedDU TMFrame) m ()
   go lastFC' = do
     x <- await
     case x of
-      Nothing    -> return ()
-      Just frame -> do
+      Nothing     -> return ()
+      Just frame' -> do
         --traceM $ "checkFrameCountC: " <> T.pack (show frame)
-        let !vcfc      = frame ^. tmFrameHdr . tmFrameVCFC
+        let frame      = frame' ^. tmstFrame
+            !vcfc      = frame ^. tmFrameHdr . tmFrameVCFC
             yieldNoGap = do
               let ep = ExtractedDU { _epQuality = toFlag Good True
+                                   , _epERT     = frame' ^. tmstTime
                                    , _epGap     = Nothing
                                    , _epSource  = pIf
                                    , _epDU      = frame
@@ -225,12 +232,14 @@ checkFrameCountC pIf = go Nothing
               else do
                 st <- ask
                 liftIO $ raiseEvent st $ EVTelemetry (EVTMFrameGap lastFC vcfc)
-                let ep = ExtractedDU
-                      { _epQuality = toFlag Good True
-                      , _epGap = Just (fromIntegral lastFC, fromIntegral vcfc)
-                      , _epSource  = pIf
-                      , _epDU      = frame
-                      }
+                let
+                  ep = ExtractedDU
+                    { _epQuality = toFlag Good True
+                    , _epERT     = frame' ^. tmstTime
+                    , _epGap     = Just (fromIntegral lastFC, fromIntegral vcfc)
+                    , _epSource  = pIf
+                    , _epDU      = frame
+                    }
                 --traceM "Yield gap!"
                 unless (isIdleTmFrame frame) $ yield ep
                 go (Just vcfc)
@@ -245,14 +254,14 @@ extractPktFromTMFramesC
   :: (MonadIO m, MonadReader env m, HasGlobalState env)
   => PUSMissionSpecific
   -> ProtocolInterface
-  -> ConduitT (ExtractedDU TMFrame) ByteString m ()
+  -> ConduitT (ExtractedDU TMFrame) (ExtractedDU TMFrame, ByteString) m ()
 extractPktFromTMFramesC missionSpecific pIf = loop True B.empty
  where
   loop
     :: (MonadIO m, MonadReader env m, HasGlobalState env)
     => Bool
     -> ByteString
-    -> ConduitT (ExtractedDU TMFrame) ByteString m ()
+    -> ConduitT (ExtractedDU TMFrame) (ExtractedDU TMFrame, ByteString) m ()
   loop initial spillOverData = do
     -- traceM
     --   $  "loop spill len: "
@@ -293,7 +302,7 @@ extractPktFromTMFramesC missionSpecific pIf = loop True B.empty
                 --   <> T.pack (show pkts)
                 --   <> "\nspill:\n"
                 --   <> hexdumpBS spill
-                yieldMany pkts
+                yieldMany (map (\x -> (frame, x)) pkts)
                 loop False spill
               else do
                 let dat           = spillOverData <> frame' ^. tmFrameData
@@ -304,13 +313,13 @@ extractPktFromTMFramesC missionSpecific pIf = loop True B.empty
                 --   <> T.pack (show pkts)
                 --   <> "\nspill:\n"
                 --   <> hexdumpBS spill
-                yieldMany pkts
+                yieldMany (map (\x -> (frame, x)) pkts)
                 loop False spill
 
   rejectSpillOver
     :: (MonadIO m, MonadReader env m, HasGlobalState env)
     => ByteString
-    -> ConduitT (ExtractedDU TMFrame) ByteString m ()
+    -> ConduitT (ExtractedDU TMFrame) (ExtractedDU TMFrame, ByteString) m ()
   rejectSpillOver sp = do
     env <- ask
     if B.length sp >= fixedSizeOf @PUSHeader
@@ -393,14 +402,14 @@ pktReconstructorC
   -> TMSegmentLen
   -> PktStore
   -> ConduitT
-       (PositionRange, PacketPart)
+       ((ExtractedDU TMFrame, ByteString), PacketPart)
        (ExtractedDU PUSPacket)
        m
-       ()
+       (Either Text ())
 pktReconstructorC missionSpecific pIf segLen pktStore = do
   x <- await
   case x of
-    Nothing        -> return ()
+    Nothing        -> return (Right ())
     Just (_, part) -> do
       let hdr    = ppHeader part
           pktKey = mkPktKey hdr
@@ -448,6 +457,8 @@ processFinishedPacket missionSpecific pIf hdr body = do
         (T.pack err)
     Right pusPkt -> do
       let ep = ExtractedDU { _epQuality = toFlag Good True
+                            -- TODO 
+                           , _epERT     = nullTime
                            , _epGap     = Nothing
                            , _epSource  = pIf
                            , _epDU      = extrPkt
@@ -563,6 +574,9 @@ processLastSegment missionSpecific pIf segLen pktStore pktKey part = do
         return newStore
 
 
+instance GetPayload (ExtractedDU TMFrame, ByteString) where
+    getPayload = snd 
+
 -- | Conduit which takes 'ByteString' and extracts PUS Packets out of
 -- this stream. Raises the event 'EV_IllegalPUSPacket' in case a packet
 -- could not be parsed. The PUS Packets are wrapped in a 'ProtocolPacket'
@@ -575,15 +589,16 @@ pusPacketDecodeC
      , HasLogFunc env
      )
   => ProtocolInterface
-  -> ConduitT ByteString (ExtractedDU PUSPacket) m ()
+  -> ConduitT (ExtractedDU TMFrame, ByteString) (ExtractedDU PUSPacket) m (Either Text ())
 pusPacketDecodeC pIf = do
   st <- ask
   let missionSpecific = st ^. getMissionSpecific
       pktStore        = HM.empty
       segLen          = cfgTMSegLength (st ^. getConfig)
 
-  conduitParser (segmentedPacketParser segLen)
+  payloadParserC (segmentedPacketParser segLen)
     .| pktReconstructorC missionSpecific pIf segLen pktStore
+  
 
 
 -- | A conduit chain. Reads from a TBQueue which delivers 'TMFrame' s,
@@ -605,7 +620,7 @@ tmFrameExtractionChain
      , HasLogFunc env
      )
   => PUSMissionSpecific
-  -> TBQueue TMFrame
+  -> TBQueue TMStoreFrame
   -> TBQueue (ExtractedDU PUSPacket)
   -> ProtocolInterface
   -> ConduitT () Void m ()
@@ -627,7 +642,7 @@ tmFrameExtraction
      )
   => PUSMissionSpecific
   -> ProtocolInterface
-  -> ConduitT TMFrame (ExtractedDU PUSPacket) m ()
+  -> ConduitT TMStoreFrame (ExtractedDU PUSPacket) m ()
 tmFrameExtraction missionSpecific interf =
   checkFrameCountC interf
     .| extractPktFromTMFramesC missionSpecific interf

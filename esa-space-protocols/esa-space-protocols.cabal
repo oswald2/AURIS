@@ -31,6 +31,7 @@ library
     exposed-modules:
         Control.PUS.Classes
         Conduit.SocketConnector
+        Conduit.PayloadParser
         Data.PUS.Config
         Data.PUS.Types
         Data.PUS.APID
@@ -127,6 +128,7 @@ library
         , network
         , streaming-commons
         , text-short
+        , resourcet
 
     if flag(llvm)
         ghc-options: -O0 -Wall -Wcompat -Widentities -Wincomplete-record-updates
