@@ -71,7 +71,6 @@ data MainWindowFluid = MainWindowFluid {
     , _mfTabs :: Ref Tabs
     , _mfTMPTab :: TMPacketTabFluid
     }
-makeLenses ''MainWindowFluid
 
 
 data MainWindow = MainWindow {

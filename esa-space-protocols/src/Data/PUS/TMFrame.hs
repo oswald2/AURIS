@@ -168,7 +168,7 @@ data TMFrame = TMFrame {
 makeLenses ''TMFrame
 
 instance GetPayload TMFrame where
-  getPayload = _tmFrameData
+    getPayload = _tmFrameData
 
 
 instance Serialise TMFrame

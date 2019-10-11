@@ -16,7 +16,7 @@ module Model.PUSPacketModel
   , pusPktModelLock
   , pusPktModelData
   , pusPacketQueryUnlocked
-)
+  )
 where
 
 
@@ -35,6 +35,9 @@ import           General.Hexdump
 
 import           Model.ScrollingTableModel
 
+import           Graphics.UI.FLTK.LowLevel.FLTKHS
+import           Graphics.UI.FLTK.LowLevel.Fl_Enumerations
+
 
 
 
@@ -51,20 +54,20 @@ createPUSPacketModel :: IO PUSPacketModel
 createPUSPacketModel = PUSPacketModel <$> newMVar () <*> newIORef (S.empty)
 
 
-queryModel :: PUSPacketModel -> (Seq ModelValue -> a) -> IO a 
-queryModel model f = do 
-    takeMVar (model ^. pusPktModelLock)
-    dat <- readIORef (model ^. pusPktModelData)
+queryModel :: PUSPacketModel -> (Seq ModelValue -> a) -> IO a
+queryModel model f = do
+  takeMVar (model ^. pusPktModelLock)
+  dat <- readIORef (model ^. pusPktModelData)
 
-    let result = f dat 
+  let result = f dat
 
-    putMVar (model ^. pusPktModelLock) ()
-    return result 
+  putMVar (model ^. pusPktModelLock) ()
+  return result
 
-pusPacketQueryUnlocked :: PUSPacketModel -> (Seq ModelValue -> a) -> IO a 
-pusPacketQueryUnlocked model f = do 
-    dat <- readIORef (model ^. pusPktModelData) 
-    pure (f dat)
+pusPacketQueryUnlocked :: PUSPacketModel -> (Seq ModelValue -> a) -> IO a
+pusPacketQueryUnlocked model f = do
+  dat <- readIORef (model ^. pusPktModelData)
+  pure (f dat)
 
 
 
@@ -75,31 +78,32 @@ addPacketToModel pkt model = do
 
   let len    = S.length dat
       newDat = if len < modelMaxRows
-        then ModelValue pkt S.<| dat  
-        else case dat of 
-                dropped S.:|> _x -> ModelValue pkt S.<| dropped
-                S.Empty -> S.singleton (ModelValue pkt)
+        then ModelValue pkt S.<| dat
+        else case dat of
+          dropped S.:|> _x -> ModelValue pkt S.<| dropped
+          S.Empty          -> S.singleton (ModelValue pkt)
 
   writeIORef (model ^. pusPktModelData) newDat
   putMVar (model ^. pusPktModelLock) ()
   return model
 
-pusPacketModelSize :: PUSPacketModel -> IO Int 
+pusPacketModelSize :: PUSPacketModel -> IO Int
 pusPacketModelSize model = queryModel model S.length
 
 
 instance ToCellText ModelValue where
-  toCellText Nothing _ = ""
-  toCellText (Just (ModelValue pkt)) 0 =
-    T.pack $ maybe "" show (pusPktTime (pkt ^. epDU . pusDfh))
-  toCellText (Just _pkt) 1 = ""
-  toCellText (Just (ModelValue pkt)) 2 =
-    textDisplay (pkt ^. epDU . pusHdr . pusHdrTcApid)
-  toCellText (Just (ModelValue pkt)) 3 =
-    textDisplay (pusType (pkt ^. epDU . pusDfh))
-  toCellText (Just (ModelValue pkt)) 4 =
-    textDisplay (pusSubType (pkt ^. epDU . pusDfh))
-  toCellText (Just (ModelValue pkt)) 5 =
-    textDisplay (pkt ^. epDU . pusHdr . pusHdrTcSsc)
-  toCellText (Just (ModelValue pkt)) 6 = hexdumpLineBS (pkt ^. epDU . pusData)
-  toCellText (Just _               ) _ = ""
+  toCellText Nothing _ = ("", alignLeft)
+  toCellText (Just (ModelValue pkt)) (Column 0) =
+    (T.pack $ maybe "" show (pusPktTime (pkt ^. epDU . pusDfh)), alignLeft)
+  toCellText (Just (ModelValue pkt)) (Column 1) = (textDisplay (pkt ^. epERT), alignLeft)
+  toCellText (Just (ModelValue pkt)) (Column 2) =
+    (textDisplay (pkt ^. epDU . pusHdr . pusHdrTcApid), alignRight)
+  toCellText (Just (ModelValue pkt)) (Column 3) =
+    (textDisplay (pusType (pkt ^. epDU . pusDfh)), alignRight)
+  toCellText (Just (ModelValue pkt)) (Column 4) =
+    (textDisplay (pusSubType (pkt ^. epDU . pusDfh)), alignRight)
+  toCellText (Just (ModelValue pkt)) (Column 5) =
+    (textDisplay (pkt ^. epDU . pusHdr . pusHdrTcSsc), alignRight)
+  toCellText (Just (ModelValue pkt)) (Column 6) =
+    (hexdumpLineBS (pkt ^. epDU . pusData), alignLeft)
+  toCellText (Just _) _ = ("", alignLeft)

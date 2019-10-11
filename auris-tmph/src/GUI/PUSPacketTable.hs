@@ -148,11 +148,9 @@ drawData table model (TableCoordinate (Row row) (Column col)) rectangle = do
   flcRectf rectangle
   flcSetColor mcsTableFG
 
---   s <- readIORef (model ^. pusPktModelData)
---   let pkt = s S.!? row
---       txt = toCellText pkt col
-  txt <- pusPacketQueryUnlocked model (\s -> toCellText (s S.!? row) col)
-  flcDrawInBox txt rectangle alignLeft Nothing Nothing
+  (txt, align) <- pusPacketQueryUnlocked model (\s -> toCellText (s S.!? row) (Column col))
+
+  flcDrawInBox txt rectangle align Nothing Nothing
 
   color' <- getColor table
   flcSetColor color'

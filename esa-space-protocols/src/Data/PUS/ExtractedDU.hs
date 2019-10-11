@@ -11,6 +11,7 @@ module Data.PUS.ExtractedDU
   , epQuality
   , epSource
   , epGap
+  , epERT
   )
 where
 

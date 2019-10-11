@@ -13,6 +13,8 @@ where
 
 
 import           RIO
+import           Graphics.UI.FLTK.LowLevel.FLTKHS
+import           Graphics.UI.FLTK.LowLevel.Fl_Enumerations
 
 
 
@@ -28,6 +30,6 @@ data ColumnDefinition = ColumnDefinition {
 
 
 class ToCellText a where
-    toCellText :: Maybe a -> Int -> Text
+    toCellText :: Maybe a -> Column -> (Text, Alignments)
 
 

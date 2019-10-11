@@ -43,7 +43,6 @@ import           ByteString.StrictBuilder
 
 import           Conduit
 import           Data.Conduit.TQueue
-import           Data.Conduit.Attoparsec
 import           Conduit.PayloadParser
 import           Data.Attoparsec.ByteString     ( Parser )
 import qualified Data.Attoparsec.ByteString    as A
@@ -254,14 +253,14 @@ extractPktFromTMFramesC
   :: (MonadIO m, MonadReader env m, HasGlobalState env)
   => PUSMissionSpecific
   -> ProtocolInterface
-  -> ConduitT (ExtractedDU TMFrame) (ExtractedDU TMFrame, ByteString) m ()
+  -> ConduitT (ExtractedDU TMFrame) ExtDuTMFame m ()
 extractPktFromTMFramesC missionSpecific pIf = loop True B.empty
  where
   loop
     :: (MonadIO m, MonadReader env m, HasGlobalState env)
     => Bool
     -> ByteString
-    -> ConduitT (ExtractedDU TMFrame) (ExtractedDU TMFrame, ByteString) m ()
+    -> ConduitT (ExtractedDU TMFrame) ExtDuTMFame m ()
   loop initial spillOverData = do
     -- traceM
     --   $  "loop spill len: "
@@ -302,7 +301,7 @@ extractPktFromTMFramesC missionSpecific pIf = loop True B.empty
                 --   <> T.pack (show pkts)
                 --   <> "\nspill:\n"
                 --   <> hexdumpBS spill
-                yieldMany (map (\x -> (frame, x)) pkts)
+                yieldMany (map (\i-> ExtDuTMFame (frame, i)) pkts)
                 loop False spill
               else do
                 let dat           = spillOverData <> frame' ^. tmFrameData
@@ -313,13 +312,13 @@ extractPktFromTMFramesC missionSpecific pIf = loop True B.empty
                 --   <> T.pack (show pkts)
                 --   <> "\nspill:\n"
                 --   <> hexdumpBS spill
-                yieldMany (map (\x -> (frame, x)) pkts)
+                yieldMany (map (\i -> ExtDuTMFame (frame, i)) pkts)
                 loop False spill
 
   rejectSpillOver
     :: (MonadIO m, MonadReader env m, HasGlobalState env)
     => ByteString
-    -> ConduitT (ExtractedDU TMFrame) (ExtractedDU TMFrame, ByteString) m ()
+    -> ConduitT (ExtractedDU TMFrame) ExtDuTMFame m ()
   rejectSpillOver sp = do
     env <- ask
     if B.length sp >= fixedSizeOf @PUSHeader
@@ -402,20 +401,21 @@ pktReconstructorC
   -> TMSegmentLen
   -> PktStore
   -> ConduitT
-       ((ExtractedDU TMFrame, ByteString), PacketPart)
+       (ExtDuTMFame, PacketPart)
        (ExtractedDU PUSPacket)
        m
-       (Either Text ())
+       ()
 pktReconstructorC missionSpecific pIf segLen pktStore = do
   x <- await
   case x of
-    Nothing        -> return (Right ())
-    Just (_, part) -> do
+    Nothing        -> return ()
+    Just (ExtDuTMFame (epu, _), part) -> do
       let hdr    = ppHeader part
           pktKey = mkPktKey hdr
+          ert = epu ^. epERT
       case hdr ^. pusHdrSeqFlags of
         SegmentStandalone -> do
-          processFinishedPacket missionSpecific pIf hdr (ppBody part)
+          processFinishedPacket missionSpecific pIf ert hdr (ppBody part)
           pktReconstructorC missionSpecific pIf segLen pktStore
         SegmentFirst -> do
           let newStore = processFirstSegment hdr part pktStore
@@ -427,6 +427,7 @@ pktReconstructorC missionSpecific pIf segLen pktStore = do
           newStore <- processLastSegment missionSpecific
                                          pIf
                                          segLen
+                                         ert 
                                          pktStore
                                          pktKey
                                          part
@@ -447,18 +448,18 @@ processFinishedPacket
   :: (MonadIO m, MonadReader env m, HasLogFunc env)
   => PUSMissionSpecific
   -> ProtocolInterface
+  -> SunTime 
   -> PUSHeader
   -> ByteString
   -> ConduitT w (ExtractedDU PUSPacket) m ()
-processFinishedPacket missionSpecific pIf hdr body = do
+processFinishedPacket missionSpecific pIf ert hdr body = do
   case A.parseOnly (pusPktParserPayload missionSpecific pIf hdr) body of
     Left err -> do
       logWarn $ display ("Error parsing TM packet: " :: Text) <> display
         (T.pack err)
     Right pusPkt -> do
       let ep = ExtractedDU { _epQuality = toFlag Good True
-                            -- TODO 
-                           , _epERT     = nullTime
+                           , _epERT     = ert
                            , _epGap     = Nothing
                            , _epSource  = pIf
                            , _epDU      = extrPkt
@@ -538,11 +539,12 @@ processLastSegment
   => PUSMissionSpecific
   -> ProtocolInterface
   -> TMSegmentLen
+  -> SunTime 
   -> PktStore
   -> PktKey
   -> PacketPart
-  -> ConduitT w (ExtractedDU PUSPacket) m (PktStore)
-processLastSegment missionSpecific pIf segLen pktStore pktKey part = do
+  -> ConduitT w (ExtractedDU PUSPacket) m PktStore
+processLastSegment missionSpecific pIf segLen ert pktStore pktKey part = do
   let body = ppBody part
       apid = hdr ^. pusHdrTcApid
       ssc  = hdr ^. pusHdrTcSsc
@@ -560,7 +562,7 @@ processLastSegment missionSpecific pIf segLen pktStore pktKey part = do
       then do
         let newStore = HM.delete pktKey pktStore
             newBody  = impBody pkt `B.append` body
-        processFinishedPacket missionSpecific pIf hdr newBody
+        processFinishedPacket missionSpecific pIf ert hdr newBody
         return newStore
       else do
         let newStore = padGap pktStore pktKey pkt hdr
@@ -573,9 +575,11 @@ processLastSegment missionSpecific pIf segLen pktStore pktKey part = do
         logWarn msg
         return newStore
 
+newtype ExtDuTMFame = ExtDuTMFame (ExtractedDU TMFrame, ByteString)
 
-instance GetPayload (ExtractedDU TMFrame, ByteString) where
-    getPayload = snd 
+instance GetPayload ExtDuTMFame where
+    getPayload (ExtDuTMFame x) = snd x 
+        
 
 -- | Conduit which takes 'ByteString' and extracts PUS Packets out of
 -- this stream. Raises the event 'EV_IllegalPUSPacket' in case a packet
@@ -589,7 +593,7 @@ pusPacketDecodeC
      , HasLogFunc env
      )
   => ProtocolInterface
-  -> ConduitT (ExtractedDU TMFrame, ByteString) (ExtractedDU PUSPacket) m (Either Text ())
+  -> ConduitT ExtDuTMFame (ExtractedDU PUSPacket) m ()
 pusPacketDecodeC pIf = do
   st <- ask
   let missionSpecific = st ^. getMissionSpecific
