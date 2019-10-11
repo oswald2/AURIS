@@ -109,7 +109,7 @@ import           ByteString.StrictBuilder
 import           Data.Conduit
 import           Data.Conduit.Attoparsec
 
-import           Data.PUS.Types
+import           General.PUSTypes
 import           Data.PUS.Events
 import           Data.PUS.EncTime
 

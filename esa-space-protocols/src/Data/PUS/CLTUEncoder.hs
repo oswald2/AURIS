@@ -28,7 +28,7 @@ import Data.Conduit
 
 import Protocol.NCTRS
 import Data.PUS.CLTU
-import Data.PUS.Types
+import General.PUSTypes
 
 
 -- | This is just very basic now, it directly converts the CLTU

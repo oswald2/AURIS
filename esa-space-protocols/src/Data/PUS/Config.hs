@@ -35,7 +35,7 @@ import qualified Data.Text                     as T
 
 import           Closed
 
-import           Data.PUS.Types
+import           General.PUSTypes
 
 import           General.Time
 

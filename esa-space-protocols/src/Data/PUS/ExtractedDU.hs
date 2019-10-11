@@ -24,7 +24,7 @@ import           Codec.Serialise
 import           Conduit.PayloadParser
 
 import           Data.Aeson
-import           Data.PUS.Types
+import           General.PUSTypes
 
 import           General.Time
 

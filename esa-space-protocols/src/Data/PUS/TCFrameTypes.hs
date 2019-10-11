@@ -41,7 +41,7 @@ import qualified RIO.ByteString as BS
 
 import Control.Lens (makeLenses)
 
-import Data.PUS.Types
+import General.PUSTypes
 import Data.PUS.TCRequest
 
 

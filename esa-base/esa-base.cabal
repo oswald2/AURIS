@@ -53,6 +53,8 @@ library
   -- Modules exported by the library.
   exposed-modules:
     General.Types
+    General.PUSTypes
+    General.APID
     General.Time
     General.TimeSpan
     General.Chunks
@@ -70,13 +72,53 @@ library
     Data.TM.LogarithmicCalibration
     Data.TM.Validity
     Data.TM.TMParameterDef
+    Data.TM.TMPacketDef
 
   -- Modules included in this library but not exported.
   -- other-modules:
 
   -- LANGUAGE extensions used by modules in this package.
   -- other-extensions:
-
+  default-extensions:
+        AutoDeriveTypeable
+        BangPatterns
+        BinaryLiterals
+        ConstraintKinds
+        DataKinds
+        DefaultSignatures
+        DeriveDataTypeable
+        DeriveFoldable
+        DeriveFunctor
+        DeriveGeneric
+        DeriveTraversable
+        DoAndIfThenElse
+        EmptyDataDecls
+        ExistentialQuantification
+        FlexibleContexts
+        FlexibleInstances
+        FunctionalDependencies
+        GADTs
+        GeneralizedNewtypeDeriving
+        InstanceSigs
+        KindSignatures
+        LambdaCase
+        MonadFailDesugaring
+        MultiParamTypeClasses
+        MultiWayIf
+        NamedFieldPuns
+        NoImplicitPrelude
+        OverloadedStrings
+        PartialTypeSignatures
+        PatternGuards
+        PolyKinds
+        RankNTypes
+        RecordWildCards
+        ScopedTypeVariables
+        StandaloneDeriving
+        TupleSections
+        TypeFamilies
+        TypeSynonymInstances
+        ViewPatterns
   -- Other library packages from which modules are imported.
   build-depends:       base ^>=4.12.0.0
     , bytestring

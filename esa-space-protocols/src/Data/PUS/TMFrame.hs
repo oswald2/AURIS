@@ -79,7 +79,7 @@ import           ByteString.StrictBuilder
 
 import           Data.PUS.CLCW
 import           Data.PUS.CRC
-import           Data.PUS.Types
+import           General.PUSTypes
 import           Data.PUS.Config
 import           Data.PUS.MissionSpecific.Definitions
 import           Data.PUS.TMFrameDfh

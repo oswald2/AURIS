@@ -23,8 +23,8 @@ import           Data.Binary
 import           Data.Aeson
 import           Codec.Serialise
 
-import           Data.PUS.Types
-import           Data.PUS.APID
+import           General.PUSTypes
+import           General.APID
 import           Data.PUS.Parameter
 
 

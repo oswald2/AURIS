@@ -28,7 +28,7 @@ import Control.Lens (makeLenses)
 import Data.PUS.PUSDfh
 import Data.PUS.EncTime
 import Data.PUS.TMFrameDfh
-import Data.PUS.Types
+import General.PUSTypes
 
 
 -- | A data type to customize for mission specific features. A default

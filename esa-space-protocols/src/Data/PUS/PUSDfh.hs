@@ -89,7 +89,7 @@ import           Data.Aeson
 
 import           Codec.Serialise
 
-import           Data.PUS.Types
+import           General.PUSTypes
 --import           Data.PUS.Parameter
 import           Data.PUS.EncTime
 

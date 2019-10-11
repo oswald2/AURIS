@@ -34,8 +34,6 @@ library
         Conduit.SocketConnector
         Conduit.PayloadParser
         Data.PUS.Config
-        Data.PUS.Types
-        Data.PUS.APID
         Data.PUS.PUSState
         Data.PUS.GlobalState
         Data.PUS.Events

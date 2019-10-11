@@ -50,8 +50,9 @@ import           RIO
 import           Codec.Serialise
 import           Data.Aeson
 
-import           Data.PUS.Types
-import           Data.PUS.APID
+import           General.PUSTypes
+import           General.APID
+
 import           Data.PUS.Parameter
 --import           Data.PUS.Value
 

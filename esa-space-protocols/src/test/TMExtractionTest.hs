@@ -25,9 +25,9 @@ import           Data.PUS.ExtractedDU
 import           Data.PUS.GlobalState
 import           Data.PUS.PUSPacket
 import           Data.PUS.PUSDfh
-import           Data.PUS.Types
+import           General.PUSTypes
 import           Data.PUS.SegmentationFlags
-import           Data.PUS.APID
+import           General.APID
 import           Data.PUS.EncTime
 import           Data.PUS.CLCW
 import           Data.PUS.CRC

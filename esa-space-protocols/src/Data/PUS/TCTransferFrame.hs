@@ -34,7 +34,7 @@ import           Data.Conduit.Attoparsec
 import           Data.PUS.TCFrameTypes
 import           Data.PUS.CRC
 import           Data.PUS.Config
-import           Data.PUS.Types
+import           General.PUSTypes
 import           Data.PUS.Events
 import           Data.PUS.GlobalState
 

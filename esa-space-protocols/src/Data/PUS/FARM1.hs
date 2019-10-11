@@ -43,7 +43,7 @@ import           Control.Lens.Setter
 
 import           Data.PUS.TCFrameTypes
 import           Data.PUS.CLCW
-import           Data.PUS.Types
+import           General.PUSTypes
 
 import qualified Data.ByteString.Lazy          as B
 

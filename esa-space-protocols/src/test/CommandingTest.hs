@@ -23,10 +23,10 @@ import           Data.PUS.CLTU
 import           Data.PUS.CLTUEncoder
 import           Data.PUS.GlobalState
 import           Data.PUS.Config
-import           Data.PUS.Types
+import           General.PUSTypes
 import           Data.PUS.PUSPacketEncoder
 import           Data.PUS.SegmentEncoder
-import           Data.PUS.APID
+import           General.APID
 import           Data.PUS.TCRequest
 import           Data.PUS.TCRequestEncoder
 import           Data.PUS.TCPacketEncoder

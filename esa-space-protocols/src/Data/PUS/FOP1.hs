@@ -41,7 +41,7 @@ import           Data.PUS.Config
 import           Data.PUS.COP1Types
 import           Data.PUS.TCFrameTypes
 import           Data.PUS.CLCW
-import           Data.PUS.Types
+import           General.PUSTypes
 --import           General.Time
 import           Data.PUS.TCDirective
 import           Data.PUS.Segment

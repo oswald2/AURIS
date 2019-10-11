@@ -57,7 +57,7 @@ import           Data.List.NonEmpty             ( NonEmpty(..)
                                                 )
 import qualified Data.List.NonEmpty            as L
 
-import           Data.PUS.Types
+import           General.PUSTypes
 import           Data.PUS.TCRequest
 import           Data.PUS.SegmentationFlags
 

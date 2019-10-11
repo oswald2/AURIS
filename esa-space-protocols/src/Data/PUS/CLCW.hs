@@ -58,7 +58,7 @@ import           ByteString.StrictBuilder      as B
 import           Data.Attoparsec.ByteString     ( Parser )
 import qualified Data.Attoparsec.Binary        as A
 
-import           Data.PUS.Types
+import           General.PUSTypes
 
 import           Protocol.SizeOf
 

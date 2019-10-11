@@ -55,7 +55,7 @@ import           Data.Binary
 import           Data.Aeson
 import           Codec.Serialise
 
-import           Data.PUS.Types
+import           General.PUSTypes
 import           Data.PUS.TCDirective
 import           Data.PUS.CLCW
 import           Data.PUS.TCFrameTypes

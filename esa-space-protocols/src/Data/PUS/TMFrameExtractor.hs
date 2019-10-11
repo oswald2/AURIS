@@ -50,8 +50,8 @@ import qualified Data.Attoparsec.ByteString    as A
 import           Control.PUS.Classes
 
 import           Data.PUS.TMFrame
-import           Data.PUS.Types
-import           Data.PUS.APID
+import           General.PUSTypes
+import           General.APID
 import           Data.PUS.PUSPacket
 import           Data.PUS.Config
 import           Data.PUS.Events

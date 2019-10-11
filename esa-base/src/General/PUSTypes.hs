@@ -1,5 +1,5 @@
 {-|
-Module      : Data.PUS.Types
+Module      : General.PUSTypes
 Description : Collections of various PUS types
 Copyright   : (c) Michael Oswald, 2019
 License     : BSD-3
@@ -9,12 +9,7 @@ Portability : POSIX
 
 This module is a collection of various simple PUS types
 -}
-{-# LANGUAGE
-    DeriveGeneric
-    , GeneralizedNewtypeDeriving
-    , NoImplicitPrelude
-#-}
-module Data.PUS.Types
+module General.PUSTypes
     ( VCID(..)
     , mkVCID
     , vcidBuilder

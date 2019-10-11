@@ -33,10 +33,10 @@ import           GUI.Colors
 
 -- import           Data.PUS.PUSPacket
 -- import           Data.PUS.EncTime
--- import           Data.PUS.APID
+-- import           General.APID
 -- import           Data.PUS.ExtractedDU
 -- import           Data.PUS.SegmentationFlags
--- import           Data.PUS.Types
+-- import           General.PUSTypes
 --import           Data.PUS.PUSDfh
 --import           Protocol.ProtocolInterfaces
 

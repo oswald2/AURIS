@@ -21,7 +21,7 @@ import qualified Data.List.NonEmpty            as L
 import           Data.PUS.Segment
 import           Data.PUS.PUSPacketEncoder
 import           Data.PUS.TCRequest
-import           Data.PUS.Types
+import           General.PUSTypes
 
 
 tcSegmentEncoderC :: Monad m => ConduitT EncodedPUSPacket EncodedSegment m ()

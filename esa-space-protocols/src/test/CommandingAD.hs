@@ -24,13 +24,13 @@ import           Data.PUS.CLTU
 import           Data.PUS.CLTUEncoder
 import           Data.PUS.GlobalState
 import           Data.PUS.Config
-import           Data.PUS.Types
+import           General.PUSTypes
 import           Data.PUS.PUSPacket
 import           Data.PUS.PUSDfh
 import           Data.PUS.PUSPacketEncoder
 import           Data.PUS.SegmentEncoder
 import           Data.PUS.SegmentationFlags
-import           Data.PUS.APID
+import           General.APID
 import           Data.PUS.TCRequest
 import           Data.PUS.MissionSpecific.Definitions
 import           Data.PUS.FOP1

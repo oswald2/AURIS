@@ -51,7 +51,7 @@ import           Data.PUS.Config
 import           Data.PUS.PUSState
 import           Data.PUS.Events
 import           Data.PUS.COP1Types
-import           Data.PUS.Types
+import           General.PUSTypes
 import           General.Time
 
 import           Data.PUS.MissionSpecific.Definitions

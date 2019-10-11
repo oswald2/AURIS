@@ -10,7 +10,7 @@ import           RIO
 
 import qualified Data.Text.IO                  as T
 import           Data.PUS.Parameter
---import           Data.PUS.Types
+--import           General.PUSTypes
 import           Data.PUS.Value
 import qualified Data.SortedList               as SL
 

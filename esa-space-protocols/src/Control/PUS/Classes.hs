@@ -33,7 +33,7 @@ import           Control.Lens.Getter
 
 import           Data.PUS.Config
 import           Data.PUS.Events
-import           Data.PUS.Types
+import           General.PUSTypes
 import           Data.PUS.GlobalState
 import           Data.PUS.MissionSpecific.Definitions
                                                 ( PUSMissionSpecific )

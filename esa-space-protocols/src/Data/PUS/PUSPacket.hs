@@ -69,8 +69,8 @@ import           ByteString.StrictBuilder
 import           Data.Bits
 import           Data.ByteString.Base64.Type
 
-import           Data.PUS.Types
-import           Data.PUS.APID
+import           General.PUSTypes
+import           General.APID
 import           Data.PUS.SegmentationFlags
 import           Data.PUS.PUSDfh
 import           Data.PUS.CRC

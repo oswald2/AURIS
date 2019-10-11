@@ -1,5 +1,5 @@
 {-|
-Module      : Data.PUS.APID
+Module      : General.APID
 Description : Provides data types for APID and PID
 Copyright   : (c) Michael Oswald, 2019
 License     : BSD-3
@@ -13,14 +13,7 @@ some use PIDs and some use both. This gets very easily mixed up, so we have
 distinct data types as well as a sum type APIDorPID which can contain both
 for mixed containers.
 -}
-{-# LANGUAGE OverloadedStrings
-    , BangPatterns
-    , GeneralizedNewtypeDeriving
-    , DeriveGeneric
-    , RecordWildCards
-    , NoImplicitPrelude
-#-}
-module Data.PUS.APID
+module General.APID
     ( APID(..)
     , PID(..)
     , APIDorPID(..)

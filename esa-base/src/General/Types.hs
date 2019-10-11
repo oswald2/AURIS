@@ -9,18 +9,6 @@ Portability : POSIX
 
 This module provides some general data types and functions operating on them
 -}
-{-# LANGUAGE OverloadedStrings
-    , BangPatterns
-    , DeriveGeneric
-    , GeneralizedNewtypeDeriving
-    , RecordWildCards
-    , NoImplicitPrelude
-    , BinaryLiterals
-    , NumericUnderscores
-    , FlexibleInstances
-    , GADTs
-    , MultiParamTypeClasses
-#-}
 module General.Types
   ( Endian(..)
   , ByteOffset(..)

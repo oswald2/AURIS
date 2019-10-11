@@ -31,7 +31,7 @@ import           Data.Aeson
 import           Codec.Serialise
 import           Data.Fixed
 
-import           Data.PUS.Types
+import           General.PUSTypes
 import           Data.PUS.PUSPacket
 import           Data.PUS.COP1Types
 import           Data.PUS.ExtractedDU
