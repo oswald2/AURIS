@@ -73,6 +73,7 @@ library
     Data.TM.Validity
     Data.TM.TMParameterDef
     Data.TM.TMPacketDef
+    Data.TM.PIVals
 
   -- Modules included in this library but not exported.
   -- other-modules:
@@ -137,6 +138,10 @@ library
     , megaparsec
     , reinterpret-cast
     , thyme
+    , bytestring-strict-builder
+    , attoparsec
+    , attoparsec-binary
+    , base64-bytestring-type
 
   -- Directories containing source files.
   hs-source-dirs:      src

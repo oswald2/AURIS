@@ -4,31 +4,38 @@
     , NoImplicitPrelude
 #-}
 module Data.TM.Validity
-(
-    Validity
-    , isValid
-    , clearValidity
-    , isWrongType
-    , validitySetWrongType
-    , isOutOfCalibRange
-    , validitySetOutOfCalibRange
-    , isExtrapolated
-    , validitySetExtrapolated
-    , isStringNotUtf8
-    , setStringNotUtf8
-    , isUninitialized
-    , setUninitialized
-    , isUndefinedValue
-    , setUndefinedValue
-)
+  ( Validity
+  , isValid
+  , clearValidity
+  , isWrongType
+  , validitySetWrongType
+  , isOutOfCalibRange
+  , validitySetOutOfCalibRange
+  , isExtrapolated
+  , validitySetExtrapolated
+  , isStringNotUtf8
+  , setStringNotUtf8
+  , isUninitialized
+  , setUninitialized
+  , isUndefinedValue
+  , setUndefinedValue
+  )
 where
 
-import RIO
-import Data.Bits
+import           RIO
+import           Data.Bits
+import           Codec.Serialise
+import           Data.Aeson
 
 
 newtype Validity = Validity { getRawValidity :: Word32 }
-    deriving (Eq, Show, Read)
+    deriving (Eq, Show, Read, Generic)
+
+instance Serialise Validity
+instance FromJSON Validity
+instance ToJSON Validity where
+  toEncoding = genericToEncoding defaultOptions
+
 
 {-# INLINABLE isValid #-}
 isValid :: Validity -> Bool

@@ -26,6 +26,8 @@ import qualified RIO.Vector                    as V
 import           Control.Lens                   ( makeLenses
                                                 , (.~)
                                                 )
+import           Codec.Serialise
+import           Data.Aeson
 
 import           Data.Text.Short                ( ShortText )
 
@@ -37,8 +39,13 @@ data TextCalibPoint = TextCalibPoint {
     , _txpUpper :: !Int64
     , _txpText :: !ShortText
     }
-    deriving (Show)
+    deriving (Show, Generic)
 makeLenses ''TextCalibPoint
+
+instance Serialise TextCalibPoint
+instance FromJSON TextCalibPoint
+instance ToJSON TextCalibPoint where
+  toEncoding = genericToEncoding defaultOptions
 
 
 data TextualCalibration = TextualCalibration {
@@ -47,8 +54,12 @@ data TextualCalibration = TextualCalibration {
         , _calibTRawFmt :: !NumType
         , _calibTPoints :: Vector TextCalibPoint
     }
-    deriving (Show)
+    deriving (Show, Generic)
 
+instance Serialise TextualCalibration
+instance FromJSON TextualCalibration
+instance ToJSON TextualCalibration where
+  toEncoding = genericToEncoding defaultOptions
 
 
 instance Calibrate TextualCalibration where

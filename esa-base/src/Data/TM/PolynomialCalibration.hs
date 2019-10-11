@@ -29,6 +29,8 @@ import           RIO
 import           Control.Lens                   ( makeLenses
                                                 , (.~)
                                                 )
+import           Codec.Serialise
+import           Data.Aeson
 
 import           Data.Text.Short                ( ShortText )
 
@@ -48,8 +50,14 @@ data PolynomialCalibration = PolynomialCalibration {
     , _pa3 :: !Double
     , _pa4 :: !Double
     }
-    deriving (Show)
+    deriving (Show, Generic)
 makeLenses ''PolynomialCalibration
+
+instance Serialise PolynomialCalibration
+instance FromJSON PolynomialCalibration
+instance ToJSON PolynomialCalibration where
+  toEncoding = genericToEncoding defaultOptions
+
 
 
 instance Calibrate PolynomialCalibration where

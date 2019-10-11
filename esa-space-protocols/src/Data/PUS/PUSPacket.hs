@@ -9,41 +9,37 @@
     , TypeApplications
 #-}
 module Data.PUS.PUSPacket
-    ( PUSPacket(..)
-    , PUSHeader(..)
-    , PUSPacketType(..)
-    , TMPIVal(..)
-    , encodePUSPacket
-    , encodePUSPktChoice
-    , decodePktMissionSpecific
-    , pusHdr
-    , pusDfh
-    , pusPIs
-    , pusData
-    , pusHdrPktID
-    , pusHdrTcVersion
-    , pusHdrType
-    , pusHdrDfhFlag
-    , pusHdrTcApid
-    , pusHdrSeqFlags
-    , pusHdrTcSsc
-    , pusHdrSeqCtrl
-    , pusHdrTcLength
-    , tmpiValue
-    , tmpiOffset
-    , tmpiWidth
-    , pusPktHdrBuilder
-    , pusPktHdrParser
-    , pusPktHdrLenOnlyParser
-    , pusPktParser
-    , pusPktParserPayload
-    , pusPktIdleAPID
-    , pusPktTimePktAPID
-    , pusPktIsIdle
-    
-    , headPacket
-    , chunkPackets
-    )
+  ( PUSPacket(..)
+  , PUSHeader(..)
+  , PUSPacketType(..)
+  , TMPIVal(..)
+  , encodePUSPacket
+  , encodePUSPktChoice
+  , decodePktMissionSpecific
+  , pusHdr
+  , pusDfh
+  , pusPIs
+  , pusData
+  , pusHdrPktID
+  , pusHdrTcVersion
+  , pusHdrType
+  , pusHdrDfhFlag
+  , pusHdrTcApid
+  , pusHdrSeqFlags
+  , pusHdrTcSsc
+  , pusHdrSeqCtrl
+  , pusHdrTcLength
+  , pusPktHdrBuilder
+  , pusPktHdrParser
+  , pusPktHdrLenOnlyParser
+  , pusPktParser
+  , pusPktParserPayload
+  , pusPktIdleAPID
+  , pusPktTimePktAPID
+  , pusPktIsIdle
+  , headPacket
+  , chunkPackets
+  )
 where
 
 
@@ -81,6 +77,8 @@ import           Protocol.SizeOf
 
 import           General.SetBitField
 import           General.Types
+
+import           Data.TM.PIVals
 --import           General.Hexdump
 
 
@@ -92,21 +90,10 @@ instance Binary PUSPacketType
 instance Serialise PUSPacketType
 instance FromJSON PUSPacketType
 instance ToJSON PUSPacketType where
-    toEncoding = genericToEncoding defaultOptions
+  toEncoding = genericToEncoding defaultOptions
 
 
-data TMPIVal = TMPIVal {
-    _tmpiValue :: !Int64,
-    _tmpiOffset :: !ByteOffset,
-    _tmpiWidth :: !Word16
-    } deriving (Eq, Show, Read, Generic)
-makeLenses ''TMPIVal
 
-instance Binary TMPIVal
-instance Serialise TMPIVal
-instance FromJSON TMPIVal
-instance ToJSON TMPIVal where
-    toEncoding = genericToEncoding defaultOptions
 
 
 data PUSHeader = PUSHeader {
@@ -130,23 +117,29 @@ makeLenses ''PUSHeader
 -- Also the length is not set when creating a packet, but will be
 -- calculated on encoding.
 instance Eq PUSHeader where
-    p1 == p2 =
-        _pusHdrTcVersion p1 == _pusHdrTcVersion p2
-        && _pusHdrType p1 == _pusHdrType p2
-        && _pusHdrDfhFlag p1 == _pusHdrDfhFlag p2
-        && _pusHdrTcApid p1 == _pusHdrTcApid p2
-        && _pusHdrSeqFlags p1 == _pusHdrSeqFlags p2
-        && _pusHdrTcSsc p1 == _pusHdrTcSsc p2
+  p1 == p2 =
+    _pusHdrTcVersion p1
+      == _pusHdrTcVersion p2
+      && _pusHdrType p1
+      == _pusHdrType p2
+      && _pusHdrDfhFlag p1
+      == _pusHdrDfhFlag p2
+      && _pusHdrTcApid p1
+      == _pusHdrTcApid p2
+      && _pusHdrSeqFlags p1
+      == _pusHdrSeqFlags p2
+      && _pusHdrTcSsc p1
+      == _pusHdrTcSsc p2
 
 
 instance Binary PUSHeader
 instance Serialise PUSHeader
 instance FromJSON PUSHeader
 instance ToJSON PUSHeader where
-    toEncoding = genericToEncoding defaultOptions
+  toEncoding = genericToEncoding defaultOptions
 
 instance FixedSize PUSHeader where
-    fixedSizeOf = 6
+  fixedSizeOf = 6
 
 
 data PUSPacket = PUSPacket {
@@ -157,44 +150,43 @@ data PUSPacket = PUSPacket {
     } deriving (Eq, Show, Generic)
 makeLenses ''PUSPacket
 
-instance Binary PUSPacket
 instance Serialise PUSPacket
 
 instance FromJSON PUSPacket where
-    parseJSON = withObject "PUSPacket" $ \v ->
-        PUSPacket
-            <$> v
-            .:  "pusHdr"
-            <*> v
-            .:  "pusDfh"
-            <*> v
-            .:  "pusPIs"
-            <*> (getByteString64 <$> v .: "pusData")
+  parseJSON = withObject "PUSPacket" $ \v ->
+    PUSPacket
+      <$> v
+      .:  "pusHdr"
+      <*> v
+      .:  "pusDfh"
+      <*> v
+      .:  "pusPIs"
+      <*> (getByteString64 <$> v .: "pusData")
 
 
 instance ToJSON PUSPacket where
-    toJSON r = object
-        [ "pusHdr" .= _pusHdr r
-        , "pusDfh" .= _pusDfh r
-        , "pusPIs" .= _pusPIs r
-        , "pusData" .= makeByteString64 (_pusData r)
-        ]
-    toEncoding r = pairs
-        (  "pusHdr"
-        .= _pusHdr r
-        <> "pusDfh"
-        .= _pusDfh r
-        <> "pusPIs"
-        .= _pusPIs r
-        <> "pusData"
-        .= makeByteString64 (_pusData r)
-        )
+  toJSON r = object
+    [ "pusHdr" .= _pusHdr r
+    , "pusDfh" .= _pusDfh r
+    , "pusPIs" .= _pusPIs r
+    , "pusData" .= makeByteString64 (_pusData r)
+    ]
+  toEncoding r = pairs
+    (  "pusHdr"
+    .= _pusHdr r
+    <> "pusDfh"
+    .= _pusDfh r
+    <> "pusPIs"
+    .= _pusPIs r
+    <> "pusData"
+    .= makeByteString64 (_pusData r)
+    )
 
 
 
 instance SizeOf PUSPacket where
-    sizeof x =
-        fixedSizeOf @PUSHeader + sizeof (_pusDfh x) + B.length (_pusData x)
+  sizeof x =
+    fixedSizeOf @PUSHeader + sizeof (_pusDfh x) + B.length (_pusData x)
 
 
 pusPktIdleAPID :: APID
@@ -202,7 +194,7 @@ pusPktIdleAPID = APID 0x7FF
 
 pusPktTimePktAPID :: APID
 pusPktTimePktAPID = APID 0
-        
+
 pusPktIsIdle :: PUSPacket -> Bool
 pusPktIsIdle pkt = pkt ^. pusHdr . pusHdrTcApid == pusPktIdleAPID
 
@@ -210,15 +202,15 @@ pusPktIsIdle pkt = pkt ^. pusHdr . pusHdrTcApid == pusPktIdleAPID
 {-# INLINABLE encodePUSPacket #-}
 encodePUSPacket :: PUSPacket -> ByteString
 encodePUSPacket pkt =
-    let !encPkt = encodePktWithoutCRC pkt True in crcEncodeAndAppendBS encPkt
+  let !encPkt = encodePktWithoutCRC pkt True in crcEncodeAndAppendBS encPkt
 
 -- | encodes a packet and sets the PI1/2 values for correct identification
 {-# INLINABLE encodePUSPktChoice #-}
 encodePUSPktChoice :: Bool -> PUSPacket -> ByteString
 encodePUSPktChoice True pkt =
-    let !encPkt = encodePktWithoutCRC pkt True in crcEncodeAndAppendBS encPkt
+  let !encPkt = encodePktWithoutCRC pkt True in crcEncodeAndAppendBS encPkt
 encodePUSPktChoice False pkt =
-    let !encPkt = encodePktWithoutCRC pkt False in encPkt
+  let !encPkt = encodePktWithoutCRC pkt False in encPkt
 
 
 
@@ -231,20 +223,20 @@ encodePUSPktChoice False pkt =
 {-# INLINABLE encodePktWithoutCRC #-}
 encodePktWithoutCRC :: PUSPacket -> Bool -> ByteString
 encodePktWithoutCRC pkt useCRC =
-    let newPkt  = pusPktUpdateLen pkt useCRC
-        encHdr  = pusPktHdrBuilder (newPkt ^. pusHdr)
-        encDfh  = dfhBuilder (newPkt ^. pusDfh)
-        payload = newPkt ^. pusData
-        !pl     = builderBytes $ if newPkt ^. pusHdr . pusHdrDfhFlag
-            then encHdr <> encDfh <> bytes payload
-            else encHdr <> bytes payload
-    in  applied pkt pl
-  where
-    applied PUSPacket { _pusPIs = Nothing } encPkt = encPkt
-    applied PUSPacket { _pusPIs = Just pis@(pi1, pi2) } encPkt =
-        if _tmpiOffset pi1 < 0 && _tmpiOffset pi2 < 0
-            then encPkt
-            else applyPIvals encPkt pis
+  let newPkt  = pusPktUpdateLen pkt useCRC
+      encHdr  = pusPktHdrBuilder (newPkt ^. pusHdr)
+      encDfh  = dfhBuilder (newPkt ^. pusDfh)
+      payload = newPkt ^. pusData
+      !pl     = builderBytes $ if newPkt ^. pusHdr . pusHdrDfhFlag
+        then encHdr <> encDfh <> bytes payload
+        else encHdr <> bytes payload
+  in  applied pkt pl
+ where
+  applied PUSPacket { _pusPIs = Nothing } encPkt = encPkt
+  applied PUSPacket { _pusPIs = Just pis@(pi1, pi2) } encPkt =
+    if _tmpiOffset pi1 < 0 && _tmpiOffset pi2 < 0
+      then encPkt
+      else applyPIvals encPkt pis
 
 
 
@@ -254,13 +246,10 @@ encodePktWithoutCRC pkt useCRC =
 {-# INLINABLE pusPktCalcLen #-}
 pusPktCalcLen :: PUSPacket -> Bool -> Word16
 pusPktCalcLen pkt useCRC =
-    let
-        newLen =
-            dfhLen + B.length (_pusData pkt) + if useCRC then crcLen else 0
-        dfhLen =
-            if pkt ^. pusHdr . pusHdrDfhFlag then dfhLength (_pusDfh pkt) else 0
-    in
-        fromIntegral (newLen - 1)
+  let newLen = dfhLen + B.length (_pusData pkt) + if useCRC then crcLen else 0
+      dfhLen =
+          if pkt ^. pusHdr . pusHdrDfhFlag then dfhLength (_pusDfh pkt) else 0
+  in  fromIntegral (newLen - 1)
 
 
 -- | Takes a packet and useCRC, calculates the length and updates the header
@@ -268,8 +257,8 @@ pusPktCalcLen pkt useCRC =
 {-# INLINABLE pusPktUpdateLen #-}
 pusPktUpdateLen :: PUSPacket -> Bool -> PUSPacket
 pusPktUpdateLen pkt useCRC =
-    let newLen = pusPktCalcLen pkt useCRC
-    in  pkt & pusHdr . pusHdrTcLength .~ newLen
+  let newLen = pusPktCalcLen pkt useCRC
+  in  pkt & pusHdr . pusHdrTcLength .~ newLen
 
 
 
@@ -278,211 +267,207 @@ pusPktUpdateLen pkt useCRC =
 {-# INLINABLE applyPIvals #-}
 applyPIvals :: ByteString -> (TMPIVal, TMPIVal) -> ByteString
 applyPIvals encPkt pic = worker
-  where
-    worker =
-        let v1 :: V.Vector Word8
-            v1 = byteStringToVector encPkt
-            v2 = runST $ do
-                v <- V.thaw v1
-                proc v pic >>= V.unsafeFreeze
-        in  vectorToByteString v2
+ where
+  worker =
+    let v1 :: V.Vector Word8
+        v1 = byteStringToVector encPkt
+        v2 = runST $ do
+          v <- V.thaw v1
+          proc v pic >>= V.unsafeFreeze
+    in  vectorToByteString v2
 
 
-    proc v (TMPIVal val1 off1 wid1, TMPIVal val2 off2 wid2) = do
-        v1 <- if off1 >= 0
-            then setBitFieldR v
-                              (toBitOffset off1)
-                              (fromIntegral wid1)
-                              (fromIntegral val1)
-            else return v
+  proc v (TMPIVal val1 off1 wid1, TMPIVal val2 off2 wid2) = do
+    v1 <- if off1 >= 0
+      then setBitFieldR v
+                        (toBitOffset off1)
+                        (fromIntegral wid1)
+                        (fromIntegral val1)
+      else return v
 
-        if off2 >= 0
-            then setBitFieldR v1
-                              (toBitOffset off2)
-                              (fromIntegral wid2)
-                              (fromIntegral val2)
-            else return v1
+    if off2 >= 0
+      then setBitFieldR v1
+                        (toBitOffset off2)
+                        (fromIntegral wid2)
+                        (fromIntegral val2)
+      else return v1
 
 
 
 {-# INLINABLE pusPktHdrBuilder #-}
 pusPktHdrBuilder :: PUSHeader -> Builder
 pusPktHdrBuilder hdr =
-    let !pktId = packPktID (_pusHdrTcVersion hdr)
-                           (_pusHdrType hdr)
-                           (_pusHdrDfhFlag hdr)
-                           (_pusHdrTcApid hdr)
-        !seqFlags = packSeqFlags (_pusHdrSeqFlags hdr) (_pusHdrTcSsc hdr)
-    in  word16BE pktId <> word16BE seqFlags <> word16BE (_pusHdrTcLength hdr)
+  let !pktId = packPktID (_pusHdrTcVersion hdr)
+                         (_pusHdrType hdr)
+                         (_pusHdrDfhFlag hdr)
+                         (_pusHdrTcApid hdr)
+      !seqFlags = packSeqFlags (_pusHdrSeqFlags hdr) (_pusHdrTcSsc hdr)
+  in  word16BE pktId <> word16BE seqFlags <> word16BE (_pusHdrTcLength hdr)
 
 
 
 {-# INLINABLE pusPktHdrParser #-}
 pusPktHdrParser :: Parser PUSHeader
 pusPktHdrParser = do
-    pktId    <- A.anyWord16be
-    seqFlags <- A.anyWord16be
-    len      <- A.anyWord16be
+  pktId    <- A.anyWord16be
+  seqFlags <- A.anyWord16be
+  len      <- A.anyWord16be
 
-    let (!vers, !tp, !dfh, !apid) = unpackPktID pktId
-        (!sf, !ssc)               = unpackSeqFlags seqFlags
+  let (!vers, !tp, !dfh, !apid) = unpackPktID pktId
+      (!sf, !ssc)               = unpackSeqFlags seqFlags
 
-    return (PUSHeader pktId vers tp dfh apid sf ssc seqFlags len)
+  return (PUSHeader pktId vers tp dfh apid sf ssc seqFlags len)
 
 
 {-# INLINABLE pusPktHdrLenOnlyParser #-}
 pusPktHdrLenOnlyParser :: Parser Word16
 pusPktHdrLenOnlyParser = do
-    void $ A.take 4
-    A.anyWord16be
-   
+  void $ A.take 4
+  A.anyWord16be
+
 
 
 {-# INLINABLE headPacket #-}
 headPacket :: ByteString -> (ByteString, ByteString)
-headPacket bs = 
-    case A.parseOnly pusPktHdrLenOnlyParser bs of 
-        Left _ -> (B.empty, bs)
-        Right len -> 
-            let splitPoint = fromIntegral len + 1 + 6 in
-            if splitPoint > B.length bs then (B.empty, bs)
-                else B.splitAt splitPoint bs 
+headPacket bs = case A.parseOnly pusPktHdrLenOnlyParser bs of
+  Left _ -> (B.empty, bs)
+  Right len ->
+    let splitPoint = fromIntegral len + 1 + 6
+    in  if splitPoint > B.length bs
+          then (B.empty, bs)
+          else B.splitAt splitPoint bs
 
 {-# INLINABLE chunkPackets #-}
 chunkPackets :: ByteString -> ([ByteString], ByteString)
 chunkPackets bs = go bs []
-    where 
-        go bs' acc = 
-            let (pkt, rest) = headPacket bs'
-            in
-            if B.null pkt 
-                then (reverse acc, rest)
-                else go rest (pkt : acc) 
+ where
+  go bs' acc =
+    let (pkt, rest) = headPacket bs'
+    in  if B.null pkt then (reverse acc, rest) else go rest (pkt : acc)
 
 
 {-# INLINABLE packPktID #-}
 packPktID :: Word8 -> PUSPacketType -> Bool -> APID -> Word16
 packPktID !vers !tp !dfh (APID apid) =
-    let versShifted = fromIntegral vers `shiftL` 13
-        typeShifted = case tp of
-            PUSTM -> 0x0000
-            PUSTC -> 0x1000
-        dfhShifted = if dfh then 0x0800 else 0x0000
-        apidMasked = apid .&. 0x7ff
-    in  versShifted .|. typeShifted .|. dfhShifted .|. apidMasked
+  let versShifted = fromIntegral vers `shiftL` 13
+      typeShifted = case tp of
+        PUSTM -> 0x0000
+        PUSTC -> 0x1000
+      dfhShifted = if dfh then 0x0800 else 0x0000
+      apidMasked = apid .&. 0x7ff
+  in  versShifted .|. typeShifted .|. dfhShifted .|. apidMasked
 
 
 
 {-# INLINABLE unpackPktID #-}
 unpackPktID :: Word16 -> (Word8, PUSPacketType, Bool, APID)
 unpackPktID pktID =
-    let !apid = pktID .&. 0x7ff
-        !dfh  = (pktID .&. 0x0800) /= 0
-        !tp   = if (pktID .&. 0x1000) /= 0 then PUSTC else PUSTM
-        !ver  = (pktID .&. 0xe000) `shiftR` 13
-    in  (fromIntegral ver, tp, dfh, APID apid)
+  let !apid = pktID .&. 0x7ff
+      !dfh  = (pktID .&. 0x0800) /= 0
+      !tp   = if (pktID .&. 0x1000) /= 0 then PUSTC else PUSTM
+      !ver  = (pktID .&. 0xe000) `shiftR` 13
+  in  (fromIntegral ver, tp, dfh, APID apid)
 
 
 
 {-# INLINABLE packSeqFlags #-}
 packSeqFlags :: SegmentationFlags -> SSC -> Word16
 packSeqFlags !flags !ssc = bfl flags .|. getSSC ssc .&. 0x3FFF
-  where
-    bfl SegmentFirst      = 0x4000
-    bfl SegmentContinue   = 0x0000
-    bfl SegmentLast       = 0x8000
-    bfl SegmentStandalone = 0xC000
+ where
+  bfl SegmentFirst      = 0x4000
+  bfl SegmentContinue   = 0x0000
+  bfl SegmentLast       = 0x8000
+  bfl SegmentStandalone = 0xC000
 
 
 
 {-# INLINABLE unpackSeqFlags #-}
 unpackSeqFlags :: Word16 -> (SegmentationFlags, SSC)
 unpackSeqFlags seg = (fl, mkSSC (seg .&. 0x3FFF))
-  where
-    fl = case seg .&. 0xC000 of
-        0x4000 -> SegmentFirst
-        0x0000 -> SegmentContinue
-        0x8000 -> SegmentLast
-        0xC000 -> SegmentStandalone
-        _      -> SegmentStandalone
+ where
+  fl = case seg .&. 0xC000 of
+    0x4000 -> SegmentFirst
+    0x0000 -> SegmentContinue
+    0x8000 -> SegmentLast
+    0xC000 -> SegmentStandalone
+    _      -> SegmentStandalone
 
 
 
 {-# INLINABLE decodePktMissionSpecific #-}
 decodePktMissionSpecific
-    :: ByteString
-    -> PUSMissionSpecific
-    -> ProtocolInterface
-    -> Either Text (ProtocolPacket PUSPacket)
+  :: ByteString
+  -> PUSMissionSpecific
+  -> ProtocolInterface
+  -> Either Text (ProtocolPacket PUSPacket)
 decodePktMissionSpecific pkt missionSpecific commIF
-    | B.length pkt < fixedSizeOf @PUSHeader + fixedSizeOf @CRC = Left
-        "PUS Packet is too short"
-    | otherwise = case crcCheck pkt of
-        Left  err -> Left err
-        Right (result, pl, extractedCRC, calcdCRC) -> if result
-            then case A.parse (pusPktParser missionSpecific commIF) pl of
-                A.Fail _ _ err -> Left (T.pack err)
-                A.Partial _ ->
-                    Left "PUS Packet: not enough input to parse PUS Packet"
-                A.Done _ p -> Right p
-            else
-                Left
-                $  T.run
-                $  T.text "CRC Error: received: "
-                <> T.string (show extractedCRC)
-                <> T.text " calculated: "
-                <> T.string (show calcdCRC)
+  | B.length pkt < fixedSizeOf @PUSHeader + fixedSizeOf @CRC = Left
+    "PUS Packet is too short"
+  | otherwise = case crcCheck pkt of
+    Left  err -> Left err
+    Right (result, pl, extractedCRC, calcdCRC) -> if result
+      then case A.parse (pusPktParser missionSpecific commIF) pl of
+        A.Fail _ _ err -> Left (T.pack err)
+        A.Partial _ -> Left "PUS Packet: not enough input to parse PUS Packet"
+        A.Done _ p -> Right p
+      else
+        Left
+        $  T.run
+        $  T.text "CRC Error: received: "
+        <> T.string (show extractedCRC)
+        <> T.text " calculated: "
+        <> T.string (show calcdCRC)
 
 
 
 pusPktParser
-    :: PUSMissionSpecific
-    -> ProtocolInterface
-    -> Parser (ProtocolPacket PUSPacket)
+  :: PUSMissionSpecific
+  -> ProtocolInterface
+  -> Parser (ProtocolPacket PUSPacket)
 pusPktParser missionSpecific comm = do
-    hdr <- pusPktHdrParser
-    --traceM $ "pusPktParser: pusHdr = " <> T.pack (show hdr)
-    pusPktParserPayload missionSpecific comm hdr
+  hdr <- pusPktHdrParser
+  --traceM $ "pusPktParser: pusHdr = " <> T.pack (show hdr)
+  pusPktParserPayload missionSpecific comm hdr
 
 
 pusPktParserPayload
-    :: PUSMissionSpecific
-    -> ProtocolInterface
-    -> PUSHeader
-    -> Parser (ProtocolPacket PUSPacket)
+  :: PUSMissionSpecific
+  -> ProtocolInterface
+  -> PUSHeader
+  -> Parser (ProtocolPacket PUSPacket)
 pusPktParserPayload missionSpecific comm hdr = do
-    dfh <- if
-        | comm == IF_NCTRS -> if hdr ^. pusHdrDfhFlag
-            then case hdr ^. pusHdrType of
-                PUSTM -> dfhParser (missionSpecific ^. pmsTMDataFieldHeader)
-                PUSTC -> dfhParser (missionSpecific ^. pmsTCDataFieldHeader)
-            else return PUSEmptyHeader
-        | comm == IF_CNC -> if hdr ^. pusHdrDfhFlag
-            then dfhParser defaultCnCTCHeader
-            else return PUSEmptyHeader
-        | comm == IF_EDEN || comm == IF_EDEN_SCOE -> if hdr ^. pusHdrDfhFlag
-            then case hdr ^. pusHdrType of
-                PUSTM -> dfhParser (missionSpecific ^. pmsTMDataFieldHeader)
-                PUSTC -> dfhParser (missionSpecific ^. pmsTCDataFieldHeader)
-            else return PUSEmptyHeader
-        | otherwise -> fail $ "Unknown protocol type: " <> show comm
+  dfh <- if
+    | comm == IF_NCTRS -> if hdr ^. pusHdrDfhFlag
+      then case hdr ^. pusHdrType of
+        PUSTM -> dfhParser (missionSpecific ^. pmsTMDataFieldHeader)
+        PUSTC -> dfhParser (missionSpecific ^. pmsTCDataFieldHeader)
+      else return PUSEmptyHeader
+    | comm == IF_CNC -> if hdr ^. pusHdrDfhFlag
+      then dfhParser defaultCnCTCHeader
+      else return PUSEmptyHeader
+    | comm == IF_EDEN || comm == IF_EDEN_SCOE -> if hdr ^. pusHdrDfhFlag
+      then case hdr ^. pusHdrType of
+        PUSTM -> dfhParser (missionSpecific ^. pmsTMDataFieldHeader)
+        PUSTC -> dfhParser (missionSpecific ^. pmsTCDataFieldHeader)
+      else return PUSEmptyHeader
+    | otherwise -> fail $ "Unknown protocol type: " <> show comm
 
-    --traceShowM dfh
+  --traceShowM dfh
 
-    -- The length in the PUS header is data length - 1, so we need to take
-    -- one byte more, but we have to ignore the CRC, which is also considered
-    -- in the length calculation
-    let plCRC = A.take len
-        len = fromIntegral (hdr ^. pusHdrTcLength) + 1 - crcLen - dfhLength dfh
-        lenWoCRC = fromIntegral (hdr ^. pusHdrTcLength) + 1 - dfhLength dfh
-    pl <- case comm of
-        IF_CNC -> case dfh of
-            PUSCnCTCHeader { _cncTcCrcFlags = val } -> if val == 1      -- the packet contains a CRC
-                then plCRC
-                else A.take lenWoCRC
-            _ -> plCRC
-        _ -> plCRC
+  -- The length in the PUS header is data length - 1, so we need to take
+  -- one byte more, but we have to ignore the CRC, which is also considered
+  -- in the length calculation
+  let plCRC = A.take len
+      len = fromIntegral (hdr ^. pusHdrTcLength) + 1 - crcLen - dfhLength dfh
+      lenWoCRC = fromIntegral (hdr ^. pusHdrTcLength) + 1 - dfhLength dfh
+  pl <- case comm of
+    IF_CNC -> case dfh of
+      PUSCnCTCHeader { _cncTcCrcFlags = val } -> if val == 1      -- the packet contains a CRC
+        then plCRC
+        else A.take lenWoCRC
+      _ -> plCRC
+    _ -> plCRC
 
-    --traceM (hexdumpBS pl)
+  --traceM (hexdumpBS pl)
 
-    return (ProtocolPacket comm (PUSPacket hdr dfh Nothing pl))
+  return (ProtocolPacket comm (PUSPacket hdr dfh Nothing pl))

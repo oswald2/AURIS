@@ -75,6 +75,7 @@ library
     Data.MIB.LoadMIB
     Data.MIB.MIB
     Data.Conversion.Calibration
+    Data.Conversion.Parameter
 
   -- Modules included in this library but not exported.
   -- other-modules:

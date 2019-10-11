@@ -1,16 +1,5 @@
-{-# LANGUAGE OverloadedStrings
-    , BangPatterns
-    , GeneralizedNewtypeDeriving
-    , DeriveGeneric
-    , RecordWildCards
-    , NoImplicitPrelude
-    , BinaryLiterals
-    , NumericUnderscores
-    , FlexibleInstances
-    , GADTs
-    , ExistentialQuantification
-    , MultiWayIf
-    , TemplateHaskell
+{-# LANGUAGE 
+    TemplateHaskell
 #-}
 module Data.TM.NumericalCalibration
   ( CalibPoint(..)
@@ -31,6 +20,8 @@ import           RIO.Vector.Partial             ( (!) )
 import           Control.Lens                   ( makeLenses
                                                 , (.~)
                                                 )
+import           Codec.Serialise
+import           Data.Aeson
 
 --import           Data.TM.Parameter
 import           Data.Text.Short                ( ShortText )
@@ -46,9 +37,13 @@ data CalibPoint = CalibPoint {
     _cx :: !Double
     , _cy :: !Double
     }
-    deriving (Show)
+    deriving (Show, Generic)
 makeLenses ''CalibPoint
 
+instance Serialise CalibPoint
+instance FromJSON CalibPoint
+instance ToJSON CalibPoint where
+  toEncoding = genericToEncoding defaultOptions
 
 
 data NumericalCalibration = NumericalCalibration {
@@ -57,8 +52,15 @@ data NumericalCalibration = NumericalCalibration {
     , _calibNInterpolation :: !CalibInterpolation
     , _calibNPoints :: Vector CalibPoint
     }
-    deriving (Show)
+    deriving (Show, Generic)
 makeLenses ''NumericalCalibration
+
+
+instance Serialise NumericalCalibration
+instance FromJSON NumericalCalibration
+instance ToJSON NumericalCalibration where
+  toEncoding = genericToEncoding defaultOptions
+
 
 -- | This type specifies, if the interpolation is done within an interval 
 -- (in case the point lies within the calibration curve) or if an 

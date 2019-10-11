@@ -15,12 +15,11 @@ module Data.TM.LogarithmicCalibration
   ( LogarithmicCalibration(..)
   , calibLName
   , calibLDescr
-  , la0 
-  , la1 
-  , la2 
-  , la3 
-  , la4 
-
+  , la0
+  , la1
+  , la2
+  , la3
+  , la4
   )
 where
 
@@ -31,6 +30,8 @@ import           Control.Lens                   ( makeLenses
                                                 )
 
 import           Data.Text.Short                ( ShortText )
+import           Codec.Serialise
+import           Data.Aeson
 
 import           General.Types                  ( ToDouble(..) )
 
@@ -50,24 +51,30 @@ data LogarithmicCalibration = LogarithmicCalibration {
     , _la3 :: !Double
     , _la4 :: !Double
     }
-    deriving(Show)
+    deriving(Show, Generic)
 makeLenses ''LogarithmicCalibration
 
+instance Serialise LogarithmicCalibration
+instance FromJSON LogarithmicCalibration
+instance ToJSON LogarithmicCalibration where
+  toEncoding = genericToEncoding defaultOptions
 
 
 instance Calibrate LogarithmicCalibration where
-    calibrate calib rawValue | isValid rawValue = if isNumeric rawValue
-        then
-          let x = toDouble rawValue
-          in  rawValue & tmvalValue .~ TMValDouble (interpolate calib x)
-        else setValidity rawValue validitySetWrongType
-    calibrate _calib rawValue = rawValue
+  calibrate calib rawValue | isValid rawValue = if isNumeric rawValue
+    then
+      let x = toDouble rawValue
+      in  rawValue & tmvalValue .~ TMValDouble (interpolate calib x)
+    else setValidity rawValue validitySetWrongType
+  calibrate _calib rawValue = rawValue
 
 interpolate :: LogarithmicCalibration -> Double -> Double
 interpolate LogarithmicCalibration {..} x =
-  let !lx  = log x
-      !l2x = lx * lx
-      !l3x = l2x * lx
-      !l4x = l3x * lx
-      !result = 1.0 / (_la0 + _la1 * lx + _la2 * l2x + _la3 * l3x + _la4 * l4x)
-  in result 
+  let
+    !lx     = log x
+    !l2x    = lx * lx
+    !l3x    = l2x * lx
+    !l4x    = l3x * lx
+    !result = 1.0 / (_la0 + _la1 * lx + _la2 * l2x + _la3 * l3x + _la4 * l4x)
+  in
+    result

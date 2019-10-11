@@ -20,6 +20,8 @@ where
 import           RIO
 
 import           Control.Lens                   ( makePrisms )
+import           Codec.Serialise
+import           Data.Aeson
 
 import           Data.TM.CalibrationTypes
 import           Data.TM.NumericalCalibration
@@ -34,9 +36,13 @@ data Calibration =
     | CalibText TextualCalibration
     | CalibPoly PolynomialCalibration
     | CalibLog LogarithmicCalibration
-    deriving (Show)
+    deriving (Show, Generic)
 makePrisms ''Calibration
 
+instance Serialise Calibration
+instance FromJSON Calibration
+instance ToJSON Calibration where
+  toEncoding = genericToEncoding defaultOptions
 
 
 instance Calibrate Calibration where

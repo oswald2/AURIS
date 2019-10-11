@@ -14,9 +14,7 @@
     , ScopedTypeVariables
 #-}
 module Data.MIB.Types
-  ( PTC(..)
-  , PFC(..)
-  , DefaultTo(..)
+  ( DefaultTo(..)
   , DefaultToNothing(..)
   , CharDefaultTo(..)
   , ShortTextDefaultTo(..)
@@ -37,31 +35,6 @@ import           GHC.TypeLits
 
 
 
-newtype PTC = PTC Int
-    deriving (Eq, Ord, Num, Show, Read, Generic)
-
-instance Serialise PTC
-instance FromJSON PTC
-instance ToJSON PTC where
-  toEncoding = genericToEncoding A.defaultOptions
-
-
-newtype PFC = PFC Int
-    deriving (Eq, Ord, Num, Show, Read, Generic)
-
-instance Serialise PFC
-instance FromJSON PFC
-instance ToJSON PFC where
-  toEncoding = genericToEncoding A.defaultOptions
-
-
-newtype SPID = SPID Word32
-    deriving (Eq, Ord, Show, Read, Generic)
-
-instance Serialise SPID
-instance FromJSON SPID
-instance ToJSON SPID where
-  toEncoding = genericToEncoding A.defaultOptions
 
 newtype DefaultTo (a :: Nat) = DefaultTo { getDefaultInt :: Int }
     deriving (Eq, Show, Read)

@@ -58,6 +58,8 @@ module General.PUSTypes
     , TMSegmentLen(..)
     , tmSegmentLength
     , SPID(..)
+    , PTC(..)
+    , PFC(..)
     )
 where
 
@@ -358,4 +360,21 @@ instance Serialise SPID
 instance FromJSON SPID
 instance ToJSON SPID where
     toEncoding = genericToEncoding defaultOptions
+
+newtype PTC = PTC Int
+    deriving (Eq, Ord, Num, Show, Read, Generic)
+
+instance Serialise PTC
+instance FromJSON PTC
+instance ToJSON PTC where
+  toEncoding = genericToEncoding defaultOptions
+
+
+newtype PFC = PFC Int
+    deriving (Eq, Ord, Num, Show, Read, Generic)
+
+instance Serialise PFC
+instance FromJSON PFC
+instance ToJSON PFC where
+  toEncoding = genericToEncoding defaultOptions
 

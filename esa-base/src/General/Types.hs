@@ -9,6 +9,7 @@ Portability : POSIX
 
 This module provides some general data types and functions operating on them
 -}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 module General.Types
   ( Endian(..)
   , ByteOffset(..)
@@ -46,9 +47,12 @@ where
 import           RIO
 import           Data.Binary
 import           Data.Aeson
+import qualified Data.Aeson.Encoding as E
 import           Data.Bits
+import           Data.Text.Short
 
 import           Codec.Serialise
+
 
 
 
@@ -61,7 +65,7 @@ instance Binary Endian
 instance Serialise Endian
 instance FromJSON Endian
 instance ToJSON Endian where
-    toEncoding = genericToEncoding defaultOptions
+  toEncoding = genericToEncoding defaultOptions
 instance NFData Endian
 
 -- | A byte offset
@@ -72,7 +76,7 @@ instance Binary ByteOffset
 instance Serialise ByteOffset
 instance FromJSON ByteOffset
 instance ToJSON ByteOffset where
-    toEncoding = genericToEncoding defaultOptions
+  toEncoding = genericToEncoding defaultOptions
 
 -- | constructs a byte offset
 mkByteOffset :: Int -> ByteOffset
@@ -172,7 +176,7 @@ instance Binary BitSize
 instance Serialise BitSize
 instance FromJSON BitSize
 instance ToJSON BitSize where
-    toEncoding = genericToEncoding defaultOptions
+  toEncoding = genericToEncoding defaultOptions
 
 -- | constructs a bit size
 mkBitSize :: Int -> BitSize
@@ -279,5 +283,21 @@ instance OffsetCalculations Offset BitSize where
 class ToDouble a where
     toDouble :: a -> Double
 
-class FromDouble a where 
+class FromDouble a where
     fromDouble :: Double -> a
+
+
+
+instance Serialise ShortText where
+    encode = Codec.Serialise.encode . toText
+    decode = fromText <$> Codec.Serialise.decode 
+
+instance FromJSON ShortText where 
+    parseJSON = withText "ShortText" $ pure . fromText
+
+instance ToJSON ShortText where 
+    toJSON = String . toText
+    {-# INLINE toJSON #-}
+    
+    toEncoding = E.text . toText
+    {-# INLINE toEncoding #-}

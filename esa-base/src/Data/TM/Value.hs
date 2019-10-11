@@ -24,6 +24,9 @@ import           RIO
 import           Control.Lens                   ( makeLenses )
 import           General.Time
 import           Data.Text.Short                ( ShortText )
+import           Codec.Serialise
+import           Data.Aeson
+import           Data.ByteString.Base64.Type
 
 import           Data.TM.Validity
 import           General.Types
@@ -31,20 +34,60 @@ import           General.Types
 
 
 data TMValueSimple =
-    TMValInt !Int64
+    TMValInt !Int64 
     | TMValUInt !Word64
     | TMValDouble !Double
-    | TMValTime !SunTime
-    | TMValString !ShortText
-    | TMValOctet !ByteString
+    | TMValTime !SunTime 
+    | TMValString !ShortText 
+    | TMValOctet !ByteString 
     deriving(Show, Generic)
 
+instance Serialise TMValueSimple
 
+instance FromJSON TMValueSimple where
+  parseJSON = withObject "TMValueSimple" $ \o -> asum
+    [ TMValInt <$> o .: "tmValInt"
+    , TMValUInt <$> o .: "tmValUInt"
+    , TMValDouble <$> o .: "tmValDouble"
+    , TMValTime <$> o .: "tmValTime"
+    , TMValString <$> o .: "tmValString"
+    , TMValOctet . getByteString64 <$> o .: "tmValOctet"
+    ]
+
+instance ToJSON TMValueSimple where
+    toJSON (TMValInt x) = object
+        [ "tmValInt" .= x ]
+    toJSON (TMValUInt x) = object
+        [ "tmValUInt" .= x ]
+    toJSON (TMValDouble x) = object
+        [ "tmValDouble" .= x ]
+    toJSON (TMValTime x) = object
+        [ "tmValTime" .= x ]
+    toJSON (TMValString x) = object
+        [ "tmValString" .= x ]
+    toJSON (TMValOctet x) = object
+        [ "tmValOctet" .= makeByteString64 x ]
+    toEncoding (TMValInt x) = pairs ( "tmValInt" .= x )
+    toEncoding (TMValUInt x) = pairs ( "tmValUInt" .= x )
+    toEncoding (TMValDouble x) = pairs ( "tmValDouble" .= x )
+    toEncoding (TMValTime x) = pairs ( "tmValTime" .= x )
+    toEncoding (TMValString x) = pairs ( "tmValString" .= x )
+    toEncoding (TMValOctet x) = pairs ( "tmValOctet" .= makeByteString64 x )
+
+
+    
 data TMValue = TMValue {
     _tmvalValue :: !TMValueSimple
     , _tmvalValidity :: !Validity
     } deriving (Show, Generic)
 makeLenses ''TMValue
+
+
+instance Serialise TMValue
+instance FromJSON TMValue
+instance ToJSON TMValue where
+  toEncoding = genericToEncoding defaultOptions
+
 
 instance ToDouble TMValue where
   toDouble TMValue { _tmvalValue = (TMValInt x) }    = fromIntegral x

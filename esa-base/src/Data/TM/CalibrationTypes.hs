@@ -26,6 +26,8 @@ where
 import           RIO
 import qualified RIO.Text                      as T
 import           Data.Text.Short
+import           Codec.Serialise
+import           Data.Aeson
 
 import           Data.TM.Value
 --import           General.Types
@@ -43,12 +45,24 @@ data NumType =
     NumInteger
     | NumUInteger
     | NumDouble
-    deriving (Eq, Ord, Enum, Show, Read)
+    deriving (Eq, Ord, Enum, Show, Read, Generic)
+
+instance Serialise NumType
+instance FromJSON NumType
+instance ToJSON NumType where
+    toEncoding = genericToEncoding defaultOptions
+    
+
 
 data CalibInterpolation =
     CalibExtrapolate
     | CalibFail
-    deriving (Eq, Ord, Enum, Show, Read)
+    deriving (Eq, Ord, Enum, Show, Read, Generic)
+
+instance Serialise CalibInterpolation
+instance FromJSON CalibInterpolation
+instance ToJSON CalibInterpolation where
+  toEncoding = genericToEncoding defaultOptions
 
 
 toCalibInterpolation :: Char -> CalibInterpolation
@@ -89,18 +103,18 @@ doubleParser NumDouble   _       = float
 parseShortTextToInt64 :: NumType -> Radix -> ShortText -> Either Text Int64
 parseShortTextToInt64 typ radix x =
   case parseMaybe (intParser typ radix) (toText x) of
-    Nothing -> Left $ "Could not parse '" <> T.pack (show x) <> "' into Int64"
+    Nothing   -> Left $ "Could not parse '" <> T.pack (show x) <> "' into Int64"
     Just xval -> Right xval
 
 
 intParser :: NumType -> Radix -> Parser Int64
-intParser NumInteger Decimal = decimal
-intParser NumInteger Hex     = hexadecimal
-intParser NumInteger Octal   = octal
+intParser NumInteger  Decimal = decimal
+intParser NumInteger  Hex     = hexadecimal
+intParser NumInteger  Octal   = octal
 intParser NumUInteger Decimal = decimal
 intParser NumUInteger Hex     = hexadecimal
 intParser NumUInteger Octal   = octal
-intParser NumDouble _ = truncate <$> (float :: Parser Double)
+intParser NumDouble   _       = truncate <$> (float :: Parser Double)
 
 
 class Calibrate a where
