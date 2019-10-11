@@ -9,8 +9,6 @@ Portability : POSIX
 
 Provides the lookup table for parity calculations
 -}
-{-# LANGUAGE BangPatterns 
-#-}
 module Data.PUS.CLTUTable
     (
         cltuTable
@@ -18,8 +16,8 @@ module Data.PUS.CLTUTable
     )
 where
 
+import RIO 
 
-import Data.Word 
 import Data.Vector.Unboxed as V
 import Data.Bits
 
@@ -57,16 +55,16 @@ codProcChar !xvalw !sregw =
     loop 0x80 xvalw sregw
     where 
         loop :: Int -> Int -> Int -> Word8
-        loop !mask !xval !sreg 
-            | mask == 0 = fromIntegral (sreg .&. 0x7F)
+        loop !msk !xval !sreg 
+            | msk == 0 = fromIntegral (sreg .&. 0x7F)
             | otherwise = 
                 let !sreg1 = sreg `shiftL` 1
                     bit1 :: Int
                     !bit1 = if (sreg1 .&. 0x80) /= 0 then 1 else 0
-                    !bit2 = if (xval .&. mask) /= 0 then bit1 `xor` 1 else bit1
+                    !bit2 = if (xval .&. msk) /= 0 then bit1 `xor` 1 else bit1
                     !sreg2 = if bit2 /= 0 then sreg1 `xor` 0x45 else sreg1
                 in
-                loop (mask `shiftR` 1) xval sreg2
+                loop (msk `shiftR` 1) xval sreg2
         
 
 

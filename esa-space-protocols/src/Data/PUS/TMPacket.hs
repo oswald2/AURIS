@@ -1,0 +1,75 @@
+{-# LANGUAGE
+    AutoDeriveTypeable
+    , BangPatterns
+    , BinaryLiterals
+    , ConstraintKinds
+    , DataKinds
+    , DefaultSignatures
+    , DeriveDataTypeable
+    , DeriveFoldable
+    , DeriveFunctor
+    , DeriveGeneric
+    , DeriveTraversable
+    , DoAndIfThenElse
+    , EmptyDataDecls
+    , ExistentialQuantification
+    , FlexibleContexts
+    , FlexibleInstances
+    , FunctionalDependencies
+    , GADTs
+    , GeneralizedNewtypeDeriving
+    , InstanceSigs
+    , KindSignatures
+    , LambdaCase
+    , MonadFailDesugaring
+    , MultiParamTypeClasses
+    , MultiWayIf
+    , NamedFieldPuns
+    , NoImplicitPrelude
+    , OverloadedStrings
+    , PartialTypeSignatures
+    , PatternGuards
+    , PolyKinds
+    , RankNTypes
+    , RecordWildCards
+    , ScopedTypeVariables
+    , StandaloneDeriving
+    , TupleSections
+    , TypeFamilies
+    , TypeSynonymInstances
+    , ViewPatterns
+#-}
+module Data.PUS.TMPacket
+  ( TMPacket(..)
+  )
+where
+
+
+import           RIO
+
+import           Codec.Serialise
+import           Data.Aeson
+
+import           Data.PUS.Types
+import           Data.PUS.APID
+import           Data.PUS.Parameter
+--import           Data.PUS.Value
+
+--import           General.Types
+import           General.Time
+
+
+data TMPacket = TMPacket {
+    _tmpSPID :: SPID
+    , _tmpAPID :: APID
+    , _tmpType :: PUSType
+    , _tmpSubType :: PUSSubType
+    , _tmpERT :: SunTime
+    , _tmpTimeStamp :: SunTime
+    , _tmpParams :: Vector Parameter
+    } deriving (Show, Generic)
+
+instance Serialise TMPacket
+instance FromJSON TMPacket
+instance ToJSON TMPacket where
+  toEncoding = genericToEncoding defaultOptions

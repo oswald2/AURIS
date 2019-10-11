@@ -1,17 +1,17 @@
 module AurisMissionSpecific
-(
-    getMissionSpecific
-)
+  ( getMissionSpecific
+  )
 where
 
+import           RIO ()
 
-import Data.PUS.MissionSpecific.Definitions
+import           Data.PUS.MissionSpecific.Definitions
 
-import AurisConfig
+import           AurisConfig
 
 
 getMissionSpecific :: AurisConfig -> IO PUSMissionSpecific
-getMissionSpecific _cfg = do 
-    pure defaultMissionSpecific
+getMissionSpecific _cfg = do
+  pure defaultMissionSpecific
 
 

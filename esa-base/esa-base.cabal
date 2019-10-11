@@ -60,7 +60,6 @@ library
     General.Padding
     General.SetBitField
     General.GetBitField
-    General.ShowConduit
     Data.TM.Value
     Data.TM.Parameter
     Data.TM.Calibration

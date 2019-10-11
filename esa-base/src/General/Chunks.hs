@@ -10,22 +10,21 @@ Portability : POSIX
 This module provides some chunking functions for several data types as convenience
 -}
 module General.Chunks
-    (
-        chunkedBy
-        , chunkedByBS
-        , chunks
-        , chunksIntersperse
-    )
+  ( chunkedBy
+  , chunkedByBS
+  , chunks
+  , chunksIntersperse
+  )
 where
 
+import           RIO
 
-import Data.ByteString.Lazy (ByteString)
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Lazy as B
-
+import qualified RIO.ByteString                as BS
+import qualified RIO.ByteString.Lazy           as B
+import           RIO.List
 
 -- | Chunk a @bs@ into list of smaller byte strings of no more than @n elements
-chunkedBy :: Int -> ByteString -> [ByteString]
+chunkedBy :: Int -> B.ByteString -> [B.ByteString]
 chunkedBy n bs = if B.length bs == 0
   then []
   else case B.splitAt (fromIntegral n) bs of
@@ -46,12 +45,9 @@ chunkedByBS n bs = if BS.length bs == 0
 {-# INLINABLE chunks #-}
 chunks :: Int -> [a] -> [[a]]
 chunks = go
-    where
-      go _ [] = []
-      go n xs =
-        let (bef, aft) = splitAt n xs
-        in
-        bef : chunks n aft
+ where
+  go _ [] = []
+  go n xs = let (bef, aft) = splitAt n xs in bef : chunks n aft
 
 
 -- | divides a list into chunks of size @n@, then adds @is as a separator
@@ -59,9 +55,7 @@ chunks = go
 {-# INLINABLE chunksIntersperse #-}
 chunksIntersperse :: Int -> [a] -> [a] -> [[a]]
 chunksIntersperse = go
-  where
-    go _ _ [] = []
-    go n is xs =
-      let (bef, aft) = splitAt n xs
-      in
-      bef : is : chunksIntersperse n is aft
+ where
+  go _ _ [] = []
+  go n is xs =
+    let (bef, aft) = splitAt n xs in bef : is : chunksIntersperse n is aft

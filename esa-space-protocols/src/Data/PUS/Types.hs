@@ -62,6 +62,7 @@ module Data.PUS.Types
     , sourceIDParser
     , TMSegmentLen(..)
     , tmSegmentLength
+    , SPID(..)
     )
 where
 
@@ -352,3 +353,14 @@ tmSegmentLength TMSegment256   = 256
 tmSegmentLength TMSegment512   = 512
 tmSegmentLength TMSegment1024  = 1024
 tmSegmentLength TMSegment65536 = 65536
+
+
+-- | The SPID (SCOS Packet ID)
+newtype SPID = SPID Word32
+    deriving (Eq, Ord, Show, Read, Generic)
+
+instance Serialise SPID 
+instance FromJSON SPID
+instance ToJSON SPID where
+    toEncoding = genericToEncoding defaultOptions
+

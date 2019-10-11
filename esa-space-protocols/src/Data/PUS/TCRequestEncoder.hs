@@ -1,21 +1,17 @@
-{-# LANGUAGE OverloadedStrings
-    , BangPatterns
-    , GeneralizedNewtypeDeriving
-    , DeriveGeneric
-    , RecordWildCards
-    , TemplateHaskell
+{-# LANGUAGE 
+    TemplateHaskell
 #-}
 module Data.PUS.TCRequestEncoder
-    ( EncodedTCRequest(..)
-    , encTcReqContent
-    , encTcReqRqst
-    , encodeTCRequest
-    , tcRequestEncoderC
-    )
+  ( EncodedTCRequest(..)
+  , encTcReqContent
+  , encTcReqRqst
+  , encodeTCRequest
+  , tcRequestEncoderC
+  )
 where
 
 
-
+import           RIO
 import           Control.Lens                   ( makeLenses )
 
 import           Data.Conduit
@@ -41,5 +37,5 @@ encodeTCRequest _ = undefined
 
 tcRequestEncoderC :: Monad m => ConduitT TCRequest EncodedTCRequest m ()
 tcRequestEncoderC = awaitForever $ \rqst -> do
-    let enc = encodeTCRequest rqst
-    pure enc
+  let enc = encodeTCRequest rqst
+  pure enc

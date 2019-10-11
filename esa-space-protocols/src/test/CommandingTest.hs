@@ -14,9 +14,8 @@ import qualified RIO.Text                      as T
 import qualified Data.Text.IO                  as T
 
 import           Conduit
-import qualified Data.Conduit.List             as C
 import           Data.Conduit.List
-import           Data.Conduit.Network
+import qualified Data.Conduit.Combinators      as C
 
 import           Data.PUS.TCTransferFrame
 import           Data.PUS.TCTransferFrameEncoder
@@ -25,11 +24,8 @@ import           Data.PUS.CLTUEncoder
 import           Data.PUS.GlobalState
 import           Data.PUS.Config
 import           Data.PUS.Types
-import           Data.PUS.PUSPacket
-import           Data.PUS.PUSDfh
 import           Data.PUS.PUSPacketEncoder
 import           Data.PUS.SegmentEncoder
-import           Data.PUS.SegmentationFlags
 import           Data.PUS.APID
 import           Data.PUS.TCRequest
 import           Data.PUS.TCRequestEncoder
@@ -39,13 +35,8 @@ import           Data.PUS.Parameter
 import           Data.PUS.Value
 import           Data.PUS.MissionSpecific.Definitions
 
-import           Persistence.Db
-import           Persistence.EventLog
-
 import           Protocol.NCTRS
 import           Protocol.ProtocolInterfaces
-
-import           General.ShowConduit
 
 import           GHC.Conc.Sync
 
@@ -138,4 +129,4 @@ main = do
               .| cltuToNcduC
               .| encodeTcNcduC
 
-      runConduitRes (chain .| showConduit .| C.sinkNull)
+      runConduitRes (chain .| C.print)

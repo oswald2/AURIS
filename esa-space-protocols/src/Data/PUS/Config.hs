@@ -10,13 +10,6 @@ Portability : POSIX
 This module contains the data structure for configuration. The configuration can currently be read and written from files in
 JSON (via the aeson library)
 -}
-{-# LANGUAGE OverloadedStrings
-    , DeriveGeneric
-    , DataKinds
-    , TypeSynonymInstances
-    , FlexibleInstances
-    , GeneralizedNewtypeDeriving
-#-}
 module Data.PUS.Config
   (
     -- | The config data type itself
@@ -32,17 +25,15 @@ module Data.PUS.Config
   )
 where
 
-import           Control.Monad.IO.Class
 
-import           Data.Word
+import           RIO
+
 import           Data.Aeson
 import           Data.ByteString.Lazy          as B
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 
 import           Closed
-
-import           GHC.Generics
 
 import           Data.PUS.Types
 

@@ -1,12 +1,8 @@
-{-# LANGUAGE
-    OverloadedStrings
-    , FlexibleContexts
-    , TypeFamilies
-    , GADTs
-    , ExistentialQuantification
-#-}
+
 module GUI.Colors
 where
+
+import RIO
 
 import Graphics.UI.FLTK.LowLevel.FLTKHS
 import Graphics.UI.FLTK.LowLevel.Fl_Enumerations

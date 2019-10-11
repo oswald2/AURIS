@@ -68,8 +68,10 @@ checkString validity x = case T.fromByteString x of
   Nothing -> TMValue (TMValString T.empty) (setStringNotUtf8 validity)
 
 
-extractExtParameters :: ByteString -> [ExtParameter] -> [ExtParameter]
-extractExtParameters bytes = map (getExtParameter' bytes)
+extractExtParameters :: ByteString -> [ExtParameter] -> [Parameter]
+extractExtParameters bytes = map (extParamToParam . getExtParameter' bytes)
+
+
 
 
 getExtParameter' :: ByteString -> ExtParameter -> ExtParameter

@@ -15,6 +15,7 @@ import qualified Data.Text.IO                  as T
 
 import           Conduit
 import           Data.Conduit.Network
+import qualified Data.Conduit.Combinators      as C
 
 import           Data.PUS.GlobalState
 import           Data.PUS.Config
@@ -26,7 +27,6 @@ import           Protocol.ProtocolInterfaces
 
 import           GHC.Conc.Sync
 
-import           General.ShowConduit
 
 
 
@@ -51,7 +51,7 @@ main = do
               .| ncduToTMFrameC
               .| storeFrameC
               .| tmFrameExtraction defaultMissionSpecific IF_NCTRS
-              .| showConduit
+              .| C.print
 
 
           showConduitF = awaitForever $ \_du -> pure ()

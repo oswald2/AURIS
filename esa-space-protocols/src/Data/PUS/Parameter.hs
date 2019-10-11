@@ -1,13 +1,44 @@
 {-# LANGUAGE
-    OverloadedStrings
+    AutoDeriveTypeable
     , BangPatterns
+    , BinaryLiterals
+    , ConstraintKinds
+    , DataKinds
+    , DefaultSignatures
+    , DeriveDataTypeable
+    , DeriveFoldable
+    , DeriveFunctor
     , DeriveGeneric
-    , NoImplicitPrelude
-    , TemplateHaskell
-    , MultiParamTypeClasses
-    , FunctionalDependencies
+    , DeriveTraversable
+    , DoAndIfThenElse
+    , EmptyDataDecls
+    , ExistentialQuantification
+    , FlexibleContexts
     , FlexibleInstances
-    , DeriveAnyClass
+    , FunctionalDependencies
+    , GADTs
+    , GeneralizedNewtypeDeriving
+    , InstanceSigs
+    , KindSignatures
+    , LambdaCase
+    , MonadFailDesugaring
+    , MultiParamTypeClasses
+    , MultiWayIf
+    , NamedFieldPuns
+    , NoImplicitPrelude
+    , OverloadedStrings
+    , PartialTypeSignatures
+    , PatternGuards
+    , PolyKinds
+    , RankNTypes
+    , RecordWildCards
+    , ScopedTypeVariables
+    , StandaloneDeriving
+    , TupleSections
+    , TypeFamilies
+    , TypeSynonymInstances
+    , ViewPatterns
+    , TemplateHaskell
 #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Data.PUS.Parameter
@@ -47,6 +78,7 @@ module Data.PUS.Parameter
     , appendExtN
     , prependN
     , prependExtN
+    , extParamToParam
     )
 where
 
@@ -83,13 +115,14 @@ data Parameter = Parameter {
   _paramName :: !Text,
   _paramValue :: !Value
   }
-  deriving (Show, Read, Generic, NFData)
+  deriving (Show, Read, Generic)
 makeLenses ''Parameter
 
 instance Binary Parameter
 instance Serialise Parameter
 instance FromJSON Parameter
 instance ToJSON Parameter
+instance NFData Parameter
 
 
 data ExtParameter = ExtParameter {
@@ -97,9 +130,14 @@ data ExtParameter = ExtParameter {
   _extParValue :: !Value,
   _extParOff :: !BitOffset
   }
-  deriving (Show, Read, Generic, NFData)
+  deriving (Show, Read, Generic)
 makeLenses ''ExtParameter
 
+
+extParamToParam :: ExtParameter -> Parameter 
+extParamToParam ExtParameter {..} = Parameter _extParName _extParValue
+
+instance NFData ExtParameter
 
 instance Eq Parameter where
     (Parameter n1 v1) == (Parameter n2 v2) = (n1 == n2) && (v1 == v2)
@@ -122,15 +160,18 @@ instance BitSizes ExtParameter where
 data ParameterList = Empty
     | List [Parameter] ParameterList
     | Group Parameter ParameterList
-    deriving (Show, Read, Generic, NFData)
+    deriving (Show, Read, Generic)
+
+instance NFData ParameterList
 
 data SizedParameterList = SizedParameterList {
         _splSize :: BitSize
         , _splParams ::  [Parameter]
     }
-    deriving (Generic, NFData)
+    deriving (Generic)
 makeLenses ''SizedParameterList
 
+instance NFData SizedParameterList
 instance Binary SizedParameterList
 instance Serialise SizedParameterList
 instance FromJSON SizedParameterList
@@ -153,7 +194,9 @@ toSizedParamList ps =
 data ExtParameterList = ExtEmpty
     | ExtList (SortedList ExtParameter) ExtParameterList
     | ExtGroup ExtParameter ExtParameterList
-    deriving (Eq, Show, Read, Generic, NFData)
+    deriving (Eq, Show, Read, Generic)
+
+instance NFData ExtParameterList
 
 
 -- data SizedExtParameterList = SizedExtParameterList {
