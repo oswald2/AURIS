@@ -15,6 +15,7 @@ module Data.TM.CalibrationTypes
   , CalibInterpolation(..)
   , toCalibInterpolation
   , parseShortTextToDouble
+  , parseShortTextToInt64
   , charToRadix
   , charToType
   , Radix(..)
@@ -49,7 +50,7 @@ data CalibInterpolation =
     | CalibFail
     deriving (Eq, Ord, Enum, Show, Read)
 
-    
+
 toCalibInterpolation :: Char -> CalibInterpolation
 toCalibInterpolation 'P' = CalibExtrapolate
 toCalibInterpolation _   = CalibFail
@@ -73,17 +74,33 @@ charToType _   = NumInteger
 
 parseShortTextToDouble :: NumType -> Radix -> ShortText -> Either Text Double
 parseShortTextToDouble typ radix x =
-  case parseMaybe (numParser typ radix) (toText x) of
-    Nothing -> Left $ "Could not parse '" <> T.pack (show x) <> "' into double"
+  case parseMaybe (doubleParser typ radix) (toText x) of
+    Nothing -> Left $ "Could not parse '" <> T.pack (show x) <> "' into Double"
     Just xval -> Right xval
 
 
-numParser :: NumType -> Radix -> Parser Double
-numParser NumInteger  _       = fromIntegral <$> (decimal :: Parser Int64)
-numParser NumUInteger Decimal = fromIntegral <$> (decimal :: Parser Word64)
-numParser NumUInteger Hex = fromIntegral <$> (hexadecimal :: Parser Word64) 
-numParser NumUInteger Octal = fromIntegral <$> (octal :: Parser Word64)
-numParser NumDouble _ = float
+doubleParser :: NumType -> Radix -> Parser Double
+doubleParser NumInteger  _       = fromIntegral <$> (decimal :: Parser Int64)
+doubleParser NumUInteger Decimal = fromIntegral <$> (decimal :: Parser Word64)
+doubleParser NumUInteger Hex = fromIntegral <$> (hexadecimal :: Parser Word64)
+doubleParser NumUInteger Octal   = fromIntegral <$> (octal :: Parser Word64)
+doubleParser NumDouble   _       = float
+
+parseShortTextToInt64 :: NumType -> Radix -> ShortText -> Either Text Int64
+parseShortTextToInt64 typ radix x =
+  case parseMaybe (intParser typ radix) (toText x) of
+    Nothing -> Left $ "Could not parse '" <> T.pack (show x) <> "' into Int64"
+    Just xval -> Right xval
+
+
+intParser :: NumType -> Radix -> Parser Int64
+intParser NumInteger Decimal = decimal
+intParser NumInteger Hex     = hexadecimal
+intParser NumInteger Octal   = octal
+intParser NumUInteger Decimal = decimal
+intParser NumUInteger Hex     = hexadecimal
+intParser NumUInteger Octal   = octal
+intParser NumDouble _ = truncate <$> (float :: Parser Double)
 
 
 class Calibrate a where

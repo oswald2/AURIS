@@ -42,6 +42,7 @@
 #-}
 module Data.MIB.MIB
   ( MIB(..)
+  , mibCalibrations
   )
 where
 

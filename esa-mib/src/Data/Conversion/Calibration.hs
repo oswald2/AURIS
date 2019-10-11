@@ -14,6 +14,7 @@ module Data.Conversion.Calibration
   ( convertNumCalib
   , convertPolyCalib
   , convertLogCalib
+  , convertTextCalib
   )
 where
 
@@ -30,11 +31,14 @@ import           Data.MIB.CAF
 import           Data.MIB.CAP
 import           Data.MIB.MCF
 import           Data.MIB.LGF
+import           Data.MIB.TXF
+import           Data.MIB.TXP
 
 import           Data.TM.CalibrationTypes
 import           Data.TM.NumericalCalibration
 import           Data.TM.PolynomialCalibration
 import           Data.TM.LogarithmicCalibration
+import           Data.TM.TextualCalibration
 
 import           Control.Monad.Trans.Except
 
@@ -85,11 +89,34 @@ convertNumCalib CAFentry {..} caps =
     in  v1
 
 
--- convertTextCalib :: TXFentry -> Vector TCPentry -> Either Text TextualCalibration
--- convertTextCalib TCFentry {..} vec = 
---     where
---         getPoints = 
---             let v1 = filter f $ V.toList vec
+convertTextCalib
+  :: TXFentry -> Vector TXPentry -> Either Text TextualCalibration
+convertTextCalib TXFentry {..} vec =
+  let points = getPoints rawFmt
+      rawFmt = charToType _txfRawFmt
+  in  if all isRight points
+        then
+          let points' = rights points
+          in  Right $ TextualCalibration { _calibTName   = _txfNumbr
+                                         , _calibTDescr  = _txfDescr
+                                         , _calibTRawFmt = rawFmt
+                                         , _calibTPoints = V.fromList points'
+                                         }
+        else
+          Left
+          $  T.concat
+          .  intersperse "\n"
+          $  ["Conversion to TextualCalibration " <> toText _txfNumbr]
+          <> lefts points
+ where
+  getPoints rawFmt =
+    let v1 = map chk . filter f $ V.toList vec
+        f x = _txpNumbr x == _txfNumbr
+        chk TXPentry {..} = runExcept $ do
+          from <- except $ parseShortTextToInt64 rawFmt Decimal _txpFrom
+          to'  <- except $ parseShortTextToInt64 rawFmt Decimal _txpTo
+          pure (TextCalibPoint from to' _txpAlTxt)
+    in  v1
 
 
 

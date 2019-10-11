@@ -66,6 +66,7 @@ import           Data.TM.Calibration
 import           Data.TM.NumericalCalibration
 import           Data.TM.PolynomialCalibration
 import           Data.TM.LogarithmicCalibration
+import           Data.TM.TextualCalibration
 
 import           Data.Conversion.Calibration
 
@@ -82,9 +83,7 @@ loadMIB mibPath = do
   runExceptT $ do
     calibs <- loadCalibs mibPath
 
-    let mib = MIB {
-        _mibCalibrations = fromRight HM.empty calibs 
-        }
+    let mib = MIB { _mibCalibrations = fromRight HM.empty calibs }
     return mib
 
 
@@ -108,6 +107,8 @@ loadCalibs mibPath = do
         cap = fromRight V.empty caps
         mcf = fromRight V.empty mcfs
         lgf = fromRight V.empty lgfs
+        txp = fromRight V.empty txps
+        txf = fromRight V.empty txfs
 
 
     numCalibs' <- except $ traverse (`convertNumCalib` cap) caf
@@ -129,5 +130,10 @@ loadCalibs mibPath = do
           polyCalibs
           logCalibs'
 
+    textCalibs' <- except $ traverse (`convertTextCalib` txp) txf
+    let !textCalibs = V.foldl'
+          (\hm x -> HM.insert (_calibTName x) (CalibText x) hm)
+          logCalibs
+          textCalibs'
 
-    return logCalibs
+    return textCalibs
