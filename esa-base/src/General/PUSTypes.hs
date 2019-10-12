@@ -10,62 +10,62 @@ Portability : POSIX
 This module is a collection of various simple PUS types
 -}
 module General.PUSTypes
-    ( VCID(..)
-    , mkVCID
-    , vcidBuilder
-    , vcidParser
-    , SCID(..)
-    , mkSCID
-    , scidBuilder
-    , scidParser
-    , MAPID
-    , mkMAPID
-    , getMAPID
-    , mapIDBuilder
-    , mapIDParser
-    , mapIDControl
-    , Flag
-    , toFlag
-    , fromFlag
-    , toBool
-    , Ready(..)
-    , Enable(..)
-    , OnOff(..)
-    , Initialized(..)
-    , Good(..)
-    , RequestID
-    , getRqstID
-    , mkRqstID
-    , TransmissionMode(..)
-    , transmissionModeBuilder
-    , transmissionModeParser
-    , PUSType
-    , mkPUSType
-    , PUSSubType
-    , mkPUSSubType
-    , pusTypeBuilder
-    , pusSubTypeBuilder
-    , pusTypeParser
-    , pusSubTypeParser
-    , SSC
-    , getSSC
-    , mkSSC
-    , nextSSC
-    , SourceID
-    , mkSourceID
-    , sourceIDBuilder
-    , sourceIDParser
-    , TMSegmentLen(..)
-    , tmSegmentLength
-    , SPID(..)
-    , PTC(..)
-    , PFC(..)
-    )
+  ( VCID(..)
+  , mkVCID
+  , vcidBuilder
+  , vcidParser
+  , SCID(..)
+  , mkSCID
+  , scidBuilder
+  , scidParser
+  , MAPID
+  , mkMAPID
+  , getMAPID
+  , mapIDBuilder
+  , mapIDParser
+  , mapIDControl
+  , Flag
+  , toFlag
+  , fromFlag
+  , toBool
+  , Ready(..)
+  , Enable(..)
+  , OnOff(..)
+  , Initialized(..)
+  , Good(..)
+  , RequestID
+  , getRqstID
+  , mkRqstID
+  , TransmissionMode(..)
+  , transmissionModeBuilder
+  , transmissionModeParser
+  , PUSType
+  , mkPUSType
+  , PUSSubType
+  , mkPUSSubType
+  , pusTypeBuilder
+  , pusSubTypeBuilder
+  , pusTypeParser
+  , pusSubTypeParser
+  , SSC
+  , getSSC
+  , mkSSC
+  , nextSSC
+  , SourceID
+  , mkSourceID
+  , sourceIDBuilder
+  , sourceIDParser
+  , TMSegmentLen(..)
+  , tmSegmentLength
+  , SPID(..)
+  , PTC(..)
+  , PFC(..)
+  )
 where
 
 
 import           RIO                     hiding ( Builder )
-
+import qualified RIO.Text                      as T
 import           Codec.Serialise
 import           Data.Binary
 import           Data.Aeson
@@ -90,7 +90,7 @@ instance Binary VCID
 instance Serialise VCID
 instance FromJSON VCID
 instance ToJSON VCID where
-    toEncoding = genericToEncoding defaultOptions
+  toEncoding = genericToEncoding defaultOptions
 instance Hashable VCID
 
 -- | A buidler for the VCID
@@ -114,7 +114,7 @@ instance Binary SCID
 instance Serialise SCID
 instance FromJSON SCID
 instance ToJSON SCID where
-    toEncoding = genericToEncoding defaultOptions
+  toEncoding = genericToEncoding defaultOptions
 
 -- | Builder for the S/C ID
 scidBuilder :: SCID -> Builder
@@ -139,7 +139,7 @@ instance Binary MAPID
 instance Serialise MAPID
 instance FromJSON MAPID
 instance ToJSON MAPID where
-    toEncoding = genericToEncoding defaultOptions
+  toEncoding = genericToEncoding defaultOptions
 
 -- | Builder for the MAPDI
 mapIDBuilder :: MAPID -> Builder
@@ -175,7 +175,7 @@ newtype Flag a = MkFlag Bool
 instance Serialise (Flag a)
 instance FromJSON (Flag a)
 instance ToJSON (Flag a) where
-    toEncoding = genericToEncoding defaultOptions
+  toEncoding = genericToEncoding defaultOptions
 
 
 -- | Converts a type with the given Bool to a 'Flag'
@@ -202,7 +202,7 @@ instance Binary RequestID
 instance Serialise RequestID
 instance FromJSON RequestID
 instance ToJSON RequestID where
-    toEncoding = genericToEncoding defaultOptions
+  toEncoding = genericToEncoding defaultOptions
 
 
 -- | The Transmission Mode. Can be AD or BD
@@ -213,7 +213,7 @@ instance Binary TransmissionMode
 instance Serialise TransmissionMode
 instance FromJSON TransmissionMode
 instance ToJSON TransmissionMode where
-    toEncoding = genericToEncoding defaultOptions
+  toEncoding = genericToEncoding defaultOptions
 
 -- | Builder for the 'TransmissionMode'
 transmissionModeBuilder :: TransmissionMode -> Builder
@@ -223,10 +223,10 @@ transmissionModeBuilder BD = word8 1
 -- | Parser for the 'TransmissionMode'
 transmissionModeParser :: Parser TransmissionMode
 transmissionModeParser = do
-    val <- A.anyWord8
-    case val of
-        0 -> pure AD
-        _ -> pure BD
+  val <- A.anyWord8
+  case val of
+    0 -> pure AD
+    _ -> pure BD
 
 -- | PUS Packet Type
 newtype PUSType = PUSType Word8
@@ -238,7 +238,7 @@ mkPUSType = PUSType
 
 
 instance Display PUSType where
-    textDisplay (PUSType x) = sformat int x
+  textDisplay (PUSType x) = sformat int x
 
 
 -- | PUS Sub Type
@@ -250,7 +250,7 @@ mkPUSSubType :: Word8 -> PUSSubType
 mkPUSSubType = PUSSubType
 
 instance Display PUSSubType where
-    textDisplay (PUSSubType x) = sformat int x
+  textDisplay (PUSSubType x) = sformat int x
 
 
 -- | Builder for the 'PUSType'
@@ -275,13 +275,13 @@ instance Binary PUSType
 instance Serialise PUSType
 instance FromJSON PUSType
 instance ToJSON PUSType where
-    toEncoding = genericToEncoding defaultOptions
+  toEncoding = genericToEncoding defaultOptions
 
 instance Binary PUSSubType
 instance Serialise PUSSubType
 instance FromJSON PUSSubType
 instance ToJSON PUSSubType where
-    toEncoding = genericToEncoding defaultOptions
+  toEncoding = genericToEncoding defaultOptions
 
 
 -- | Type for the source sequence count
@@ -300,11 +300,11 @@ instance Binary SSC
 instance Serialise SSC
 instance FromJSON SSC
 instance ToJSON SSC where
-    toEncoding = genericToEncoding defaultOptions
+  toEncoding = genericToEncoding defaultOptions
 instance Hashable SSC
 
 instance Display SSC where
-    display (SSC x) = display x
+  display (SSC x) = display x
 
 newtype SourceID = SourceID { getSourceID :: Word8 }
     deriving (Eq, Ord, Show, Read, Generic)
@@ -316,7 +316,7 @@ instance Binary SourceID
 instance Serialise SourceID
 instance FromJSON SourceID
 instance ToJSON SourceID where
-    toEncoding = genericToEncoding defaultOptions
+  toEncoding = genericToEncoding defaultOptions
 instance NFData SourceID
 
 
@@ -341,7 +341,7 @@ instance Binary TMSegmentLen
 instance Serialise TMSegmentLen
 instance FromJSON TMSegmentLen
 instance ToJSON TMSegmentLen where
-    toEncoding = genericToEncoding defaultOptions
+  toEncoding = genericToEncoding defaultOptions
 
 
 -- | returns the length of the segment in bytes
@@ -356,10 +356,10 @@ tmSegmentLength TMSegment65536 = 65536
 newtype SPID = SPID Word32
     deriving (Eq, Ord, Show, Read, Generic)
 
-instance Serialise SPID 
+instance Serialise SPID
 instance FromJSON SPID
 instance ToJSON SPID where
-    toEncoding = genericToEncoding defaultOptions
+  toEncoding = genericToEncoding defaultOptions
 
 newtype PTC = PTC Int
     deriving (Eq, Ord, Num, Show, Read, Generic)
@@ -368,6 +368,9 @@ instance Serialise PTC
 instance FromJSON PTC
 instance ToJSON PTC where
   toEncoding = genericToEncoding defaultOptions
+
+instance Display PTC where
+  textDisplay = T.pack . show
 
 
 newtype PFC = PFC Int
@@ -378,3 +381,5 @@ instance FromJSON PFC
 instance ToJSON PFC where
   toEncoding = genericToEncoding defaultOptions
 
+instance Display PFC where
+  textDisplay = T.pack . show

@@ -11,26 +11,32 @@ import           Data.TM.TMParameterDef
 
 
 
-convertParameter :: PCFentry -> TMParameterDef
+convertParameter :: PCFentry -> Either Text TMParameterDef
 convertParameter PCFentry {..} = 
-    let result = TMParameterDef {
-        _fpName = _pcfName
-        , _fpDescription = _pcfDescr
-        , _fpPID = _pcfPID
-        , _fpUnit = _pcfUnit
-        , _fpType = ptcPfcToParamType (PTC _pcfPTC) (PFC _pcfPFC)
-        , _fpWidth = _pcfWidth
-        , _fpValid :: Maybe TMParameterDef
-        , _fpRelated :: Maybe TMParameterDef
-        , _fpCalibs :: [Calibration]
-        , _fpNatur :: !ParamNatur
-        , _fpInterpolation :: !InterpolationType
-        , _fpStatusConsistency :: !StatusConsistency
-        , _fpDecim :: !Int
-        , _fpDefaultVal :: !TMValue
-        , _fpSubsys :: !ShortText
-        , _fpValidityValue :: !TMValue
-        , _fpOBTID :: Maybe Int
-        , _fpEndian :: Endian
-        }
-    in result 
+    let 
+        calibs = []
+        corr = case _pcfCorr of 
+            DefaultToChar 'Y' -> Just True 
+            DefaultToChar 'N' -> Just False 
+    in runExceptT $ do 
+        typ <- except ptcPfcToParamType (PTC _pcfPTC) (PFC _pcfPFC) corr 
+        pure (TMParameterDef {
+            _fpName = _pcfName
+            , _fpDescription = _pcfDescr
+            , _fpPID = _pcfPID
+            , _fpUnit = _pcfUnit
+            , _fpType = typ
+            , _fpWidth = _pcfWidth
+            , _fpValid = Nothing 
+            , _fpRelated = Nothing
+            , _fpCalibs = calibs
+            , _fpNatur :: !ParamNatur
+            , _fpInterpolation :: !InterpolationType
+            , _fpStatusConsistency :: !StatusConsistency
+            , _fpDecim :: !Int
+            , _fpDefaultVal :: !TMValue
+            , _fpSubsys :: !ShortText
+            , _fpValidityValue :: !TMValue
+            , _fpOBTID :: Maybe Int
+            , _fpEndian :: Endian
+            })
