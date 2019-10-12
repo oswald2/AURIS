@@ -41,9 +41,10 @@
     , TemplateHaskell
 #-}
 module Data.MIB.MIB
-  ( MIB(..)
-  , mibCalibrations
-  )
+    ( MIB(..)
+    , mibCalibrations
+    , mibSyntheticParams
+    )
 where
 
 import           RIO
@@ -52,12 +53,13 @@ import           Control.Lens                   ( makeLenses )
 
 import           Data.Text.Short                ( ShortText )
 
-import Data.TM.Calibration
-
+import           Data.TM.Calibration
+import           Data.TM.Synthetic
 
 
 data MIB = MIB {
     _mibCalibrations :: HashMap ShortText Calibration
+    , _mibSyntheticParams :: HashMap ShortText Synthetic
     }
     deriving (Show, Generic)
 makeLenses ''MIB

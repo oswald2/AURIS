@@ -13,15 +13,24 @@
     , TemplateHaskell
 #-}
 module Data.TM.Calibration
-  ( Calibration(..)
-  )
+    ( Calibration(..)
+    , CritCalib(..)
+    , CalibContainer(..)
+    , ccRLChk
+    , ccValPar
+    , ccCalibration
+
+    )
 where
 
 import           RIO
 
-import           Control.Lens                   ( makePrisms )
+import           Control.Lens                   ( makeLenses
+                                                , makePrisms
+                                                )
 import           Codec.Serialise
 import           Data.Aeson
+import           Data.Text.Short
 
 import           Data.TM.CalibrationTypes
 import           Data.TM.NumericalCalibration
@@ -42,11 +51,38 @@ makePrisms ''Calibration
 instance Serialise Calibration
 instance FromJSON Calibration
 instance ToJSON Calibration where
-  toEncoding = genericToEncoding defaultOptions
+    toEncoding = genericToEncoding defaultOptions
 
 
 instance Calibrate Calibration where
-  calibrate (CalibNum  x) = calibrate x
-  calibrate (CalibText x) = calibrate x
-  calibrate (CalibPoly x) = calibrate x
-  calibrate (CalibLog  x) = calibrate x
+    calibrate (CalibNum  x) = calibrate x
+    calibrate (CalibText x) = calibrate x
+    calibrate (CalibPoly x) = calibrate x
+    calibrate (CalibLog  x) = calibrate x
+
+
+
+data CritCalib =
+    CritCalib {
+        _ccRLChk :: !ShortText
+        , _ccValPar :: !Int
+        , _ccCalibration :: Calibration
+    } deriving (Show, Generic)
+makeLenses ''CritCalib
+
+instance Serialise CritCalib
+instance FromJSON CritCalib
+instance ToJSON CritCalib where
+    toEncoding = genericToEncoding defaultOptions
+
+
+data CalibContainer =
+    CritNoCalib
+    | CritDirect Calibration
+    | Crit (Vector CritCalib)
+    deriving (Show, Generic)
+
+instance Serialise CalibContainer
+instance FromJSON CalibContainer
+instance ToJSON CalibContainer where
+    toEncoding = genericToEncoding defaultOptions

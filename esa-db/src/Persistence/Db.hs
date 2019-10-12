@@ -20,13 +20,13 @@ module Persistence.Db where
 import           Control.Monad.State
 
 import qualified Data.Text                       as T
-import           Data.Time
+--import           Data.Time
 
 import           Database.Selda
 import           Database.Selda.Backend
 import           Database.Selda.Backend.Internal
 import           Database.Selda.SQLite
-import           Database.Selda.SqlType
+--import           Database.Selda.SqlType
 
 import           Persistence.EventLog
 
@@ -52,10 +52,10 @@ instance SqlType LogLevel where
         y       -> LevelOther y
     defaultValue = customText "wtf"
 
-instance SqlRow EventLog 
+instance SqlRow EventLog
 
 eventLogTable :: Table EventLog
-eventLogTable = tableFieldMod "events_log" 
+eventLogTable = tableFieldMod "events_log"
     [   #logTime :- index]
     (T.drop $ T.length "log")
 

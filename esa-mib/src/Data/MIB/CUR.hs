@@ -26,7 +26,8 @@ data CURentry = CURentry {
     , _curSelect :: !ShortText
 } deriving (Eq, Show)
 
-
+instance Ord CURentry where
+    compare x1 x2 = compare (_curPos x1) (_curPos x2)
 
 
 

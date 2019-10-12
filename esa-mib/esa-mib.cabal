@@ -76,13 +76,53 @@ library
     Data.MIB.MIB
     Data.Conversion.Calibration
     Data.Conversion.Parameter
+    Data.Conversion.Criteria
 
   -- Modules included in this library but not exported.
   -- other-modules:
 
   -- LANGUAGE extensions used by modules in this package.
   -- other-extensions:
-
+  default-extensions:
+        AutoDeriveTypeable
+        BangPatterns
+        BinaryLiterals
+        ConstraintKinds
+        DataKinds
+        DefaultSignatures
+        DeriveDataTypeable
+        DeriveFoldable
+        DeriveFunctor
+        DeriveGeneric
+        DeriveTraversable
+        DoAndIfThenElse
+        EmptyDataDecls
+        ExistentialQuantification
+        FlexibleContexts
+        FlexibleInstances
+        FunctionalDependencies
+        GADTs
+        GeneralizedNewtypeDeriving
+        InstanceSigs
+        KindSignatures
+        LambdaCase
+        MonadFailDesugaring
+        MultiParamTypeClasses
+        MultiWayIf
+        NamedFieldPuns
+        NoImplicitPrelude
+        OverloadedStrings
+        PartialTypeSignatures
+        PatternGuards
+        PolyKinds
+        RankNTypes
+        RecordWildCards
+        ScopedTypeVariables
+        StandaloneDeriving
+        TupleSections
+        TypeFamilies
+        TypeSynonymInstances
+        ViewPatterns
   -- Other library packages from which modules are imported.
   build-depends:       base >=4.12 && <4.13
     , binary
@@ -104,7 +144,8 @@ library
     , esa-base
     , esa-tm-model
     , text-short
-    , transformers
+    , mtl
+
   -- Directories containing source files.
   hs-source-dirs:      src
 

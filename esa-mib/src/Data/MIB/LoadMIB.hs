@@ -40,16 +40,20 @@
     , ViewPatterns
 #-}
 module Data.MIB.LoadMIB
-  ( loadMIB
-  )
+    ( loadMIB
+    )
 where
 
 
 import           RIO
 import qualified RIO.Vector                    as V
 import qualified RIO.HashMap                   as HM
+import qualified RIO.Text                      as T
+import           RIO.Directory
+import           RIO.FilePath
+import           RIO.List                       ( intersperse )
 
-import           Control.Monad.Trans.Except
+import           Control.Monad.Except
 
 import           Data.Either
 import           Data.Text.Short                ( ShortText )
@@ -67,6 +71,7 @@ import           Data.TM.NumericalCalibration
 import           Data.TM.PolynomialCalibration
 import           Data.TM.LogarithmicCalibration
 import           Data.TM.TextualCalibration
+import           Data.TM.Synthetic
 
 import           Data.Conversion.Calibration
 
@@ -76,64 +81,109 @@ import           Data.Conversion.Calibration
 
 -- | load the whole MIB into a data structure
 loadMIB
-  :: (MonadIO m, MonadReader env m, HasLogFunc env)
-  => FilePath
-  -> m (Either Text MIB)
+    :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env)
+    => FilePath
+    -> m (Either Text MIB)
 loadMIB mibPath = do
-  runExceptT $ do
-    calibs <- loadCalibs mibPath
+    syns' <- loadSyntheticParameters mibPath
+    case syns' of
+        Left  err  -> return (Left err)
+        Right syns -> runExceptT $ do
+            calibs <- loadCalibs mibPath
+            let mib = MIB { _mibCalibrations    = fromRight HM.empty calibs
+                          , _mibSyntheticParams = syns
+                          }
+            return mib
 
-    let mib = MIB { _mibCalibrations = fromRight HM.empty calibs }
-    return mib
 
-
--- | load all calibrations and return either an error or a 
--- 'HashMap' containing all the 'Calibration's. 
+-- | load all calibrations and return either an error or a
+-- 'HashMap' containing all the 'Calibration's.
 loadCalibs
-  :: (MonadIO m, MonadReader env m, HasLogFunc env)
-  => FilePath
-  -> m (Either Text (HashMap ShortText Calibration))
+    :: (MonadIO m, MonadReader env m, HasLogFunc env)
+    => FilePath
+    -> m (Either Text (HashMap ShortText Calibration))
 loadCalibs mibPath = do
-  runExceptT $ do
-      -- load calibrations
-    !cafs <- CAF.loadFromFile mibPath
-    !caps <- CAP.loadFromFile mibPath
-    !mcfs <- MCF.loadFromFile mibPath
-    !lgfs <- LGF.loadFromFile mibPath
-    !txps <- TXP.loadFromFile mibPath
-    !txfs <- TXF.loadFromFile mibPath
+    runExceptT $ do
+        -- load calibrations
+        !cafs <- CAF.loadFromFile mibPath
+        !caps <- CAP.loadFromFile mibPath
+        !mcfs <- MCF.loadFromFile mibPath
+        !lgfs <- LGF.loadFromFile mibPath
+        !txps <- TXP.loadFromFile mibPath
+        !txfs <- TXF.loadFromFile mibPath
 
-    let caf = fromRight V.empty cafs
-        cap = fromRight V.empty caps
-        mcf = fromRight V.empty mcfs
-        lgf = fromRight V.empty lgfs
-        txp = fromRight V.empty txps
-        txf = fromRight V.empty txfs
+        let caf = fromRight V.empty cafs
+            cap = fromRight V.empty caps
+            mcf = fromRight V.empty mcfs
+            lgf = fromRight V.empty lgfs
+            txp = fromRight V.empty txps
+            txf = fromRight V.empty txfs
 
 
-    numCalibs' <- except $ traverse (`convertNumCalib` cap) caf
-    let !numCalibs =
-          HM.fromList
-            . map (\x -> (_calibNName x, CalibNum x))
-            . toList
-            $ numCalibs'
+        numCalibs' <- liftEither $ traverse (`convertNumCalib` cap) caf
+        let !numCalibs =
+                HM.fromList
+                    . map (\x -> (_calibNName x, CalibNum x))
+                    . toList
+                    $ numCalibs'
 
-    polyCalibs' <- except $ traverse convertPolyCalib mcf
-    let !polyCalibs = V.foldl'
-          (\hm x -> HM.insert (_calibPName x) (CalibPoly x) hm)
-          numCalibs
-          polyCalibs'
+        polyCalibs' <- liftEither $ traverse convertPolyCalib mcf
+        let !polyCalibs = V.foldl'
+                (\hm x -> HM.insert (_calibPName x) (CalibPoly x) hm)
+                numCalibs
+                polyCalibs'
 
-    logCalibs' <- except $ traverse convertLogCalib lgf
-    let !logCalibs = V.foldl'
-          (\hm x -> HM.insert (_calibLName x) (CalibLog x) hm)
-          polyCalibs
-          logCalibs'
+        logCalibs' <- liftEither $ traverse convertLogCalib lgf
+        let !logCalibs = V.foldl'
+                (\hm x -> HM.insert (_calibLName x) (CalibLog x) hm)
+                polyCalibs
+                logCalibs'
 
-    textCalibs' <- except $ traverse (`convertTextCalib` txp) txf
-    let !textCalibs = V.foldl'
-          (\hm x -> HM.insert (_calibTName x) (CalibText x) hm)
-          logCalibs
-          textCalibs'
+        textCalibs' <- liftEither $ traverse (`convertTextCalib` txp) txf
+        let !textCalibs = V.foldl'
+                (\hm x -> HM.insert (_calibTName x) (CalibText x) hm)
+                logCalibs
+                textCalibs'
 
-    return textCalibs
+        return textCalibs
+
+
+loadSyntheticParameters
+    :: (MonadUnliftIO m)
+    => FilePath
+    -> m (Either Text (HashMap ShortText Synthetic))
+loadSyntheticParameters path = do
+    handleIO
+            (\exc -> return
+                (Left
+                    (  "Error reading synthetic parameters: "
+                    <> T.pack (displayException exc)
+                    )
+                )
+            )
+        $   doesDirectoryExist path
+        >>= \x -> if not x
+                then
+                    do
+                        pure
+                    $  Left
+                    $  "Could not read synthetic parameters: directory '"
+                    <> T.pack path
+                    <> "' does not exist"
+                else do
+                    files <- listDirectory path >>= filterM doesFileExist
+                    ols   <- forM (map (path </>) files) parseOL
+                    if all isRight ols
+                        then do
+                            let syn = zipWith f files (rights ols)
+                                f p ol = (fromString p, ol)
+                                !hm = HM.fromList syn
+                            return (Right hm)
+                        else
+                            do
+                                return
+                            $  Left
+                            $  T.concat
+                            $  ["Error parsing synthetic parameters: " :: Text]
+                            <> intersperse "\n" (lefts ols)
+

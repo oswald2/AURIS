@@ -74,6 +74,7 @@ library
     Data.TM.TMParameterDef
     Data.TM.TMPacketDef
     Data.TM.PIVals
+    Data.TM.Synthetic
 
   -- Modules included in this library but not exported.
   -- other-modules:
@@ -142,6 +143,7 @@ library
     , attoparsec
     , attoparsec-binary
     , base64-bytestring-type
+    , mtl
 
   -- Directories containing source files.
   hs-source-dirs:      src

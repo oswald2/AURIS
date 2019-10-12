@@ -290,14 +290,14 @@ class FromDouble a where
 
 instance Serialise ShortText where
     encode = Codec.Serialise.encode . toText
-    decode = fromText <$> Codec.Serialise.decode 
+    decode = fromText <$> Codec.Serialise.decode
 
-instance FromJSON ShortText where 
+instance FromJSON ShortText where
     parseJSON = withText "ShortText" $ pure . fromText
 
-instance ToJSON ShortText where 
+instance ToJSON ShortText where
     toJSON = String . toText
     {-# INLINE toJSON #-}
-    
+
     toEncoding = E.text . toText
     {-# INLINE toEncoding #-}

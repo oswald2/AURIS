@@ -49,15 +49,14 @@ import           ByteString.StrictBuilder
 import           Codec.Serialise
 
 import           Data.PUS.EncTime
-import           General.Time
-
-import           Data.MIB.Types
 
 import           Protocol.SizeOf
 
 import           General.Padding
 import           General.Hexdump
 import           General.Types
+import           General.PUSTypes
+import           General.Time
 import           General.SetBitField
 import           General.GetBitField
 
@@ -426,29 +425,36 @@ setAlignedValue _   _    _              = pure ()
 
 {-# INLINABLE getAlignedValue #-}
 getAlignedValue :: ByteString -> ByteOffset -> Value -> Value
-getAlignedValue byts off ValInt8 {} = ValInt8 $ getValue byts off BiE
-getAlignedValue byts off (ValInt16 b _) = ValInt16 b $ getValue byts off b
+getAlignedValue byts off ValInt8{}       = ValInt8 $ getValue byts off BiE
+getAlignedValue byts off (ValInt16  b _) = ValInt16 b $ getValue byts off b
 getAlignedValue byts off (ValDouble b _) = ValDouble b $ getValue byts off b
-getAlignedValue byts off (ValString _) = ValString $ getValueOctet byts off
-getAlignedValue byts off (ValFixedString len _) = ValFixedString len $ getValueOctetLen byts off (fromIntegral len)
+getAlignedValue byts off (ValString _  ) = ValString $ getValueOctet byts off
+getAlignedValue byts off (ValFixedString len _) =
+    ValFixedString len $ getValueOctetLen byts off (fromIntegral len)
 getAlignedValue byts off (ValOctet _) = ValOctet $ getValueOctet byts off
-getAlignedValue byts off (ValFixedOctet len _) = ValFixedOctet len $ getValueOctetLen byts off (fromIntegral len)
-getAlignedValue byts off (ValCUCTime (CUCTime _ _ delta)) = ValCUCTime $ cucTimeSetDelta (getValue byts off BiE) delta
+getAlignedValue byts off (ValFixedOctet len _) =
+    ValFixedOctet len $ getValueOctetLen byts off (fromIntegral len)
+getAlignedValue byts off (ValCUCTime (CUCTime _ _ delta)) =
+    ValCUCTime $ cucTimeSetDelta (getValue byts off BiE) delta
 getAlignedValue _ _ _ = ValUndefined
 
 
 {-# INLINABLE getUnalignedValue #-}
 getUnalignedValue :: ByteString -> Offset -> Value -> Value
-getUnalignedValue byts off ValUInt3 {} = ValUInt3 (fromIntegral (getBitField byts off (BitSize 3) BiE))
-getUnalignedValue byts off ValInt8 {} = ValInt8 (fromIntegral (getBitFieldInt byts off (BitSize 8) BiE))
-getUnalignedValue byts off (ValInt16 b _) = ValInt16 b (fromIntegral (getBitFieldInt byts off (BitSize 16) b))
-getUnalignedValue byts off (ValDouble b _) = ValDouble b (getBitFieldDouble byts off b)
+getUnalignedValue byts off ValUInt3{} =
+    ValUInt3 (fromIntegral (getBitField byts off (BitSize 3) BiE))
+getUnalignedValue byts off ValInt8{} =
+    ValInt8 (fromIntegral (getBitFieldInt byts off (BitSize 8) BiE))
+getUnalignedValue byts off (ValInt16 b _) =
+    ValInt16 b (fromIntegral (getBitFieldInt byts off (BitSize 16) b))
+getUnalignedValue byts off (ValDouble b _) =
+    ValDouble b (getBitFieldDouble byts off b)
 getUnalignedValue _ _ _ = ValUndefined
 
 {-# INLINABLE isGettableUnaligned #-}
 isGettableUnaligned :: Value -> Bool
-isGettableUnaligned ValUInt3 {} = True
-isGettableUnaligned ValInt8 {} = True
-isGettableUnaligned ValInt16 {} = True
-isGettableUnaligned ValDouble {} = True
-isGettableUnaligned _ = False
+isGettableUnaligned ValUInt3{}  = True
+isGettableUnaligned ValInt8{}   = True
+isGettableUnaligned ValInt16{}  = True
+isGettableUnaligned ValDouble{} = True
+isGettableUnaligned _           = False

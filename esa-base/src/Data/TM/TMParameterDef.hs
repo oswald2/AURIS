@@ -135,9 +135,9 @@ ptcPfcToParamType (PTC 9) (PFC 17) Nothing = Right $ ParamTime CUC4Coarse2Fine C
 ptcPfcToParamType (PTC 9) (PFC 17) (Just True) = Right $ ParamTime CUC4Coarse2Fine CorrelationYes
 ptcPfcToParamType (PTC 9) (PFC 17) (Just False) = Right $ ParamTime CUC4Coarse2Fine CorrelationNo
 ptcPfcToParamType (PTC 10) (PFC 17) _ = Right $ ParamTime CUC4Coarse2Fine CorrelationNo
-ptcPfcToParamType (PTC 11) (PFC 0) _ = Right $ ParamDeduced Nothing 
+ptcPfcToParamType (PTC 11) (PFC 0) _ = Right $ ParamDeduced Nothing
 ptcPfcToParamType (PTC 11) (PFC x) _ = Right $ ParamDeduced (Just x)
-ptcPfcToParamType (PTC 13) (PFC 0) _ = Right $ ParamSavedSynthetic 
+ptcPfcToParamType (PTC 13) (PFC 0) _ = Right $ ParamSavedSynthetic
 ptcPfcToParamType ptc pfc _ = Left $ "Unsupported: " <> textDisplay ptc <> " " <> textDisplay pfc
 
 
@@ -199,7 +199,7 @@ data TMParameterDef = TMParameterDef {
     , _fpWidth :: Maybe Word32
     , _fpValid :: Maybe TMParameterDef
     , _fpRelated :: Maybe TMParameterDef
-    , _fpCalibs :: [Calibration]
+    , _fpCalibs :: CalibContainer
     , _fpNatur :: !ParamNatur
     , _fpInterpolation :: !InterpolationType
     , _fpStatusConsistency :: !StatusConsistency

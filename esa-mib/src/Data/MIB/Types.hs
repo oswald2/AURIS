@@ -25,8 +25,8 @@ where
 import           RIO
 import           Data.Hashable
 
-import           Data.Aeson                    as A
-import           Codec.Serialise
+-- import           Data.Aeson                    as A
+-- import           Codec.Serialise
 import           Data.Csv
 import           Data.Text.Short (ShortText)
 import qualified Data.Text.Short as ST

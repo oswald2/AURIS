@@ -40,15 +40,15 @@ import           Data.TM.PolynomialCalibration
 import           Data.TM.LogarithmicCalibration
 import           Data.TM.TextualCalibration
 
-import           Control.Monad.Trans.Except
+import           Control.Monad.Except
 
 
 
 
--- | Convert from MIB structure to a TM model structure. In this case 
--- the standard numerical calibration is converted. 
+-- | Convert from MIB structure to a TM model structure. In this case
+-- the standard numerical calibration is converted.
 -- In case there is an error in the conversion, a 'Left' error message
--- is provided. 
+-- is provided.
 convertNumCalib
   :: CAFentry -> Vector CAPentry -> Either Text NumericalCalibration
 convertNumCalib CAFentry {..} caps =
@@ -113,8 +113,8 @@ convertTextCalib TXFentry {..} vec =
     let v1 = map chk . filter f $ V.toList vec
         f x = _txpNumbr x == _txfNumbr
         chk TXPentry {..} = runExcept $ do
-          from <- except $ parseShortTextToInt64 rawFmt Decimal _txpFrom
-          to'  <- except $ parseShortTextToInt64 rawFmt Decimal _txpTo
+          from <- liftEither $ parseShortTextToInt64 rawFmt Decimal _txpFrom
+          to'  <- liftEither $ parseShortTextToInt64 rawFmt Decimal _txpTo
           pure (TextCalibPoint from to' _txpAlTxt)
     in  v1
 
@@ -126,7 +126,7 @@ convertPolyCalib :: MCFentry -> Either Text PolynomialCalibration
 convertPolyCalib MCFentry {..} = case conv of
   Left err ->
     Left $ "Conversion to PolynomialCalibration " <> toText _mcfIdent <> err
-  Right (a0, a1, a2, a3, a4) -> Right $ PolynomialCalibration
+  Right (a0, a1, a2, a3, a4) -> Right PolynomialCalibration
     { _calibPName  = _mcfIdent
     , _calibPDescr = _mcfDescr
     , _pa0         = a0
@@ -136,7 +136,7 @@ convertPolyCalib MCFentry {..} = case conv of
     , _pa4         = a4
     }
  where
-  f    = except . parseShortTextToDouble NumDouble Decimal . getDefaultShortText
+  f    = liftEither . parseShortTextToDouble NumDouble Decimal . getDefaultShortText
   conv = runExcept $ do
     a0 <- f _mcfPol1
     a1 <- f _mcfPol2
@@ -153,7 +153,7 @@ convertLogCalib :: LGFentry -> Either Text LogarithmicCalibration
 convertLogCalib LGFentry {..} = case conv of
   Left err ->
     Left $ "Conversion to LogarithmicCalibration " <> toText _lgfIdent <> err
-  Right (a0, a1, a2, a3, a4) -> Right $ LogarithmicCalibration
+  Right (a0, a1, a2, a3, a4) -> Right LogarithmicCalibration
     { _calibLName  = _lgfIdent
     , _calibLDescr = _lgfDescr
     , _la0         = a0
@@ -163,7 +163,7 @@ convertLogCalib LGFentry {..} = case conv of
     , _la4         = a4
     }
  where
-  f    = except . parseShortTextToDouble NumDouble Decimal . getDefaultShortText
+  f    = liftEither . parseShortTextToDouble NumDouble Decimal . getDefaultShortText
   conv = runExcept $ do
     a0 <- f _lgfPol1
     a1 <- f _lgfPol2
