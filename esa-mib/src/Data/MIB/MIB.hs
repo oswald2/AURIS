@@ -44,6 +44,7 @@ module Data.MIB.MIB
     ( MIB(..)
     , mibCalibrations
     , mibSyntheticParams
+    , mibParameters
     )
 where
 
@@ -55,11 +56,13 @@ import           Data.Text.Short                ( ShortText )
 
 import           Data.TM.Calibration
 import           Data.TM.Synthetic
+import           Data.TM.TMParameterDef
 
 
 data MIB = MIB {
     _mibCalibrations :: HashMap ShortText Calibration
     , _mibSyntheticParams :: HashMap ShortText Synthetic
+    , _mibParameters :: HashMap ShortText TMParameterDef
     }
     deriving (Show, Generic)
 makeLenses ''MIB

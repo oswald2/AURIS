@@ -31,7 +31,6 @@ resolver: lts-14.4
 packages:
 - .
 - ../esa-base
-- ../esa-tm-model
 
 
 # Dependency packages to be pulled from upstream that are not in the resolver.

@@ -1,8 +1,3 @@
-{-# LANGUAGE
-    OverloadedStrings
-    , BangPatterns
-    , NoImplicitPrelude
-#-}
 module Data.MIB.CAF
   ( CAFentry(..)
   , loadFromFile
@@ -17,6 +12,7 @@ import           Data.Text.Short                ( ShortText )
 import           Data.Csv
 
 import           Data.MIB.Load
+import Data.MIB.Types
 
 
 data CAFentry = CAFentry {
@@ -27,7 +23,7 @@ data CAFentry = CAFentry {
     , _cafRadix :: !Char
     , _cafUnit :: !ShortText
     , _cafNCurve :: !Int
-    , _cafInter :: !Char
+    , _cafInter :: CharDefaultTo "F"
 } deriving (Eq, Show)
 
 
@@ -54,7 +50,24 @@ instance FromRecord CAFentry where
       .!  6
       <*> v
       .!  7
-    | otherwise
+      | V.length v == 7
+      = CAFentry
+        <$> v
+        .!  0
+        <*> v
+        .!  1
+        <*> v
+        .!  2
+        <*> v
+        .!  3
+        <*> v
+        .!  4
+        <*> v
+        .!  5
+        <*> v
+        .!  6
+        <*> pure (CharDefaultTo 'F')
+      | otherwise
     = mzero
 
 

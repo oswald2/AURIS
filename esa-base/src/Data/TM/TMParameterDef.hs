@@ -12,12 +12,14 @@
     , ExistentialQuantification
 #-}
 module Data.TM.TMParameterDef
-  ( DoubleType(..)
-  , TimeType(..)
-  , ParamType(..)
-  , TMParameterDef(..)
-  , ptcPfcToParamType
-  )
+    ( DoubleType(..)
+    , TimeType(..)
+    , ParamType(..)
+    , ParamNatur(..)
+    , TMParameterDef(..)
+    , ptcPfcToParamType
+    , charToStatusConsistency
+    )
 where
 
 
@@ -29,6 +31,8 @@ import           Data.Aeson
 
 import           Data.TM.Value
 import           Data.TM.Calibration
+import           Data.TM.CalibrationTypes
+import           Data.TM.Synthetic
 
 import           General.Types
 import           General.PUSTypes
@@ -44,7 +48,7 @@ data DoubleType =
 instance Serialise DoubleType
 instance FromJSON DoubleType
 instance ToJSON DoubleType where
-  toEncoding = genericToEncoding defaultOptions
+    toEncoding = genericToEncoding defaultOptions
 
 
 data TimeType =
@@ -56,7 +60,7 @@ data TimeType =
 instance Serialise TimeType
 instance FromJSON TimeType
 instance ToJSON TimeType where
-  toEncoding = genericToEncoding defaultOptions
+    toEncoding = genericToEncoding defaultOptions
 
 data CorrelationType = CorrelationYes | CorrelationNo
     deriving (Eq, Ord, Enum, Bounded, Show, Generic)
@@ -64,7 +68,7 @@ data CorrelationType = CorrelationYes | CorrelationNo
 instance Serialise CorrelationType
 instance FromJSON CorrelationType
 instance ToJSON CorrelationType where
-  toEncoding = genericToEncoding defaultOptions
+    toEncoding = genericToEncoding defaultOptions
 
 data ParamType =
     ParamInteger Int
@@ -118,34 +122,38 @@ ptcPfcToParamType (PTC 5) (PFC 1 ) _ = Right $ ParamDouble DTFloat
 ptcPfcToParamType (PTC 5) (PFC 2 ) _ = Right $ ParamDouble DTDouble
 ptcPfcToParamType (PTC 5) (PFC 3 ) _ = Right $ ParamDouble DTMilSingle
 ptcPfcToParamType (PTC 5) (PFC 4 ) _ = Right $ ParamDouble DTMMilExtended
-ptcPfcToParamType (PTC 6) (PFC 0 ) _ = Left $ "Variable bit string not supported"
+ptcPfcToParamType (PTC 6) (PFC 0 ) _ = Left "Variable bit string not supported"
 ptcPfcToParamType (PTC 6) (PFC x ) _ = Right $ ParamUInteger x
 ptcPfcToParamType (PTC 7) (PFC 0 ) _ = Right $ ParamOctet Nothing
 ptcPfcToParamType (PTC 7) (PFC x ) _ = Right $ ParamOctet (Just x)
 ptcPfcToParamType (PTC 8) (PFC 0 ) _ = Right $ ParamString Nothing
 ptcPfcToParamType (PTC 8) (PFC x ) _ = Right $ ParamString (Just x)
-ptcPfcToParamType (PTC 9) (PFC 0 ) _ = Left $ "PTC=9 PFC=0 not supported"
-ptcPfcToParamType (PTC 9) (PFC 1 ) Nothing = Right $ ParamTime CDS6 CorrelationYes
-ptcPfcToParamType (PTC 9) (PFC 1 ) (Just True) = Right $ ParamTime CDS6 CorrelationYes
-ptcPfcToParamType (PTC 9) (PFC 1 ) (Just False) = Right $ ParamTime CDS6 CorrelationNo
-ptcPfcToParamType (PTC 9) (PFC 2 ) Nothing = Right $ ParamTime CDS8 CorrelationYes
-ptcPfcToParamType (PTC 9) (PFC 2 ) (Just True) = Right $ ParamTime CDS8 CorrelationYes
-ptcPfcToParamType (PTC 9) (PFC 2 ) (Just False) = Right $ ParamTime CDS8 CorrelationNo
-ptcPfcToParamType (PTC 9) (PFC 17) Nothing = Right $ ParamTime CUC4Coarse2Fine CorrelationYes
-ptcPfcToParamType (PTC 9) (PFC 17) (Just True) = Right $ ParamTime CUC4Coarse2Fine CorrelationYes
-ptcPfcToParamType (PTC 9) (PFC 17) (Just False) = Right $ ParamTime CUC4Coarse2Fine CorrelationNo
-ptcPfcToParamType (PTC 10) (PFC 17) _ = Right $ ParamTime CUC4Coarse2Fine CorrelationNo
+ptcPfcToParamType (PTC 9) (PFC 0 ) _ = Left "PTC=9 PFC=0 not supported"
+ptcPfcToParamType (PTC 9) (PFC 1) Nothing =
+    Right $ ParamTime CDS6 CorrelationYes
+ptcPfcToParamType (PTC 9) (PFC 1) (Just True) =
+    Right $ ParamTime CDS6 CorrelationYes
+ptcPfcToParamType (PTC 9) (PFC 1) (Just False) =
+    Right $ ParamTime CDS6 CorrelationNo
+ptcPfcToParamType (PTC 9) (PFC 2) Nothing =
+    Right $ ParamTime CDS8 CorrelationYes
+ptcPfcToParamType (PTC 9) (PFC 2) (Just True) =
+    Right $ ParamTime CDS8 CorrelationYes
+ptcPfcToParamType (PTC 9) (PFC 2) (Just False) =
+    Right $ ParamTime CDS8 CorrelationNo
+ptcPfcToParamType (PTC 9) (PFC 17) Nothing =
+    Right $ ParamTime CUC4Coarse2Fine CorrelationYes
+ptcPfcToParamType (PTC 9) (PFC 17) (Just True) =
+    Right $ ParamTime CUC4Coarse2Fine CorrelationYes
+ptcPfcToParamType (PTC 9) (PFC 17) (Just False) =
+    Right $ ParamTime CUC4Coarse2Fine CorrelationNo
+ptcPfcToParamType (PTC 10) (PFC 17) _ =
+    Right $ ParamTime CUC4Coarse2Fine CorrelationNo
 ptcPfcToParamType (PTC 11) (PFC 0) _ = Right $ ParamDeduced Nothing
 ptcPfcToParamType (PTC 11) (PFC x) _ = Right $ ParamDeduced (Just x)
 ptcPfcToParamType (PTC 13) (PFC 0) _ = Right $ ParamSavedSynthetic
-ptcPfcToParamType ptc pfc _ = Left $ "Unsupported: " <> textDisplay ptc <> " " <> textDisplay pfc
-
-
-
-
-
-
-
+ptcPfcToParamType ptc pfc _ =
+    Left $ "Unsupported: " <> textDisplay ptc <> " " <> textDisplay pfc
 
 
 
@@ -153,41 +161,33 @@ ptcPfcToParamType ptc pfc _ = Left $ "Unsupported: " <> textDisplay ptc <> " " <
 instance Serialise ParamType
 instance FromJSON ParamType
 instance ToJSON ParamType where
-  toEncoding = genericToEncoding defaultOptions
+    toEncoding = genericToEncoding defaultOptions
 
 
 data ParamNatur =
     NaturRaw
-    | NaturSynthetic { _pnScript :: Text }
+    | NaturSynthetic { _pnSynth :: Synthetic }
     | NaturConstant
     deriving (Show, Generic)
 
 instance Serialise ParamNatur
 instance FromJSON ParamNatur
 instance ToJSON ParamNatur where
-  toEncoding = genericToEncoding defaultOptions
-
-
-
-
-data InterpolationType =
-    InterInterpolation
-    | InterInvalid
-    deriving (Show, Generic)
-
-instance Serialise InterpolationType
-instance FromJSON InterpolationType
-instance ToJSON InterpolationType where
-  toEncoding = genericToEncoding defaultOptions
+    toEncoding = genericToEncoding defaultOptions
 
 
 data StatusConsistency = SCCOn | SCCOff
     deriving (Eq, Ord, Enum, Bounded, Show, Generic)
 
+charToStatusConsistency :: Char -> StatusConsistency
+charToStatusConsistency 'Y' = SCCOn
+charToStatusConsistency _   = SCCOff
+
+
 instance Serialise StatusConsistency
 instance FromJSON StatusConsistency
 instance ToJSON StatusConsistency where
-  toEncoding = genericToEncoding defaultOptions
+    toEncoding = genericToEncoding defaultOptions
 
 
 data TMParameterDef = TMParameterDef {
@@ -201,7 +201,7 @@ data TMParameterDef = TMParameterDef {
     , _fpRelated :: Maybe TMParameterDef
     , _fpCalibs :: CalibContainer
     , _fpNatur :: !ParamNatur
-    , _fpInterpolation :: !InterpolationType
+    , _fpInterpolation :: !CalibInterpolation
     , _fpStatusConsistency :: !StatusConsistency
     , _fpDecim :: !Int
     , _fpDefaultVal :: !TMValue
@@ -215,5 +215,5 @@ data TMParameterDef = TMParameterDef {
 instance Serialise TMParameterDef
 instance FromJSON TMParameterDef
 instance ToJSON TMParameterDef where
-  toEncoding = genericToEncoding defaultOptions
+    toEncoding = genericToEncoding defaultOptions
 

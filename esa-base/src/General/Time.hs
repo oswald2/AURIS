@@ -35,6 +35,7 @@ module General.Time
   , DeltaTime(..)
   , edenTime
   , fromText
+  , sunTimeParser
   , (<+>)
   , (<->)
   , addTimes
@@ -420,15 +421,15 @@ edenTime (SunTime t _) =
 -- | parses a 'Text' and returns a 'SunTime' time. The format is standard SCOS
 -- | format YYY.DDD.hh.mm.ss.mmmmmm
 fromText :: Text -> Either Text SunTime
-fromText str = case parse timeStr "" str of
+fromText str = case parse sunTimeParser "" str of
   Left  err -> Left (T.pack (show err))
   Right x   -> Right x
 
 
 
 -- | the time parser
-timeStr :: Parser SunTime
-timeStr = do
+sunTimeParser :: Parser SunTime
+sunTimeParser = do
   Text.Megaparsec.Char.space
   -- option 0 sign
   sign <- optional
@@ -591,7 +592,7 @@ newtype LeapSeconds = LeapSeconds { fromLeaps :: Int }
 
 instance Serialise LeapSeconds
 instance FromJSON LeapSeconds
-instance ToJSON LeapSeconds where 
+instance ToJSON LeapSeconds where
     toEncoding = genericToEncoding defaultOptions
 
 
