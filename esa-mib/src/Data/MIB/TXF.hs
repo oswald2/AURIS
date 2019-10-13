@@ -23,7 +23,7 @@ data TXFentry = TXFentry {
     _txfNumbr :: !ShortText
     , _txfDescr :: !ShortText
     , _txfRawFmt :: !Char
-    , _txfNAlias :: !Int
+    , _txfNAlias :: Maybe Int
 } deriving (Eq, Show)
 
 

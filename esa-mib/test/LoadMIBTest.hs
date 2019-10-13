@@ -12,6 +12,11 @@ import           Data.MIB.CAF                  as CAF
 import           Data.MIB.CAP                  as CAP
 import           Data.MIB.MCF                  as MCF
 import           Data.MIB.LGF                  as LGF
+import           Data.MIB.TXF                  as TXF
+import           Data.MIB.TXP                  as TXP
+import           Data.MIB.CUR                  as CUR 
+import           Data.MIB.PCF                  as PCF
+
 
 import           Test.Hspec
 import           Text.Show.Pretty
@@ -36,12 +41,26 @@ testMcf = testLoadTab MCF.loadFromFile
 testLgf :: FilePath -> IO ()
 testLgf = testLoadTab LGF.loadFromFile
 
+testTxp :: FilePath -> IO ()
+testTxp = testLoadTab TXP.loadFromFile
+
+testTxf :: FilePath -> IO ()
+testTxf = testLoadTab TXF.loadFromFile
+
+testCur :: FilePath -> IO ()
+testCur = testLoadTab CUR.loadFromFile
+
+testPcf :: FilePath -> IO ()
+testPcf = testLoadTab PCF.loadFromFile
+
 
 testLoadTab :: Show b => (FilePath -> RIO TestState (Either Text (Vector b))) -> FilePath-> IO ()
 testLoadTab action mibPath = do
     elems <- runRIOTestAction (action mibPath)
     case elems of
-        Left  err -> T.putStrLn err
+        Left  err -> do 
+            T.putStrLn err
+            exitFailure
         Right c   -> do
             pPrint c
             T.putStrLn $ "Count: " <> T.pack (show (V.length c))
@@ -57,19 +76,40 @@ runRIOTestAction action = do
         runRIO state action
 
 
+testLoadCalibs :: FilePath -> IO () 
+testLoadCalibs mibPath = do 
+    res <- runRIOTestAction (loadCalibs mibPath)
+    case res of 
+        Left err -> do 
+            T.putStrLn err 
+            exitFailure 
+        Right r -> pPrint r
+
 
 
 main :: IO ()
 main = do
     [mibPath] <- getArgs
 
-    T.putStrLn "Loading Tables:\n===============\n"
-    T.putStrLn "CAFs:\n"
-    testCaf mibPath
-    T.putStrLn "\n\n\nCAPs:\n"
-    testCap mibPath
-    T.putStrLn "\n\n\nMCFs:\n"
-    testMcf mibPath
-    T.putStrLn "\n\n\nLGFs:\n"
-    testLgf mibPath
+    -- T.putStrLn "Loading Tables:\n===============\n"
+    -- T.putStrLn "CAFs:\n"
+    -- testCaf mibPath
+    -- T.putStrLn "\n\n\nCAPs:\n"
+    -- testCap mibPath
+    -- T.putStrLn "\n\n\nMCFs:\n"
+    -- testMcf mibPath
+    -- T.putStrLn "\n\n\nLGFs:\n"
+    -- testLgf mibPath
+    -- T.putStrLn "\n\n\nTXFs:\n"
+    -- testTxf mibPath
+    -- T.putStrLn "\n\n\nTXPs:\n"
+    -- testTxp mibPath
+    -- T.putStrLn "\n\n\nCURs:\n"
+    -- testCur mibPath
+    -- T.putStrLn "\n\n\nPCFs:\n"
+    -- testPcf mibPath
+
+    T.putStrLn "\n\n\nLoading Data Structures:\n===============\n"
+    T.putStrLn "LoadCalibs:\n"
+    testLoadCalibs mibPath 
 

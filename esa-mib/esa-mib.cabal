@@ -142,7 +142,6 @@ library
     , directory
     , lens
     , esa-base
-    , esa-tm-model
     , text-short
     , mtl
 

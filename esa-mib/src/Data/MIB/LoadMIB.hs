@@ -41,6 +41,8 @@
 #-}
 module Data.MIB.LoadMIB
     ( loadMIB
+    , loadCalibs
+    , loadSyntheticParameters
     )
 where
 

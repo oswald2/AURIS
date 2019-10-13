@@ -55,7 +55,7 @@ import           General.Types
 data PCFentry = PCFentry {
     _pcfName :: !ShortText,
     _pcfDescr :: !ShortText,
-    _pcfPID :: !Word32,
+    _pcfPID :: Maybe Word32,
     _pcfUnit :: !ShortText,
     _pcfPTC :: !Int,
     _pcfPFC :: !Int,

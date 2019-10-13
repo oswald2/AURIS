@@ -193,7 +193,7 @@ instance ToJSON StatusConsistency where
 data TMParameterDef = TMParameterDef {
     _fpName :: !ShortText
     , _fpDescription :: !ShortText
-    , _fpPID :: !Word32
+    , _fpPID :: Maybe Word32
     , _fpUnit :: !ShortText
     , _fpType :: !ParamType
     , _fpWidth :: Maybe Word32
