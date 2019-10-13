@@ -62,6 +62,7 @@ library
     General.Padding
     General.SetBitField
     General.GetBitField
+    General.TriState
     Data.TM.Value
     Data.TM.Parameter
     Data.TM.Calibration

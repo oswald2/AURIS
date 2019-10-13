@@ -151,7 +151,7 @@ ptcPfcToParamType (PTC 10) (PFC 17) _ =
     Right $ ParamTime CUC4Coarse2Fine CorrelationNo
 ptcPfcToParamType (PTC 11) (PFC 0) _ = Right $ ParamDeduced Nothing
 ptcPfcToParamType (PTC 11) (PFC x) _ = Right $ ParamDeduced (Just x)
-ptcPfcToParamType (PTC 13) (PFC 0) _ = Right $ ParamSavedSynthetic
+ptcPfcToParamType (PTC 13) (PFC 0) _ = Right ParamSavedSynthetic
 ptcPfcToParamType ptc pfc _ =
     Left $ "Unsupported: " <> textDisplay ptc <> " " <> textDisplay pfc
 

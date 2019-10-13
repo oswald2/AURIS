@@ -25,7 +25,7 @@ convertCalibCriteria hm CURentry {..} = case HM.lookup _curSelect hm of
         Left
             $  "CalibCriteria: Calibration "
             <> toText _curSelect
-            <> " has not been found!"
+            <> " has not been found for parmeter " <> toText _curParamName
     Just calib -> Right CritCalib { _ccRLChk       = _curRlChk
                                   , _ccValPar      = _curValPar
                                   , _ccCalibration = calib
@@ -40,7 +40,7 @@ determineCalibCriterias paramName curs hm =
     let curs' = V.filter f curs
         f x = _curParamName x == paramName
         crits = V.map (convertCalibCriteria hm) curs'
-    in  if V.all isRight crits
+    in if V.all isRight crits
             then Right . V.fromList . rights . toList $ crits
             else
                 Left

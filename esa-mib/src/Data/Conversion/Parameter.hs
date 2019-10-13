@@ -1,7 +1,7 @@
 module Data.Conversion.Parameter
-    ( convertParameter
-    , convertParameters
-    )
+  ( convertParameter
+  , convertParameters
+  )
 where
 
 import           RIO
@@ -11,6 +11,7 @@ import           RIO.List                       ( intersperse )
 import           Data.Text.Short                ( ShortText
                                                 , toText
                                                 )
+import qualified Data.Text.Short               as ST
 
 import           Data.MIB.PCF
 import           Data.MIB.CUR
@@ -26,92 +27,108 @@ import           Data.MIB.Types
 
 import           Data.Conversion.Criteria
 
-import           Control.Monad.Except
-
 import           General.PUSTypes
+import           General.TriState
 
 
 
 convertParameters
-    :: Vector PCFentry
-    -> Vector CURentry
-    -> HashMap ShortText Calibration
-    -> HashMap ShortText Synthetic
-    -> Either Text (HashMap ShortText TMParameterDef)
+  :: Vector PCFentry
+  -> Vector CURentry
+  -> HashMap ShortText Calibration
+  -> HashMap ShortText Synthetic
+  -> Either Text (Maybe Text, HashMap ShortText TMParameterDef)
 convertParameters pcfs curs calibHM synHM =
-    let params = map (convertParameter curs calibHM synHM) (toList pcfs)
-    in  if all isRight params
-            then Right $ foldl' (\hm x -> HM.insert (_fpName x) x hm)
-                                HM.empty
-                                (rights params)
-            else
-                Left
-                .  T.concat
-                $  ["Error creating TM parameters: "]
-                <> intersperse "\n" (lefts params)
-
+  let params = map (convertParameter curs calibHM synHM) (toList pcfs)
+      (errs, wrns, ok) = partitionTriState params
+  in
+  if not (null errs) 
+    then Left . T.concat $ ["Error creating TM parameters: "] <> intersperse
+            "\n" errs
+    else 
+        let warnings = if not (null wrns) then Just warnMsg else Nothing 
+            warnMsg = T.concat $ ["WARNING: on creating TM parameters: "] <> intersperse "\n" wrns 
+            parmap = foldl' (\hm x -> HM.insert (_fpName x) x hm)
+                HM.empty
+                ok
+        in Right (warnings, parmap)
 
 
 convertParameter
-    :: Vector CURentry
-    -> HashMap ShortText Calibration
-    -> HashMap ShortText Synthetic
-    -> PCFentry
-    -> Either Text TMParameterDef
+  :: Vector CURentry
+  -> HashMap ShortText Calibration
+  -> HashMap ShortText Synthetic
+  -> PCFentry
+  -> TriState Text Text TMParameterDef
 convertParameter curs calibHM synthHM p@PCFentry {..} =
-    let
-        corr = case _pcfCorr of
-            CharDefaultTo 'Y' -> Just True
-            CharDefaultTo 'N' -> Just False
-            _                 -> Just True
-        inter x = toCalibInterpolation (getDefaultChar x)
-        scc x = charToStatusConsistency (getDefaultChar x)
-        validityVal = TMValue
-            (TMValInt (fromIntegral (getDefaultInt _pcfValPar)))
-            clearValidity
-    in
-        runExcept $ do
-            typ <- liftEither
-                $ ptcPfcToParamType (PTC _pcfPTC) (PFC _pcfPFC) corr
-            calibs <- liftEither
-                $ getCalibCriteria _pcfName _pcfCurTx curs calibHM
-            natur  <- liftEither $ getParamNatur _pcfName _pcfNatur synthHM
-            defVal <- liftEither
-                $ parseShortTextToValue (PTC _pcfPTC) (PFC _pcfPFC) _pcfParVal
-            pure TMParameterDef { _fpName              = _pcfName
-                                , _fpDescription       = _pcfDescr
-                                , _fpPID               = _pcfPID
-                                , _fpUnit              = _pcfUnit
-                                , _fpType              = typ
-                                , _fpWidth             = _pcfWidth
-                                , _fpValid             = Nothing
-                                , _fpRelated           = Nothing
-                                , _fpCalibs            = calibs
-                                , _fpNatur             = natur
-                                , _fpInterpolation     = inter _pcfInter
-                                , _fpStatusConsistency = scc _pcfUscon
-                                , _fpDecim             = fromMaybe 0 _pcfDecim
-                                , _fpDefaultVal        = defVal
-                                , _fpSubsys            = _pcfSubSys
-                                , _fpValidityValue     = validityVal
-                                , _fpOBTID             = _pcfOBTID
-                                , _fpEndian            = getEndian p
-                                }
+  case ptcPfcToParamType (PTC _pcfPTC) (PFC _pcfPFC) corr of
+    Left  err -> TWarn err
+    Right typ -> getCalibs typ
+ where
+  corr = case _pcfCorr of
+    CharDefaultTo 'Y' -> Just True
+    CharDefaultTo 'N' -> Just False
+    _                 -> Just True
+  inter x = toCalibInterpolation (getDefaultChar x)
+  scc x = charToStatusConsistency (getDefaultChar x)
+
+  validityVal =
+    TMValue (TMValInt (fromIntegral (getDefaultInt _pcfValPar))) clearValidity
+
+  getCalibs typ = case getCalibCriteria _pcfName _pcfCurTx curs calibHM of
+    Left  err    -> TError err
+    Right calibs -> getNatur typ calibs
+
+  getNatur typ calib = case getParamNatur _pcfName _pcfNatur synthHM of
+    TError err   -> TError err
+    TWarn  err   -> TWarn err
+    TOk    natur -> getDefVal typ calib natur
+
+  getDefVal typ calib natur =
+    case
+        (if ST.null _pcfParVal
+          then Right nullValue
+          else parseShortTextToValue (PTC _pcfPTC) (PFC _pcfPFC) _pcfParVal
+        )
+      of
+        Left  err    -> TError err
+        Right defVal -> createParam typ calib natur defVal
+
+  createParam typ calibs natur defVal = TOk $ TMParameterDef
+    { _fpName              = _pcfName
+    , _fpDescription       = _pcfDescr
+    , _fpPID               = _pcfPID
+    , _fpUnit              = _pcfUnit
+    , _fpType              = typ
+    , _fpWidth             = _pcfWidth
+    , _fpValid             = Nothing
+    , _fpRelated           = Nothing
+    , _fpCalibs            = calibs
+    , _fpNatur             = natur
+    , _fpInterpolation     = inter _pcfInter
+    , _fpStatusConsistency = scc _pcfUscon
+    , _fpDecim             = fromMaybe 0 _pcfDecim
+    , _fpDefaultVal        = defVal
+    , _fpSubsys            = _pcfSubSys
+    , _fpValidityValue     = validityVal
+    , _fpOBTID             = _pcfOBTID
+    , _fpEndian            = getEndian p
+    }
 
 
 getParamNatur
-    :: ShortText
-    -> Char
-    -> HashMap ShortText Synthetic
-    -> Either Text ParamNatur
+  :: ShortText
+  -> Char
+  -> HashMap ShortText Synthetic
+  -> TriState Text Text ParamNatur
 getParamNatur paramName t synthHM
-    | t == 'R' = Right NaturRaw
-    | t == 'D' || t == 'H' || t == 'S' = case HM.lookup paramName synthHM of
-        Nothing ->
-            Left
-                $  "Error: no synthetic definition found for parameter: "
-                <> toText paramName
-        Just syn -> Right $ NaturSynthetic syn
-    | t == 'P' = Left "SPEL synthetic parameters not yet implemented"
-    | t == 'C' = Right NaturConstant
-    | otherwise = Left $ "Illegal PCF_NATUR: " <> T.singleton t
+  | t == 'R' = TOk NaturRaw
+  | t == 'D' || t == 'H' || t == 'S' = case HM.lookup paramName synthHM of
+    Nothing ->
+      TWarn
+        $  "Error: no synthetic definition found for parameter: "
+        <> toText paramName
+    Just syn -> TOk $ NaturSynthetic syn
+  | t == 'P' = TWarn "SPEL synthetic parameters not yet implemented"
+  | t == 'C' = TOk NaturConstant
+  | otherwise = TError $ "Illegal PCF_NATUR: " <> T.singleton t

@@ -105,31 +105,80 @@ testLoadSyn mibPath = do
       T.putStrLn $ "Count: " <> T.pack (show (HM.size r))
 
 
+testLoadParameters :: FilePath -> IO ()
+testLoadParameters mibPath = do
+    res <- runRIOTestAction $ do 
+        cal <- loadCalibs mibPath
+        case cal of 
+            Left err -> do
+                liftIO $ T.putStrLn err 
+                exitFailure
+            Right calibs -> do 
+                syn <- loadSyntheticParameters mibPath
+                case syn of 
+                    Left err -> do 
+                        liftIO $ T.putStrLn err 
+                        exitFailure 
+                    Right syns -> do 
+                        param <- loadParameters mibPath calibs syns
+                        case param of 
+                            Left err -> do 
+                                liftIO $ T.putStrLn err 
+                                exitFailure 
+                            Right params -> return (Right params)
+    case res of
+        Left err -> do
+            T.putStrLn err
+            exitFailure
+        Right r -> do
+            pPrint r
+      
+
+
+testLoadMIB :: FilePath -> IO ()
+testLoadMIB mibPath = do
+    res <- runRIOTestAction (loadMIB mibPath)
+    case res of
+        Left err -> do
+            T.putStrLn err
+            exitFailure
+        Right r -> do
+            pPrint r
+      
+
+
 main :: IO ()
 main = do
   [mibPath] <- getArgs
 
-  -- T.putStrLn "Loading Tables:\n===============\n"
-  -- T.putStrLn "CAFs:\n"
-  -- testCaf mibPath
-  -- T.putStrLn "\n\n\nCAPs:\n"
-  -- testCap mibPath
-  -- T.putStrLn "\n\n\nMCFs:\n"
-  -- testMcf mibPath
-  -- T.putStrLn "\n\n\nLGFs:\n"
-  -- testLgf mibPath
-  -- T.putStrLn "\n\n\nTXFs:\n"
-  -- testTxf mibPath
-  -- T.putStrLn "\n\n\nTXPs:\n"
-  -- testTxp mibPath
-  -- T.putStrLn "\n\n\nCURs:\n"
-  -- testCur mibPath
-  -- T.putStrLn "\n\n\nPCFs:\n"
-  -- testPcf mibPath
+  T.putStrLn "Loading Tables:\n===============\n"
+  T.putStrLn "CAFs:\n"
+  testCaf mibPath
+  T.putStrLn "\n\n\nCAPs:\n"
+  testCap mibPath
+  T.putStrLn "\n\n\nMCFs:\n"
+  testMcf mibPath
+  T.putStrLn "\n\n\nLGFs:\n"
+  testLgf mibPath
+  T.putStrLn "\n\n\nTXFs:\n"
+  testTxf mibPath
+  T.putStrLn "\n\n\nTXPs:\n"
+  testTxp mibPath
+  T.putStrLn "\n\n\nCURs:\n"
+  testCur mibPath
+  T.putStrLn "\n\n\nPCFs:\n"
+  testPcf mibPath
 
   T.putStrLn "\n\n\nLoading Data Structures:\n===============\n"
   T.putStrLn "LoadCalibs:\n"
   testLoadCalibs mibPath
   T.putStrLn "\nLoadSyns:\n"
   testLoadSyn mibPath
+  T.putStrLn "\nLoadParams:\n"
+  testLoadParameters mibPath
+
+  T.putStrLn "\n\n\nLoading MIB:\n===============\n"
+  T.putStrLn "LoadMIB:\n"
+  testLoadMIB mibPath
+
 
