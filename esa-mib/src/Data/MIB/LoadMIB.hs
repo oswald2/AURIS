@@ -186,7 +186,8 @@ loadCalibs mibPath = do
 
 loadSyntheticParameters
     :: (MonadIO m) => FilePath -> m (Either Text (HashMap ShortText Synthetic))
-loadSyntheticParameters path = do
+loadSyntheticParameters path' = do
+    let path = path' </> "synthetic"
     doesDirectoryExist path >>= \x -> if not x
         then
             do
@@ -196,8 +197,12 @@ loadSyntheticParameters path = do
             <> T.pack path
             <> "' does not exist"
         else do
-            files <- listDirectory path >>= filterM doesFileExist
-            ols   <- forM (map (path </>) files) parseOL
+            -- traceM ("Path: " <> (T.pack path))
+            files' <- listDirectory path 
+            files <- filterM doesFileExist (map (path </>) files')
+            -- traceM ("files: " <> (T.pack (show files)))
+            ols   <- forM files parseOL
+            -- traceM ("ols: " <> (T.pack (show ols)))
             if all isRight ols
                 then do
                     let syn = zipWith f files (rights ols)
