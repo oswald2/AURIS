@@ -73,7 +73,6 @@ library
     Data.MIB.MCF
     Data.MIB.LGF
     Data.MIB.LoadMIB
-    Data.MIB.MIB
     Data.Conversion.Calibration
     Data.Conversion.Parameter
     Data.Conversion.Criteria

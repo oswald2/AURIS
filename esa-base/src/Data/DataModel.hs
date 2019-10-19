@@ -40,11 +40,11 @@
     , ViewPatterns
     , TemplateHaskell
 #-}
-module Data.MIB.MIB
-    ( MIB(..)
-    , mibCalibrations
-    , mibSyntheticParams
-    , mibParameters
+module Data.DataModel
+    ( DataModel(..)
+    , dmCalibrations
+    , dmSyntheticParams
+    , dmParameters
     )
 where
 
@@ -59,11 +59,11 @@ import           Data.TM.Synthetic
 import           Data.TM.TMParameterDef
 
 
-data MIB = MIB {
-    _mibCalibrations :: HashMap ShortText Calibration
-    , _mibSyntheticParams :: HashMap ShortText Synthetic
-    , _mibParameters :: HashMap ShortText TMParameterDef
+data DataModel = DataModel {
+    _dmCalibrations :: HashMap ShortText Calibration
+    , _dmSyntheticParams :: HashMap ShortText Synthetic
+    , _dmParameters :: HashMap ShortText TMParameterDef
     }
     deriving (Show, Generic)
-makeLenses ''MIB
+makeLenses ''DataModel
 
