@@ -44,7 +44,8 @@ convertParameters
     -> Either Text (Warnings, HashMap ShortText TMParameterDef)
 convertParameters pcfs curs calibHM synHM =
     let
-        params = map (convertParameter curs calibHM synHM) (toList pcfs)
+        params = map (convertParameter curs calibHM synHM (getPCFMap pcfs))
+                     (toList pcfs)
         (errs, wrns, ok) = partitionTriState params
     in
         if not (null errs)
@@ -70,10 +71,18 @@ convertParameters pcfs curs calibHM synHM =
                     warnings = warnings' <> if not (null warns2)
                         then Just "\n" <> Just warnMsg2
                         else Nothing
-                    parmap = foldl'
-                        (\hm (_, x) -> HM.insert (_fpName x) x hm)
-                        HM.empty
-                        ok
+
+                    -- insert a parameter definition into the 'HashMap'.
+                    -- When there are dependent parameters, also insert them
+                    -- into the HashMap first.
+                    ins hm (_, par) = case _fpValid par of
+                        Nothing -> HM.insertWith const (_fpName par) par hm
+                        Just dep ->
+                            let newHM = ins hm (Nothing, dep)
+                            in  HM.insertWith const (_fpName par) par newHM
+
+                    -- Finally, insert all parameters into the 'HashMap'
+                    parmap = foldl' ins HM.empty ok
                 in
                     Right (warnings, parmap)
 
@@ -82,11 +91,12 @@ convertParameter
     :: Vector CURentry
     -> HashMap ShortText Calibration
     -> HashMap ShortText Synthetic
+    -> HashMap ShortText PCFentry
     -> PCFentry
     -> TriState Text Text (Warnings, TMParameterDef)
-convertParameter curs calibHM synthHM p@PCFentry {..} =
+convertParameter curs calibHM synthHM pcfs p@PCFentry {..} =
     case ptcPfcToParamType (PTC _pcfPTC) (PFC _pcfPFC) corr of
-        Left  err -> TError err
+        Left  err -> TWarn err
         Right typ -> getCalibs typ
   where
     corr = case _pcfCorr of
@@ -124,27 +134,39 @@ convertParameter curs calibHM synthHM p@PCFentry {..} =
                 Left  err    -> Left err
                 Right defVal -> createParam typ calib natur defVal
 
-    createParam typ calibs natur defVal = Right (Nothing, param)
+    isDep PCFentry {..} = not . ST.null $ _pcfValid
+
+    createParam typ calibs natur defVal = if isDep p
+        then
+            let depP = HM.lookup _pcfValid pcfs
+                res  = maybe (TOk (Nothing, param Nothing))
+                             (convertParameter curs calibHM synthHM pcfs)
+                             depP
+            in  case res of
+                    TError err -> Left err
+                    TWarn err -> Right (Just err, param Nothing)
+                    TOk (warns', valPar) -> Right (warns', param (Just valPar))
+        else Right (Nothing, param Nothing)
       where
-        param = TMParameterDef { _fpName              = _pcfName
-                               , _fpDescription       = _pcfDescr
-                               , _fpPID               = _pcfPID
-                               , _fpUnit              = _pcfUnit
-                               , _fpType              = typ
-                               , _fpWidth             = _pcfWidth
-                               , _fpValid             = Nothing
-                               , _fpRelated           = Nothing
-                               , _fpCalibs            = calibs
-                               , _fpNatur             = natur
-                               , _fpInterpolation     = inter _pcfInter
-                               , _fpStatusConsistency = scc _pcfUscon
-                               , _fpDecim             = fromMaybe 0 _pcfDecim
-                               , _fpDefaultVal        = defVal
-                               , _fpSubsys            = _pcfSubSys
-                               , _fpValidityValue     = validityVal
-                               , _fpOBTID             = _pcfOBTID
-                               , _fpEndian            = getEndian p
-                               }
+        param valPar = TMParameterDef { _fpName              = _pcfName
+                                      , _fpDescription       = _pcfDescr
+                                      , _fpPID               = _pcfPID
+                                      , _fpUnit              = _pcfUnit
+                                      , _fpType              = typ
+                                      , _fpWidth             = _pcfWidth
+                                      , _fpValid             = valPar
+                                      , _fpRelated           = Nothing
+                                      , _fpCalibs            = calibs
+                                      , _fpNatur             = natur
+                                      , _fpInterpolation     = inter _pcfInter
+                                      , _fpStatusConsistency = scc _pcfUscon
+                                      , _fpDecim = fromMaybe 0 _pcfDecim
+                                      , _fpDefaultVal        = defVal
+                                      , _fpSubsys            = _pcfSubSys
+                                      , _fpValidityValue     = validityVal
+                                      , _fpOBTID             = _pcfOBTID
+                                      , _fpEndian            = getEndian p
+                                      }
 
 
 getParamNatur

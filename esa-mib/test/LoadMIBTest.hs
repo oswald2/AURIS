@@ -18,6 +18,7 @@ import           Data.MIB.TXP                  as TXP
 import           Data.MIB.CUR                  as CUR
 import           Data.MIB.PCF                  as PCF
 
+import           Data.TM.TMParameterDef
 
 import           Test.Hspec
 import           Text.Show.Pretty
@@ -27,7 +28,7 @@ import           Text.Show.Pretty
 newtype TestState = TestState { logFunction :: LogFunc}
 
 instance HasLogFunc TestState where
-  logFuncL = lens logFunction (\c lf -> c { logFunction = lf })
+    logFuncL = lens logFunction (\c lf -> c { logFunction = lf })
 
 
 testCaf :: FilePath -> IO ()
@@ -56,83 +57,89 @@ testPcf = testLoadTab PCF.loadFromFile
 
 
 testLoadTab
-  :: Show b
-  => (FilePath -> RIO TestState (Either Text (Vector b)))
-  -> FilePath
-  -> IO ()
+    :: Show b
+    => (FilePath -> RIO TestState (Either Text (Vector b)))
+    -> FilePath
+    -> IO ()
 testLoadTab action mibPath = do
-  elems <- runRIOTestAction (action mibPath)
-  case elems of
-    Left err -> do
-      T.putStrLn err
-      exitFailure
-    Right c -> do
-      pPrint c
-      T.putStrLn $ "Count: " <> T.pack (show (V.length c))
+    elems <- runRIOTestAction (action mibPath)
+    case elems of
+        Left err -> do
+            T.putStrLn err
+            exitFailure
+        Right c -> do
+            pPrint c
+            T.putStrLn $ "Count: " <> T.pack (show (V.length c))
 
 
 runRIOTestAction :: RIO TestState b -> IO b
 runRIOTestAction action = do
-  defLogOptions <- logOptionsHandle stdout True
-  let logOptions = setLogMinLevel LevelError defLogOptions
-  withLogFunc logOptions $ \logFunc -> do
-    let state = TestState logFunc
+    defLogOptions <- logOptionsHandle stdout True
+    let logOptions = setLogMinLevel LevelError defLogOptions
+    withLogFunc logOptions $ \logFunc -> do
+        let state = TestState logFunc
 
-    runRIO state action
+        runRIO state action
 
 
 testLoadCalibs :: FilePath -> IO ()
 testLoadCalibs mibPath = do
-  res <- runRIOTestAction (loadCalibs mibPath)
-  case res of
-    Left err -> do
-      T.putStrLn err
-      exitFailure
-    Right r -> do
-      pPrint r
-      T.putStrLn $ "Count: " <> T.pack (show (HM.size r))
-
-
-testLoadSyn :: FilePath -> IO ()
-testLoadSyn mibPath = do
-  res <- runRIOTestAction (loadSyntheticParameters mibPath)
-  case res of
-    Left err -> do
-      T.putStrLn err
-      exitFailure
-    Right r -> do
-      pPrint r
-      T.putStrLn $ "Count: " <> T.pack (show (HM.size r))
-
-
-testLoadParameters :: FilePath -> IO ()
-testLoadParameters mibPath = do
-    res <- runRIOTestAction $ do 
-        cal <- loadCalibs mibPath
-        case cal of 
-            Left err -> do
-                liftIO $ T.putStrLn err 
-                exitFailure
-            Right calibs -> do 
-                syn <- loadSyntheticParameters mibPath
-                case syn of 
-                    Left err -> do 
-                        liftIO $ T.putStrLn err 
-                        exitFailure 
-                    Right syns -> do 
-                        param <- loadParameters mibPath calibs syns
-                        case param of 
-                            Left err -> do 
-                                liftIO $ T.putStrLn err 
-                                exitFailure 
-                            Right params -> return (Right params)
+    res <- runRIOTestAction (loadCalibs mibPath)
     case res of
         Left err -> do
             T.putStrLn err
             exitFailure
         Right r -> do
             pPrint r
-      
+            T.putStrLn $ "Count: " <> T.pack (show (HM.size r))
+
+
+testLoadSyn :: FilePath -> IO ()
+testLoadSyn mibPath = do
+    res <- runRIOTestAction (loadSyntheticParameters mibPath)
+    case res of
+        Left err -> do
+            T.putStrLn err
+            exitFailure
+        Right r -> do
+            pPrint r
+            T.putStrLn $ "Count: " <> T.pack (show (HM.size r))
+
+
+testLoadParameters :: FilePath -> IO ()
+testLoadParameters mibPath = do
+    res <- runRIOTestAction $ do
+        cal <- loadCalibs mibPath
+        case cal of
+            Left err -> do
+                liftIO $ T.putStrLn err
+                exitFailure
+            Right calibs -> do
+                syn <- loadSyntheticParameters mibPath
+                case syn of
+                    Left err -> do
+                        liftIO $ T.putStrLn err
+                        exitFailure
+                    Right syns -> do
+                        param <- loadParameters mibPath calibs syns
+                        case param of
+                            Left err -> do
+                                liftIO $ T.putStrLn err
+                                exitFailure
+                            Right params -> return (Right params)
+    case res of
+        Left err -> do
+            T.putStrLn err
+            exitFailure
+        Right (warnings, params) -> do
+            pPrint params
+            case warnings of
+                Just w  -> T.putStrLn $ "Imported with warnings:\n" <> w
+                Nothing -> return ()
+
+            T.putStrLn "\n\nParameters with validity parameters:\n\n"
+            pPrint $ HM.filter (isJust . _fpValid) params
+
 
 
 testLoadMIB :: FilePath -> IO ()
@@ -144,41 +151,41 @@ testLoadMIB mibPath = do
             exitFailure
         Right r -> do
             pPrint r
-      
+
 
 
 main :: IO ()
 main = do
-  [mibPath] <- getArgs
+    [mibPath] <- getArgs
 
-  T.putStrLn "Loading Tables:\n===============\n"
-  T.putStrLn "CAFs:\n"
-  testCaf mibPath
-  T.putStrLn "\n\n\nCAPs:\n"
-  testCap mibPath
-  T.putStrLn "\n\n\nMCFs:\n"
-  testMcf mibPath
-  T.putStrLn "\n\n\nLGFs:\n"
-  testLgf mibPath
-  T.putStrLn "\n\n\nTXFs:\n"
-  testTxf mibPath
-  T.putStrLn "\n\n\nTXPs:\n"
-  testTxp mibPath
-  T.putStrLn "\n\n\nCURs:\n"
-  testCur mibPath
-  T.putStrLn "\n\n\nPCFs:\n"
-  testPcf mibPath
+    T.putStrLn "Loading Tables:\n===============\n"
+    T.putStrLn "CAFs:\n"
+    testCaf mibPath
+    T.putStrLn "\n\n\nCAPs:\n"
+    testCap mibPath
+    T.putStrLn "\n\n\nMCFs:\n"
+    testMcf mibPath
+    T.putStrLn "\n\n\nLGFs:\n"
+    testLgf mibPath
+    T.putStrLn "\n\n\nTXFs:\n"
+    testTxf mibPath
+    T.putStrLn "\n\n\nTXPs:\n"
+    testTxp mibPath
+    T.putStrLn "\n\n\nCURs:\n"
+    testCur mibPath
+    T.putStrLn "\n\n\nPCFs:\n"
+    testPcf mibPath
 
-  T.putStrLn "\n\n\nLoading Data Structures:\n===============\n"
-  T.putStrLn "LoadCalibs:\n"
-  testLoadCalibs mibPath
-  T.putStrLn "\nLoadSyns:\n"
-  testLoadSyn mibPath
-  T.putStrLn "\nLoadParams:\n"
-  testLoadParameters mibPath
+    T.putStrLn "\n\n\nLoading Data Structures:\n===============\n"
+    T.putStrLn "LoadCalibs:\n"
+    testLoadCalibs mibPath
+    T.putStrLn "\nLoadSyns:\n"
+    testLoadSyn mibPath
+    T.putStrLn "\nLoadParams:\n"
+    testLoadParameters mibPath
 
-  T.putStrLn "\n\n\nLoading MIB:\n===============\n"
-  T.putStrLn "LoadMIB:\n"
-  testLoadMIB mibPath
+    -- T.putStrLn "\n\n\nLoading MIB:\n===============\n"
+    -- T.putStrLn "LoadMIB:\n"
+    -- testLoadMIB mibPath
 
 

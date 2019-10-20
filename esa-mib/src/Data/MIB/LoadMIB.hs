@@ -145,16 +145,15 @@ loadParameters mibPath calibHM synthHM = do
     pcfs' <- PCF.loadFromFile mibPath
     case pcfs' of
         Left  err  -> return (Left err)
-        Right pcfs ->
-          case loadCURs pcfs of
-            Left err -> Left err
-            Right (warns, params) ->
+        Right pcfs -> loadCURs pcfs
   where
     loadCURs pcfs = do
         curs' <- CUR.loadFromFile mibPath
         case curs' of
             Left  err  -> return (Left err)
             Right curs -> return $ convertParameters pcfs curs calibHM synthHM
+
+
 
 
 -- | load all calibrations and return either an error or a
