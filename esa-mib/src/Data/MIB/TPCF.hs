@@ -1,16 +1,18 @@
 {-# LANGUAGE
-    OverloadedStrings
-    , BangPatterns
-    , NoImplicitPrelude
+    TemplateHaskell
 #-}
 module Data.MIB.TPCF
   ( TPCFentry(..)
   , loadFromFile
   , getTPCFMap
-  )
+  , tpcfSPID
+  , tpcfName
+  , tpcfSize
+)
 where
 
 import           RIO
+import           Control.Lens                   ( makeLenses )
 
 import           Data.Text.Short                ( ShortText )
 import           Data.Csv
@@ -21,14 +23,14 @@ import           Data.MIB.Load
 
 
 data TPCFentry = TPCFentry {
-    tpcfSPID :: !Word32,
-    tpcfName :: !ShortText,
-    tpcfSize :: Maybe Int
+    _tpcfSPID :: !Word32,
+    _tpcfName :: !ShortText,
+    _tpcfSize :: Maybe Int
 } deriving Show
-
+makeLenses ''TPCFentry
 
 instance Eq TPCFentry where
-  f1 == f2 = tpcfSPID f1 == tpcfSPID f2
+  f1 == f2 = _tpcfSPID f1 == _tpcfSPID f2
 
 
 
@@ -50,4 +52,4 @@ loadFromFile mibPath = loadFromFileGen mibPath fileName
 
 
 getTPCFMap :: Vector TPCFentry -> HashMap Word32 TPCFentry
-getTPCFMap = V.foldl (\m e -> HM.insert (tpcfSPID e) e m) HM.empty
+getTPCFMap = V.foldl (\m e -> HM.insert (_tpcfSPID e) e m) HM.empty

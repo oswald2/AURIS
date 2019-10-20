@@ -41,7 +41,6 @@ module Data.TM.Value
 where
 
 import           RIO                     hiding ( many )
-import           RIO.Partial                    ( read )
 import           RIO.List.Partial               ( head )
 import qualified RIO.Text                      as T
 import qualified RIO.ByteString                as B

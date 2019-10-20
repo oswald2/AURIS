@@ -1,49 +1,9 @@
-{-# LANGUAGE
-    AutoDeriveTypeable
-    , BangPatterns
-    , BinaryLiterals
-    , ConstraintKinds
-    , DataKinds
-    , DefaultSignatures
-    , DeriveDataTypeable
-    , DeriveFoldable
-    , DeriveFunctor
-    , DeriveGeneric
-    , DeriveTraversable
-    , DoAndIfThenElse
-    , EmptyDataDecls
-    , ExistentialQuantification
-    , FlexibleContexts
-    , FlexibleInstances
-    , FunctionalDependencies
-    , GADTs
-    , GeneralizedNewtypeDeriving
-    , InstanceSigs
-    , KindSignatures
-    , LambdaCase
-    , MonadFailDesugaring
-    , MultiParamTypeClasses
-    , MultiWayIf
-    , NamedFieldPuns
-    , NoImplicitPrelude
-    , OverloadedStrings
-    , PartialTypeSignatures
-    , PatternGuards
-    , PolyKinds
-    , RankNTypes
-    , RecordWildCards
-    , ScopedTypeVariables
-    , StandaloneDeriving
-    , TupleSections
-    , TypeFamilies
-    , TypeSynonymInstances
-    , ViewPatterns
-#-}
 module Data.MIB.LoadMIB
     ( loadMIB
     , loadCalibs
     , loadSyntheticParameters
     , loadParameters
+    , loadPackets
     )
 where
 
@@ -68,6 +28,8 @@ import qualified Data.MIB.TXP                  as TXP
 import qualified Data.MIB.TXF                  as TXF
 import qualified Data.MIB.PCF                  as PCF
 import qualified Data.MIB.CUR                  as CUR
+import qualified Data.MIB.PID                  as PID
+import qualified Data.MIB.TPCF                 as TPCF
 
 import           Data.DataModel
 
@@ -78,11 +40,13 @@ import           Data.TM.LogarithmicCalibration
 import           Data.TM.TextualCalibration
 import           Data.TM.Synthetic
 import           Data.TM.TMParameterDef
+import           Data.TM.TMPacketDef
 
 import           Data.Conversion.Calibration
 import           Data.Conversion.Parameter
 
-
+import           General.PUSTypes
+import           General.APID
 
 
 
@@ -241,3 +205,30 @@ loadSyntheticParameters path' = do
                     $  ["Error parsing synthetic parameters: " :: Text]
                     <> intersperse "\n" (lefts ols)
 
+
+
+loadPackets :: (MonadIO m, MonadReader env m, HasLogFunc env) => FilePath -> m (Either Text (HashMap ShortText TMPacketDef))
+loadPackets mibPath = do
+  pids' <- PID.loadFromFile mibPath
+  case pids' of
+    Left err -> return (Left err)
+    Right pids -> loadTPCF pids
+
+  where
+    loadTPCF pids = do
+      tpcfs' <- TPCF.loadFromFile mibPath
+      case tpcfs' of
+        Left err -> return (Left err)
+        Right tpcfs -> undefined
+
+
+
+    createPacket PID.PIDentry {..} (Just TPCF.TPCFentry {..}) = TMPacketDef {
+      _tmpdSPID = SPID _pidSPID
+      , _tmpdName = _tpcfName
+      , _tmpdType = mkPUSType (fromIntegral _pidType)
+      , _tmpdSubType = mkPUSSubType (fromIntegral _pidSubType)
+      , _tmpdApid = APID (fromIntegral _pidAPID)
+      , _tmpdPI1Val = _pidP1Val
+      , _tmpdPI2Val = _pidP2Val
+      }

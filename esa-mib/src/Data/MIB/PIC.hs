@@ -1,14 +1,5 @@
-{-# LANGUAGE OverloadedStrings
-    , BangPatterns
-    , GeneralizedNewtypeDeriving
-    , DeriveGeneric
-    , RecordWildCards
-    , NoImplicitPrelude
-    , BinaryLiterals
-    , NumericUnderscores
-    , FlexibleInstances
-    , GADTs
-    , DataKinds
+{-# LANGUAGE
+  TemplateHaskell
 #-}
 module Data.MIB.PIC
   ( PICentry(..)
@@ -22,11 +13,19 @@ module Data.MIB.PIC
   , picVecToTypeMap
   , ApidKey(..)
   , TypeSubTypeKey(..)
+  , picType
+  , picSubType
+  , picPI1Off
+  , picPI1Width
+  , picPI2Off
+  , picPI2Width
+  , picApid
   )
 where
 
 
 import           RIO
+import Control.Lens (makeLenses)
 
 import           Data.ByteString.Lazy          as B
 import           Data.ByteString.Lazy.Char8    as BC
@@ -47,25 +46,26 @@ import           Data.MIB.Types
 
 
 data PICentry = PICentry
-  { picType :: !Word8
-  , picSubType :: !Word8
-  , picPI1Off :: !Int
-  , picPI1Width :: !Word16
-  , picPI2Off :: !Int
-  , picPI2Width :: !Word16
-  , picApid :: DefaultToNothing Word16
+  { _picType :: !Word8
+  , _picSubType :: !Word8
+  , _picPI1Off :: !Int
+  , _picPI1Width :: !Word16
+  , _picPI2Off :: !Int
+  , _picPI2Width :: !Word16
+  , _picApid :: DefaultToNothing Word16
 } deriving (Show, Read)
+makeLenses ''PICentry
 
 defaultPIC :: PICentry
 defaultPIC = PICentry 0 0 (-1) 0 (-1) 0 (DefaultToNothing Nothing)
 
 
 instance Eq PICentry where
-  PICentry { picType = t1, picSubType = p1, picApid = a1 } == PICentry { picType = t2, picSubType = p2, picApid = a2 }
+  PICentry { _picType = t1, _picSubType = p1, _picApid = a1 } == PICentry { _picType = t2, _picSubType = p2, _picApid = a2 }
     = (t1 == t2) && (p1 == p2) && (a1 == a2)
 
 instance Ord PICentry where
-  compare PICentry { picType = t1, picSubType = p1, picApid = a1 } PICentry { picType = t2, picSubType = p2, picApid = a2 }
+  compare PICentry { _picType = t1, _picSubType = p1, _picApid = a1 } PICentry { _picType = t2, _picSubType = p2, _picApid = a2 }
     = let res1 = compare t1 t2
       in  case res1 of
             EQ ->
@@ -76,7 +76,7 @@ instance Ord PICentry where
             _ -> res1
 
 instance Hashable PICentry where
-  hashWithSalt s PICentry { picType = t1, picSubType = p1, picApid = a1 } =
+  hashWithSalt s PICentry { _picType = t1, _picSubType = p1, _picApid = a1 } =
     s `hashWithSalt` t1 `hashWithSalt` p1 `hashWithSalt` a1
 
 instance FromRecord PICentry where
@@ -153,29 +153,29 @@ instance Ord TypeSubTypeKey where
 picVecToApidMap :: Vector PICentry -> Map ApidKey PICentry
 picVecToApidMap = V.foldl ins M.empty
  where
-  ins m pic = case picApid pic of
+  ins m pic = case _picApid pic of
     DefaultToNothing (Just apid) ->
-      M.insert (ApidKey (picType pic) (picSubType pic) apid) pic m
+      M.insert (ApidKey (_picType pic) (_picSubType pic) apid) pic m
     _ -> m
 
 picVecToTypeMap :: Vector PICentry -> Map TypeSubTypeKey PICentry
 picVecToTypeMap = V.foldl ins M.empty
  where
-  ins m pic = M.insert (TypeSubTypeKey (picType pic) (picSubType pic)) pic m
+  ins m pic = M.insert (TypeSubTypeKey (_picType pic) (_picSubType pic)) pic m
 
 
 
 picCompareWithApid :: (Word8, Word8, Word16) -> PICentry -> Ordering
 picCompareWithApid (typ, subtype, apid) pic =
-  case compare (DefaultToNothing (Just apid)) (picApid pic) of
-    EQ -> case compare typ (picType pic) of
-      EQ -> compare subtype (picSubType pic)
+  case compare (DefaultToNothing (Just apid)) (_picApid pic) of
+    EQ -> case compare typ (_picType pic) of
+      EQ -> compare subtype (_picSubType pic)
       x  -> x
     x -> x
 
 picCompareTypeSubType :: (Word8, Word8) -> PICentry -> Ordering
-picCompareTypeSubType (typ, subtype) pic = case compare typ (picType pic) of
-  EQ -> compare subtype (picSubType pic)
+picCompareTypeSubType (typ, subtype) pic = case compare typ (_picType pic) of
+  EQ -> compare subtype (_picSubType pic)
   x  -> x
 
 -- | loads the MIB file from disk into a vector. The vector is sorted
