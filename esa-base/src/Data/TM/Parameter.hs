@@ -4,12 +4,14 @@
     , NoImplicitPrelude
 #-}
 module Data.TM.Parameter
-  ( TMParameter(..)
-  )
+    ( TMParameter(..)
+    )
 where
 
 import           RIO
 import           Data.Text.Short
+import           Codec.Serialise
+import           Data.Aeson
 
 import           General.Time
 import           Data.TM.Value
@@ -22,5 +24,10 @@ data TMParameter = TMParameter {
     , _pTime :: !SunTime
     , _pValue :: TMValue
     , _pEngValue :: Maybe TMValue
-} deriving (Show)
+} deriving (Show, Generic)
 
+instance NFData TMParameter
+instance Serialise TMParameter
+instance FromJSON TMParameter
+instance ToJSON TMParameter where
+  toEncoding = genericToEncoding defaultOptions
