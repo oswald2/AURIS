@@ -158,8 +158,8 @@ testLoadMIB mibPath = do
             T.putStrLn err
             exitFailure
         Right r -> do
-            -- pPrint r
-            return (force r)
+            pPrint r
+            --return (force r)
             T.putStrLn "Done."
 
 
@@ -168,31 +168,31 @@ main :: IO ()
 main = do
     [mibPath] <- getArgs
 
-    -- T.putStrLn "Loading Tables:\n===============\n"
-    -- T.putStrLn "CAFs:\n"
-    -- testCaf mibPath
-    -- T.putStrLn "\n\n\nCAPs:\n"
-    -- testCap mibPath
-    -- T.putStrLn "\n\n\nMCFs:\n"
-    -- testMcf mibPath
-    -- T.putStrLn "\n\n\nLGFs:\n"
-    -- testLgf mibPath
-    -- T.putStrLn "\n\n\nTXFs:\n"
-    -- testTxf mibPath
-    -- T.putStrLn "\n\n\nTXPs:\n"
-    -- testTxp mibPath
-    -- T.putStrLn "\n\n\nCURs:\n"
-    -- testCur mibPath
-    -- T.putStrLn "\n\n\nPCFs:\n"
-    -- testPcf mibPath
+    T.putStrLn "Loading Tables:\n===============\n"
+    T.putStrLn "CAFs:\n"
+    testCaf mibPath
+    T.putStrLn "\n\n\nCAPs:\n"
+    testCap mibPath
+    T.putStrLn "\n\n\nMCFs:\n"
+    testMcf mibPath
+    T.putStrLn "\n\n\nLGFs:\n"
+    testLgf mibPath
+    T.putStrLn "\n\n\nTXFs:\n"
+    testTxf mibPath
+    T.putStrLn "\n\n\nTXPs:\n"
+    testTxp mibPath
+    T.putStrLn "\n\n\nCURs:\n"
+    testCur mibPath
+    T.putStrLn "\n\n\nPCFs:\n"
+    testPcf mibPath
 
-    -- T.putStrLn "\n\n\nLoading Data Structures:\n===============\n"
-    -- T.putStrLn "LoadCalibs:\n"
-    -- testLoadCalibs mibPath
-    -- T.putStrLn "\nLoadSyns:\n"
-    -- testLoadSyn mibPath
-    -- T.putStrLn "\nLoadParams:\n"
-    -- testLoadParameters mibPath
+    T.putStrLn "\n\n\nLoading Data Structures:\n===============\n"
+    T.putStrLn "LoadCalibs:\n"
+    testLoadCalibs mibPath
+    T.putStrLn "\nLoadSyns:\n"
+    testLoadSyn mibPath
+    T.putStrLn "\nLoadParams:\n"
+    testLoadParameters mibPath
 
     T.putStrLn "\n\n\nLoading MIB:\n===============\n"
     T.putStrLn "LoadMIB:\n"
