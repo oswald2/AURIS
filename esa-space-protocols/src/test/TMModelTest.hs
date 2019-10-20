@@ -6,6 +6,7 @@
     , FlexibleInstances
     , BinaryLiterals
     , FlexibleContexts
+    , NumericUnderscores
 #-}
 module Main where
 
@@ -69,6 +70,8 @@ feedParamValues gen model queue = do
 
     replicateM_ 2000 $ do
         genRandomParameter gen nv >>= liftIO . atomically . writeTBQueue queue
+        del <- uniformR (0, 100_000) gen
+        threadDelay del
 
 
 
