@@ -1,44 +1,21 @@
+{-|
+Module      : Data.DataModel
+Description : Represents the data model loaded from the MIB or CDM
+Copyright   : (c) Michael Oswald, 2019
+License     : BSD-3
+Maintainer  : michael.oswald@onikudaki.net
+Stability   : experimental
+Portability : POSIX
+
+This module provides the data structures for the data model. The information
+from a MIB (mission information base) or a CDM (component data model, which is
+currently not yet supported) is parsed and read in in the specific libraries
+dedicated to the model (e.g. esa-mib for the MIB). The model is used by the TM model
+and the TC model to describe the packets and commands used as well as some behaviours
+like calibrations, limit checks, synthetic parameters and so on
+-}
 {-# LANGUAGE
-    AutoDeriveTypeable
-    , BangPatterns
-    , BinaryLiterals
-    , ConstraintKinds
-    , DataKinds
-    , DefaultSignatures
-    , DeriveDataTypeable
-    , DeriveFoldable
-    , DeriveFunctor
-    , DeriveGeneric
-    , DeriveTraversable
-    , DoAndIfThenElse
-    , EmptyDataDecls
-    , ExistentialQuantification
-    , FlexibleContexts
-    , FlexibleInstances
-    , FunctionalDependencies
-    , GADTs
-    , GeneralizedNewtypeDeriving
-    , InstanceSigs
-    , KindSignatures
-    , LambdaCase
-    , MonadFailDesugaring
-    , MultiParamTypeClasses
-    , MultiWayIf
-    , NamedFieldPuns
-    , NoImplicitPrelude
-    , OverloadedStrings
-    , PartialTypeSignatures
-    , PatternGuards
-    , PolyKinds
-    , RankNTypes
-    , RecordWildCards
-    , ScopedTypeVariables
-    , StandaloneDeriving
-    , TupleSections
-    , TypeFamilies
-    , TypeSynonymInstances
-    , ViewPatterns
-    , TemplateHaskell
+    TemplateHaskell
 #-}
 module Data.DataModel
     ( DataModel(..)
@@ -61,10 +38,13 @@ import           Data.TM.Synthetic
 import           Data.TM.TMParameterDef
 
 
-
+-- | The data model itself.
 data DataModel = DataModel {
+    -- | A map of the defined calibrations indexed by name
     _dmCalibrations :: HashMap ShortText Calibration
+    -- | A map of the defined synthetic parameters indexed by name
     , _dmSyntheticParams :: HashMap ShortText Synthetic
+    -- | A map of the defined TM parameters indexec by name
     , _dmParameters :: HashMap ShortText TMParameterDef
     }
     deriving (Show, Generic)

@@ -1,3 +1,14 @@
+{-|
+Module      : Data.TM.LogarithmicCalibration
+Description : data type for the logarithmic calibration
+Copyright   : (c) Michael Oswald, 2019
+License     : BSD-3
+Maintainer  : michael.oswald@onikudaki.net
+Stability   : experimental
+Portability : POSIX
+
+This module provides some types used in calibrations
+-}
 {-# LANGUAGE OverloadedStrings
     , BangPatterns
     , GeneralizedNewtypeDeriving
@@ -41,7 +52,9 @@ import           Data.TM.Validity        hiding ( isValid )
 
 
 
-
+-- | The logarithmic calibration. Provides 5 coefficients and
+-- calibrates an incoming value with the formula:
+-- y = 1/(a0 + a1 * ln(x) + a2 * ln^2(x) + a3 * ln^3(x) + a4 * ln^4(x))
 data LogarithmicCalibration = LogarithmicCalibration {
     _calibLName :: !ShortText
     , _calibLDescr :: !ShortText

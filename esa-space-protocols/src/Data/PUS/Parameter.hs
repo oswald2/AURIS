@@ -134,7 +134,7 @@ data ExtParameter = ExtParameter {
 makeLenses ''ExtParameter
 
 
-extParamToParam :: ExtParameter -> Parameter 
+extParamToParam :: ExtParameter -> Parameter
 extParamToParam ExtParameter {..} = Parameter _extParName _extParValue
 
 instance NFData ExtParameter
@@ -432,7 +432,7 @@ addOffset bsize param = param & extParOff .~ newOff
     where newOff = (param ^. extParOff) `addBitOffset` bsize
 
 
-    -- | prepends the second ParameterList n times to the first
+-- | prepends the second ParameterList n times to the first
 prependN :: Word64 -> ParameterList -> ParameterList -> ParameterList
 prependN n t1 t2 = appendN n Empty t2 <> t1
 

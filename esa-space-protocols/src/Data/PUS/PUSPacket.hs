@@ -281,14 +281,14 @@ applyPIvals encPkt pic = worker
     v1 <- if off1 >= 0
       then setBitFieldR v
                         (toBitOffset off1)
-                        (fromIntegral wid1)
+                        (fromIntegral (unBitSize wid1))
                         (fromIntegral val1)
       else return v
 
     if off2 >= 0
       then setBitFieldR v1
                         (toBitOffset off2)
-                        (fromIntegral wid2)
+                        (fromIntegral (unBitSize wid2))
                         (fromIntegral val2)
       else return v1
 

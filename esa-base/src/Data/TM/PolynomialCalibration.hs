@@ -1,3 +1,14 @@
+{-|
+Module      : Data.TM.PolynomialCalibration
+Description : data type for the polynomial calibration
+Copyright   : (c) Michael Oswald, 2019
+License     : BSD-3
+Maintainer  : michael.oswald@onikudaki.net
+Stability   : experimental
+Portability : POSIX
+
+This module provides some types used in calibrations
+-}
 {-# LANGUAGE OverloadedStrings
     , BangPatterns
     , GeneralizedNewtypeDeriving
@@ -41,6 +52,9 @@ import           Data.TM.Value
 import           Data.TM.Validity        hiding ( isValid )
 
 
+-- | The polynomial calibration. Provides 5 coefficients and
+-- calibrates an incoming value with the formula:
+-- y = a0 + a1 * x + a2 * x^2 + a3 * x^3 + a4 * x^4
 data PolynomialCalibration = PolynomialCalibration {
     _calibPName :: !ShortText
     , _calibPDescr :: !ShortText

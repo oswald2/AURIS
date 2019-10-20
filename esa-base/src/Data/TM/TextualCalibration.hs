@@ -1,3 +1,14 @@
+{-|
+Module      : Data.TM.TextualCalibration
+Description : Data type for a numerical calibration
+Copyright   : (c) Michael Oswald, 2019
+License     : BSD-3
+Maintainer  : michael.oswald@onikudaki.net
+Stability   : experimental
+Portability : POSIX
+
+This module handles textual calibrations of TM parameters
+-}
 {-# LANGUAGE OverloadedStrings
     , BangPatterns
     , GeneralizedNewtypeDeriving
@@ -34,9 +45,17 @@ import           Data.Text.Short                ( ShortText )
 import           Data.TM.CalibrationTypes
 import           Data.TM.Value
 
+
+
+-- | a calibration point for textual information. Textual
+-- calibrations are only possible on integer values.
 data TextCalibPoint = TextCalibPoint {
+    -- | specifies the lower value of the range
     _txpLower :: !Int64
+    -- | specified the upper value of the range
     , _txpUpper :: !Int64
+    -- | specifies to text to be used when the parameter
+    -- value falls within the range [lower, upper] (inclusive)
     , _txpText :: !ShortText
     }
     deriving (Show, Generic)

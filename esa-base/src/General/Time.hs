@@ -1,3 +1,23 @@
+{-|
+Module      : General.Time
+Description : General types for time handling
+Copyright   : (c) Michael Oswald, 2019
+License     : BSD-3
+Maintainer  : michael.oswald@onikudaki.net
+Stability   : experimental
+Portability : POSIX
+
+This module provides data types and functions for handling time values
+within the system.
+
+The time handling is based on 3 layers:
+
+  1. the 'SunTime' handles the normal time at application level (user facing)
+  2. the 'EpochTime' is for converting between encoded times and 'SunTime' with
+     specifiable epochs. Each mission can have it's own epoch
+  3. the encoded times. There are various formats how the time can be encoded/decoded.
+     See the module "Data.PUS.EncTime" for details.
+-}
 {-# LANGUAGE OverloadedStrings
     , BangPatterns
     , GeneralizedNewtypeDeriving
@@ -97,15 +117,15 @@ import           General.Types                  ( ToDouble(..) )
 
 type Parser = Parsec Void Text
 
-
+-- | one micro second
 {-# INLINABLE microSecs #-}
 microSecs :: Int64
 microSecs = 1_000_000
 
 
 -- | This class is for handling time conversions of the different time types
--- | This can be used in encoding as well as for displaying stuff, so
--- | this is a bit more general than it looks like
+-- This can be used in encoding as well as for displaying stuff, so
+-- this is a bit more general than it looks like
 class TimeRepConversion a where
     -- | converts time to a 64 bit word. High word are seconds, low word are
     -- | microseconds
@@ -153,7 +173,10 @@ microToTime' x =
   in  (sign * sec, fromIntegral (sign * usec))
 
 
--- | Time types
+-- | The basic sun data type. The sun time  is the general class on application
+-- level which is used in the system. It is used in all user interface interactions
+-- and is subject to time correlation and leap second correction (currently fixed leap
+-- seconds taken from the configuration).
 data SunTime = SunTime {
     tdsTime :: !Int64,
     tdsDelta :: !Bool
@@ -172,6 +195,8 @@ instance ToJSON SunTime where
 instance ToDouble SunTime where
   toDouble (SunTime msecs _) = fromIntegral msecs / 1_000_000
 
+-- | Convert from a double to a time. The double is assumed to
+-- be in seconds
 {-# INLINABLE fromDouble #-}
 fromDouble :: Double -> Bool -> SunTime
 fromDouble secs = SunTime (round (secs * 1_000_000))
@@ -182,7 +207,8 @@ instance Ord SunTime where
   SunTime _t1 False `compare` SunTime _t2 True  = GT
   SunTime _t1 True  `compare` SunTime _t2 False = LT
 
-
+-- | Create a 'SunTime' out of seconds, microseconds and if it is a
+-- delta time (True) or not
 {-# INLINABLE makeTime #-}
 makeTime :: Int64 -> Int32 -> Bool -> SunTime
 makeTime sec usec delta =
@@ -192,10 +218,13 @@ makeTime sec usec delta =
       newMicro         = newSec * microSecInt + fromIntegral usec'
   in  SunTime (sign * newMicro) delta
 
+
+-- | returns the seconds of the 'SunTime'
 {-# INLINABLE tdsSecs #-}
 tdsSecs :: SunTime -> Int64
 tdsSecs (SunTime micro _) = micro `quot` microSecInt
 
+-- | returns the micro seconds of the 'SunTime'
 {-# INLINABLE tdsMicro #-}
 tdsMicro :: SunTime -> Int32
 tdsMicro (SunTime micro _) = fromIntegral (micro `rem` microSecInt)
@@ -206,6 +235,7 @@ tdsMicro (SunTime micro _) = fromIntegral (micro `rem` microSecInt)
 nullTime :: SunTime
 nullTime = SunTime 0 False
 
+-- | a null relative time
 {-# INLINABLE nullRelTime #-}
 nullRelTime :: SunTime
 nullRelTime = SunTime 0 True
@@ -222,36 +252,43 @@ oneMicroSecond = SunTime 1 True
 tdsNull :: SunTime -> Bool
 tdsNull (SunTime mic _) = mic == 0
 
+-- | the seconds per day (no leaps)
 {-# INLINABLE secsInDay #-}
 secsInDay :: Int64
 secsInDay = 86400
 
+-- | the milli seconds in a day (no leaps)
 {-# INLINABLE milliSecsInDay #-}
 milliSecsInDay :: Int64
 milliSecsInDay = secsInDay * 1000
 
+-- | the micro seconds in a day (no leaps)
 {-# INLINABLE microSecsInDay #-}
 microSecsInDay :: Int64
 microSecsInDay = secsInDay * 1_000_000
 
+-- | the micro seconds per seoncd as 'Int64'
 {-# INLINABLE microSecInt #-}
 microSecInt :: Int64
 microSecInt = 1_000_000
 
+-- | the seconds in a year (no leaps)
 {-# INLINABLE secsInYear #-}
 secsInYear :: Int64
 secsInYear = 31536000
 
+-- | the micro seconds per second as a 'Double'
 {-# INLINABLE microSecond #-}
 microSecond :: Double
 microSecond = fromIntegral microSecInt
 
-
+-- | Returns the current system time as a 'SunTime'
 {-# INLINABLE getCurrentTime #-}
 getCurrentTime :: IO SunTime
 getCurrentTime = do
   t <- Data.Thyme.Clock.getCurrentTime
   return (SunTime (t ^. posixTime . microseconds) False)
+
 
 -- | show the low level internal data of a time
 {-# INLINABLE displayRaw #-}
@@ -259,7 +296,7 @@ displayRaw :: SunTime -> Text
 displayRaw (SunTime mic delta) =
   utf8BuilderToText ("SunTime " <> displayShow mic <> " " <> displayShow delta)
 
-
+-- | Display a 'SunTime' in ISO format
 {-# INLINABLE displayISO #-}
 displayISO :: SunTime -> Text
 displayISO (SunTime t False) =
@@ -324,6 +361,7 @@ displayISO (SunTime t True) =
 
 
 instance Display SunTime where
+  -- | display a 'SunTime' in SCOS format (with day of year)
   textDisplay (SunTime t False) =
     let t1 :: LocalTime
         t1 = t ^. from microseconds . from posixTime . utcLocalTime utc
@@ -381,12 +419,14 @@ instance Display SunTime where
           secs
           (abs mic)
 
+-- | Display a SunTime as a floating point value (in seconds)
 {-# INLINABLE displayDouble #-}
 displayDouble :: SunTime -> Text
 displayDouble t = utf8BuilderToText $ displayShow (toDouble t) <> " s"
 
 
-
+-- | Convert a 'SunTime' into a binary 'ByteString' in the format for the EDEN
+-- protocol
 {-# INLINABLE edenTime #-}
 edenTime :: SunTime -> ByteString
 edenTime (SunTime t _) =
@@ -420,7 +460,7 @@ edenTime (SunTime t _) =
 
 
 -- | parses a 'Text' and returns a 'SunTime' time. The format is standard SCOS
--- | format YYY.DDD.hh.mm.ss.mmmmmm
+-- format YYY.DDD.hh.mm.ss.mmmmmm
 fromText :: Text -> Either Text SunTime
 fromText str = case parse sunTimeParser "" str of
   Left  err -> Left (T.pack (show err))
@@ -513,15 +553,17 @@ daySegmToSeconds year days hours minutes seconds =
             + fromIntegral seconds
   in  temp_sec'
 
-
+-- | Add two 'SunTime'
 {-# INLINABLE (<+>) #-}
 (<+>) :: SunTime -> SunTime -> SunTime
 t1 <+> t2 = addTimes t1 t2
 
+-- | Subtract two 'SunTime'
 {-# INLINABLE (<->) #-}
 (<->) :: SunTime -> SunTime -> SunTime
 t1 <-> t2 = subTimes t1 t2
 
+-- | Negate a 'SunTime'
 {-# INLINABLE negTime #-}
 negTime :: SunTime -> SunTime
 negTime (SunTime mic delta) = SunTime (-mic) delta
@@ -556,7 +598,8 @@ instance TimeRepConversion SunTime where
   {-# INLINABLE microToTime #-}
   microToTime = SunTime
 
-
+-- | Class to indicate if a time value is a delta time. Can also be set
+-- via the setDelta function
 class DeltaTime a where
     isDelta :: a -> Bool
     setDelta :: Bool -> a -> a
@@ -597,8 +640,7 @@ instance ToJSON LeapSeconds where
     toEncoding = genericToEncoding defaultOptions
 
 
--- | correlation of the given ground time relative to a start time.
--- | This function is only
+-- | correlation of the given ground time relative to a on-board time
 {-# INLINABLE mcsTimeToOBT #-}
 mcsTimeToOBT :: SunTime -> CorrelationCoefficients -> SunTime
 mcsTimeToOBT curTime coeff
@@ -610,8 +652,8 @@ mcsTimeToOBT curTime coeff
         obt  = fromDouble obt' False
     in  obt
 
--- | correlation of a given on-board time relative to a start time into
--- | ground time
+-- | correlation of a given on-board time into
+-- ground time
 {-# INLINABLE obtToMcsTim #-}
 obtToMcsTim :: SunTime -> CorrelationCoefficients -> SunTime
 obtToMcsTim obt coeff
@@ -624,7 +666,7 @@ obtToMcsTim obt coeff
     in  utt
 
 -- | Perform leap second correction to a given time. This is for the
--- | converstion from ground time to OBT
+-- converstion from ground time to OBT
 {-# INLINABLE uttObtLeap #-}
 uttObtLeap :: LeapSeconds -> SunTime -> SunTime
 uttObtLeap leaps (SunTime mic delta) =
@@ -633,7 +675,7 @@ uttObtLeap leaps (SunTime mic delta) =
 
 
 -- | Perform leap second correction to a given time. This is for the
--- | converstion from OBT to ground time
+-- converstion from OBT to ground time
 {-# INLINABLE obtUttLeap #-}
 obtUttLeap :: LeapSeconds -> SunTime -> SunTime
 obtUttLeap leaps (SunTime mic delta) =
@@ -643,7 +685,7 @@ obtUttLeap leaps (SunTime mic delta) =
 
 
 
--- | Epoch, which specifies the used mission epoch
+-- | Epoch, which specifies the used mission epoch, including leap seconds
 data Epoch = Epoch {
     epEpoch :: !Int64,
     epLeapSeconds :: !LeapSeconds
@@ -655,8 +697,8 @@ instance Ord Epoch where
 
 
 -- | constructor of an epoch. Takes the seconds for the epoch (in relation
--- | to Unix time 1.1.1970) and the leap seconds. Both can be negative
--- | (e.g. for TAI time, the epoch is negative since 1958 < 1970
+-- to Unix time 1.1.1970) and the leap seconds. Both can be negative
+-- (e.g. for TAI time, the epoch is negative since 1958 < 1970
 {-# INLINABLE makeEpoch #-}
 makeEpoch :: Int64 -> LeapSeconds -> Epoch
 makeEpoch seconds leaps =
@@ -664,7 +706,7 @@ makeEpoch seconds leaps =
 
 
 -- | Epoch time is encoded with a given epoch. The epoch is completely free,
--- | some values have been specified as default (GPS, TAI and Year2000)
+-- some values have been specified as default (GPS, TAI and Year2000)
 data EpochTime = EpochTime {
     eptTime :: !Int64,
     eptDelta :: !Bool,
@@ -745,13 +787,13 @@ epoch1958 leaps =
 epochGPS :: LeapSeconds -> Epoch
 epochGPS leaps =
   Epoch (315964800 * microSecInt) (leaps * fromIntegral microSecInt)
--- | the epoch of unix time (01.01.1970)
 
+  -- | the epoch of unix time (01.01.1970)
 {-# INLINABLE epochUnix #-}
 epochUnix :: LeapSeconds -> Epoch
 epochUnix leaps = Epoch 0 (leaps * fromIntegral microSecInt)
--- | the epoch of the year 2000
 
+-- | the epoch of the year 2000
 {-# INLINABLE epoch2000 #-}
 epoch2000 :: LeapSeconds -> Epoch
 epoch2000 leaps =
@@ -775,9 +817,6 @@ instance ToDouble EpochTime where
   toDouble (EpochTime mic _ _) = fromIntegral mic / microSecond
 
 
--- | we need to handle EpochTime differently as it is the intermediate
--- | layer and needs the Epoch in the back-conversion as input
-
 -- {-# INLINABLE epochTimeToMicro #-}
 -- epochTimeToMicro :: EpochTime -> Int64
 -- epochTimeToMicro (EpochTime usec _ _) = usec
@@ -786,13 +825,15 @@ instance ToDouble EpochTime where
 -- microToEpochTime val ep delta = EpochTime val delta ep
 
 
-
+-- | Converts an 'EpochTime' to a 'SunTime'
 {-# INLINABLE epochTimeToSunTime #-}
 epochTimeToSunTime :: EpochTime -> SunTime
 epochTimeToSunTime (EpochTime m d (Epoch e l))
   | d         = SunTime m d
   | otherwise = SunTime (m + e - fromIntegral l) d
 
+
+-- | Converts a 'SunTime' with the given 'Epoch' into a 'EpochTime'
 {-# INLINABLE sunTimeToEpochTime #-}
 sunTimeToEpochTime :: Epoch -> SunTime -> EpochTime
 sunTimeToEpochTime ep@(Epoch e l) (SunTime mic delta) =

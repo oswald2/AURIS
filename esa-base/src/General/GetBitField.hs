@@ -1,3 +1,15 @@
+{-|
+Module      : General.GetBitField
+Description : Various functions to extract values from binary data
+Copyright   : (c) Michael Oswald, 2019
+License     : BSD-3
+Maintainer  : michael.oswald@onikudaki.net
+Stability   : experimental
+Portability : POSIX
+
+This module provides functions to extract values out of binary data. The
+values may be on arbitrary bit positions and may have also odd bit widths.
+-}
 {-# LANGUAGE
     OverloadedStrings
     , BangPatterns

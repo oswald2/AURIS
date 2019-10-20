@@ -1,3 +1,14 @@
+{-|
+Module      : Data.TM.NumericalCalibration
+Description : Data type for a numerical calibration
+Copyright   : (c) Michael Oswald, 2019
+License     : BSD-3
+Maintainer  : michael.oswald@onikudaki.net
+Stability   : experimental
+Portability : POSIX
+
+This module handles numerical calibrations of TM parameters
+-}
 {-# LANGUAGE
     TemplateHaskell
 #-}
@@ -33,6 +44,7 @@ import           Data.TM.Value
 import           Data.TM.Validity        hiding ( isValid )
 
 
+-- | A data point to be used within the calibration
 data CalibPoint = CalibPoint {
     _cx :: !Double
     , _cy :: !Double
@@ -47,6 +59,11 @@ instance ToJSON CalibPoint where
   toEncoding = genericToEncoding defaultOptions
 
 
+-- | The numerical calibration. Calibrates a value with a given
+-- set of calibration points. The value is interpolated between
+-- the given points. The '_calibNInterpolation' specifies what
+-- should be done when the given value falls outside of the range
+-- of the calibration (see 'CalibInterpolation')
 data NumericalCalibration = NumericalCalibration {
     _calibNName :: !ShortText
     , _calibNDescr :: !ShortText
