@@ -41,7 +41,7 @@ determineCalibCriterias paramName curs hm =
         f x = _curParamName x == paramName
         crits = V.map (convertCalibCriteria hm) curs'
     in if V.all isRight crits
-            then Right . V.fromList . rights . toList $ crits
+            then Right . force . V.fromList . rights . toList $ crits
             else
                 Left
                 $ V.foldl' (\x y -> x <> "\n" <> fromLeft "" y)

@@ -15,6 +15,8 @@ import           Data.Aeson
 data SyntheticAST = SyntheticAST
     deriving(Show, Generic)
 
+
+instance NFData SyntheticAST
 instance Serialise SyntheticAST
 instance FromJSON SyntheticAST
 instance ToJSON SyntheticAST where
@@ -26,6 +28,7 @@ data Synthetic = Synthetic {
     , _synthAST :: SyntheticAST
     } deriving (Show, Generic)
 
+instance NFData Synthetic
 instance Serialise Synthetic
 instance FromJSON Synthetic
 instance ToJSON Synthetic where

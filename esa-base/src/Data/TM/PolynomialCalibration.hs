@@ -53,6 +53,7 @@ data PolynomialCalibration = PolynomialCalibration {
     deriving (Show, Generic)
 makeLenses ''PolynomialCalibration
 
+instance NFData PolynomialCalibration
 instance Serialise PolynomialCalibration
 instance FromJSON PolynomialCalibration
 instance ToJSON PolynomialCalibration where

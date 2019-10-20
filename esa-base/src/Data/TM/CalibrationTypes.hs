@@ -30,6 +30,7 @@ data CalibInterpolation =
     | CalibFail
     deriving (Eq, Ord, Enum, Show, Read, Generic)
 
+instance NFData CalibInterpolation
 instance Serialise CalibInterpolation
 instance FromJSON CalibInterpolation
 instance ToJSON CalibInterpolation where

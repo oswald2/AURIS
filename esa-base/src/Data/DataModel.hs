@@ -54,9 +54,12 @@ import           Control.Lens                   ( makeLenses )
 
 import           Data.Text.Short                ( ShortText )
 
+import           Codec.Serialise
+
 import           Data.TM.Calibration
 import           Data.TM.Synthetic
 import           Data.TM.TMParameterDef
+
 
 
 data DataModel = DataModel {
@@ -67,3 +70,6 @@ data DataModel = DataModel {
     deriving (Show, Generic)
 makeLenses ''DataModel
 
+
+instance NFData DataModel
+instance Serialise DataModel

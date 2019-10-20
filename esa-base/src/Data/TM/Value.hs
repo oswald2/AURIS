@@ -68,6 +68,7 @@ data NumType =
     | NumDouble
     deriving (Eq, Ord, Enum, Show, Read, Generic)
 
+instance NFData NumType
 instance Serialise NumType
 instance FromJSON NumType
 instance ToJSON NumType where
@@ -90,7 +91,7 @@ charToType _   = NumInteger
 
 parseShortTextToDouble :: NumType -> Radix -> ShortText -> Either Text Double
 parseShortTextToDouble typ radix x =
-  -- trace ("parseTextToDouble: " <> T.pack (show typ ++ " " ++ show radix ++ show x)) $ 
+  -- trace ("parseTextToDouble: " <> T.pack (show typ ++ " " ++ show radix ++ show x)) $
   case parse (doubleParser typ radix) "" (toText x) of
     Left err ->
       Left $ "Could not parse '" <> toText x <> "' into Double: " <> T.pack
@@ -119,8 +120,8 @@ double = L.signed space L.float
 integer :: Parser Int64
 integer = L.lexeme space L.decimal
 
-uInteger :: Parser Word64 
-uInteger = L.lexeme space L.decimal 
+uInteger :: Parser Word64
+uInteger = L.lexeme space L.decimal
 
 signedInteger :: Parser Int64
 signedInteger = L.signed space integer
@@ -128,13 +129,13 @@ signedInteger = L.signed space integer
 hexInteger :: Parser Word64
 hexInteger = L.lexeme space L.hexadecimal
 
-octInteger :: Parser Word64 
+octInteger :: Parser Word64
 octInteger = L.lexeme space L.octal
 
 
 parseShortTextToInt64 :: NumType -> Radix -> ShortText -> Either Text Int64
 parseShortTextToInt64 typ radix x =
-  -- trace ("parseShortTextToInt64: " <> T.pack (show typ ++ " " ++ show radix ++ show x)) $ 
+  -- trace ("parseShortTextToInt64: " <> T.pack (show typ ++ " " ++ show radix ++ show x)) $
   case parseMaybe (intParser typ radix) (toText x) of
     Nothing   -> Left $ "Could not parse '" <> toText x <> "' into Int64"
     Just xval -> Right xval
@@ -163,6 +164,7 @@ data TMValueSimple =
 nullValueSimple :: TMValueSimple
 nullValueSimple = TMValUInt 0
 
+instance NFData TMValueSimple
 instance Serialise TMValueSimple
 
 instance FromJSON TMValueSimple where
@@ -198,8 +200,8 @@ parseShortTextToValueSimple ptc pfc x =
     Just xval -> Right xval
 
 parseShortTextToValue :: PTC -> PFC -> ShortText -> Either Text TMValue
-parseShortTextToValue ptc pfc x = 
-  -- trace ("parseShortTextToValue: " <> T.pack (show ptc ++ " " ++ show pfc ++ show x)) $ 
+parseShortTextToValue ptc pfc x =
+  -- trace ("parseShortTextToValue: " <> T.pack (show ptc ++ " " ++ show pfc ++ show x)) $
   case parseShortTextToValueSimple ptc pfc x of
     Left  err -> Left err
     Right val -> Right (TMValue val clearValidity)
@@ -211,11 +213,11 @@ tmValueParser (PTC ptc) (PFC pfc)
   | ptc == 1 || ptc == 2 || ptc == 3
   = TMValUInt <$> uInteger
   | ptc == 4
-  = TMValInt <$> signedInteger 
+  = TMValInt <$> signedInteger
   | ptc == 5
-  = TMValDouble <$> double 
+  = TMValDouble <$> double
   | ptc == 6 && pfc > 0
-  = TMValUInt <$> uInteger 
+  = TMValUInt <$> uInteger
   | ptc == 7 && pfc == 0
   = TMValOctet . strToByteString <$> many hexDigitChar
   | ptc == 7
@@ -260,7 +262,7 @@ data TMValue = TMValue {
     } deriving (Show, Generic)
 makeLenses ''TMValue
 
-
+instance NFData TMValue
 instance Serialise TMValue
 instance FromJSON TMValue
 instance ToJSON TMValue where

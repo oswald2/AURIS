@@ -9,7 +9,7 @@
     , FlexibleInstances
     , GADTs
     , ExistentialQuantification
-    , TemplateHaskell 
+    , TemplateHaskell
 #-}
 module Data.TM.TextualCalibration
   ( TextualCalibration(..)
@@ -42,6 +42,7 @@ data TextCalibPoint = TextCalibPoint {
     deriving (Show, Generic)
 makeLenses ''TextCalibPoint
 
+instance NFData TextCalibPoint
 instance Serialise TextCalibPoint
 instance FromJSON TextCalibPoint
 instance ToJSON TextCalibPoint where
@@ -56,6 +57,7 @@ data TextualCalibration = TextualCalibration {
     }
     deriving (Show, Generic)
 
+instance NFData TextualCalibration
 instance Serialise TextualCalibration
 instance FromJSON TextualCalibration
 instance ToJSON TextualCalibration where

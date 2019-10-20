@@ -137,8 +137,16 @@ testLoadParameters mibPath = do
                 Just w  -> T.putStrLn $ "Imported with warnings:\n" <> w
                 Nothing -> return ()
 
-            T.putStrLn "\n\nParameters with validity parameters:\n\n"
-            pPrint $ HM.filter (isJust . _fpValid) params
+            -- T.putStrLn "\n\nParameters with validity parameters:\n\n"
+            -- pPrint $ HM.filter (isJust . _fpValid) params
+
+            T.putStrLn "\n\nValidity Parameters:\n"
+            case HM.lookup "S2KUPDC1" params of
+              Just x -> pPrint x
+              Nothing -> T.putStrLn "S2KUPDC1 not found."
+            case HM.lookup "S2KTP201" params of
+              Just x -> pPrint x
+              Nothing -> T.putStrLn "S2KTP201 not found."
 
 
 
@@ -150,7 +158,9 @@ testLoadMIB mibPath = do
             T.putStrLn err
             exitFailure
         Right r -> do
-            pPrint r
+            -- pPrint r
+            return (force r)
+            T.putStrLn "Done."
 
 
 
@@ -158,34 +168,34 @@ main :: IO ()
 main = do
     [mibPath] <- getArgs
 
-    T.putStrLn "Loading Tables:\n===============\n"
-    T.putStrLn "CAFs:\n"
-    testCaf mibPath
-    T.putStrLn "\n\n\nCAPs:\n"
-    testCap mibPath
-    T.putStrLn "\n\n\nMCFs:\n"
-    testMcf mibPath
-    T.putStrLn "\n\n\nLGFs:\n"
-    testLgf mibPath
-    T.putStrLn "\n\n\nTXFs:\n"
-    testTxf mibPath
-    T.putStrLn "\n\n\nTXPs:\n"
-    testTxp mibPath
-    T.putStrLn "\n\n\nCURs:\n"
-    testCur mibPath
-    T.putStrLn "\n\n\nPCFs:\n"
-    testPcf mibPath
+    -- T.putStrLn "Loading Tables:\n===============\n"
+    -- T.putStrLn "CAFs:\n"
+    -- testCaf mibPath
+    -- T.putStrLn "\n\n\nCAPs:\n"
+    -- testCap mibPath
+    -- T.putStrLn "\n\n\nMCFs:\n"
+    -- testMcf mibPath
+    -- T.putStrLn "\n\n\nLGFs:\n"
+    -- testLgf mibPath
+    -- T.putStrLn "\n\n\nTXFs:\n"
+    -- testTxf mibPath
+    -- T.putStrLn "\n\n\nTXPs:\n"
+    -- testTxp mibPath
+    -- T.putStrLn "\n\n\nCURs:\n"
+    -- testCur mibPath
+    -- T.putStrLn "\n\n\nPCFs:\n"
+    -- testPcf mibPath
 
-    T.putStrLn "\n\n\nLoading Data Structures:\n===============\n"
-    T.putStrLn "LoadCalibs:\n"
-    testLoadCalibs mibPath
-    T.putStrLn "\nLoadSyns:\n"
-    testLoadSyn mibPath
-    T.putStrLn "\nLoadParams:\n"
-    testLoadParameters mibPath
+    -- T.putStrLn "\n\n\nLoading Data Structures:\n===============\n"
+    -- T.putStrLn "LoadCalibs:\n"
+    -- testLoadCalibs mibPath
+    -- T.putStrLn "\nLoadSyns:\n"
+    -- testLoadSyn mibPath
+    -- T.putStrLn "\nLoadParams:\n"
+    -- testLoadParameters mibPath
 
-    -- T.putStrLn "\n\n\nLoading MIB:\n===============\n"
-    -- T.putStrLn "LoadMIB:\n"
-    -- testLoadMIB mibPath
+    T.putStrLn "\n\n\nLoading MIB:\n===============\n"
+    T.putStrLn "LoadMIB:\n"
+    testLoadMIB mibPath
 
 

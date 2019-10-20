@@ -54,6 +54,7 @@ data LogarithmicCalibration = LogarithmicCalibration {
     deriving(Show, Generic)
 makeLenses ''LogarithmicCalibration
 
+instance NFData LogarithmicCalibration
 instance Serialise LogarithmicCalibration
 instance FromJSON LogarithmicCalibration
 instance ToJSON LogarithmicCalibration where

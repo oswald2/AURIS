@@ -1,4 +1,4 @@
-{-# LANGUAGE 
+{-# LANGUAGE
     TemplateHaskell
 #-}
 module Data.TM.NumericalCalibration
@@ -40,6 +40,7 @@ data CalibPoint = CalibPoint {
     deriving (Show, Generic)
 makeLenses ''CalibPoint
 
+instance NFData CalibPoint
 instance Serialise CalibPoint
 instance FromJSON CalibPoint
 instance ToJSON CalibPoint where
@@ -55,18 +56,18 @@ data NumericalCalibration = NumericalCalibration {
     deriving (Show, Generic)
 makeLenses ''NumericalCalibration
 
-
+instance NFData NumericalCalibration
 instance Serialise NumericalCalibration
 instance FromJSON NumericalCalibration
 instance ToJSON NumericalCalibration where
   toEncoding = genericToEncoding defaultOptions
 
 
--- | This type specifies, if the interpolation is done within an interval 
--- (in case the point lies within the calibration curve) or if an 
+-- | This type specifies, if the interpolation is done within an interval
+-- (in case the point lies within the calibration curve) or if an
 -- extrapolation should be done (when the point is outside the calibration
 -- curve). In case the point is left to the calibration curve, the first two
--- points are returned for extrapolation, in case the point is right to the 
+-- points are returned for extrapolation, in case the point is right to the
 -- curve, the last two points are returned
 data CalibInterval =
     Extrapolate CalibPoint CalibPoint

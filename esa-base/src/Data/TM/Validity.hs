@@ -31,6 +31,8 @@ import           Data.Aeson
 newtype Validity = Validity { getRawValidity :: Word32 }
     deriving (Eq, Show, Read, Generic)
 
+
+instance NFData Validity
 instance Serialise Validity
 instance FromJSON Validity
 instance ToJSON Validity where

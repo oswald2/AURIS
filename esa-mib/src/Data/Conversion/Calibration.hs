@@ -85,7 +85,7 @@ convertNumCalib CAFentry {..} caps =
                                                _capYVals
                     chk (Left e)   _          = Left e
                     chk _          (Left  e ) = Left e
-                    chk (Right x1) (Right y1) = Right $ CalibPoint x1 y1
+                    chk (Right !x1) (Right !y1) = Right $ CalibPoint x1 y1
                 in
                     chk x y
         in

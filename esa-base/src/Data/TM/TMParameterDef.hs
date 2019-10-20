@@ -45,6 +45,7 @@ data DoubleType =
     | DTMMilExtended
     deriving (Eq, Ord, Enum, Bounded, Show, Generic)
 
+instance NFData DoubleType
 instance Serialise DoubleType
 instance FromJSON DoubleType
 instance ToJSON DoubleType where
@@ -57,6 +58,7 @@ data TimeType =
     | CUC4Coarse2Fine
     deriving (Eq, Ord, Enum, Bounded, Show, Generic)
 
+instance NFData TimeType
 instance Serialise TimeType
 instance FromJSON TimeType
 instance ToJSON TimeType where
@@ -65,6 +67,7 @@ instance ToJSON TimeType where
 data CorrelationType = CorrelationYes | CorrelationNo
     deriving (Eq, Ord, Enum, Bounded, Show, Generic)
 
+instance NFData CorrelationType
 instance Serialise CorrelationType
 instance FromJSON CorrelationType
 instance ToJSON CorrelationType where
@@ -157,7 +160,7 @@ ptcPfcToParamType ptc pfc _ =
 
 
 
-
+instance NFData ParamType
 instance Serialise ParamType
 instance FromJSON ParamType
 instance ToJSON ParamType where
@@ -170,6 +173,7 @@ data ParamNatur =
     | NaturConstant
     deriving (Show, Generic)
 
+instance NFData ParamNatur
 instance Serialise ParamNatur
 instance FromJSON ParamNatur
 instance ToJSON ParamNatur where
@@ -183,7 +187,7 @@ charToStatusConsistency :: Char -> StatusConsistency
 charToStatusConsistency 'Y' = SCCOn
 charToStatusConsistency _   = SCCOff
 
-
+instance NFData StatusConsistency
 instance Serialise StatusConsistency
 instance FromJSON StatusConsistency
 instance ToJSON StatusConsistency where
@@ -212,6 +216,7 @@ data TMParameterDef = TMParameterDef {
     }
     deriving(Show, Generic)
 
+instance NFData TMParameterDef
 instance Serialise TMParameterDef
 instance FromJSON TMParameterDef
 instance ToJSON TMParameterDef where

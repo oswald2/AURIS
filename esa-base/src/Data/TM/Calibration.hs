@@ -48,6 +48,7 @@ data Calibration =
     deriving (Show, Generic)
 makePrisms ''Calibration
 
+instance NFData Calibration
 instance Serialise Calibration
 instance FromJSON Calibration
 instance ToJSON Calibration where
@@ -70,6 +71,7 @@ data CritCalib =
     } deriving (Show, Generic)
 makeLenses ''CritCalib
 
+instance NFData CritCalib
 instance Serialise CritCalib
 instance FromJSON CritCalib
 instance ToJSON CritCalib where
@@ -82,6 +84,7 @@ data CalibContainer =
     | Crit (Vector CritCalib)
     deriving (Show, Generic)
 
+instance NFData CalibContainer
 instance Serialise CalibContainer
 instance FromJSON CalibContainer
 instance ToJSON CalibContainer where

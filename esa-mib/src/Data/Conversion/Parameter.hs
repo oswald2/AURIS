@@ -97,9 +97,9 @@ convertParameter
 convertParameter curs calibHM synthHM pcfs p@PCFentry {..} =
     case ptcPfcToParamType (PTC _pcfPTC) (PFC _pcfPFC) corr of
         Left  err -> TWarn err
-        Right typ -> getCalibs typ
+        Right !typ -> getCalibs typ
   where
-    corr = case _pcfCorr of
+    !corr = case _pcfCorr of
         CharDefaultTo 'Y' -> Just True
         CharDefaultTo 'N' -> Just False
         _                 -> Just True
@@ -115,14 +115,14 @@ convertParameter curs calibHM synthHM pcfs p@PCFentry {..} =
         Left  err    -> TError err
         Right calibs -> getNatur typ calibs
 
-    getNatur typ calib = case getParamNatur _pcfName _pcfNatur synthHM of
+    getNatur !typ !calib = case getParamNatur _pcfName _pcfNatur synthHM of
         TError err   -> TError err
         TWarn  err   -> TWarn err
-        TOk    natur -> case getDefVal typ calib natur of
+        TOk    !natur -> case getDefVal typ calib natur of
             Left  err -> TError err
-            Right x   -> TOk x
+            Right !x   -> TOk x
 
-    getDefVal typ calib natur =
+    getDefVal !typ !calib !natur =
         case
                 (if ST.null _pcfParVal
                     then Right nullValue
@@ -132,20 +132,20 @@ convertParameter curs calibHM synthHM pcfs p@PCFentry {..} =
                 )
             of
                 Left  err    -> Left err
-                Right defVal -> createParam typ calib natur defVal
+                Right !defVal -> createParam typ calib natur defVal
 
     isDep PCFentry {..} = not . ST.null $ _pcfValid
 
-    createParam typ calibs natur defVal = if isDep p
+    createParam !typ !calibs !natur !defVal = if isDep p
         then
             let depP = HM.lookup _pcfValid pcfs
-                res  = maybe (TOk (Nothing, param Nothing))
+                !res  = maybe (TOk (Nothing, param Nothing))
                              (convertParameter curs calibHM synthHM pcfs)
                              depP
             in  case res of
                     TError err -> Left err
                     TWarn err -> Right (Just err, param Nothing)
-                    TOk (warns', valPar) -> Right (warns', param (Just valPar))
+                    TOk (warns', !valPar) -> Right (warns', param (Just valPar))
         else Right (Nothing, param Nothing)
       where
         param valPar = TMParameterDef { _fpName              = _pcfName

@@ -160,6 +160,7 @@ data SunTime = SunTime {
     }
     deriving (Eq, Show, Read, Generic)
 
+instance NFData SunTime
 instance Serialise SunTime
 instance FromJSON SunTime
 instance ToJSON SunTime where
