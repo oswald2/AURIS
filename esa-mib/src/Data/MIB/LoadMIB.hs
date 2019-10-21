@@ -45,8 +45,6 @@ import           Data.TM.TMPacketDef
 import           Data.Conversion.Calibration
 import           Data.Conversion.Parameter
 
-import           General.PUSTypes
-import           General.APID
 
 
 
@@ -209,26 +207,13 @@ loadSyntheticParameters path' = do
 
 loadPackets :: (MonadIO m, MonadReader env m, HasLogFunc env) => FilePath -> m (Either Text (HashMap ShortText TMPacketDef))
 loadPackets mibPath = do
-  pids' <- PID.loadFromFile mibPath
-  case pids' of
-    Left err -> return (Left err)
-    Right pids -> loadTPCF pids
+  _ <- runExceptT $ do
+    -- load calibrations
+    pids' <- PID.loadFromFile mibPath
+    tpcfs' <- TPCF.loadFromFile mibPath
 
-  where
-    loadTPCF pids = do
-      tpcfs' <- TPCF.loadFromFile mibPath
-      case tpcfs' of
-        Left err -> return (Left err)
-        Right tpcfs -> undefined
+    let pid = fromRight V.empty pids'
+        tpcf = fromRight V.empty tpcfs'
+    return ()
 
-
-
-    createPacket PID.PIDentry {..} (Just TPCF.TPCFentry {..}) = TMPacketDef {
-      _tmpdSPID = SPID _pidSPID
-      , _tmpdName = _tpcfName
-      , _tmpdType = mkPUSType (fromIntegral _pidType)
-      , _tmpdSubType = mkPUSSubType (fromIntegral _pidSubType)
-      , _tmpdApid = APID (fromIntegral _pidAPID)
-      , _tmpdPI1Val = _pidP1Val
-      , _tmpdPI2Val = _pidP2Val
-      }
+  return (Left "not implemented")

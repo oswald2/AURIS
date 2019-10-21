@@ -356,6 +356,7 @@ tmSegmentLength TMSegment65536 = 65536
 newtype SPID = SPID Word32
     deriving (Eq, Ord, Show, Read, Generic)
 
+instance Hashable SPID
 instance Serialise SPID
 instance FromJSON SPID
 instance ToJSON SPID where

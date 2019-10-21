@@ -73,9 +73,11 @@ library
     Data.MIB.MCF
     Data.MIB.LGF
     Data.MIB.LoadMIB
+    Data.Conversion.Types
     Data.Conversion.Calibration
     Data.Conversion.Parameter
     Data.Conversion.Criteria
+    Data.Conversion.TMPacket
 
   -- Modules included in this library but not exported.
   -- other-modules:

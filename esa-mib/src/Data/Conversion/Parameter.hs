@@ -27,13 +27,13 @@ import           Data.TM.Validity
 import           Data.MIB.Types
 
 import           Data.Conversion.Criteria
+import Data.Conversion.Types
 
 import           General.PUSTypes
 import           General.TriState
 
 
 
-type Warnings = Maybe Text
 
 
 convertParameters
