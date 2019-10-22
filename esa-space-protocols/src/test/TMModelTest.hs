@@ -13,11 +13,11 @@ module Main where
 import           RIO
 import qualified RIO.Text                      as T
 import qualified Data.Text.IO                  as T
-import qualified RIO.HashMap                   as HM
+-- import qualified RIO.HashMap                   as HM
 import qualified RIO.Vector                    as V
 import qualified RIO.Vector.Partial            as V
 import           Data.Text.Short                ( ShortText )
---import           UnliftIO.STM
+import qualified Data.HashTable.IO             as HT
 
 import           Data.MIB.LoadMIB
 
@@ -47,7 +47,11 @@ genRandomValue gen = do
     v <- uniformR (0, 255) gen
     return $ TMValue (TMValUInt v) clearValidity
 
-genRandomParameter :: (PrimMonad m, MonadIO m, V.Vector v ShortText) => Gen (PrimState m) -> v ShortText -> m TMParameter
+genRandomParameter
+    :: (PrimMonad m, MonadIO m, V.Vector v ShortText)
+    => Gen (PrimState m)
+    -> v ShortText
+    -> m TMParameter
 genRandomParameter gen namevec = do
     val <- genRandomValue gen
     t   <- liftIO getCurrentTime
@@ -60,13 +64,20 @@ genRandomParameter gen namevec = do
     return $ TMParameter name t val Nothing
 
 
-nameVec :: DataModel -> Vector ShortText
-nameVec model = V.fromList . map fst . HM.toList $ _dmParameters model
+nameVec :: DataModel -> IO (Vector ShortText)
+nameVec model = do
+    lst <- HT.toList $ _dmParameters model
+    return $ V.fromList . map fst $ lst
 
 
-feedParamValues :: (PrimMonad m, MonadIO m) => Gen (PrimState m) -> DataModel -> TBQueue TMParameter -> m ()
+feedParamValues
+    :: (PrimMonad m, MonadIO m)
+    => Gen (PrimState m)
+    -> DataModel
+    -> TBQueue TMParameter
+    -> m ()
 feedParamValues gen model queue = do
-    let nv = nameVec model
+    nv <- liftIO $ nameVec model
 
     replicateM_ 2000 $ do
         genRandomParameter gen nv >>= liftIO . atomically . writeTBQueue queue
@@ -102,7 +113,7 @@ main = do
                     exitFailure
                 Right model -> do
                   -- TODO: setup the FRP model
-                    thr <- async $ feedParamValues gen model queue
+                    _ <- async $ feedParamValues gen model queue
                     return ()
 
 

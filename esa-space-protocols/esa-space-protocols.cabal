@@ -465,3 +465,4 @@ executable TMModelTest
         , unliftio
         , mwc-random
         , text-short
+        , hashtables
