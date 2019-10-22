@@ -48,11 +48,15 @@ category:            Graphics
 -- README.
 extra-source-files:  CHANGELOG.md
 
+flag llvm
+    description:
+        build library with llvm
+    default: False
 
 library
   -- Modules exported by the library.
   exposed-modules:
-    GUI.Colors 
+    GUI.Colors
     GUI.Utils
     Model.ScrollingTableModel
 
@@ -74,3 +78,11 @@ library
   -- Base language which the package is written in.
   default-language:    Haskell2010
 
+  if flag(llvm)
+      ghc-options: -O2 -Wall -Wcompat -Widentities -Wincomplete-record-updates
+                    -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
+                    -funbox-strict-fields -fllvm
+  else
+      ghc-options: -O2 -Wall -Wcompat -Widentities -Wincomplete-record-updates
+                    -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
+                    -funbox-strict-fields

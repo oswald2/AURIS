@@ -169,19 +169,13 @@ library
         , resourcet
 
     if flag(llvm)
-        ghc-options: -O0 -Wall -Wcompat -Widentities -Wincomplete-record-updates
+        ghc-options: -O2 -Wall -Wcompat -Widentities -Wincomplete-record-updates
                      -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
                      -funbox-strict-fields -fllvm
-        -- ghc-options: -O2 -Wall -Wcompat -Widentities -Wincomplete-record-updates
-        --              -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
-        --              -funbox-strict-fields -fllvm
     else
-        ghc-options: -O0 -Wall -Wcompat -Widentities -Wincomplete-record-updates
+        ghc-options: -O2 -Wall -Wcompat -Widentities -Wincomplete-record-updates
                      -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
                      -funbox-strict-fields
-        -- ghc-options: -O2 -Wall -Wcompat -Widentities -Wincomplete-record-updates
-        --              -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
-        --              -funbox-strict-fields
 
 executable WriteConfig
     main-is: WriteConfig.hs
