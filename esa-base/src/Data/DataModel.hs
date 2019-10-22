@@ -33,6 +33,8 @@ import           Data.Text.Short                ( ShortText )
 
 import           Codec.Serialise
 
+import           Data.HashTable.IO
+
 import           Data.TM.Calibration
 import           Data.TM.Synthetic
 import           Data.TM.TMParameterDef
@@ -45,11 +47,9 @@ data DataModel = DataModel {
     -- | A map of the defined synthetic parameters indexed by name
     , _dmSyntheticParams :: HashMap ShortText Synthetic
     -- | A map of the defined TM parameters indexec by name
-    , _dmParameters :: HashMap ShortText TMParameterDef
+    , _dmParameters :: BasicHashTable ShortText TMParameterDef
     }
     deriving (Show, Generic)
 makeLenses ''DataModel
 
 
-instance NFData DataModel
-instance Serialise DataModel

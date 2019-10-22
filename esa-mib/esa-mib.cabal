@@ -145,6 +145,7 @@ library
     , esa-base
     , text-short
     , mtl
+    , hashtables
 
   -- Directories containing source files.
   hs-source-dirs:      src

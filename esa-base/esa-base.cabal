@@ -146,6 +146,7 @@ library
     , attoparsec-binary
     , base64-bytestring-type
     , mtl
+    , hashtables
 
   -- Directories containing source files.
   hs-source-dirs:      src

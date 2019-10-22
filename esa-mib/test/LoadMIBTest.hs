@@ -153,13 +153,13 @@ testLoadParameters mibPath = do
             -- T.putStrLn "\n\nParameters with validity parameters:\n\n"
             -- pPrint $ HM.filter (isJust . _fpValid) params
 
-            T.putStrLn "\n\nValidity Parameters:\n"
-            case HM.lookup "S2KUPDC1" params of
-                Just x  -> pPrint x
-                Nothing -> T.putStrLn "S2KUPDC1 not found."
-            case HM.lookup "S2KTP201" params of
-                Just x  -> pPrint x
-                Nothing -> T.putStrLn "S2KTP201 not found."
+            -- T.putStrLn "\n\nValidity Parameters:\n"
+            -- case HM.lookup "S2KUPDC1" params of
+            --     Just x  -> pPrint x
+            --     Nothing -> T.putStrLn "S2KUPDC1 not found."
+            -- case HM.lookup "S2KTP201" params of
+            --     Just x  -> pPrint x
+            --     Nothing -> T.putStrLn "S2KTP201 not found."
 
 
 
