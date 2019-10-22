@@ -57,7 +57,7 @@ library
   if flag(llvm)
     ghc-Options: -O2 -Wall -Wcompat -Widentities -Wincomplete-record-updates
                       -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
-                      -funbox-strict-fields -threaded -fllvm
+                      -funbox-strict-fields -threaded -fllvm -optlo-O3
   else
     ghc-Options: -O2 -Wall -Wcompat -Widentities -Wincomplete-record-updates
                       -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
