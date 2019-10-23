@@ -35,6 +35,11 @@ flag llvm
         build library with llvm
     default: False
 
+flag optimize 
+    description: 
+      build library with optimization
+    default: False 
+
 
 Executable AURISi
   Main-Is: AURISiMain.hs
@@ -71,13 +76,19 @@ Executable AURISi
 
   default-language: Haskell2010
   if flag(llvm)
-    ghc-Options: -O2 -Wall -Wcompat -Widentities -Wincomplete-record-updates
-                      -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
-                      -funbox-strict-fields -threaded -rtsopts -fllvm -optlo-O3
-  else
-    ghc-Options: -O2 -Wall -Wcompat -Widentities -Wincomplete-record-updates
-                      -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
-                      -funbox-strict-fields -threaded -rtsopts
+        ghc-options: -O2 -Wall -Wcompat -Widentities -Wincomplete-record-updates
+                     -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
+                     -funbox-strict-fields -fllvm -optlo-O3
+  else 
+    if flag(optimize) 
+        ghc-options: -O2 -Wall -Wcompat -Widentities -Wincomplete-record-updates
+                     -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
+                     -funbox-strict-fields
+    else 
+        ghc-options: -O0 -Wall -Wcompat -Widentities -Wincomplete-record-updates
+                     -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
+                     -funbox-strict-fields
+
 
   if impl(ghc >= 7.10) && flag(FastCompile)
      ghc-Options: -fno-specialise -fmax-simplifier-iterations=0 -fsimplifier-phases=0

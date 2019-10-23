@@ -17,6 +17,11 @@ flag llvm
         build library with llvm
     default: False
 
+flag optimize 
+    description: 
+      build library with optimization
+    default: False 
+
 flag tests
     description:
         Build test suite
@@ -172,8 +177,13 @@ library
         ghc-options: -O2 -Wall -Wcompat -Widentities -Wincomplete-record-updates
                      -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
                      -funbox-strict-fields -fllvm -optlo-O3
-    else
+    else 
+      if flag(optimize) 
         ghc-options: -O2 -Wall -Wcompat -Widentities -Wincomplete-record-updates
+                     -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
+                     -funbox-strict-fields
+      else 
+        ghc-options: -O0 -Wall -Wcompat -Widentities -Wincomplete-record-updates
                      -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
                      -funbox-strict-fields
 
