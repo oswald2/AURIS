@@ -11,12 +11,15 @@ import qualified RIO.List                      as L
 import           Data.MIB.PID
 import           Data.MIB.TPCF
 import           Data.MIB.PLF
+import           Data.MIB.Types
 
 import           Data.TM.TMPacketDef
 
+import           General.Types
 import           General.PUSTypes
 import           General.TriState
 import           General.APID
+import           General.Time
 
 import           Data.Conversion.Types
 
@@ -50,8 +53,41 @@ convertPacket tpcfs plfs pid@PIDentry {..} =
           )
 
   getFixedParams =
-    let pls = L.sort . filter (\x -> _pidSPID == _plfSPID x) . toList $ plfs
+    let pls = map convertPacketLocation . L.sort . filter (\x -> _pidSPID == _plfSPID x) . toList $ plfs
     in  undefined
 
 
   getVariableParams = undefined
+
+
+
+
+convertPacketLocation :: PLFentry -> TMParamLocation
+convertPacketLocation plf@PLFentry {..} = TMParamLocation
+  { _tmplName   = _plfName
+  , _tmplOffset = toBitOffset
+                    (mkOffset (ByteOffset _plfOffBy) (BitOffset _plfOffBi))
+  , _tmplTime   = fromMilli (fromIntegral (getDefaultInt _plfTime)) True
+  , _tmplSuperComm = convertSuperComm plf
+  }
+
+
+convertSuperComm :: PLFentry -> Maybe SuperCommutated 
+convertSuperComm PLFentry {..} = 
+  case (_plfNbOcc, _plfLgOcc, _plfTdOcc) of 
+    (Just n, Just lg, Just td) -> Just SuperCommutated {
+          _scNbOcc = n 
+          , _scLgOcc = lg 
+          , _scTdOcc = td
+        }
+    _ -> Nothing
+
+
+  -- data TMParamLocation = TMParamLocation {
+  --   _tmplName :: !ShortText
+  --   , _tmplOffset :: !BitOffset
+  --   , _tmplTime :: !TimeSpan
+  --   , _tmplSuperComm :: Maybe SuperCommutated
+  --   , _tmplParam :: TMParameterDef
+  --   } deriving (Show, Generic)
+  -- makeLenses ''TMParamLocation

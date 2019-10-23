@@ -25,6 +25,7 @@ import           Data.Csv
 
 
 import           Data.MIB.Load
+import           Data.MIB.Types
 --import           General.PUSTypes
 
 
@@ -36,7 +37,7 @@ data PLFentry = PLFentry {
     _plfOffBi :: !Int,
     _plfNbOcc :: Maybe Int,
     _plfLgOcc :: Maybe Int,
-    _plfTime :: Maybe Int,
+    _plfTime :: DefaultTo 0,
     _plfTdOcc :: Maybe Int
 } deriving (Show, Read)
 makeLenses ''PLFentry
