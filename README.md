@@ -47,4 +47,4 @@ Also thinking about adding SLE (would be necessary and probably be an interface 
 
 ## Notes
 
- * The [hashtables](https://github.com/gregorycollins/hashtables) library has been forked and directly put into this mono-repo. What has been modified is that an immutable hash table type has been added (but only for the Basic ST hash table), which can be obtained by calling unsafeFreeze. This allows to pass the HashTable out of the ST monad, but also only read-only functions are allowed. Currently, only `ilookup`, `fold` and `toList` are implemented.
+ * The [hashtables](https://github.com/gregorycollins/hashtables) library has been forked and directly put into this mono-repo. What has been modified is that an immutable hash table type has been added (but only for the Basic ST hash table), which can be obtained by calling `unsafeFreeze`. This allows to pass the HashTable out of the ST monad, but also only read-only functions are allowed. Currently, only `ilookup`, `fold` and `toList` are implemented.
