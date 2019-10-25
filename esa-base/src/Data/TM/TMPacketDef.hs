@@ -3,6 +3,9 @@
 #-}
 module Data.TM.TMPacketDef
   ( TMPacketDef(..)
+  , SuperCommutated(..)
+  , TMParamLocation(..)
+  , TMPacketParams(..)
   , tmpdSPID
   , tmpdType
   , tmpdSubType
@@ -21,6 +24,7 @@ module Data.TM.TMPacketDef
   , tmplSuperComm
   , tmplParam
 
+  , isSuperCommutated
   )
 where
 
@@ -32,7 +36,7 @@ import           Control.Lens                   ( makeLenses )
 import           General.PUSTypes
 import           General.APID
 import           General.Types
-import           General.TimeSpan
+import           General.Time
 
 import           Data.TM.TMParameterDef
 
@@ -50,11 +54,14 @@ makeLenses ''SuperCommutated
 data TMParamLocation = TMParamLocation {
   _tmplName :: !ShortText
   , _tmplOffset :: !BitOffset
-  , _tmplTime :: !TimeSpan
+  , _tmplTime :: !SunTime
   , _tmplSuperComm :: Maybe SuperCommutated
   , _tmplParam :: TMParameterDef
   } deriving (Show, Generic)
 makeLenses ''TMParamLocation
+
+isSuperCommutated :: TMParamLocation -> Bool 
+isSuperCommutated TMParamLocation {..} = isJust _tmplSuperComm
 
 
 

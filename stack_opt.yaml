@@ -29,9 +29,15 @@ resolver: lts-14.11
 #   - auto-update
 #   - wai
 packages:
-- .
-- ../esa-base
-
+- esa-base
+- esa-mib
+- esa-space-protocols
+- esa-db
+- esa-tm-model
+- mcs-interface
+- gui-base
+- auris-tmph
+- aurisi
 
 # Dependency packages to be pulled from upstream that are not in the resolver.
 # These entries can reference officially published versions as well as
@@ -42,10 +48,34 @@ packages:
 # - git: https://github.com/commercialhaskell/stack.git
 #   commit: e7b331f14bcffb8367cd58fbfc8b40ec7642100a
 #
-# extra-deps: []
+extra-deps:
+- attoparsec-data-1.0.4.1
+- closed-0.2.0.1
+- attoparsec-time-1
+- bytestring-to-vector-0.3.0.1
+- fltkhs-0.8.0.2
+- hw-prim-bits-0.1.0.4
 
 # Override default flag values for local packages and extra-deps
-# flags: {}
+flags:
+    fltkhs:
+      bundled: true
+    esa-base:
+      optimize: true
+    esa-mib:
+      optimize: true
+    esa-db:
+      optimize: true
+    esa-space-protocols:
+      optimize: true
+    auris-tmph:
+      optimize: true
+    aurisi:
+      optimize: true
+    gui-base:
+      optimize: true
+    mcs-interface:
+      optimize: true
 
 # Extra package databases containing global packages
 # extra-package-dbs: []

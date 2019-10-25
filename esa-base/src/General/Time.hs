@@ -35,6 +35,7 @@ module General.Time
   , microToTime'
   , SunTime
   , makeTime
+  , fromMilli
   , tdsSecs
   , tdsMicro
   , nullTime
@@ -200,6 +201,10 @@ instance ToDouble SunTime where
 {-# INLINABLE fromDouble #-}
 fromDouble :: Double -> Bool -> SunTime
 fromDouble secs = SunTime (round (secs * 1_000_000))
+
+{-# INLINABLE fromMilli #-}
+fromMilli :: Int64 -> Bool -> SunTime 
+fromMilli milli = SunTime (milli * 1000) 
 
 instance Ord SunTime where
   SunTime t1  False `compare` SunTime t2  False = t1 `compare` t2

@@ -31,7 +31,7 @@ import           Control.Lens                   ( makeLenses )
 
 import           Data.Text.Short                ( ShortText )
 
-import           Codec.Serialise
+-- import           Codec.Serialise
 
 import           Data.HashTable.IO
 
@@ -52,4 +52,4 @@ data DataModel = DataModel {
     deriving (Show, Generic)
 makeLenses ''DataModel
 
-
+-- since we use a hash table here, we can't automatically serialize.
