@@ -230,4 +230,5 @@ executable LoadMIBTest
         unliftio,
         hspec,
         pretty-show,
-        vector
+        vector,
+        hashtables

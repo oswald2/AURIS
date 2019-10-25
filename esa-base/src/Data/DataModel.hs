@@ -33,7 +33,7 @@ import           Data.Text.Short                ( ShortText )
 
 -- import           Codec.Serialise
 
-import           Data.HashTable.IO
+import           Data.HashTable.ST.Basic
 
 import           Data.TM.Calibration
 import           Data.TM.Synthetic
@@ -47,7 +47,7 @@ data DataModel = DataModel {
     -- | A map of the defined synthetic parameters indexed by name
     , _dmSyntheticParams :: HashMap ShortText Synthetic
     -- | A map of the defined TM parameters indexec by name
-    , _dmParameters :: BasicHashTable ShortText TMParameterDef
+    , _dmParameters :: IHashTable ShortText TMParameterDef
     }
     deriving (Show, Generic)
 makeLenses ''DataModel

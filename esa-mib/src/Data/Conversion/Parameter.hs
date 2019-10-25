@@ -13,8 +13,8 @@ import           Data.Text.Short                ( ShortText
                                                 , toText
                                                 )
 import qualified Data.Text.Short               as ST
-import           Data.HashTable.IO              ( BasicHashTable )
-import qualified Data.HashTable.IO             as HT
+import           Data.HashTable.ST.Basic        ( IHashTable )
+import qualified Data.HashTable.ST.Basic       as HT
 
 import           Data.MIB.PCF
 import           Data.MIB.CUR
@@ -29,18 +29,12 @@ import           Data.TM.Validity
 import           Data.MIB.Types
 
 import           Data.Conversion.Criteria
-import Data.Conversion.Types
+import           Data.Conversion.Types
 
 import           General.PUSTypes
 import           General.TriState
 
 
-
-foo :: IO (BasicHashTable Int Int)
-foo = do
-    ht <- HT.new
-    HT.insert ht 1 1
-    return ht
 
 
 convertParameters
@@ -48,19 +42,19 @@ convertParameters
     -> Vector CURentry
     -> HashMap ShortText Calibration
     -> HashMap ShortText Synthetic
-    -> IO (Either Text (Warnings, BasicHashTable ShortText TMParameterDef))
-convertParameters pcfs curs calibHM synHM = do
+    -> (Either Text (Warnings, IHashTable ShortText TMParameterDef))
+convertParameters pcfs curs calibHM synHM = 
     let params = map (convertParameter curs calibHM synHM (getPCFMap pcfs))
                      (toList pcfs)
         (errs, wrns, ok) = partitionTriState params
-
+    in
     if not (null errs)
-      then do
-        return $ Left
+      then 
+        Left
           .  T.concat
           $  ["Error creating TM parameters: "]
           <> intersperse "\n" errs
-      else do
+      else 
         -- create a hash table
         let warnings' = if not (null wrns) then Just warnMsg else Nothing
             warnMsg =
@@ -76,11 +70,13 @@ convertParameters pcfs curs calibHM synHM = do
             warnings = warnings' <> if not (null warns2)
               then Just "\n" <> Just warnMsg2
               else Nothing
-
+        in
         -- now insert the parameters
-        ht <- HT.new
-        foldM_ ins ht ok
-        return $ Right (warnings, ht)
+        runST $ do 
+          ht <- HT.new
+          foldM_ ins ht ok
+          iht <- HT.unsafeFreeze ht 
+          return $ Right (warnings, iht)
   where
     -- insert a parameter definition into the 'HashMap'.
     -- When there are dependent parameters, also insert them

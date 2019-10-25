@@ -17,7 +17,7 @@ import qualified Data.Text.IO                  as T
 import qualified RIO.Vector                    as V
 import qualified RIO.Vector.Partial            as V
 import           Data.Text.Short                ( ShortText )
-import qualified Data.HashTable.IO             as HT
+import qualified Data.HashTable.ST.Basic       as HT
 
 import           Data.MIB.LoadMIB
 
@@ -64,10 +64,10 @@ genRandomParameter gen namevec = do
     return $ TMParameter name t val Nothing
 
 
-nameVec :: DataModel -> IO (Vector ShortText)
-nameVec model = do
-    lst <- HT.toList $ _dmParameters model
-    return $ V.fromList . map fst $ lst
+nameVec :: DataModel -> Vector ShortText
+nameVec model = 
+    let lst = HT.toList $ _dmParameters model
+    in V.fromList . map fst $ lst
 
 
 feedParamValues
@@ -77,7 +77,7 @@ feedParamValues
     -> TBQueue TMParameter
     -> m ()
 feedParamValues gen model queue = do
-    nv <- liftIO $ nameVec model
+    let nv = nameVec model
 
     replicateM_ 2000 $ do
         genRandomParameter gen nv >>= liftIO . atomically . writeTBQueue queue

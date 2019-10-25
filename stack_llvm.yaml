@@ -38,6 +38,7 @@ packages:
 - gui-base
 - auris-tmph
 - aurisi
+- hashtables
 
 # Dependency packages to be pulled from upstream that are not in the resolver.
 # These entries can reference officially published versions as well as
@@ -76,6 +77,8 @@ flags:
       llvm: true
     mcs-interface:
       llvm: true
+    unsafe-tricks: true
+      sse42: true
 
 # Extra package databases containing global packages
 # extra-package-dbs: []

@@ -18,7 +18,7 @@ import           RIO.List                       ( intersperse )
 
 import           Control.Monad.Except
 
-import Data.HashTable.IO (BasicHashTable)
+import           Data.HashTable.ST.Basic        ( IHashTable )
 
 import           Data.Either
 import           Data.Text.Short                ( ShortText )
@@ -103,7 +103,7 @@ loadParameters
     -> m
            ( Either
                  Text
-                 (Maybe Text, BasicHashTable ShortText TMParameterDef)
+                 (Maybe Text, IHashTable ShortText TMParameterDef)
            )
 loadParameters mibPath calibHM synthHM = do
     pcfs' <- PCF.loadFromFile mibPath
@@ -116,7 +116,7 @@ loadParameters mibPath calibHM synthHM = do
         case curs' of
             Left  err  -> return (Left err)
             Right curs -> do
-              liftIO $ convertParameters pcfs curs calibHM synthHM
+              return $ convertParameters pcfs curs calibHM synthHM
 
 
 
