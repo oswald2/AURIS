@@ -6,7 +6,12 @@ where
 import           RIO
 import qualified RIO.HashMap                   as HM
 import qualified RIO.List                      as L
---import           Data.Text.Short                ( ShortText )
+import qualified RIO.Text                      as T
+import           Data.Text.Short                ( ShortText )
+import qualified Data.Text.Short               as ST
+
+import           Data.HashTable.ST.Basic        ( IHashTable )
+import qualified Data.HashTable.ST.Basic       as HT
 
 import           Data.MIB.PID
 import           Data.MIB.TPCF
@@ -14,6 +19,7 @@ import           Data.MIB.PLF
 import           Data.MIB.Types
 
 import           Data.TM.TMPacketDef
+import           Data.TM.TMParameterDef
 
 import           General.Types
 import           General.PUSTypes
@@ -25,14 +31,20 @@ import           Data.Conversion.Types
 
 
 
+
 convertPacket
   :: HashMap Word32 TPCFentry
   -> Vector PLFentry
+  -> IHashTable ShortText TMParameterDef
   -> PIDentry
   -> TriState Text Text (Warnings, TMPacketDef)
-convertPacket tpcfs plfs pid@PIDentry {..} =
+convertPacket tpcfs plfs paramHT pid@PIDentry {..} =
   let params = if _pidTPSD == -1 then getFixedParams else getVariableParams
-  in  createPacket pid (HM.lookup _pidSPID tpcfs) params
+  in  
+  case handleTriState params of 
+    Left err -> TError err 
+    Right (warnings, params') -> 
+      createPacket pid (HM.lookup _pidSPID tpcfs) params'
 
  where
   createPacket PIDentry {..} tpcf params =
@@ -53,8 +65,16 @@ convertPacket tpcfs plfs pid@PIDentry {..} =
           )
 
   getFixedParams =
-    let pls = map convertPacketLocation . L.sort . filter (\x -> _pidSPID == _plfSPID x) . toList $ plfs
-    in  undefined
+    let (errs, pls) =
+            partitionEithers
+              . map (convertPacketLocation paramHT)
+              . L.sort
+              . filter (\x -> _pidSPID == _plfSPID x)
+              . toList
+              $ plfs
+    in  if null errs
+          then TOk (Nothing, pls)
+          else TError (T.concat (L.intercalate "\n" errs))
 
 
   getVariableParams = undefined
@@ -62,25 +82,31 @@ convertPacket tpcfs plfs pid@PIDentry {..} =
 
 
 
-convertPacketLocation :: PLFentry -> TMParamLocation
-convertPacketLocation plf@PLFentry {..} = TMParamLocation
-  { _tmplName   = _plfName
-  , _tmplOffset = toBitOffset
-                    (mkOffset (ByteOffset _plfOffBy) (BitOffset _plfOffBi))
-  , _tmplTime   = fromMilli (fromIntegral (getDefaultInt _plfTime)) True
-  , _tmplSuperComm = convertSuperComm plf
-  }
+convertPacketLocation
+  :: IHashTable ShortText TMParameterDef
+  -> PLFentry
+  -> Either Text TMParamLocation
+convertPacketLocation ht plf@PLFentry {..} = case HT.ilookup ht _plfName of
+  Just x -> Right TMParamLocation
+    { _tmplName      = _plfName
+    , _tmplOffset    = toBitOffset
+                         (mkOffset (ByteOffset _plfOffBy) (BitOffset _plfOffBi))
+    , _tmplTime      = fromMilli (fromIntegral (getDefaultInt _plfTime)) True
+    , _tmplSuperComm = convertSuperComm plf
+    , _tmplParam     = x
+    }
+  Nothing ->
+    Left
+      $  "PLF: Parameter "
+      <> ST.toText _plfName
+      <> " defined in plf.dat not found"
 
 
-convertSuperComm :: PLFentry -> Maybe SuperCommutated 
-convertSuperComm PLFentry {..} = 
-  case (_plfNbOcc, _plfLgOcc, _plfTdOcc) of 
-    (Just n, Just lg, Just td) -> Just SuperCommutated {
-          _scNbOcc = n 
-          , _scLgOcc = lg 
-          , _scTdOcc = td
-        }
-    _ -> Nothing
+convertSuperComm :: PLFentry -> Maybe SuperCommutated
+convertSuperComm PLFentry {..} = case (_plfNbOcc, _plfLgOcc, _plfTdOcc) of
+  (Just n, Just lg, Just td) ->
+    Just SuperCommutated { _scNbOcc = n, _scLgOcc = lg, _scTdOcc = td }
+  _ -> Nothing
 
 
   -- data TMParamLocation = TMParamLocation {

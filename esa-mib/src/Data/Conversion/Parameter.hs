@@ -42,37 +42,14 @@ convertParameters
     -> Vector CURentry
     -> HashMap ShortText Calibration
     -> HashMap ShortText Synthetic
-    -> (Either Text (Warnings, IHashTable ShortText TMParameterDef))
+    -> Either Text (Warnings, IHashTable ShortText TMParameterDef)
 convertParameters pcfs curs calibHM synHM = 
     let params = map (convertParameter curs calibHM synHM (getPCFMap pcfs))
                      (toList pcfs)
-        (errs, wrns, ok) = partitionTriState params
     in
-    if not (null errs)
-      then 
-        Left
-          .  T.concat
-          $  ["Error creating TM parameters: "]
-          <> intersperse "\n" errs
-      else 
-        -- create a hash table
-        let warnings' = if not (null wrns) then Just warnMsg else Nothing
-            warnMsg =
-              T.concat
-                  $ [ "WARNING: on creating TM parameters, parameter ignored: "
-                    ]
-                  <> intersperse "\n" wrns
-            warns2 = map (fromJust . fst) . filter (isJust . fst) $ ok
-            warnMsg2 =
-              T.concat
-                  $  ["WARNING: on creating TM parameters: "]
-                  <> intersperse "\n" warns2
-            warnings = warnings' <> if not (null warns2)
-              then Just "\n" <> Just warnMsg2
-              else Nothing
-        in
-        -- now insert the parameters
-        runST $ do 
+    case handleTriState params of 
+      Left err -> Left err 
+      Right (warnings, ok) -> runST $ do 
           ht <- HT.new
           foldM_ ins ht ok
           iht <- HT.unsafeFreeze ht 
@@ -81,14 +58,14 @@ convertParameters pcfs curs calibHM synHM =
     -- insert a parameter definition into the 'HashMap'.
     -- When there are dependent parameters, also insert them
     -- into the HashMap first.
-    ins ht (_, par) = do
+    ins ht par = do
       -- we ignore the new values
       case _fpValid par of
         Nothing -> do
           HT.mutate ht (_fpName par) (upd par)
           return ht
         Just dep -> do
-            ht1 <- ins ht (Nothing, dep)
+            ht1 <- ins ht dep
             HT.mutate ht1 (_fpName par) (upd par)
             return ht1
 

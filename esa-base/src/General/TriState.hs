@@ -8,6 +8,7 @@ module General.TriState
   , warns
   , oks
   , partitionTriState
+  , handleTriState
   , fromError
   , fromWarn
   , fromOk
@@ -15,6 +16,9 @@ module General.TriState
 where
 
 import           RIO
+import qualified RIO.Text                      as T
+import           RIO.List                       ( intersperse )
+import           Data.Maybe
 
 
 data TriState a b c =
@@ -80,3 +84,24 @@ fromWarn a _         = a
 fromOk :: c -> TriState a b c -> c
 fromOk _ (TOk a) = a
 fromOk a _       = a
+
+
+handleTriState
+  :: [TriState Text Text (Maybe Text, a)] -> Either Text (Maybe Text, [a])
+handleTriState ls =
+  let (errs, wrns, ok) = partitionTriState ls
+  in
+    if not (null errs)
+      then Left . T.concat . intersperse "\n" $ errs
+      else
+        let
+          warnings' = if not (null wrns) then Just warnMsg else Nothing
+          warnMsg   = T.concat . intersperse "\n" $ wrns
+          warns2    = map (fromJust . fst) . filter (isJust . fst) $ ok
+          warnMsg2  = T.concat . intersperse "\n" $ warns2
+          warnings  = warnings' <> if not (null warns2)
+            then Just "\n" <> Just warnMsg2
+            else Nothing
+          ok' = map snd ok
+        in
+          Right (warnings, ok')
