@@ -788,7 +788,7 @@ epochGPS :: LeapSeconds -> Epoch
 epochGPS leaps =
   Epoch (315964800 * microSecInt) (leaps * fromIntegral microSecInt)
 
-  -- | the epoch of unix time (01.01.1970)
+-- | the epoch of unix time (01.01.1970)
 {-# INLINABLE epochUnix #-}
 epochUnix :: LeapSeconds -> Epoch
 epochUnix leaps = Epoch 0 (leaps * fromIntegral microSecInt)
