@@ -215,8 +215,8 @@ main = do
   T.putStrLn "\nLoadParams:\n"
   testLoadParameters mibPath
 
-  -- T.putStrLn "\n\n\nLoading MIB:\n===============\n"
-  -- T.putStrLn "LoadMIB:\n"
-  -- testLoadMIB mibPath
+  T.putStrLn "\n\n\nLoading MIB:\n===============\n"
+  T.putStrLn "LoadMIB:\n"
+  testLoadMIB mibPath
 
 
