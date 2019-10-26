@@ -32,6 +32,7 @@ import qualified Data.MIB.PCF                  as PCF
 import qualified Data.MIB.CUR                  as CUR
 import qualified Data.MIB.PID                  as PID
 import qualified Data.MIB.TPCF                 as TPCF
+import qualified Data.MIB.PLF                  as PLF
 
 import           Data.DataModel
 
@@ -46,7 +47,10 @@ import           Data.TM.TMPacketDef
 
 import           Data.Conversion.Calibration
 import           Data.Conversion.Parameter
+import           Data.Conversion.Types
+import           Data.Conversion.TMPacket
 
+import           General.PUSTypes
 
 
 
@@ -88,10 +92,23 @@ loadMIB mibPath = do
                 maybe (return ())
                       (\w -> logWarn ("On parameter import: " <> display w))
                       wa
-                return $ Right DataModel { _dmCalibrations    = calibs
-                                         , _dmSyntheticParams = syns
-                                         , _dmParameters      = params
-                                         }
+                procPackets syns calibs params
+
+    procPackets syns calibs params = do
+      packets' <- loadPackets mibPath params
+      case packets' of
+        Left err -> do
+          logError (display err)
+          return (Left err)
+        Right (wa, packets) -> do
+          maybe (return ())
+            (\w -> logWarn ("On parameter import: " <> display w))
+            wa
+          return $ Right DataModel { _dmCalibrations    = calibs
+            , _dmSyntheticParams = syns
+            , _dmParameters      = params
+            , _dmTMPackets       = packets
+            }
 
 
 
@@ -208,15 +225,24 @@ loadSyntheticParameters path' = do
 
 
 
-loadPackets :: (MonadIO m, MonadReader env m, HasLogFunc env) => FilePath -> m (Either Text (HashMap ShortText TMPacketDef))
-loadPackets mibPath = do
-  _ <- runExceptT $ do
+loadPackets :: (MonadIO m, MonadReader env m, HasLogFunc env)
+  => FilePath
+  -> IHashTable ShortText TMParameterDef
+  -> m (Either Text (Warnings, HashMap SPID TMPacketDef))
+loadPackets mibPath parameters = do
+  runExceptT $ do
     -- load calibrations
     pids' <- PID.loadFromFile mibPath
     tpcfs' <- TPCF.loadFromFile mibPath
+    plfs' <- PLF.loadFromFile mibPath
 
     let pid = fromRight V.empty pids'
         tpcf = fromRight V.empty tpcfs'
-    return ()
+        plf = fromRight V.empty plfs'
+        tpcfMap = TPCF.getTPCFMap tpcf
 
-  return (Left "not implemented")
+    (warnings, packets) <- liftEither $ convertPackets tpcfMap plf parameters pid
+    let ins = foldl' f HM.empty packets
+        f hm pkt = HM.insert (_tmpdSPID pkt) pkt hm
+    return (warnings, ins)
+

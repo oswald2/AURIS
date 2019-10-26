@@ -77,7 +77,8 @@ flags:
       llvm: true
     mcs-interface:
       llvm: true
-    unsafe-tricks: true
+    hashtables:
+      unsafe-tricks: true
       sse42: true
 
 # Extra package databases containing global packages

@@ -18,6 +18,7 @@ module Data.MIB.Types
   , DefaultToNothing(..)
   , CharDefaultTo(..)
   , ShortTextDefaultTo(..)
+  , charDefaultToBool
   )
 where
 
@@ -51,6 +52,13 @@ instance ToField (DefaultTo a) where
 
 newtype CharDefaultTo (a :: Symbol) = CharDefaultTo { getDefaultChar :: Char }
     deriving (Eq, Show, Read)
+
+
+charDefaultToBool :: CharDefaultTo a -> Bool
+charDefaultToBool x =
+  case getDefaultChar x of
+    'Y' -> True
+    _ -> False
 
 instance KnownSymbol a => FromField (CharDefaultTo a) where
   parseField s = case runParser (parseField s) of

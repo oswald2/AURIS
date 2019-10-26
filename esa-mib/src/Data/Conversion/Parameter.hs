@@ -7,8 +7,8 @@ where
 import           RIO
 import qualified RIO.HashMap                   as HM
 import qualified RIO.Text                      as T
-import           RIO.List                       ( intersperse )
-import           RIO.Partial                    ( fromJust )
+--import           RIO.List                       ( intersperse )
+--import           RIO.Partial                    ( fromJust )
 import           Data.Text.Short                ( ShortText
                                                 , toText
                                                 )
@@ -43,16 +43,16 @@ convertParameters
     -> HashMap ShortText Calibration
     -> HashMap ShortText Synthetic
     -> Either Text (Warnings, IHashTable ShortText TMParameterDef)
-convertParameters pcfs curs calibHM synHM = 
+convertParameters pcfs curs calibHM synHM =
     let params = map (convertParameter curs calibHM synHM (getPCFMap pcfs))
                      (toList pcfs)
     in
-    case handleTriState params of 
-      Left err -> Left err 
-      Right (warnings, ok) -> runST $ do 
+    case handleTriState params of
+      Left err -> Left err
+      Right (warnings, ok) -> runST $ do
           ht <- HT.new
           foldM_ ins ht ok
-          iht <- HT.unsafeFreeze ht 
+          iht <- HT.unsafeFreeze ht
           return $ Right (warnings, iht)
   where
     -- insert a parameter definition into the 'HashMap'.
@@ -70,7 +70,7 @@ convertParameters pcfs curs calibHM synHM =
             return ht1
 
     upd x Nothing = (Just x, ())
-    upd x (Just old) = (Just old, ())
+    upd _ (Just old) = (Just old, ())
 
 
 convertParameter

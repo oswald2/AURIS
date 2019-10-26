@@ -3,7 +3,6 @@
 #-}
 module Data.MIB.PID
     ( PIDentry(..)
-    , DefaultTime(..)
     , loadFromFile
     , getPidTime
     , pidType
@@ -33,14 +32,8 @@ import           Data.Csv
 import qualified RIO.Vector                    as V
 
 import           Data.MIB.Load
+import           Data.MIB.Types
 
-
-
-newtype DefaultTime = DefTime {defaultTimeVal :: Char}  deriving (Eq, Ord, Show, Read)
-
-instance FromField DefaultTime where
-    parseField s =
-        DefTime . fromMaybe 'N' <$> (parseField s :: Parser (Maybe Char))
 
 
 
@@ -52,14 +45,14 @@ data PIDentry = PIDentry {
     _pidP2Val :: !Int,
     _pidSPID :: !Word32,
     _pidDescr :: !ShortText,
-    _pidUnit :: !ByteString,
+    _pidUnit :: !ShortText,
     _pidTPSD :: !Int,
     _pidDfhSize :: !Int,
-    _pidTime :: !DefaultTime,
-    _pidInter :: !ShortText,
-    _pidValid :: !ShortText,
-    _pidCheck :: Maybe Int,
-    _pidEvent :: !ShortText,
+    _pidTime :: CharDefaultTo "N",
+    _pidInter :: Maybe Int,
+    _pidValid :: CharDefaultTo "Y",
+    _pidCheck :: DefaultTo 0,
+    _pidEvent :: CharDefaultTo "N",
     _pidEventID :: !ShortText
 } deriving (Show, Read)
 makeLenses ''PIDentry
@@ -75,8 +68,10 @@ instance Eq PIDentry where
 
 
 
-getPidTime :: PIDentry -> Char
-getPidTime = defaultTimeVal . _pidTime
+getPidTime :: PIDentry -> Bool
+getPidTime pid = case getDefaultChar (_pidTime pid) of
+    'Y' -> True
+    _   -> False
 
 
 

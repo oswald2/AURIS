@@ -22,6 +22,7 @@ module Data.DataModel
     , dmCalibrations
     , dmSyntheticParams
     , dmParameters
+    , dmTMPackets
     )
 where
 
@@ -31,13 +32,16 @@ import           Control.Lens                   ( makeLenses )
 
 import           Data.Text.Short                ( ShortText )
 
--- import           Codec.Serialise
+--import           Codec.Serialise
 
 import           Data.HashTable.ST.Basic
 
 import           Data.TM.Calibration
 import           Data.TM.Synthetic
 import           Data.TM.TMParameterDef
+import           Data.TM.TMPacketDef
+
+import           General.PUSTypes
 
 
 -- | The data model itself.
@@ -48,8 +52,9 @@ data DataModel = DataModel {
     , _dmSyntheticParams :: HashMap ShortText Synthetic
     -- | A map of the defined TM parameters indexec by name
     , _dmParameters :: IHashTable ShortText TMParameterDef
+    , _dmTMPackets :: HashMap SPID TMPacketDef
     }
     deriving (Show, Generic)
 makeLenses ''DataModel
 
--- since we use a hash table here, we can't automatically serialize.
+

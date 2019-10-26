@@ -12,6 +12,7 @@
 #-}
 module General.TimeSpan
   ( TimeSpan(..)
+  , TimeSpn
   , ToTimeSpan(..)
   , mkTimeSpan
   , getMicro
