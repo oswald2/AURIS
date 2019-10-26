@@ -256,6 +256,8 @@ loadPackets mibPath parameters = do
     (warnings, packets) <- liftEither $ convertPackets tpcfMap plf parameters pid
     let ins = foldl' f HM.empty packets
         f hm pkt = HM.insert (key pkt) pkt hm
-        key pkt = TMPacketKey (_tmpdApid pkt) (_tmpdType pkt) (_tmpdSubType pkt) (_tmpdPI1Val pkt) (_tmpdPI2Val pkt)
+        key pkt = TMPacketKey (_tmpdApid pkt)
+            (_tmpdType pkt) (_tmpdSubType pkt)
+            (fromIntegral (_tmpdPI1Val pkt)) (fromIntegral (_tmpdPI2Val pkt))
     return (warnings, ins)
 

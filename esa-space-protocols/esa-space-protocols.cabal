@@ -17,10 +17,10 @@ flag llvm
         build library with llvm
     default: False
 
-flag optimize 
-    description: 
+flag optimize
+    description:
       build library with optimization
-    default: False 
+    default: False
 
 flag tests
     description:
@@ -73,6 +73,7 @@ library
         Data.PUS.TMStoreFrame
         Data.PUS.TMParameterExtraction
         Data.PUS.TMPacket
+        Data.PUS.TMPacketIdentification
         Data.PUS.ExtractedDU
         Data.PUS.MissionSpecific.Definitions
         Data.PUS.Value
@@ -177,12 +178,12 @@ library
         ghc-options: -O2 -Wall -Wcompat -Widentities -Wincomplete-record-updates
                      -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
                      -funbox-strict-fields -fllvm -optlo-O3
-    else 
-      if flag(optimize) 
+    else
+      if flag(optimize)
         ghc-options: -O2 -Wall -Wcompat -Widentities -Wincomplete-record-updates
                      -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
                      -funbox-strict-fields
-      else 
+      else
         ghc-options: -O0 -Wall -Wcompat -Widentities -Wincomplete-record-updates
                      -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
                      -funbox-strict-fields

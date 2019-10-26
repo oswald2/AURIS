@@ -164,7 +164,7 @@ makeLenses ''TMPacketDef
 
 -- | The tuple (APID, PUSType, PUSSubType, PI1, PI2) which is the lookup key
 -- for the packet definition
-data TMPacketKey = TMPacketKey APID PUSType PUSSubType Int Int
+data TMPacketKey = TMPacketKey !APID !PUSType !PUSSubType !Int64 !Int64
   deriving (Eq, Show, Generic)
 
 instance Hashable TMPacketKey
