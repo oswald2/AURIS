@@ -7,6 +7,7 @@ import           RIO
 import qualified RIO.HashMap                   as HM
 import qualified RIO.List                      as L
 import qualified RIO.Text                      as T
+import qualified RIO.Vector                    as V
 import           Data.Text.Short                ( ShortText )
 import qualified Data.Text.Short               as ST
 
@@ -39,20 +40,19 @@ convertPacket
   -> PIDentry
   -> TriState Text Text (Warnings, TMPacketDef)
 convertPacket tpcfs plfs paramHT pid@PIDentry {..} =
-  let params = if _pidTPSD == -1 then getFixedParams else getVariableParams
-  in  
-  case handleTriState params of 
-    Left err -> TError err 
-    Right (warnings, params') -> 
-      createPacket pid (HM.lookup _pidSPID tpcfs) params'
+  case if _pidTPSD == -1 then getFixedParams else getVariableParams of
+    TError err -> TError err
+    TWarn  err -> TWarn err
+    TOk (warnings, params) ->
+      createPacket pid (HM.lookup _pidSPID tpcfs) warnings params
 
  where
-  createPacket PIDentry {..} tpcf params =
+  createPacket PIDentry {..} tpcf warnings params =
     let name = case tpcf of
           Just TPCFentry {..} -> _tpcfName
           Nothing             -> ""
     in  TOk
-          ( Nothing
+          ( warnings
           , TMPacketDef { _tmpdSPID    = SPID _pidSPID
                         , _tmpdName    = name
                         , _tmpdType    = mkPUSType (fromIntegral _pidType)
@@ -73,8 +73,8 @@ convertPacket tpcfs plfs paramHT pid@PIDentry {..} =
               . toList
               $ plfs
     in  if null errs
-          then TOk (Nothing, pls)
-          else TError (T.concat (L.intercalate "\n" errs))
+          then TOk (Nothing, TMFixedParams (V.fromList pls))
+          else TError (T.concat (L.intersperse ("\n" :: Text) errs))
 
 
   getVariableParams = undefined
