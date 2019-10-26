@@ -33,6 +33,7 @@ import qualified Data.MIB.CUR                  as CUR
 import qualified Data.MIB.PID                  as PID
 import qualified Data.MIB.TPCF                 as TPCF
 import qualified Data.MIB.PLF                  as PLF
+import qualified Data.MIB.PIC                  as PIC
 
 import           Data.DataModel
 
@@ -50,7 +51,7 @@ import           Data.Conversion.Parameter
 import           Data.Conversion.Types
 import           Data.Conversion.TMPacket
 
-import           General.PUSTypes
+-- import           General.PUSTypes
 
 
 
@@ -92,9 +93,19 @@ loadMIB mibPath = do
                 maybe (return ())
                       (\w -> logWarn ("On parameter import: " <> display w))
                       wa
-                procPackets syns calibs params
+                procPicIdx syns calibs params
 
-    procPackets syns calibs params = do
+    procPicIdx syns calibs params = do
+      pics' <- PIC.loadFromFile mibPath
+      case pics' of
+        Left err -> do
+          logError (display err)
+          return (Left err)
+        Right pics -> do
+          let !pIdx = picSeachIndexFromPIC pics
+          procPackets syns calibs pIdx params
+
+    procPackets syns calibs pIdx params = do
       packets' <- loadPackets mibPath params
       case packets' of
         Left err -> do
@@ -107,6 +118,7 @@ loadMIB mibPath = do
           return $ Right DataModel { _dmCalibrations    = calibs
             , _dmSyntheticParams = syns
             , _dmParameters      = params
+            , _dmPacketIdIdx     = pIdx
             , _dmTMPackets       = packets
             }
 
@@ -228,7 +240,7 @@ loadSyntheticParameters path' = do
 loadPackets :: (MonadIO m, MonadReader env m, HasLogFunc env)
   => FilePath
   -> IHashTable ShortText TMParameterDef
-  -> m (Either Text (Warnings, HashMap SPID TMPacketDef))
+  -> m (Either Text (Warnings, HashMap TMPacketKey TMPacketDef))
 loadPackets mibPath parameters = do
   runExceptT $ do
     -- load calibrations
@@ -243,6 +255,7 @@ loadPackets mibPath parameters = do
 
     (warnings, packets) <- liftEither $ convertPackets tpcfMap plf parameters pid
     let ins = foldl' f HM.empty packets
-        f hm pkt = HM.insert (_tmpdSPID pkt) pkt hm
+        f hm pkt = HM.insert (key pkt) pkt hm
+        key pkt = TMPacketKey (_tmpdApid pkt) (_tmpdType pkt) (_tmpdSubType pkt) (_tmpdPI1Val pkt) (_tmpdPI2Val pkt)
     return (warnings, ins)
 

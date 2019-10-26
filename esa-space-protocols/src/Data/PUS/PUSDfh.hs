@@ -82,15 +82,11 @@ import           Data.Attoparsec.ByteString     ( Parser )
 import qualified Data.Attoparsec.ByteString    as A
 import           Data.Bits
 import           ByteString.StrictBuilder
---import           Data.Vector                    ( Vector )
---import qualified Data.Vector                   as V
-import           Data.Binary
 import           Data.Aeson
 
 import           Codec.Serialise
 
 import           General.PUSTypes
---import           Data.PUS.Parameter
 import           Data.PUS.EncTime
 
 import           Protocol.SizeOf
@@ -134,7 +130,6 @@ data DataFieldHeader =
     deriving (Eq, Show, Read, Generic)
 makeLenses ''DataFieldHeader
 
-instance Binary DataFieldHeader
 instance Serialise DataFieldHeader
 instance FromJSON DataFieldHeader
 instance ToJSON DataFieldHeader where
@@ -222,7 +217,7 @@ pusAckFlags PUSTMStdHeader{} = (False, False, False, False)
 pusAckFlags PUSCnCTCHeader{} = (False, False, False, False)
 
 
-pusPktTime :: DataFieldHeader -> Maybe CUCTime 
+pusPktTime :: DataFieldHeader -> Maybe CUCTime
 pusPktTime PUSTMStdHeader {_stdTmOBTime = t} = Just t
 pusPktTime _ = Nothing
 

@@ -9,10 +9,6 @@ module Data.MIB.PIC
   , getPICSet
   , picCompareWithApid
   , picCompareTypeSubType
-  , picVecToApidMap
-  , picVecToTypeMap
-  , ApidKey(..)
-  , TypeSubTypeKey(..)
   , picType
   , picSubType
   , picPI1Off
@@ -32,7 +28,6 @@ import           Data.ByteString.Lazy.Char8    as BC
 import           Data.Text                     as T
 import           Data.Char
 import           Data.Csv
-import           Data.Map                      as M
 import           Data.HashSet                  as HS
 import           Data.Hashable
 import           Data.Vector                   as V
@@ -52,12 +47,12 @@ data PICentry = PICentry
   , _picPI1Width :: !Word16
   , _picPI2Off :: !Int
   , _picPI2Width :: !Word16
-  , _picApid :: DefaultToNothing Word16
+  , _picApid :: Maybe Word16
 } deriving (Show, Read)
 makeLenses ''PICentry
 
 defaultPIC :: PICentry
-defaultPIC = PICentry 0 0 (-1) 0 (-1) 0 (DefaultToNothing Nothing)
+defaultPIC = PICentry 0 0 (-1) 0 (-1) 0 Nothing
 
 
 instance Eq PICentry where
@@ -111,7 +106,7 @@ instance FromRecord PICentry where
       .!  4
       <*> v
       .!  5
-      <*> pure (DefaultToNothing Nothing)
+      <*> pure Nothing
     | otherwise
     = mzero
 
@@ -121,53 +116,14 @@ myOptions = defaultDecodeOptions { decDelimiter = fromIntegral (ord '\t') }
 fileName :: FilePath
 fileName = "pic.dat"
 
-data ApidKey =
-  ApidKey !Word8
-          !Word8
-          !Word16
-  deriving (Show)
-
-instance Eq ApidKey where
-  (ApidKey t st ap) == (ApidKey t2 st2 ap2) = t == t2 && st == st2 && ap == ap2
-
-instance Ord ApidKey where
-  compare (ApidKey t1 st1 ap1) (ApidKey t2 st2 ap2) = case compare ap1 ap2 of
-    EQ -> case compare t1 t2 of
-      EQ -> compare st1 st2
-      x  -> x
-    x -> x
 
 
-data TypeSubTypeKey =
-  TypeSubTypeKey !Word8
-                 !Word8
-  deriving (Show, Eq)
-
-instance Ord TypeSubTypeKey where
-  compare (TypeSubTypeKey t1 st1) (TypeSubTypeKey t2 st2) =
-    case compare t1 t2 of
-      EQ -> compare st1 st2
-      x  -> x
-
-
-picVecToApidMap :: Vector PICentry -> Map ApidKey PICentry
-picVecToApidMap = V.foldl ins M.empty
- where
-  ins m pic = case _picApid pic of
-    DefaultToNothing (Just apid) ->
-      M.insert (ApidKey (_picType pic) (_picSubType pic) apid) pic m
-    _ -> m
-
-picVecToTypeMap :: Vector PICentry -> Map TypeSubTypeKey PICentry
-picVecToTypeMap = V.foldl ins M.empty
- where
-  ins m pic = M.insert (TypeSubTypeKey (_picType pic) (_picSubType pic)) pic m
 
 
 
 picCompareWithApid :: (Word8, Word8, Word16) -> PICentry -> Ordering
 picCompareWithApid (typ, subtype, apid) pic =
-  case compare (DefaultToNothing (Just apid)) (_picApid pic) of
+  case compare (Just apid) (_picApid pic) of
     EQ -> case compare typ (_picType pic) of
       EQ -> compare subtype (_picSubType pic)
       x  -> x

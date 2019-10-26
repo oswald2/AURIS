@@ -23,6 +23,7 @@ module Data.DataModel
     , dmSyntheticParams
     , dmParameters
     , dmTMPackets
+    , dmPacketIdIdx
     )
 where
 
@@ -41,7 +42,7 @@ import           Data.TM.Synthetic
 import           Data.TM.TMParameterDef
 import           Data.TM.TMPacketDef
 
-import           General.PUSTypes
+
 
 
 -- | The data model itself.
@@ -52,7 +53,10 @@ data DataModel = DataModel {
     , _dmSyntheticParams :: HashMap ShortText Synthetic
     -- | A map of the defined TM parameters indexec by name
     , _dmParameters :: IHashTable ShortText TMParameterDef
-    , _dmTMPackets :: HashMap SPID TMPacketDef
+    -- | A search index for packet identification criterias
+    , _dmPacketIdIdx :: PICSearchIndex
+    -- | A map into the packets
+    , _dmTMPackets :: HashMap TMPacketKey TMPacketDef
     }
     deriving (Show, Generic)
 makeLenses ''DataModel

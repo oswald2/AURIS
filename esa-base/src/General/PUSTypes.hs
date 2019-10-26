@@ -41,8 +41,10 @@ module General.PUSTypes
   , transmissionModeParser
   , PUSType
   , mkPUSType
+  , getPUSTypeVal
   , PUSSubType
   , mkPUSSubType
+  , getPUSSubTypeVal
   , pusTypeBuilder
   , pusSubTypeBuilder
   , pusTypeParser
@@ -229,7 +231,7 @@ transmissionModeParser = do
     _ -> pure BD
 
 -- | PUS Packet Type
-newtype PUSType = PUSType Word8
+newtype PUSType = PUSType { getPUSTypeVal :: Word8 }
     deriving (Eq, Ord, Num, Show, Read, Generic)
 
 -- | Smart constructor for the 'PUSType'
@@ -242,7 +244,7 @@ instance Display PUSType where
 
 
 -- | PUS Sub Type
-newtype PUSSubType = PUSSubType Word8
+newtype PUSSubType = PUSSubType { getPUSSubTypeVal :: Word8 }
     deriving (Eq, Ord, Num, Show, Read, Generic)
 
 -- | Smart constructor for the 'PUSSubType'
@@ -270,14 +272,13 @@ pusSubTypeParser :: Parser PUSSubType
 pusSubTypeParser = PUSSubType <$> A.anyWord8
 
 
-
-instance Binary PUSType
+instance Hashable PUSType
 instance Serialise PUSType
 instance FromJSON PUSType
 instance ToJSON PUSType where
   toEncoding = genericToEncoding defaultOptions
 
-instance Binary PUSSubType
+instance Hashable PUSSubType
 instance Serialise PUSSubType
 instance FromJSON PUSSubType
 instance ToJSON PUSSubType where

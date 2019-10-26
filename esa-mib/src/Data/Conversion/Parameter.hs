@@ -50,7 +50,7 @@ convertParameters pcfs curs calibHM synHM =
     case handleTriState params of
       Left err -> Left err
       Right (warnings, ok) -> runST $ do
-          ht <- HT.new
+          ht <- HT.newSized 100000
           foldM_ ins ht ok
           iht <- HT.unsafeFreeze ht
           return $ Right (warnings, iht)

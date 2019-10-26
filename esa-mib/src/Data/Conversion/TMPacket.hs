@@ -2,6 +2,7 @@ module Data.Conversion.TMPacket
     ( convertPacket
     , convertPackets
     , charToPIDEvent
+    , picSeachIndexFromPIC
     )
 where
 
@@ -19,10 +20,12 @@ import qualified Data.HashTable.ST.Basic       as HT
 import           Data.MIB.PID
 import           Data.MIB.TPCF
 import           Data.MIB.PLF
+import           Data.MIB.PIC
 import           Data.MIB.Types
 
 import           Data.TM.TMPacketDef
 import           Data.TM.TMParameterDef
+import           Data.TM.PIVals
 
 import           General.Types
 import           General.PUSTypes
@@ -37,13 +40,14 @@ import           Data.Conversion.Types
 
 
 
-convertPackets :: HashMap Word32 TPCFentry
-  -> Vector PLFentry
-  -> IHashTable ShortText TMParameterDef
-  -> Vector PIDentry
-  -> Either Text (Warnings, [TMPacketDef])
+convertPackets
+    :: HashMap Word32 TPCFentry
+    -> Vector PLFentry
+    -> IHashTable ShortText TMParameterDef
+    -> Vector PIDentry
+    -> Either Text (Warnings, [TMPacketDef])
 convertPackets tpcfs plfs paramHT =
-  handleTriState . map (convertPacket tpcfs plfs paramHT) . V.toList
+    handleTriState . map (convertPacket tpcfs plfs paramHT) . V.toList
 
 
 convertPacket
@@ -64,7 +68,8 @@ convertPacket tpcfs plfs paramHT pid@PIDentry {..} =
         let name = case tpcf of
                 Just TPCFentry {..} -> _tpcfName
                 Nothing             -> ""
-        in  TOk
+        in
+            TOk
                 ( warnings
                 , TMPacketDef
                     { _tmpdSPID    = SPID _pidSPID
@@ -80,7 +85,8 @@ convertPacket tpcfs plfs paramHT pid@PIDentry {..} =
                     , _tmpdInter   = toSpan _pidInter
                     , _tmpdValid   = charDefaultToBool _pidValid
                     , _tmpdCheck   = getDefaultInt _pidCheck /= 0
-                    , _tmpdEvent   = charToPIDEvent (getDefaultChar _pidEvent) _pidEventID
+                    , _tmpdEvent   = charToPIDEvent (getDefaultChar _pidEvent)
+                                                    _pidEventID
                     , _tmpdParams  = params
                     }
                 )
@@ -130,15 +136,58 @@ convertPacketLocation ht plf@PLFentry {..} = case HT.ilookup ht _plfName of
 
 convertSuperComm :: PLFentry -> Maybe SuperCommutated
 convertSuperComm PLFentry {..} = case (_plfNbOcc, _plfLgOcc, _plfTdOcc) of
-    (Just n, Just lg, Just td) ->
-        Just SuperCommutated { _scNbOcc = n, _scLgOcc = lg, _scTdOcc = td }
+    (Just n, Just lg, Just td) -> Just SuperCommutated
+        { _scNbOcc = n
+        , _scLgOcc = mkBitSize lg
+        , _scTdOcc = mkTimeSpan MilliSeconds (fromIntegral td)
+        }
     _ -> Nothing
 
 
 
 charToPIDEvent :: Char -> ShortText -> PIDEvent
-charToPIDEvent 'N' _ = PIDNo
+charToPIDEvent 'N' _    = PIDNo
 charToPIDEvent 'I' evid = PIDInfo evid
 charToPIDEvent 'W' evid = PIDWarning evid
 charToPIDEvent 'A' evid = PIDAlarm evid
-charToPIDEvent _ _ = PIDNo
+charToPIDEvent _   _    = PIDNo
+
+
+
+picVecToCriteria :: Vector PICentry -> Vector PacketIDCriteria
+picVecToCriteria = V.map conv
+  where
+    conv pic@PICentry {..} = PacketIDCriteria
+        { _pidcAPID    = APID <$> _picApid
+        , _pidcType    = mkPUSType _picType
+        , _pidcSubType = mkPUSSubType _picSubType
+        , _pidcPIs     = convertPIC pic
+        }
+
+
+picSeachIndexFromPIC :: Vector PICentry -> PICSearchIndex
+picSeachIndexFromPIC pics =
+    let p = picVecToCriteria pics in mkPICSearchIndex p
+
+
+convertPIC :: PICentry -> TMPIDefs
+convertPIC PICentry {..} =
+    let
+        pi1 = if _picPI1Off == -1
+            then Nothing
+            else
+                Just
+                    (TMPIDef (mkByteOffset _picPI1Off)
+                             (mkBitSize (fromIntegral _picPI1Width))
+                    )
+        pi2 = if _picPI2Off == -1
+            then Nothing
+            else
+                Just
+                    (TMPIDef (mkByteOffset _picPI2Off)
+                             (mkBitSize (fromIntegral _picPI2Width))
+                    )
+    in
+        TMPIDefs pi1 pi2
+
+

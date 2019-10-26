@@ -39,7 +39,6 @@ data TCPacket = TCPacket {
     deriving (Show, Read, Generic)
 makeLenses ''TCPacket
 
-instance Binary TCPacket
 instance Serialise TCPacket
 instance FromJSON TCPacket
 instance ToJSON TCPacket where
