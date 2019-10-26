@@ -22,7 +22,8 @@ import           General.Types
 
 
 
-
+-- | Main function to detect the packet identification of a newly received
+-- TM PUS Packet.
 getPackeDefintion
     :: DataModel -> ByteString -> ExtractedDU PUSPacket -> Maybe TMPacketDef
 getPackeDefintion model bytes pkt =
