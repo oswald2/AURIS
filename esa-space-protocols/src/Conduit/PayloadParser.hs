@@ -1,44 +1,3 @@
-{-# LANGUAGE
-    AutoDeriveTypeable
-    , BangPatterns
-    , BinaryLiterals
-    , ConstraintKinds
-    , DataKinds
-    , DefaultSignatures
-    , DeriveDataTypeable
-    , DeriveFoldable
-    , DeriveFunctor
-    , DeriveGeneric
-    , DeriveTraversable
-    , DoAndIfThenElse
-    , EmptyDataDecls
-    , ExistentialQuantification
-    , FlexibleContexts
-    , FlexibleInstances
-    , FunctionalDependencies
-    , GADTs
-    , GeneralizedNewtypeDeriving
-    , InstanceSigs
-    , KindSignatures
-    , LambdaCase
-    , MonadFailDesugaring
-    , MultiParamTypeClasses
-    , MultiWayIf
-    , NamedFieldPuns
-    , NoImplicitPrelude
-    , OverloadedStrings
-    , PartialTypeSignatures
-    , PatternGuards
-    , PolyKinds
-    , RankNTypes
-    , RecordWildCards
-    , ScopedTypeVariables
-    , StandaloneDeriving
-    , TupleSections
-    , TypeFamilies
-    , TypeSynonymInstances
-    , ViewPatterns
-#-}
 module Conduit.PayloadParser
   ( payloadParserC
   , GetPayload(..)
@@ -57,7 +16,7 @@ class GetPayload a where
     getPayload :: a -> ByteString
 
 
-data ParseError = ParseError Text 
+data ParseError = ParseError Text
     deriving Show
 
 instance Exception ParseError

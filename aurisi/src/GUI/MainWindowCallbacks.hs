@@ -46,7 +46,7 @@ setupCallbacks window = do
 
 addCB :: MainWindow -> Ref Button -> IO ()
 addCB window _btn = do
-  now <- getCurrentTime 
+  now <- getCurrentTime
   let table = window ^. mwTMPTab . tmpTable
       model = window ^. mwTMPTab . tmpModel
       pusPkt x = PUSPacket pusHdr' pusDfh' Nothing payload
@@ -56,7 +56,7 @@ addCB window _btn = do
         pusDfh' = PUSTMStdHeader 0 3 25 (mkSourceID 0) nullCUCTime
         payload = B.pack [0 .. 255]
 
-      epu = ExtractedDU (toFlag Good True) now Nothing IF_NCTRS
+      epu = ExtractedDU (toFlag Good True) now Nothing IF_NCTRS (VCID 0)
 
   addRow table model (epu (pusPkt 100))
 

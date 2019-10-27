@@ -44,17 +44,17 @@ runProcessing cfg missionSpecific interface = do
                             (ifRaiseEvent interface . EventPUS)
 
     runRIO state $ do
-      runTMChain cfg missionSpecific
+      runTMChain cfg
     pure ()
 
 
-runTMChain :: AurisConfig -> PUSMissionSpecific -> RIO GlobalState ()
-runTMChain cfg missionSpecific = do
+runTMChain :: AurisConfig -> RIO GlobalState ()
+runTMChain cfg = do
   let chain =
         receiveTmNcduC
           .| ncduToTMFrameC
           .| storeFrameC
-          .| tmFrameExtraction missionSpecific IF_NCTRS
+          .| tmFrameExtraction IF_NCTRS
           .| raisePUSPacketC
 
       ignoreConduit = awaitForever $ \_ -> pure ()

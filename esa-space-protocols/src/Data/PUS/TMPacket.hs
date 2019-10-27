@@ -53,7 +53,7 @@ import           Data.Aeson
 import           General.PUSTypes
 import           General.APID
 
-import           Data.PUS.Parameter
+import           Data.TM.Parameter
 --import           Data.PUS.Value
 
 --import           General.Types
@@ -67,7 +67,8 @@ data TMPacket = TMPacket {
     , _tmpSubType :: PUSSubType
     , _tmpERT :: SunTime
     , _tmpTimeStamp :: SunTime
-    , _tmpParams :: Vector Parameter
+    , _tmpVCID :: VCID
+    , _tmpParams :: Vector TMParameter
     } deriving (Show, Generic)
 
 instance Serialise TMPacket

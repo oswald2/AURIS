@@ -12,6 +12,7 @@ module Data.PUS.ExtractedDU
   , epSource
   , epGap
   , epERT
+  , epVCID
   )
 where
 
@@ -38,6 +39,7 @@ data ExtractedDU a = ExtractedDU {
     , _epERT :: !SunTime
     , _epGap ::Maybe (Word32, Word32)
     , _epSource :: !ProtocolInterface
+    , _epVCID :: !VCID
     , _epDU :: a
 } deriving (Eq, Show, Generic)
 makeLenses ''ExtractedDU

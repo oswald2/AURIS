@@ -17,13 +17,14 @@ access control to IO functions. Used within the encoding conduits.
     , RankNTypes
 #-}
 module Control.PUS.Classes
-  ( HasConfig(..)
-  , HasPUSState(..)
-  , HasGlobalState(..)
-  , HasFOPState(..)
-  , HasCorrelationState(..)
-  , HasMissionSpecific(..)
-  )
+    ( HasConfig(..)
+    , HasPUSState(..)
+    , HasGlobalState(..)
+    , HasFOPState(..)
+    , HasCorrelationState(..)
+    , HasMissionSpecific(..)
+    , HasDataModel(..)
+    )
 where
 
 import           RIO                     hiding ( to )
@@ -31,6 +32,7 @@ import qualified RIO.HashMap.Partial           as HM
 
 import           Control.Lens.Getter
 
+import           Data.DataModel
 import           Data.PUS.Config
 import           Data.PUS.Events
 import           General.PUSTypes
@@ -58,34 +60,41 @@ class HasFOPState env where
 class HasCorrelationState env where
     corrStateG :: Getter env CorrelationVar
 
+class HasDataModel env where
+    getDataModel :: Getter env (TVar DataModel)
+
+
 -- | Class for accessing the global state
-class (HasConfig env, 
-    HasPUSState env, 
-    HasFOPState env, 
-    HasMissionSpecific env, 
-    HasCorrelationState env) => HasGlobalState env where
+class (HasConfig env,
+    HasPUSState env,
+    HasFOPState env,
+    HasMissionSpecific env,
+    HasCorrelationState env,
+    HasDataModel env) => HasGlobalState env where
     raiseEvent :: env -> Event -> IO ()
 
 
 
 instance HasConfig GlobalState where
-  getConfig = to glsConfig
+    getConfig = to glsConfig
 
 instance HasPUSState GlobalState where
-  appStateG = to glsState
+    appStateG = to glsState
 
 instance HasMissionSpecific GlobalState where
-  getMissionSpecific = to glsMissionSpecific
+    getMissionSpecific = to glsMissionSpecific
 
 instance HasFOPState GlobalState where
-  copStateG = to glsFOP1
-  fopStateG vcid env = glsFOP1 env HM.! vcid
+    copStateG = to glsFOP1
+    fopStateG vcid env = glsFOP1 env HM.! vcid
 
-instance HasCorrelationState GlobalState where 
+instance HasCorrelationState GlobalState where
     corrStateG = to glsCorrState
 
+instance HasDataModel GlobalState where
+    getDataModel = to glsDataModel
 
 instance HasGlobalState GlobalState where
-  raiseEvent = glsRaiseEvent
+    raiseEvent = glsRaiseEvent
 
 

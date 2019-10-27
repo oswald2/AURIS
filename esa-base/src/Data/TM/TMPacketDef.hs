@@ -59,6 +59,7 @@ module Data.TM.TMPacketDef
     , TMPacketKey(..)
     , PICSearchIndex(..)
     , mkPICSearchIndex
+    , emptyPICSearchIndex
     , ApidKey
     , TypeSubTypeKey
     , PacketIDCriteria(..)
@@ -237,6 +238,11 @@ data PICSearchIndex = PICSearchIndex {
   _picSiApidMap :: IHashTable ApidKey PacketIDCriteria
   , _picSiMap :: IHashTable TypeSubTypeKey PacketIDCriteria
   } deriving (Show, Generic)
+
+emptyPICSearchIndex :: PICSearchIndex
+emptyPICSearchIndex = runST $ do
+  PICSearchIndex <$> (HT.new >>= HT.unsafeFreeze) <*> (HT.new >>= HT.unsafeFreeze)
+
 
 
 picVecToApidMap

@@ -41,7 +41,7 @@ main = do
   withLogFunc logOptions $ \logFunc -> do
     state <- newGlobalState
       defaultConfig
-      defaultMissionSpecific
+      (defaultMissionSpecific defaultConfig)
       logFunc
       (\ev -> T.putStrLn ("Event: " <> T.pack (show ev)))
 
@@ -50,7 +50,7 @@ main = do
             receiveTmNcduC
               .| ncduToTMFrameC
               .| storeFrameC
-              .| tmFrameExtraction defaultMissionSpecific IF_NCTRS
+              .| tmFrameExtraction IF_NCTRS
               .| C.print
 
 

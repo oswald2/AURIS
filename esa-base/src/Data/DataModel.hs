@@ -24,11 +24,12 @@ module Data.DataModel
     , dmParameters
     , dmTMPackets
     , dmPacketIdIdx
+    , empty
     )
 where
 
 import           RIO
-
+import qualified RIO.HashMap                   as HM
 import           Control.Lens                   ( makeLenses )
 
 import           Data.Text.Short                ( ShortText )
@@ -62,3 +63,15 @@ data DataModel = DataModel {
 makeLenses ''DataModel
 
 
+empty :: DataModel
+empty =
+    let (params, packets) = runST $ do
+            prm <- new
+            pkts <- new
+            (,) <$> unsafeFreeze prm <*> unsafeFreeze pkts
+    in  DataModel { _dmCalibrations    = HM.empty
+                  , _dmSyntheticParams = HM.empty
+                  , _dmParameters      = params
+                  , _dmPacketIdIdx     = emptyPICSearchIndex
+                  , _dmTMPackets       = packets
+                  }

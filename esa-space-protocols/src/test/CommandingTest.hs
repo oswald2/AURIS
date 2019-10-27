@@ -114,14 +114,14 @@ main = do
     withLogFunc logOptions $ \logFunc -> do
         state <- newGlobalState
             defaultConfig
-            defaultMissionSpecific
+            (defaultMissionSpecific defaultConfig)
             logFunc
             (\ev -> T.putStrLn ("Event: " <> T.pack (show ev)))
 
         runRIO state $ do
             let chain =
                     sourceList (packets 1000)
-                        .| tcPktEncoderC defaultMissionSpecific
+                        .| tcPktEncoderC (defaultMissionSpecific defaultConfig)
                         .| tcPktToEncPUSC
                         .| tcSegmentEncoderC
                         .| tcSegmentToTransferFrame

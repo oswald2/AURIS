@@ -65,7 +65,7 @@ genRandomParameter gen namevec = do
 
 
 nameVec :: DataModel -> Vector ShortText
-nameVec model = 
+nameVec model =
     let lst = HT.toList $ _dmParameters model
     in V.fromList . map fst $ lst
 
@@ -101,7 +101,7 @@ main = do
     withLogFunc logOptions $ \logFunc -> do
         state <- newGlobalState
             defaultConfig
-            defaultMissionSpecific
+            (defaultMissionSpecific defaultConfig)
             logFunc
             (\ev -> T.putStrLn ("Event: " <> T.pack (show ev)))
 

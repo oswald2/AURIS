@@ -67,7 +67,7 @@ main = do
     withLogFunc logOptions $ \logFunc -> do
         state <- newGlobalState
             defaultConfig
-            defaultMissionSpecific
+            (defaultMissionSpecific defaultConfig)
             logFunc
             (\ev -> T.putStrLn ("Event: " <> T.pack (show ev)))
 

@@ -22,21 +22,22 @@ state (or library state)
     , MultiParamTypeClasses
 #-}
 module Data.PUS.GlobalState
-  ( GlobalState
-  , AppState
-  , FOP1State
-  , COP1State
-  , CorrelationVar
-  , glsConfig
-  , glsState
-  , glsCorrState
-  , glsFOP1
-  , glsLogFunc
-  , glsRaiseEvent
-  , glsMissionSpecific
-  , newGlobalState
-  , nextADCount
-  )
+    ( GlobalState
+    , AppState
+    , FOP1State
+    , COP1State
+    , CorrelationVar
+    , glsConfig
+    , glsState
+    , glsCorrState
+    , glsFOP1
+    , glsLogFunc
+    , glsRaiseEvent
+    , glsMissionSpecific
+    , glsDataModel
+    , newGlobalState
+    , nextADCount
+    )
 where
 
 
@@ -47,10 +48,13 @@ import qualified RIO.HashMap                   as HM
 
 import           UnliftIO.STM                   ( )
 
+import           Data.DataModel
+
 import           Data.PUS.Config
 import           Data.PUS.PUSState
 import           Data.PUS.Events
 import           Data.PUS.COP1Types
+
 import           General.PUSTypes
 import           General.Time
 
@@ -75,6 +79,7 @@ data GlobalState = GlobalState {
     , glsState :: !AppState
     , glsFOP1 :: COP1State
     , glsCorrState :: CorrelationVar
+    , glsDataModel :: TVar DataModel
 
     , glsMissionSpecific :: PUSMissionSpecific
 
@@ -86,39 +91,41 @@ data GlobalState = GlobalState {
 -- logging function as specified by the RIO library and a raiseEvent
 -- function to report events to the application
 newGlobalState
-  :: Config
-  -> PUSMissionSpecific
-  -> LogFunc
-  -> (Event -> IO ())
-  -> IO GlobalState
+    :: Config
+    -> PUSMissionSpecific
+    -> LogFunc
+    -> (Event -> IO ())
+    -> IO GlobalState
 newGlobalState cfg missionSpecific logErr raiseEvent = do
-  st <- defaultPUSState cfg
-  tv <- newTVarIO st
-  cv <- newTVarIO defaultCoeffs
-  let vcids = cfgVCIDs cfg
-  fopTVars <- mapM (newTVarIO . initialFOPState) vcids
-  let fop1 = HM.fromList $ zip vcids fopTVars
+    st <- defaultPUSState cfg
+    tv <- newTVarIO st
+    cv <- newTVarIO defaultCoeffs
+    dmodel <- newTVarIO Data.DataModel.empty
+    let vcids = cfgVCIDs cfg
+    fopTVars <- mapM (newTVarIO . initialFOPState) vcids
+    let fop1 = HM.fromList $ zip vcids fopTVars
 
-  let state = GlobalState { glsConfig          = cfg
-                          , glsState           = tv
-                          , glsCorrState       = cv
-                          , glsFOP1            = fop1
-                          , glsRaiseEvent      = raiseEvent
-                          , glsLogFunc         = logErr
-                          , glsMissionSpecific = missionSpecific
-                          }
-  pure state
+    let state = GlobalState { glsConfig          = cfg
+                            , glsState           = tv
+                            , glsCorrState       = cv
+                            , glsFOP1            = fop1
+                            , glsRaiseEvent      = raiseEvent
+                            , glsLogFunc         = logErr
+                            , glsDataModel       = dmodel
+                            , glsMissionSpecific = missionSpecific
+                            }
+    pure state
 
 -- | returns the next counter value for TC transfer frames
 -- in AD transmission mode
 nextADCount :: AppState -> STM Word8
 nextADCount st = do
-  state <- readTVar st
-  let (newSt, cnt) = nextADCnt state
-  writeTVar st newSt
-  pure cnt
+    state <- readTVar st
+    let (newSt, cnt) = nextADCnt state
+    writeTVar st newSt
+    pure cnt
 
 
 -- | Instance of the logging function for the global state
 instance HasLogFunc GlobalState where
-  logFuncL = lens glsLogFunc (\c lf -> c { glsLogFunc = lf })
+    logFuncL = lens glsLogFunc (\c lf -> c { glsLogFunc = lf })
