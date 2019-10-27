@@ -19,6 +19,8 @@ import           RIO.List                       ( intersperse )
 import           Control.Monad.Except
 
 import           Data.HashTable.ST.Basic        ( IHashTable )
+import qualified Data.HashTable.ST.Basic       as HT
+import qualified Data.HashTable.Class          as HT
 
 import           Data.Either
 import           Data.Text.Short                ( ShortText )
@@ -240,7 +242,7 @@ loadSyntheticParameters path' = do
 loadPackets :: (MonadIO m, MonadReader env m, HasLogFunc env)
   => FilePath
   -> IHashTable ShortText TMParameterDef
-  -> m (Either Text (Warnings, HashMap TMPacketKey TMPacketDef))
+  -> m (Either Text (Warnings, IHashTable TMPacketKey TMPacketDef))
 loadPackets mibPath parameters = do
   runExceptT $ do
     -- load calibrations
@@ -254,10 +256,12 @@ loadPackets mibPath parameters = do
         tpcfMap = TPCF.getTPCFMap tpcf
 
     (warnings, packets) <- liftEither $ convertPackets tpcfMap plf parameters pid
-    let ins = foldl' f HM.empty packets
-        f hm pkt = HM.insert (key pkt) pkt hm
-        key pkt = TMPacketKey (_tmpdApid pkt)
+    let key pkt = TMPacketKey (_tmpdApid pkt)
             (_tmpdType pkt) (_tmpdSubType pkt)
             (fromIntegral (_tmpdPI1Val pkt)) (fromIntegral (_tmpdPI2Val pkt))
-    return (warnings, ins)
+        lst = map (\x -> (key x, x)) packets
+    hm <- liftEither $ runST $ do
+      ht <- HT.fromList lst
+      Right <$> HT.unsafeFreeze ht
+    return (warnings, hm)
 

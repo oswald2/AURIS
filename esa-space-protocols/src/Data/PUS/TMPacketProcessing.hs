@@ -1,13 +1,12 @@
 {-# LANGUAGE TypeApplications #-}
-module Data.PUS.TMPacketIdentification
+module Data.PUS.TMPacketProcessing
     ( getPackeDefintion
     )
 where
 
 
 import           RIO
-import qualified RIO.HashMap                   as HM
---import           Data.HashTable.ST.Basic       as HT
+import           Data.HashTable.ST.Basic       as HT
 import           Data.DataModel
 
 import           Data.TM.TMPacketDef
@@ -37,8 +36,8 @@ getPackeDefintion model bytes pkt =
             Just def -> extractPIVals def bytes
             Nothing  -> (0, 0)
         pktKey = TMPacketKey apid t st pi1 pi2
-    in   --HT.ilookup (model ^. dmTMPackets) pktKey
-        HM.lookup pktKey (model ^. dmTMPackets)
+    in HT.ilookup (model ^. dmTMPackets) pktKey
+
 
 
 

@@ -56,7 +56,7 @@ data DataModel = DataModel {
     -- | A search index for packet identification criterias
     , _dmPacketIdIdx :: PICSearchIndex
     -- | A map into the packets
-    , _dmTMPackets :: HashMap TMPacketKey TMPacketDef
+    , _dmTMPackets :: IHashTable TMPacketKey TMPacketDef
     }
     deriving (Show, Generic)
 makeLenses ''DataModel
