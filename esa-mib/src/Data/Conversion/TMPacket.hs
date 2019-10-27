@@ -122,7 +122,7 @@ convertPacketLocation ht plf@PLFentry {..} = case HT.ilookup ht _plfName of
     Just x -> Right TMParamLocation
         { _tmplName      = _plfName
         , _tmplOffset    =
-            toBitOffset (mkOffset (ByteOffset _plfOffBy) (BitOffset _plfOffBi))
+            mkOffset (ByteOffset _plfOffBy) (BitOffset _plfOffBi)
         , _tmplTime = fromMilli (fromIntegral (getDefaultInt _plfTime)) True
         , _tmplSuperComm = convertSuperComm plf
         , _tmplParam     = x

@@ -11,17 +11,20 @@ This module provides functions to extract values out of binary data. The
 values may be on arbitrary bit positions and may have also odd bit widths.
 -}
 {-# LANGUAGE
-    OverloadedStrings
-    , BangPatterns
-    , NoImplicitPrelude
+    TypeApplications
 #-}
 module General.GetBitField
     ( getBitField
     , getBitFieldDouble
+    , getBitFieldFloat
+    , getBitFieldMilSingle
+    , getBitFieldMilExtended
     , getBitFieldInt
     , GetValue(..)
     , getValueOctet
     , getValueOctetLen
+    , MILSingle
+    , getMilSingle
     )
 where
 
@@ -128,8 +131,21 @@ instance GetValue Float where
     getValue bytes off endian = wordToFloat (getValue bytes off endian)
     {-# INLINABLE getValue #-}
 
+newtype Word48 = Word48 { getWord48Val :: Word64 }
+  deriving (Show, Generic)
 
 
+newtype MILSingle = MILSingle { getMilSingle :: Double }
+  deriving (Show, Generic)
+
+instance GetValue MILSingle where
+  getValue bytes off endian = MILSingle $ decMILSingle $ getValue @Word32 bytes off endian
+
+newtype MILExtended = MILExtended { getMilExtended :: Double }
+  deriving (Show, Generic)
+
+instance GetValue MILExtended where
+  getValue bytes off endian = MILExtended $ decMILSingle $ getWord48Val $ getValue @Word48 bytes off endian
 
 -- | Get a octet string out of a 'ByteString' with the defined length
 getValueOctetLen :: ByteString -> ByteOffset -> Int -> ByteString
@@ -156,6 +172,19 @@ getBitFieldInt bytes off bits endian = fromIntegral (getBitField bytes off bits 
 {-# INLINABLE getBitFieldDouble #-}
 getBitFieldDouble :: ByteString -> Offset -> Endian -> Double
 getBitFieldDouble bytes off endian = wordToDouble (getBitField bytes off (BitSize 64) endian)
+
+{-# INLINABLE getBitFieldFloat #-}
+getBitFieldFloat :: ByteString -> Offset -> Endian -> Float
+getBitFieldFloat bytes off endian = wordToFloat $ fromIntegral $ getBitField bytes off (BitSize 32) endian
+
+{-# INLINABLE getBitFieldMilSingle #-}
+getBitFieldMilSingle :: ByteString -> Offset -> Endian -> Double
+getBitFieldMilSingle bytes off endian = decMILSingle $ fromIntegral $ getBitField bytes off (BitSize 32) endian
+
+{-# INLINABLE getBitFieldMilExtended #-}
+getBitFieldMilExtended :: ByteString -> Offset -> Endian -> Double
+getBitFieldMilExtended bytes off endian = decMILExtended endian $ getBitField bytes off (BitSize 48) endian
+
 
 
 -- | This function gets a 'Word64' out of a 'ByteString' in case the
@@ -190,7 +219,65 @@ getBitField bytes off (BitSize nBits) endian =
                                 ((bytes `B.index` ix) `shiftR` (8 - nb))
                         else val
     in
+        -- TODO: check endian of non-64 bit values, this is probably not correct
         case endian of
             BiE -> value2
             LiE -> byteSwap64 value2
 
+
+
+{-# INLINABLE decMILSingle #-}
+decMILSingle :: Word32 -> Double
+decMILSingle b =
+    let
+        signMask :: Word32
+        !signMask = 0x80000000
+        exponent1 :: Word32
+        !exponent1            = b .&. 0xFF
+        (exp1, signExponent) = if signMask .&. exponent1 /= 0
+            then (complement exponent1 + 1, 1 :: Int)
+            else (exponent1, 0)
+        !exp'      = exp1 .&. 0x000000FF
+        exp_256_3 = 16777216
+        (!mant, !exp'') =
+            let mant1 :: Word32
+                mant1 = b .&. 0xFFFFFF00 `shiftR` 8
+            in  (mant1, exp')
+        (!mant', !signMantissa) = if signMask .&. b /= 0
+            then (complement mant + 1, 1 :: Int)
+            else (mant, 0)
+        !mant'' = mant' .&. 0x00FFFFFF
+        mantissa :: Double
+        !mantissa = fromIntegral mant'' / exp_256_3 * 2
+        base :: Double
+        !base = mantissa * if signMantissa == 0 then 1 else -1
+        !expd = fromIntegral exp''
+            * if signExponent == 0 then 1 :: Int else -1
+
+        !result = base * 2 ^^ expd
+    in
+        result
+
+
+{-# INLINABLE decMILExtended #-}
+decMILExtended :: Endian -> Word64 -> Double
+decMILExtended bo b' =
+    let !b = case bo of
+            BiE -> b'
+            LiE -> byteSwap64 b' `shiftR` 16
+        mantissaBits :: Word64
+        !mantissaBits =
+                  ((b .&. 0x00_00_FF_FF_FF_00_00_00) `shiftL` 16)
+                  .|. ((b .&. 0x00_00_00_00_00_00_FF_FF) `shiftL` 24)
+        mant :: Int64
+        mant = fromIntegral mantissaBits
+        !mantissa = fromIntegral (mant `div` (1 `shiftL` 24)) / 549755813888.0
+
+        !exponentBits = (b .&. 0x00_00_00_00_00_FF_00_00) `shiftR` 16
+        exp1 :: Int8
+        exp1      = fromIntegral exponentBits
+        exponent1 :: Int
+        exponent1 = fromIntegral exp1
+        !result   = mantissa * 2 ^^ exponent1
+    in
+    result

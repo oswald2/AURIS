@@ -22,6 +22,7 @@ the information read out of a SCOS MIB, EGS-CC CDM etc.
     , FlexibleInstances
     , GADTs
     , ExistentialQuantification
+    , TemplateHaskell
 #-}
 module Data.TM.TMParameterDef
     ( DoubleType(..)
@@ -32,12 +33,30 @@ module Data.TM.TMParameterDef
     , StatusConsistency(..)
     , ptcPfcToParamType
     , charToStatusConsistency
+    , fpName
+    , fpDescription
+    , fpPID
+    , fpUnit
+    , fpType
+    , fpWidth
+    , fpValid
+    , fpRelated
+    , fpCalibs
+    , fpNatur
+    , fpInterpolation
+    , fpStatusConsistency
+    , fpDecim
+    , fpDefaultVal
+    , fpSubsys
+    , fpValidityValue
+    , fpOBTID
+    , fpEndian
     )
 where
 
 
 import           RIO
-
+import           Control.Lens                   ( makeLenses )
 import           Data.Text.Short                ( ShortText )
 import           Codec.Serialise
 import           Data.Aeson
@@ -60,7 +79,7 @@ data DoubleType =
     -- | MIL-1750 single precision floating point (32 bit)
     | DTMilSingle
     -- | MIL-1750 extended precision floating point (48 bit)
-    | DTMMilExtended
+    | DTMilExtended
     deriving (Eq, Ord, Enum, Bounded, Show, Generic)
 
 instance NFData DoubleType
@@ -168,7 +187,7 @@ ptcPfcToParamType (PTC 4) (PFC 16) _ = Right $ ParamInteger 64
 ptcPfcToParamType (PTC 5) (PFC 1 ) _ = Right $ ParamDouble DTFloat
 ptcPfcToParamType (PTC 5) (PFC 2 ) _ = Right $ ParamDouble DTDouble
 ptcPfcToParamType (PTC 5) (PFC 3 ) _ = Right $ ParamDouble DTMilSingle
-ptcPfcToParamType (PTC 5) (PFC 4 ) _ = Right $ ParamDouble DTMMilExtended
+ptcPfcToParamType (PTC 5) (PFC 4 ) _ = Right $ ParamDouble DTMilExtended
 ptcPfcToParamType (PTC 6) (PFC 0 ) _ = Left "Variable bit string not supported"
 ptcPfcToParamType (PTC 6) (PFC x ) _ = Right $ ParamUInteger x
 ptcPfcToParamType (PTC 7) (PFC 0 ) _ = Right $ ParamOctet Nothing
@@ -290,6 +309,8 @@ data TMParameterDef = TMParameterDef {
     , _fpEndian :: Endian
     }
     deriving(Show, Generic)
+makeLenses ''TMParameterDef
+
 
 instance NFData TMParameterDef
 instance Serialise TMParameterDef

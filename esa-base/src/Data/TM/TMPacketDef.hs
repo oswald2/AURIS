@@ -104,7 +104,7 @@ data TMParamLocation = TMParamLocation {
   -- | The name of the parameter
   _tmplName :: !ShortText
   -- | The bit-offset of the parameter in the packet
-  , _tmplOffset :: !BitOffset
+  , _tmplOffset :: !Offset
   -- | Time offset of the first parameter occurence relative to the packet
   -- time. This is effectively a delta time added/subtracted from the packet
   -- timestamp.

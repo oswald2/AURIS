@@ -53,10 +53,10 @@ flag llvm
         build library with llvm
     default: False
 
-flag optimize 
-    description: 
+flag optimize
+    description:
       build library with optimization
-    default: False 
+    default: False
 
 
 library
@@ -133,6 +133,8 @@ library
         TypeFamilies
         TypeSynonymInstances
         ViewPatterns
+        NumericUnderscores
+
   -- Other library packages from which modules are imported.
   build-depends:       base ^>=4.12.0.0
     , bytestring
@@ -168,12 +170,12 @@ library
         ghc-options: -O2 -Wall -Wcompat -Widentities -Wincomplete-record-updates
                      -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
                      -funbox-strict-fields -fllvm -optlo-O3
-  else 
-    if flag(optimize) 
+  else
+    if flag(optimize)
         ghc-options: -O2 -Wall -Wcompat -Widentities -Wincomplete-record-updates
                      -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
                      -funbox-strict-fields
-    else 
+    else
         ghc-options: -O0 -Wall -Wcompat -Widentities -Wincomplete-record-updates
                      -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
                      -funbox-strict-fields

@@ -14,7 +14,11 @@ import           Control.PUS.Classes
 import           Data.DataModel
 
 import           Data.TM.TMPacketDef
+import           Data.TM.TMParameterDef
 import           Data.TM.PIVals
+import           Data.TM.Parameter
+import           Data.TM.Value
+import           Data.TM.Validity
 
 import           Data.PUS.ExtractedDU
 import           Data.PUS.PUSPacket
@@ -141,3 +145,82 @@ correlateTMTime inTime ert = do
             corrState    <- view corrStateG
             coefficients <- readTVarIO corrState
             return (obtToMcsTim inTime coefficients)
+
+
+
+extractParamValue :: ByteString -> TMParamLocation -> TMValue
+extractParamValue oct def =
+    let par    = def ^. tmplParam
+        endian = par ^. fpEndian
+    in  case def ^. tmplParam . fpType of
+            ParamInteger w ->
+                let v = readIntParam oct (_tmplOffset def) (BitSize w) endian
+                in  TMValue v clearValidity
+            ParamUInteger w ->
+                let v = readUIntParam oct (_tmplOffset def) (BitSize w) endian
+                in  TMValue v clearValidity
+            ParamDouble dt ->
+                let v = readDoubleParam oct (_tmplOffset def) endian dt
+                in  TMValue v clearValidity
+
+  where
+    readIntParam oct off width endian = if isByteAligned off
+        then case width of
+            8 ->
+                TMValInt
+                    (fromIntegral (getValue @Int8 oct (toByteOffset off) endian)
+                    )
+            16 ->
+                TMValInt
+                    (fromIntegral
+                        (getValue @Int16 oct (toByteOffset off) endian)
+                    )
+            32 ->
+                TMValInt
+                    (fromIntegral
+                        (getValue @Int32 oct (toByteOffset off) endian)
+                    )
+            64 -> TMValInt (getValue @Int64 oct (toByteOffset off) endian)
+            w  -> TMValInt
+                (fromIntegral (getBitField oct (_tmplOffset def) w endian))
+        else TMValInt
+            (fromIntegral (getBitField oct (_tmplOffset def) width endian))
+    readUIntParam oct off width endian = if isByteAligned off
+        then case width of
+            8 ->
+                TMValUInt
+                    (fromIntegral
+                        (getValue @Word8 oct (toByteOffset off) endian)
+                    )
+            16 ->
+                TMValUInt
+                    (fromIntegral
+                        (getValue @Word16 oct (toByteOffset off) endian)
+                    )
+            32 ->
+                TMValUInt
+                    (fromIntegral
+                        (getValue @Word32 oct (toByteOffset off) endian)
+                    )
+            64 -> TMValUInt (getValue @Word64 oct (toByteOffset off) endian)
+            w  -> TMValUInt (getBitField oct (_tmplOffset def) w endian)
+        else TMValUInt (getBitField oct (_tmplOffset def) width endian)
+
+
+    readDoubleParam oct off endian DTDouble = if isByteAligned off
+        then TMValDouble (getValue @Double oct (toByteOffset off) endian)
+        else TMValDouble (getBitFieldDouble oct (toOffset off) endian)
+    readDoubleParam oct off endian DTFloat = if isByteAligned off
+        then TMValDouble
+            (realToFrac (getValue @Float oct (toByteOffset off) endian))
+        else TMValDouble
+            (realToFrac (getBitFieldFloat oct (toOffset off) endian))
+    readDoubleParam oct off endian DTMilSingle   = if isByteAligned off
+      then TMValDouble
+          (getMilSingle (getValue @MILSingle oct (toByteOffset off) endian))
+      else TMValDouble (getBitFieldMilSingle oct (toOffset off) endian)
+    readDoubleParam oct off endian DTMilExtended = undefined
+
+
+
+
