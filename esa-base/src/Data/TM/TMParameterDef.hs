@@ -31,6 +31,7 @@ module Data.TM.TMParameterDef
     , ParamNatur(..)
     , TMParameterDef(..)
     , StatusConsistency(..)
+    , Correlate(..)
     , ptcPfcToParamType
     , charToStatusConsistency
     , fpName
@@ -105,13 +106,13 @@ instance ToJSON TimeType where
 
 -- | Specifies, if the parameter is a time value, if
 -- this value should go through the time correlation
-data CorrelationType = CorrelationYes | CorrelationNo
+data Correlate = CorrelationYes | CorrelationNo
     deriving (Eq, Ord, Enum, Bounded, Show, Generic)
 
-instance NFData CorrelationType
-instance Serialise CorrelationType
-instance FromJSON CorrelationType
-instance ToJSON CorrelationType where
+instance NFData Correlate
+instance Serialise Correlate
+instance FromJSON Correlate
+instance ToJSON Correlate where
     toEncoding = genericToEncoding defaultOptions
 
 
@@ -124,9 +125,9 @@ data ParamType =
     -- | the parameter is a floating point value with the given 'DoubleType'
     | ParamDouble !DoubleType
     -- | the parameter is a time value. The 'TimeType' specifies which encoding
-    -- format is used, the 'CorrelationType' if value of this parameter should
+    -- format is used, the 'Correlate' if value of this parameter should
     -- be put through the time correlation
-    | ParamTime !TimeType !CorrelationType
+    | ParamTime !TimeType !Correlate
     -- | the parameter is a (ASCCI)-string. Though the system generally supports
     -- UTF-8, when a MIB is used only ASCII is allowed. In case of Nothing, the
     -- string is variable length, or Just a number of bytes long

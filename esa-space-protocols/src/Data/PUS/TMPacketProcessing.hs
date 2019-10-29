@@ -151,7 +151,7 @@ correlateTMTime inTime ert = do
 
 
 
-extractParamValue :: Epoch -> ByteString -> TMParamLocation -> TMValue
+extractParamValue :: Epoch -> ByteString -> TMParamLocation -> (TMValue, Correlate)
 extractParamValue epoch oct def =
     let
         par    = def ^. tmplParam
@@ -160,22 +160,22 @@ extractParamValue epoch oct def =
         case def ^. tmplParam . fpType of
             ParamInteger w ->
                 let v = readIntParam oct (_tmplOffset def) (BitSize w) endian
-                in  TMValue v clearValidity
+                in  (TMValue v clearValidity, CorrelationNo)
             ParamUInteger w ->
                 let v = readUIntParam oct (_tmplOffset def) (BitSize w) endian
-                in  TMValue v clearValidity
+                in  (TMValue v clearValidity, CorrelationNo)
             ParamDouble dt ->
                 let v = readDoubleParam oct (_tmplOffset def) endian dt
-                in  TMValue v clearValidity
+                in  (TMValue v clearValidity, CorrelationNo)
             ParamString w ->
                 let v = readString oct (_tmplOffset def) w
-                in  TMValue v clearValidity
+                in  (TMValue v clearValidity, CorrelationNo)
             ParamOctet w ->
                 let v = readOctet oct (_tmplOffset def) w
-                in TMValue v clearValidity
+                in (TMValue v clearValidity, CorrelationNo)
             ParamTime tt ct ->
                 let v = readTime oct (_tmplOffset def) epoch tt
-                in TMValue v clearValidity
+                in (TMValue v clearValidity, ct)
   where
     readIntParam oct off width endian = if isByteAligned off
         then case width of
