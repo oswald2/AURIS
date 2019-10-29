@@ -19,7 +19,7 @@ import           RIO
 
 import           Control.Lens                   ( makeLenses )
 
-import           Data.Binary
+--import           Data.Binary
 import           Data.Aeson
 import           Codec.Serialise
 

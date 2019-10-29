@@ -91,10 +91,10 @@ instance ToJSON DoubleType where
 -- | Specifies the time format encoding. Currently, only a
 -- subset of the valid time values are supported
 data TimeType =
-    CDS6
-    | CDS8
-    | CUC4Coarse2Fine
-    deriving (Eq, Ord, Enum, Bounded, Show, Generic)
+    CDS6 Bool
+    | CDS8 Bool
+    | CUC4Coarse2Fine Bool
+    deriving (Eq, Ord, Show, Generic)
 
 instance NFData TimeType
 instance Serialise TimeType
@@ -196,25 +196,25 @@ ptcPfcToParamType (PTC 8) (PFC 0 ) _ = Right $ ParamString Nothing
 ptcPfcToParamType (PTC 8) (PFC x ) _ = Right $ ParamString (Just x)
 ptcPfcToParamType (PTC 9) (PFC 0 ) _ = Left "PTC=9 PFC=0 not supported"
 ptcPfcToParamType (PTC 9) (PFC 1) Nothing =
-    Right $ ParamTime CDS6 CorrelationYes
+    Right $ ParamTime (CDS6 False) CorrelationYes
 ptcPfcToParamType (PTC 9) (PFC 1) (Just True) =
-    Right $ ParamTime CDS6 CorrelationYes
+    Right $ ParamTime (CDS6 False) CorrelationYes
 ptcPfcToParamType (PTC 9) (PFC 1) (Just False) =
-    Right $ ParamTime CDS6 CorrelationNo
+    Right $ ParamTime (CDS6 False) CorrelationNo
 ptcPfcToParamType (PTC 9) (PFC 2) Nothing =
-    Right $ ParamTime CDS8 CorrelationYes
+    Right $ ParamTime (CDS8 False) CorrelationYes
 ptcPfcToParamType (PTC 9) (PFC 2) (Just True) =
-    Right $ ParamTime CDS8 CorrelationYes
+    Right $ ParamTime (CDS8 False) CorrelationYes
 ptcPfcToParamType (PTC 9) (PFC 2) (Just False) =
-    Right $ ParamTime CDS8 CorrelationNo
+    Right $ ParamTime (CDS8 False) CorrelationNo
 ptcPfcToParamType (PTC 9) (PFC 17) Nothing =
-    Right $ ParamTime CUC4Coarse2Fine CorrelationYes
+    Right $ ParamTime (CUC4Coarse2Fine False) CorrelationYes
 ptcPfcToParamType (PTC 9) (PFC 17) (Just True) =
-    Right $ ParamTime CUC4Coarse2Fine CorrelationYes
+    Right $ ParamTime (CUC4Coarse2Fine False) CorrelationYes
 ptcPfcToParamType (PTC 9) (PFC 17) (Just False) =
-    Right $ ParamTime CUC4Coarse2Fine CorrelationNo
+    Right $ ParamTime (CUC4Coarse2Fine False) CorrelationNo
 ptcPfcToParamType (PTC 10) (PFC 17) _ =
-    Right $ ParamTime CUC4Coarse2Fine CorrelationNo
+    Right $ ParamTime (CUC4Coarse2Fine True) CorrelationNo
 ptcPfcToParamType (PTC 11) (PFC 0) _ = Right $ ParamDeduced Nothing
 ptcPfcToParamType (PTC 11) (PFC x) _ = Right $ ParamDeduced (Just x)
 ptcPfcToParamType (PTC 13) (PFC 0) _ = Right ParamSavedSynthetic

@@ -7,8 +7,10 @@ where
 
 
 import           RIO
+import qualified RIO.ByteString                as B
 import           Conduit
 import           Data.HashTable.ST.Basic       as HT
+import qualified Data.Text.Short               as ST
 
 import           Control.PUS.Classes
 import           Data.DataModel
@@ -16,7 +18,7 @@ import           Data.DataModel
 import           Data.TM.TMPacketDef
 import           Data.TM.TMParameterDef
 import           Data.TM.PIVals
-import           Data.TM.Parameter
+--import           Data.TM.Parameter
 import           Data.TM.Value
 import           Data.TM.Validity
 
@@ -92,9 +94,10 @@ extractPIVal bytes TMPIDef {..}
     | _tmpidWidth == 8 = fromIntegral $ getValue @Int8 bytes _tmpidOffset BiE
     | _tmpidWidth == 16 = fromIntegral $ getValue @Int16 bytes _tmpidOffset BiE
     | _tmpidWidth == 32 = fromIntegral $ getValue @Int32 bytes _tmpidOffset BiE
+    | _tmpidWidth == 48 = fromIntegral $ getValue @Int48 bytes _tmpidOffset BiE
     | _tmpidWidth == 64 = getValue @Int64 bytes _tmpidOffset BiE
     | otherwise = fromIntegral
-    $ getBitField bytes (toOffset _tmpidOffset) _tmpidWidth BiE
+        (getBitField bytes (toOffset _tmpidOffset) _tmpidWidth)
 
 
 processPacket
@@ -148,11 +151,13 @@ correlateTMTime inTime ert = do
 
 
 
-extractParamValue :: ByteString -> TMParamLocation -> TMValue
-extractParamValue oct def =
-    let par    = def ^. tmplParam
+extractParamValue :: Epoch -> ByteString -> TMParamLocation -> TMValue
+extractParamValue epoch oct def =
+    let
+        par    = def ^. tmplParam
         endian = par ^. fpEndian
-    in  case def ^. tmplParam . fpType of
+    in
+        case def ^. tmplParam . fpType of
             ParamInteger w ->
                 let v = readIntParam oct (_tmplOffset def) (BitSize w) endian
                 in  TMValue v clearValidity
@@ -162,7 +167,15 @@ extractParamValue oct def =
             ParamDouble dt ->
                 let v = readDoubleParam oct (_tmplOffset def) endian dt
                 in  TMValue v clearValidity
-
+            ParamString w ->
+                let v = readString oct (_tmplOffset def) w
+                in  TMValue v clearValidity
+            ParamOctet w ->
+                let v = readOctet oct (_tmplOffset def) w
+                in TMValue v clearValidity
+            ParamTime tt ct ->
+                let v = readTime oct (_tmplOffset def) epoch tt
+                in TMValue v clearValidity
   where
     readIntParam oct off width endian = if isByteAligned off
         then case width of
@@ -181,10 +194,12 @@ extractParamValue oct def =
                         (getValue @Int32 oct (toByteOffset off) endian)
                     )
             64 -> TMValInt (getValue @Int64 oct (toByteOffset off) endian)
-            w  -> TMValInt
-                (fromIntegral (getBitField oct (_tmplOffset def) w endian))
-        else TMValInt
-            (fromIntegral (getBitField oct (_tmplOffset def) width endian))
+            w  -> TMValInt (getBitFieldInt64 oct (_tmplOffset def) w endian)
+        else
+            TMValInt
+                (fromIntegral
+                    (getBitFieldInt64 oct (_tmplOffset def) width endian)
+                )
     readUIntParam oct off width endian = if isByteAligned off
         then case width of
             8 ->
@@ -203,8 +218,8 @@ extractParamValue oct def =
                         (getValue @Word32 oct (toByteOffset off) endian)
                     )
             64 -> TMValUInt (getValue @Word64 oct (toByteOffset off) endian)
-            w  -> TMValUInt (getBitField oct (_tmplOffset def) w endian)
-        else TMValUInt (getBitField oct (_tmplOffset def) width endian)
+            w  -> TMValUInt (getBitFieldWord64 oct (_tmplOffset def) w endian)
+        else TMValUInt (getBitFieldWord64 oct (_tmplOffset def) width endian)
 
 
     readDoubleParam oct off endian DTDouble = if isByteAligned off
@@ -215,12 +230,58 @@ extractParamValue oct def =
             (realToFrac (getValue @Float oct (toByteOffset off) endian))
         else TMValDouble
             (realToFrac (getBitFieldFloat oct (toOffset off) endian))
-    readDoubleParam oct off endian DTMilSingle   = if isByteAligned off
-      then TMValDouble
-          (getMilSingle (getValue @MILSingle oct (toByteOffset off) endian))
-      else TMValDouble (getBitFieldMilSingle oct (toOffset off) endian)
-    readDoubleParam oct off endian DTMilExtended = undefined
+    readDoubleParam oct off endian DTMilSingle = if isByteAligned off
+        then
+            TMValDouble
+                (getMilSingle
+                    (getValue @MILSingle oct (toByteOffset off) endian)
+                )
+        else TMValDouble (getBitFieldMilSingle oct (toOffset off) endian)
+    readDoubleParam oct off endian DTMilExtended = if isByteAligned off
+        then TMValDouble
+            (getMilExtended
+                (getValue @MILExtended oct (toByteOffset off) endian)
+            )
+        else TMValDouble (getBitFieldMilExtended oct (toOffset off) endian)
 
+    readString oct off (Just w) =
+        let val = B.take w $ B.drop (unByteOffset (toByteOffset off)) oct
+        in  case ST.fromByteString val of
+                Just x  -> TMValString x
+                Nothing -> TMValString "UNDEFINED"
+    readString oct off Nothing =
+        let val = B.drop (unByteOffset (toByteOffset off)) oct
+        in  case ST.fromByteString val of
+                Just x  -> TMValString x
+                Nothing -> TMValString "UNDEFINED"
 
+    readOctet oct off (Just w) =
+        let val = B.take w $ B.drop (unByteOffset (toByteOffset off)) oct
+        in TMValOctet val
+    readOctet oct off Nothing =
+        let val = B.drop (unByteOffset (toByteOffset off)) oct
+        in TMValOctet val
 
+    readTime oct off epoch (CUC4Coarse2Fine delta) =
+        let !sec = getValue @Int32 oct (toByteOffset off) BiE
+            !mic = getValue @Int16 oct (toByteOffset off + 4) BiE
+            !encTime = mkCUCTime (fromIntegral sec) (fromIntegral mic) delta
+            st = cucTimeToSunTime epoch encTime
+        in
+        TMValTime st
+    readTime oct off epoch (CDS8 delta) =
+        let !days = getValue oct (toByteOffset off) BiE
+            !milli = getValue oct (toByteOffset off + 2) BiE
+            !micro = getValue oct (toByteOffset off + 6) BiE
+            !encTime = mkCDSTime days milli (Just micro)
+            st = cdsTimeToSunTime epoch encTime
+        in
+        TMValTime st
+    readTime oct off epoch (CDS6 delta) =
+        let !days = getValue oct (toByteOffset off) BiE
+            !milli = getValue oct (toByteOffset off + 2) BiE
+            !encTime = mkCDSTime days milli Nothing
+            st = cdsTimeToSunTime epoch encTime
+        in
+        TMValTime st
 

@@ -442,11 +442,11 @@ getAlignedValue _ _ _ = ValUndefined
 {-# INLINABLE getUnalignedValue #-}
 getUnalignedValue :: ByteString -> Offset -> Value -> Value
 getUnalignedValue byts off ValUInt3{} =
-    ValUInt3 (fromIntegral (getBitField byts off (BitSize 3) BiE))
+    ValUInt3 (fromIntegral (getBitFieldWord64 byts off (BitSize 3) BiE))
 getUnalignedValue byts off ValInt8{} =
-    ValInt8 (fromIntegral (getBitFieldInt byts off (BitSize 8) BiE))
+    ValInt8 (fromIntegral (getBitFieldInt64 byts off (BitSize 8) BiE))
 getUnalignedValue byts off (ValInt16 b _) =
-    ValInt16 b (fromIntegral (getBitFieldInt byts off (BitSize 16) b))
+    ValInt16 b (fromIntegral (getBitFieldInt64 byts off (BitSize 16) b))
 getUnalignedValue byts off (ValDouble b _) =
     ValDouble b (getBitFieldDouble byts off b)
 getUnalignedValue _ _ _ = ValUndefined

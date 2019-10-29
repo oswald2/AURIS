@@ -19,12 +19,17 @@ module General.GetBitField
     , getBitFieldFloat
     , getBitFieldMilSingle
     , getBitFieldMilExtended
-    , getBitFieldInt
+    , getBitFieldInt64
+    , getBitFieldWord64
     , GetValue(..)
     , getValueOctet
     , getValueOctetLen
     , MILSingle
     , getMilSingle
+    , MILExtended
+    , getMilExtended
+    , Word48
+    , Int48
     )
 where
 
@@ -94,6 +99,40 @@ instance GetValue Int32 where
     {-# INLINABLE getValue #-}
 
 
+newtype Word48 = Word48 { getWord48Val :: Word64 }
+    deriving (Eq, Ord, Enum, Num, Real, Integral, Show, Bits, Generic)
+
+newtype Int48 = Int48 { getInt48Val :: Int64 }
+    deriving (Eq, Ord, Enum, Num, Real, Integral, Show, Bits, Generic)
+
+
+instance GetValue Word48 where
+  getValue bytes (ByteOffset idx) BiE =
+      let b0   = fromIntegral (bytes `B.index` idx) `shiftL` 40
+          b1   = fromIntegral (bytes `B.index` (idx + 1)) `shiftL` 32
+          b2   = fromIntegral (bytes `B.index` (idx + 2)) `shiftL` 24
+          b3   = fromIntegral (bytes `B.index` (idx + 3)) `shiftL` 16
+          b4   = fromIntegral (bytes `B.index` (idx + 4)) `shiftL` 8
+          b5   = fromIntegral (bytes `B.index` (idx + 5))
+          !val = b0 .|. b1 .|. b2 .|. b3 .|. b4 .|. b5
+      in  val
+  getValue bytes (ByteOffset idx) LiE =
+      let b0   = fromIntegral (bytes `B.index` idx)
+          b1   = fromIntegral (bytes `B.index` (idx + 1)) `shiftL` 8
+          b2   = fromIntegral (bytes `B.index` (idx + 2)) `shiftL` 16
+          b3   = fromIntegral (bytes `B.index` (idx + 3)) `shiftL` 24
+          b4   = fromIntegral (bytes `B.index` (idx + 4)) `shiftL` 32
+          b5   = fromIntegral (bytes `B.index` (idx + 5)) `shiftL` 40
+          !val = b0 .|. b1 .|. b2 .|. b3 .|. b4 .|. b5
+      in  val
+  {-# INLINABLE getValue #-}
+
+instance GetValue Int48 where
+  getValue bytes off endian =
+    let val = getWord48Val $ getValue @Word48 bytes off endian
+        !val2 = if val .&. 0x00_00_80_00_00_00_00_00 /= 0 then val .|. 0xFF_FF_00_00_00_00_00_00 else val
+    in Int48 (fromIntegral val2)
+
 instance GetValue Word64 where
     getValue bytes (ByteOffset idx) BiE =
         let b0   = fromIntegral (bytes `B.index` idx) `shiftL` 56
@@ -131,8 +170,6 @@ instance GetValue Float where
     getValue bytes off endian = wordToFloat (getValue bytes off endian)
     {-# INLINABLE getValue #-}
 
-newtype Word48 = Word48 { getWord48Val :: Word64 }
-  deriving (Show, Generic)
 
 
 newtype MILSingle = MILSingle { getMilSingle :: Double }
@@ -145,7 +182,7 @@ newtype MILExtended = MILExtended { getMilExtended :: Double }
   deriving (Show, Generic)
 
 instance GetValue MILExtended where
-  getValue bytes off endian = MILExtended $ decMILSingle $ getWord48Val $ getValue @Word48 bytes off endian
+  getValue bytes off endian = MILExtended . decMILExtended endian . getWord48Val $ getValue @Word48 bytes off endian
 
 -- | Get a octet string out of a 'ByteString' with the defined length
 getValueOctetLen :: ByteString -> ByteOffset -> Int -> ByteString
@@ -157,33 +194,89 @@ getValueOctetLen bytes (ByteOffset idx) len = B.take len (B.drop idx bytes)
 getValueOctet :: ByteString -> ByteOffset -> ByteString
 getValueOctet bytes (ByteOffset idx) = B.drop idx bytes
 
+{-# INLINABLE byteSwap48 #-}
+byteSwap48 :: Word48 -> Word48
+byteSwap48 (Word48 w) =
+  let b0 = w .&. 0xFF `shiftL` 40
+      b1 = (w .&. 0xFF00) `shiftL` 24
+      b2 = (w .&. 0xFF0000) `shiftL` 8
+      b3 = (w .&. 0xFF000000) `shiftR` 8
+      b4 = (w .&. 0xFF00000000) `shiftR` 24
+      b5 = (w .&. 0xFF0000000000) `shiftR` 40
+      !out = b5
+        .|. b4
+        .|. b3
+        .|. b2
+        .|. b1
+        .|. b0 `shiftL` 40
+  in
+    Word48 out
+
+{-# INLINABLE signExtend48 #-}
+signExtend48 :: Word48 -> Int48
+signExtend48 (Word48 val) =
+  let !val2 = if val .&. 0x00_00_80_00_00_00_00_00 /= 0 then val .|. 0xFF_FF_00_00_00_00_00_00 else val in
+  Int48 (fromIntegral val2)
+
+
+{-# INLINABLE signExtend #-}
+signExtend :: BitSize -> Word64 -> Int64
+signExtend bits w =
+  let mask' = 0xFF_FF_FF_FF_FF_FF_FF_FF `shiftL` unBitSize bits
+      isNegative = ((1 `shiftL` (unBitSize bits - 1)) .&. w) /= 0
+      !newVal = if isNegative then w .|. mask' else w
+  in
+  fromIntegral newVal
 
 
 -- | This function gets a 'Int64' out of a 'ByteString' in case the
 -- value is not byte-aligned (has a bit-offset)
 -- The value has a lenght of 'BitSize', which must be less than 64
-{-# INLINABLE getBitFieldInt #-}
-getBitFieldInt :: ByteString -> Offset -> BitSize -> Endian -> Int64
-getBitFieldInt bytes off bits endian = fromIntegral (getBitField bytes off bits endian)
+{-# INLINABLE getBitFieldInt64 #-}
+getBitFieldInt64 :: ByteString -> Offset -> BitSize -> Endian -> Int64
+getBitFieldInt64 bytes off bits BiE = signExtend bits (getBitField bytes off bits)
+getBitFieldInt64 bytes off bits LiE =
+  let val = getBitField bytes off bits in
+  if | bits == 64 -> fromIntegral . byteSwap64 $ val
+     | bits == 32 -> fromIntegral (byteSwap32 (fromIntegral val :: Word32))
+     | bits == 16 -> fromIntegral (byteSwap16 (fromIntegral val :: Word16))
+     | bits == 48 -> fromIntegral (signExtend48 (byteSwap48 (fromIntegral val)))
+     | otherwise -> -- we can't byte-order convert non-byte length values. We
+        getBitFieldInt64 bytes off bits BiE
+
+{-# INLINABLE getBitFieldWord64 #-}
+getBitFieldWord64 :: ByteString -> Offset -> BitSize -> Endian -> Word64
+getBitFieldWord64 bytes off bits BiE = getBitField bytes off bits
+getBitFieldWord64 bytes off bits LiE =
+  let val = getBitField bytes off bits in
+    if | bits == 64 -> byteSwap64 val
+       | bits == 32 -> fromIntegral (byteSwap32 (fromIntegral val :: Word32))
+       | bits == 16 -> fromIntegral (byteSwap16 (fromIntegral val :: Word16))
+       | bits == 48 -> fromIntegral (byteSwap48 (fromIntegral val))
+       | otherwise -> -- we can't byte-order convert non-byte length values. We
+          getBitFieldWord64 bytes off bits BiE
 
 -- | This function gets a 'Double' out of a 'ByteString' in case the
 -- value is not byte-aligned (has a bit-offset)
 -- The value has a lenght of 'BitSize', which must be less than 64
 {-# INLINABLE getBitFieldDouble #-}
 getBitFieldDouble :: ByteString -> Offset -> Endian -> Double
-getBitFieldDouble bytes off endian = wordToDouble (getBitField bytes off (BitSize 64) endian)
+getBitFieldDouble bytes off BiE = wordToDouble (getBitField bytes off (BitSize 64))
+getBitFieldDouble bytes off LiE = wordToDouble (byteSwap64 (getBitField bytes off (BitSize 64)))
 
 {-# INLINABLE getBitFieldFloat #-}
 getBitFieldFloat :: ByteString -> Offset -> Endian -> Float
-getBitFieldFloat bytes off endian = wordToFloat $ fromIntegral $ getBitField bytes off (BitSize 32) endian
+getBitFieldFloat bytes off BiE = wordToFloat $ fromIntegral $ getBitField bytes off (BitSize 32)
+getBitFieldFloat bytes off LiE = wordToFloat . byteSwap32 . fromIntegral $ getBitField bytes off (BitSize 32)
 
 {-# INLINABLE getBitFieldMilSingle #-}
 getBitFieldMilSingle :: ByteString -> Offset -> Endian -> Double
-getBitFieldMilSingle bytes off endian = decMILSingle $ fromIntegral $ getBitField bytes off (BitSize 32) endian
+getBitFieldMilSingle bytes off BiE = decMILSingle . fromIntegral $ getBitField bytes off (BitSize 32)
+getBitFieldMilSingle bytes off LiE = decMILSingle . byteSwap32 . fromIntegral $ getBitField bytes off (BitSize 32)
 
 {-# INLINABLE getBitFieldMilExtended #-}
 getBitFieldMilExtended :: ByteString -> Offset -> Endian -> Double
-getBitFieldMilExtended bytes off endian = decMILExtended endian $ getBitField bytes off (BitSize 48) endian
+getBitFieldMilExtended bytes off endian = decMILExtended endian $ getBitField bytes off (BitSize 48)
 
 
 
@@ -191,8 +284,8 @@ getBitFieldMilExtended bytes off endian = decMILExtended endian $ getBitField by
 -- value is not byte-aligned (has a bit-offset).
 -- The value has a lenght of 'BitSize', which must be less than 64
 {-# INLINABLE getBitField #-}
-getBitField :: ByteString -> Offset -> BitSize -> Endian -> Word64
-getBitField bytes off (BitSize nBits) endian =
+getBitField :: ByteString -> Offset -> BitSize -> Word64
+getBitField bytes off (BitSize nBits) =
     let
         (ByteOffset idx, BitOffset bitNr) = offsetParts off
         value1 :: Word64
@@ -219,11 +312,7 @@ getBitField bytes off (BitSize nBits) endian =
                                 ((bytes `B.index` ix) `shiftR` (8 - nb))
                         else val
     in
-        -- TODO: check endian of non-64 bit values, this is probably not correct
-        case endian of
-            BiE -> value2
-            LiE -> byteSwap64 value2
-
+    value2
 
 
 {-# INLINABLE decMILSingle #-}
