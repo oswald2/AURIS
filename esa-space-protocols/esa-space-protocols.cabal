@@ -78,7 +78,6 @@ library
         Data.PUS.MissionSpecific.Definitions
         Data.PUS.Value
         Data.PUS.NcduToTMFrame
-        Protocol.SizeOf
         Protocol.NCTRS
         Protocol.EDEN
         Protocol.CnC
@@ -174,6 +173,7 @@ library
         , text-short
         , resourcet
         , hashtables
+        , vector-builder
 
     if flag(llvm)
         ghc-options: -O2 -Wall -Wcompat -Widentities -Wincomplete-record-updates

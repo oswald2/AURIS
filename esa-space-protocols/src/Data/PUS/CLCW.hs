@@ -60,7 +60,7 @@ import qualified Data.Attoparsec.Binary        as A
 
 import           General.PUSTypes
 
-import           Protocol.SizeOf
+import           General.SizeOf
 
 import           Formatting
 

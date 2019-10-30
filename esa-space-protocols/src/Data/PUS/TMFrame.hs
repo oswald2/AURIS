@@ -84,7 +84,7 @@ import           Data.PUS.Config
 import           Data.PUS.MissionSpecific.Definitions
 import           Data.PUS.TMFrameDfh
 
-import           Protocol.SizeOf
+import           General.SizeOf
 
 
 

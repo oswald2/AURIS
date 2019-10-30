@@ -50,7 +50,7 @@ import           Codec.Serialise
 
 import           Data.PUS.EncTime
 
-import           Protocol.SizeOf
+import           General.SizeOf
 
 import           General.Padding
 import           General.Hexdump

@@ -113,7 +113,7 @@ import           General.PUSTypes
 import           Data.PUS.Events
 import           Data.PUS.EncTime
 
-import           Protocol.SizeOf
+import           General.SizeOf
 
 import           General.Padding
 import           General.Hexdump

@@ -1,7 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes
     , NoImplicitPrelude
 #-}
-module Protocol.SizeOf
+module General.SizeOf
     (
         SizeOf(..)
         , FixedSize(..)

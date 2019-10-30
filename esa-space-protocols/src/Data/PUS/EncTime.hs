@@ -52,7 +52,7 @@ import qualified Data.Attoparsec.Binary        as A
 
 import           Codec.Serialise
 
-import           Protocol.SizeOf
+import           General.SizeOf
 
 import           General.Time
 import           General.SetBitField

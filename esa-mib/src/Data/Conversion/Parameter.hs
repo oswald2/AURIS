@@ -32,6 +32,7 @@ import           Data.Conversion.Criteria
 import           Data.Conversion.Types
 
 import           General.PUSTypes
+import           General.Types
 import           General.TriState
 
 
@@ -139,7 +140,7 @@ convertParameter curs calibHM synthHM pcfs p@PCFentry {..} =
                                       , _fpPID               = _pcfPID
                                       , _fpUnit              = _pcfUnit
                                       , _fpType              = typ
-                                      , _fpWidth             = _pcfWidth
+                                      , _fpWidth             = fmap (BitSize . fromIntegral) _pcfWidth
                                       , _fpValid             = valPar
                                       , _fpRelated           = Nothing
                                       , _fpCalibs            = calibs

@@ -8,9 +8,14 @@ where
 
 import           RIO
 import qualified RIO.ByteString                as B
+import qualified RIO.Vector                    as V
+import           RIO.List                      ( iterate )
 import           Conduit
+import           Control.Lens                  ( (.~) )
 import           Data.HashTable.ST.Basic       as HT
 import qualified Data.Text.Short               as ST
+import qualified VectorBuilder.Builder         as VB
+import qualified VectorBuilder.Vector          as VB
 
 import           Control.PUS.Classes
 import           Data.DataModel
@@ -18,7 +23,7 @@ import           Data.DataModel
 import           Data.TM.TMPacketDef
 import           Data.TM.TMParameterDef
 import           Data.TM.PIVals
---import           Data.TM.Parameter
+import           Data.TM.Parameter
 import           Data.TM.Value
 import           Data.TM.Validity
 
@@ -29,10 +34,12 @@ import           Data.PUS.TMPacket
 --import           Data.PUS.MissionSpecific.Definitions
 import           Data.PUS.EncTime
 import           Data.PUS.PUSState
+import           Data.PUS.CRC
 
 import           General.GetBitField
 import           General.Types
 import           General.Time
+
 
 
 
@@ -45,12 +52,26 @@ packetProcessorC
        , HasLogFunc env
        )
     => ConduitT (ByteString, ExtractedDU PUSPacket) TMPacket m ()
-packetProcessorC = awaitForever $ \pkt@(_, pusPkt) -> do
+packetProcessorC = awaitForever $ \pkt@(oct, pusPkt) -> do
     model' <- view getDataModel
     model  <- readTVarIO model'
     let def' = getPackeDefinition model pkt
     case def' of
-        Just def -> yieldM $ processPacket def pkt
+        Just def -> do 
+          if def ^. tmpdCheck 
+            then do 
+              case crcCheck oct of 
+                Left err -> logError $ "CRC Check on TM packet failed: " 
+                      <> display err <> ". Packet ignored."
+                Right (chk, payload, crcCalcd, crcPkt) -> do 
+                  if chk 
+                    then yieldM $ processPacket def (payload, pusPkt) 
+                    else logError $ "CRC Check on TM packet failed: received: " 
+                            <> display crcPkt 
+                            <> ", calculated: " 
+                            <> display crcCalcd
+                            <> ". Packet ignored."
+            else yieldM $ processPacket def pkt
         Nothing  -> do
             logWarn
                 $  "No packet defintion found for packet: APID:"
@@ -105,15 +126,26 @@ processPacket
     => TMPacketDef
     -> (ByteString, ExtractedDU PUSPacket)
     -> m TMPacket
-processPacket pktDef pkt = do
-    timestamp <- getTimeStamp pkt
-    undefined
+processPacket pktDef pkt@(_, pusDU) = do
+    (timestamp, epoch) <- getTimeStamp pkt
+    params <- getParameters timestamp epoch pktDef pkt 
+    let tmPacket = TMPacket {
+      _tmpSPID = _tmpdSPID pktDef
+      , _tmpAPID = _tmpdApid pktDef 
+      , _tmpType = _tmpdType pktDef 
+      , _tmpSubType = _tmpdSubType pktDef
+      , _tmpERT = pusDU ^. epERT
+      , _tmpTimeStamp = timestamp 
+      , _tmpVCID = pusDU ^. epVCID
+      , _tmpParams = params
+      }
+    return tmPacket
 
 
 getTimeStamp
     :: (MonadIO m, MonadReader env m, HasPUSState env, HasCorrelationState env)
     => (ByteString, ExtractedDU PUSPacket)
-    -> m SunTime
+    -> m (SunTime, Epoch)
 getTimeStamp (_, epu) = do
     appState <- view appStateG
     state    <- readTVarIO appState
@@ -123,11 +155,14 @@ getTimeStamp (_, epu) = do
     case pusPktTime (epu ^. epDU . pusDfh) of
         Just time -> do
             let sunTime = cucTimeToSunTime epoch time
-            correlateTMTime sunTime (epu ^. epERT)
+            t <- correlateTMTime sunTime (epu ^. epERT)
+            return (t, epoch)
         Nothing -> do
             case state ^. pusStCorrelation of
-                CorrERT -> return (epu ^. epERT)
-                _       -> liftIO getCurrentTime
+                CorrERT -> return (epu ^. epERT, epoch)
+                _       -> do
+                  t <- liftIO getCurrentTime
+                  return (t, epoch)
 
 
 
@@ -148,6 +183,113 @@ correlateTMTime inTime ert = do
             corrState    <- view corrStateG
             coefficients <- readTVarIO corrState
             return (obtToMcsTim inTime coefficients)
+
+
+getParameters :: (MonadIO m, MonadReader env m, HasPUSState env, HasCorrelationState env) 
+  => SunTime 
+  -> Epoch 
+  -> TMPacketDef 
+  -> (ByteString, ExtractedDU PUSPacket) 
+  -> m (Vector TMParameter)
+getParameters timestamp epoch def pkt = do
+  let ert = snd pkt ^. epERT
+  case def ^. tmpdParams of 
+    TMFixedParams paramLocations -> getFixedParams timestamp ert epoch def pkt paramLocations 
+    TMVariableParams tpsd dfhSize -> getVariableParams timestamp def pkt tpsd dfhSize
+
+
+getFixedParams :: (MonadIO m, MonadReader env m, HasPUSState env, HasCorrelationState env) 
+  => SunTime 
+  -> SunTime
+  -> Epoch 
+  -> TMPacketDef 
+  -> (ByteString, ExtractedDU PUSPacket) 
+  -> Vector TMParamLocation 
+  -> m (Vector TMParameter) 
+getFixedParams timestamp ert epoch def (oct, ep) locs = do 
+  bldr <- V.foldM (go oct) VB.empty locs
+  return (VB.build bldr)  
+  where 
+    go oct bldr loc = do 
+      case _tmplSuperComm loc of 
+        Just sup -> do 
+          let newLocs = unroll timestamp loc sup 
+              func (l, ts) = do 
+                v <- getParamValue epoch ert oct l 
+                return TMParameter {
+                    _pName = _tmplName loc 
+                    , _pTime = ts 
+                    , _pValue = v 
+                    , _pEngValue = Nothing
+                  }
+          vals <- mapM func newLocs 
+          return (bldr <> VB.foldable vals) 
+        Nothing -> do 
+          val <- getParamValue epoch ert oct loc 
+
+          let parTime = if tOffset == nullRelTime then timestamp else timestamp <+> tOffset
+              tOffset = _tmplTime loc
+
+          let paramValue = TMParameter {
+                _pName = _tmplName loc  
+                , _pTime = parTime 
+                , _pValue = val 
+                , _pEngValue = Nothing
+              }
+          return (bldr <> VB.singleton paramValue)
+          
+    unroll :: SunTime -> TMParamLocation -> SuperCommutated -> [(TMParamLocation, SunTime)]
+    unroll timestamp loc sup = 
+      let n = sup ^. scNbOcc in 
+      if n <= 1 
+        then [(loc, timestamp <+> (loc ^. tmplTime))] 
+        else
+          let newLocs = update sup . replicate (sup ^. scNbOcc) $ loc
+              startTime = timestamp <+> (loc ^. tmplTime)
+              times = iterate f startTime
+              deltaTime = sup ^. scTdOcc
+              f x = addSpan x deltaTime 
+          in zip newLocs times  
+
+
+    update :: SuperCommutated 
+      -> [TMParamLocation] 
+      -> [TMParamLocation] 
+    update _ [] = []
+    update _ [locNew] = [locNew] 
+    update sup (locOld : locNew : rest) =
+      let oldOff = locOld ^. tmplOffset 
+          oldWidth = getWidth (locOld ^. tmplParam)
+          newOff = oldOff .+. oldWidth .+. sup ^. scLgOcc
+          locNew' = locNew & tmplOffset .~ newOff 
+      in 
+      locOld : update sup (locNew' : rest) 
+
+
+
+
+getVariableParams :: 
+  SunTime 
+  -> TMPacketDef 
+  -> (ByteString, ExtractedDU PUSPacket) 
+  -> Int 
+  -> Word8 
+  -> m (Vector TMParameter)
+getVariableParams = undefined 
+
+
+getParamValue :: (MonadIO m, MonadReader env m, HasPUSState env, HasCorrelationState env) 
+  => Epoch -> SunTime -> ByteString -> TMParamLocation -> m TMValue
+getParamValue epoch ert oct def = do 
+  let (val, corr) = extractParamValue epoch oct def 
+  if corr == CorrelationYes
+    then do 
+      case val ^. tmvalValue of 
+          TMValTime inTime -> do
+            newTime <- TMValTime <$> correlateTMTime inTime ert
+            return $ val & tmvalValue .~ newTime
+          _ -> return val
+    else return val 
 
 
 

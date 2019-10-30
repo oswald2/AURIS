@@ -73,8 +73,8 @@ import           Data.PUS.CRC
 import           Data.PUS.MissionSpecific.Definitions
 
 import           Protocol.ProtocolInterfaces
-import           Protocol.SizeOf
 
+import           General.SizeOf
 import           General.SetBitField
 import           General.Types
 

@@ -85,7 +85,7 @@ import           Data.Conduit.Attoparsec
 import           Data.PUS.CLCW
 import           Data.PUS.Events
 
-import           Protocol.SizeOf
+import           General.SizeOf
 
 import           General.Hexdump
 import           General.Padding

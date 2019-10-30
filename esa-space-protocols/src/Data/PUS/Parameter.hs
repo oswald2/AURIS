@@ -103,7 +103,7 @@ import qualified Data.SortedList               as SL
 import           Codec.Serialise
 import           Text.Read
 
-import           Protocol.SizeOf
+import           General.SizeOf
 
 import           Data.PUS.Value
 

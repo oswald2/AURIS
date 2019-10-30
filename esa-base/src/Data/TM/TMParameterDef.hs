@@ -25,34 +25,36 @@ the information read out of a SCOS MIB, EGS-CC CDM etc.
     , TemplateHaskell
 #-}
 module Data.TM.TMParameterDef
-    ( DoubleType(..)
-    , TimeType(..)
-    , ParamType(..)
-    , ParamNatur(..)
-    , TMParameterDef(..)
-    , StatusConsistency(..)
-    , Correlate(..)
-    , ptcPfcToParamType
-    , charToStatusConsistency
-    , fpName
-    , fpDescription
-    , fpPID
-    , fpUnit
-    , fpType
-    , fpWidth
-    , fpValid
-    , fpRelated
-    , fpCalibs
-    , fpNatur
-    , fpInterpolation
-    , fpStatusConsistency
-    , fpDecim
-    , fpDefaultVal
-    , fpSubsys
-    , fpValidityValue
-    , fpOBTID
-    , fpEndian
-    )
+  ( DoubleType(..)
+  , TimeType(..)
+  , ParamType(..)
+  , ParamNatur(..)
+  , TMParameterDef(..)
+  , StatusConsistency(..)
+  , Correlate(..)
+  , ptcPfcToParamType
+  , charToStatusConsistency
+  , fpName
+  , fpDescription
+  , fpPID
+  , fpUnit
+  , fpType
+  , fpWidth
+  , fpValid
+  , fpRelated
+  , fpCalibs
+  , fpNatur
+  , fpInterpolation
+  , fpStatusConsistency
+  , fpDecim
+  , fpDefaultVal
+  , fpSubsys
+  , fpValidityValue
+  , fpOBTID
+  , fpEndian
+  , getWidth 
+  , getPaddedWidth
+  )
 where
 
 
@@ -69,6 +71,8 @@ import           Data.TM.Synthetic
 
 import           General.Types
 import           General.PUSTypes
+import           General.SizeOf
+
 
 -- | If a value is a double, describes which double type
 -- is used.
@@ -87,7 +91,7 @@ instance NFData DoubleType
 instance Serialise DoubleType
 instance FromJSON DoubleType
 instance ToJSON DoubleType where
-    toEncoding = genericToEncoding defaultOptions
+  toEncoding = genericToEncoding defaultOptions
 
 -- | Specifies the time format encoding. Currently, only a
 -- subset of the valid time values are supported
@@ -101,7 +105,7 @@ instance NFData TimeType
 instance Serialise TimeType
 instance FromJSON TimeType
 instance ToJSON TimeType where
-    toEncoding = genericToEncoding defaultOptions
+  toEncoding = genericToEncoding defaultOptions
 
 
 -- | Specifies, if the parameter is a time value, if
@@ -113,7 +117,7 @@ instance NFData Correlate
 instance Serialise Correlate
 instance FromJSON Correlate
 instance ToJSON Correlate where
-    toEncoding = genericToEncoding defaultOptions
+  toEncoding = genericToEncoding defaultOptions
 
 
 -- | Specifies the data type of the parameter
@@ -141,6 +145,24 @@ data ParamType =
     -- in AURIS are always saved synthetic, hence this type has no effect
     | ParamSavedSynthetic
     deriving (Show, Generic)
+
+
+instance BitSizes ParamType where
+  bitSize (ParamInteger x) = BitSize x
+  bitSize (ParamUInteger x) = BitSize x 
+  bitSize (ParamDouble DTDouble) = BitSize 64
+  bitSize (ParamDouble DTFloat) = BitSize 32
+  bitSize (ParamDouble DTMilSingle) = BitSize 32
+  bitSize (ParamDouble DTMilExtended) = BitSize 48
+  bitSize (ParamString (Just x)) = BitSize (x * 8)
+  bitSize (ParamString Nothing) = BitSize 0 
+  bitSize (ParamOctet (Just x)) = BitSize (x * 8)
+  bitSize (ParamOctet Nothing) = BitSize 0 
+  bitSize (ParamTime (CDS6 _) _) = BitSize 48 
+  bitSize (ParamTime (CDS8 _) _) = BitSize 64 
+  bitSize (ParamTime (CUC4Coarse2Fine _) _ ) = BitSize 48
+  bitSize (ParamDeduced x) = BitSize (fromMaybe 0 x)
+  bitSize ParamSavedSynthetic = BitSize 0
 
 
 -- | Converts from a 'PTC' and a 'PFC' value (according to the SCOS-2000 MIB ICD 6.9)
@@ -197,30 +219,30 @@ ptcPfcToParamType (PTC 8) (PFC 0 ) _ = Right $ ParamString Nothing
 ptcPfcToParamType (PTC 8) (PFC x ) _ = Right $ ParamString (Just x)
 ptcPfcToParamType (PTC 9) (PFC 0 ) _ = Left "PTC=9 PFC=0 not supported"
 ptcPfcToParamType (PTC 9) (PFC 1) Nothing =
-    Right $ ParamTime (CDS6 False) CorrelationYes
+  Right $ ParamTime (CDS6 False) CorrelationYes
 ptcPfcToParamType (PTC 9) (PFC 1) (Just True) =
-    Right $ ParamTime (CDS6 False) CorrelationYes
+  Right $ ParamTime (CDS6 False) CorrelationYes
 ptcPfcToParamType (PTC 9) (PFC 1) (Just False) =
-    Right $ ParamTime (CDS6 False) CorrelationNo
+  Right $ ParamTime (CDS6 False) CorrelationNo
 ptcPfcToParamType (PTC 9) (PFC 2) Nothing =
-    Right $ ParamTime (CDS8 False) CorrelationYes
+  Right $ ParamTime (CDS8 False) CorrelationYes
 ptcPfcToParamType (PTC 9) (PFC 2) (Just True) =
-    Right $ ParamTime (CDS8 False) CorrelationYes
+  Right $ ParamTime (CDS8 False) CorrelationYes
 ptcPfcToParamType (PTC 9) (PFC 2) (Just False) =
-    Right $ ParamTime (CDS8 False) CorrelationNo
+  Right $ ParamTime (CDS8 False) CorrelationNo
 ptcPfcToParamType (PTC 9) (PFC 17) Nothing =
-    Right $ ParamTime (CUC4Coarse2Fine False) CorrelationYes
+  Right $ ParamTime (CUC4Coarse2Fine False) CorrelationYes
 ptcPfcToParamType (PTC 9) (PFC 17) (Just True) =
-    Right $ ParamTime (CUC4Coarse2Fine False) CorrelationYes
+  Right $ ParamTime (CUC4Coarse2Fine False) CorrelationYes
 ptcPfcToParamType (PTC 9) (PFC 17) (Just False) =
-    Right $ ParamTime (CUC4Coarse2Fine False) CorrelationNo
+  Right $ ParamTime (CUC4Coarse2Fine False) CorrelationNo
 ptcPfcToParamType (PTC 10) (PFC 17) _ =
-    Right $ ParamTime (CUC4Coarse2Fine True) CorrelationNo
+  Right $ ParamTime (CUC4Coarse2Fine True) CorrelationNo
 ptcPfcToParamType (PTC 11) (PFC 0) _ = Right $ ParamDeduced Nothing
 ptcPfcToParamType (PTC 11) (PFC x) _ = Right $ ParamDeduced (Just x)
 ptcPfcToParamType (PTC 13) (PFC 0) _ = Right ParamSavedSynthetic
 ptcPfcToParamType ptc pfc _ =
-    Left $ "Unsupported: " <> textDisplay ptc <> " " <> textDisplay pfc
+  Left $ "Unsupported: " <> textDisplay ptc <> " " <> textDisplay pfc
 
 
 
@@ -228,7 +250,7 @@ instance NFData ParamType
 instance Serialise ParamType
 instance FromJSON ParamType
 instance ToJSON ParamType where
-    toEncoding = genericToEncoding defaultOptions
+  toEncoding = genericToEncoding defaultOptions
 
 -- | The parameter nature.
 data ParamNatur =
@@ -244,7 +266,7 @@ instance NFData ParamNatur
 instance Serialise ParamNatur
 instance FromJSON ParamNatur
 instance ToJSON ParamNatur where
-    toEncoding = genericToEncoding defaultOptions
+  toEncoding = genericToEncoding defaultOptions
 
 -- | Defines if the parameter is status consistency checked
 data StatusConsistency = SCCOn | SCCOff
@@ -261,7 +283,7 @@ instance NFData StatusConsistency
 instance Serialise StatusConsistency
 instance FromJSON StatusConsistency
 instance ToJSON StatusConsistency where
-    toEncoding = genericToEncoding defaultOptions
+  toEncoding = genericToEncoding defaultOptions
 
 
 -- | The whole parameter definition
@@ -280,7 +302,7 @@ data TMParameterDef = TMParameterDef {
     -- | the padding width. This is not the width of the parameter, which is
     -- given in the '_fpType' field, but if the parameter should have additional
     -- padding to the next one
-    , _fpWidth :: Maybe Word32
+    , _fpWidth :: Maybe BitSize
     -- | Reference to the validity parameter. If the validity parameter has a value
     -- equal to '_fpValidityValue', the validity to set to true for this parameter
     , _fpValid :: Maybe TMParameterDef
@@ -312,10 +334,19 @@ data TMParameterDef = TMParameterDef {
     deriving(Show, Generic)
 makeLenses ''TMParameterDef
 
+getWidth :: TMParameterDef -> BitSize 
+getWidth def = bitSize (def ^. fpType)
+
+getPaddedWidth :: TMParameterDef -> BitSize 
+getPaddedWidth def = 
+  let w = bitSize (def ^. fpType) in
+  case def ^. fpWidth of 
+    Just b -> let !res = w + b in res 
+    Nothing -> w 
 
 instance NFData TMParameterDef
 instance Serialise TMParameterDef
 instance FromJSON TMParameterDef
 instance ToJSON TMParameterDef where
-    toEncoding = genericToEncoding defaultOptions
+  toEncoding = genericToEncoding defaultOptions
 

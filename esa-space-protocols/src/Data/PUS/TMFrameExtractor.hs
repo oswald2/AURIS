@@ -64,7 +64,7 @@ import           Data.PUS.EncTime
 import           General.Time
 
 import           Protocol.ProtocolInterfaces
-import           Protocol.SizeOf
+import           General.SizeOf
 
 --import           General.Hexdump
 

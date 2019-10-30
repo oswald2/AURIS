@@ -89,7 +89,7 @@ import           Codec.Serialise
 import           General.PUSTypes
 import           Data.PUS.EncTime
 
-import           Protocol.SizeOf
+import           General.SizeOf
 
 
 -- | Data Structure for the data field header of a PUS packet

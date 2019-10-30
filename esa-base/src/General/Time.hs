@@ -61,6 +61,8 @@ module General.Time
   , (<->)
   , addTimes
   , subTimes
+  , addSpan
+  , subSpan
   , negTime
   , LeapSeconds(..)
   , CorrelationCoefficients
@@ -114,7 +116,7 @@ import           Text.Megaparsec
 import           Text.Megaparsec.Char
 
 import           General.Types                  ( ToDouble(..) )
-
+import           General.TimeSpan
 
 type Parser = Parsec Void Text
 
@@ -188,7 +190,7 @@ instance NFData SunTime
 instance Serialise SunTime
 instance FromJSON SunTime
 instance ToJSON SunTime where
-    toEncoding = genericToEncoding defaultOptions
+  toEncoding = genericToEncoding defaultOptions
 
 
 -- | converts the time into a 'Double' represinting the seconds
@@ -203,8 +205,8 @@ fromDouble :: Double -> Bool -> SunTime
 fromDouble secs = SunTime (round (secs * 1_000_000))
 
 {-# INLINABLE fromMilli #-}
-fromMilli :: Int64 -> Bool -> SunTime 
-fromMilli milli = SunTime (milli * 1000) 
+fromMilli :: Int64 -> Bool -> SunTime
+fromMilli milli = SunTime (milli * 1000)
 
 instance Ord SunTime where
   SunTime t1  False `compare` SunTime t2  False = t1 `compare` t2
@@ -586,6 +588,15 @@ addTimes t1 t2 =
   in  microToTime summ bothDelta
 
 
+{-# INLINABLE addSpan #-}
+addSpan :: SunTime -> TimeSpn a -> SunTime
+addSpan (SunTime t d) spn = SunTime (t + getMicro spn) d
+
+{-# INLINABLE subSpan #-}
+subSpan :: SunTime -> TimeSpn a -> SunTime
+subSpan (SunTime t d) spn = SunTime (t - getMicro spn) d
+
+
 -- | only implemented for sun time
 {-# INLINABLE subTimes #-}
 subTimes :: SunTime -> SunTime -> SunTime
@@ -642,7 +653,7 @@ newtype LeapSeconds = LeapSeconds { fromLeaps :: Int }
 instance Serialise LeapSeconds
 instance FromJSON LeapSeconds
 instance ToJSON LeapSeconds where
-    toEncoding = genericToEncoding defaultOptions
+  toEncoding = genericToEncoding defaultOptions
 
 
 -- | correlation of the given ground time relative to a on-board time

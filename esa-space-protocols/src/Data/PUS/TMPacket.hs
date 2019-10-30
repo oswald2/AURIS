@@ -61,13 +61,13 @@ import           General.Time
 
 
 data TMPacket = TMPacket {
-    _tmpSPID :: SPID
-    , _tmpAPID :: APID
-    , _tmpType :: PUSType
-    , _tmpSubType :: PUSSubType
-    , _tmpERT :: SunTime
-    , _tmpTimeStamp :: SunTime
-    , _tmpVCID :: VCID
+    _tmpSPID :: !SPID
+    , _tmpAPID :: !APID
+    , _tmpType :: !PUSType
+    , _tmpSubType :: !PUSSubType
+    , _tmpERT :: !SunTime
+    , _tmpTimeStamp :: !SunTime
+    , _tmpVCID :: !VCID
     , _tmpParams :: Vector TMParameter
     } deriving (Show, Generic)
 

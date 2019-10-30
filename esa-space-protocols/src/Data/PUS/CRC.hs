@@ -47,7 +47,7 @@ import           Data.Aeson
 import           Data.Bits
 import qualified Data.Vector.Unboxed           as V
 
-import           Protocol.SizeOf
+import           General.SizeOf
 
 import           Formatting
 
