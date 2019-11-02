@@ -52,7 +52,7 @@ module Data.TM.TMParameterDef
   , fpValidityValue
   , fpOBTID
   , fpEndian
-  , getWidth 
+  , getWidth
   , getPaddedWidth
   )
 where
@@ -98,7 +98,24 @@ instance ToJSON DoubleType where
 data TimeType =
     CDS6 Bool
     | CDS8 Bool
-    | CUC4Coarse2Fine Bool
+    | CUC1 Bool
+    | CUC1_1 Bool
+    | CUC1_2 Bool
+    | CUC1_3 Bool
+    | CUC2 Bool
+    | CUC2_1 Bool
+    | CUC2_2 Bool
+    | CUC2_3 Bool
+    | CUC3 Bool
+    | CUC3_1  Bool
+    | CUC3_2 Bool
+    | CUC3_3 Bool
+    | CUC4  Bool
+    | CUC4_1  Bool
+    | CUC4_2 Bool
+    | CUC4_3 Bool
+    | UxTime
+
     deriving (Eq, Ord, Show, Generic)
 
 instance NFData TimeType
@@ -148,21 +165,37 @@ data ParamType =
 
 
 instance BitSizes ParamType where
-  bitSize (ParamInteger x) = BitSize x
-  bitSize (ParamUInteger x) = BitSize x 
-  bitSize (ParamDouble DTDouble) = BitSize 64
-  bitSize (ParamDouble DTFloat) = BitSize 32
-  bitSize (ParamDouble DTMilSingle) = BitSize 32
-  bitSize (ParamDouble DTMilExtended) = BitSize 48
-  bitSize (ParamString (Just x)) = BitSize (x * 8)
-  bitSize (ParamString Nothing) = BitSize 0 
-  bitSize (ParamOctet (Just x)) = BitSize (x * 8)
-  bitSize (ParamOctet Nothing) = BitSize 0 
-  bitSize (ParamTime (CDS6 _) _) = BitSize 48 
-  bitSize (ParamTime (CDS8 _) _) = BitSize 64 
-  bitSize (ParamTime (CUC4Coarse2Fine _) _ ) = BitSize 48
-  bitSize (ParamDeduced x) = BitSize (fromMaybe 0 x)
-  bitSize ParamSavedSynthetic = BitSize 0
+  bitSize (ParamInteger  x            ) = BitSize x
+  bitSize (ParamUInteger x            ) = BitSize x
+  bitSize (ParamDouble   DTDouble     ) = BitSize 64
+  bitSize (ParamDouble   DTFloat      ) = BitSize 32
+  bitSize (ParamDouble   DTMilSingle  ) = BitSize 32
+  bitSize (ParamDouble   DTMilExtended) = BitSize 48
+  bitSize (ParamString   (Just x)     ) = BitSize (x * 8)
+  bitSize (ParamString   Nothing      ) = BitSize 0
+  bitSize (ParamOctet    (Just x)     ) = BitSize (x * 8)
+  bitSize (ParamOctet    Nothing      ) = BitSize 0
+  bitSize (ParamTime (CDS6   _) _     ) = BitSize 48
+  bitSize (ParamTime (CDS8   _) _     ) = BitSize 64
+  bitSize (ParamTime (CUC1   _) _     ) = BitSize 8
+  bitSize (ParamTime (CUC1_1 _) _     ) = BitSize 16
+  bitSize (ParamTime (CUC1_2 _) _     ) = BitSize 24
+  bitSize (ParamTime (CUC1_3 _) _     ) = BitSize 32
+  bitSize (ParamTime (CUC2   _) _     ) = BitSize 16
+  bitSize (ParamTime (CUC2_1 _) _     ) = BitSize 24
+  bitSize (ParamTime (CUC2_2 _) _     ) = BitSize 32
+  bitSize (ParamTime (CUC2_3 _) _     ) = BitSize 40
+  bitSize (ParamTime (CUC3   _) _     ) = BitSize 24
+  bitSize (ParamTime (CUC3_1 _) _     ) = BitSize 32
+  bitSize (ParamTime (CUC3_2 _) _     ) = BitSize 40
+  bitSize (ParamTime (CUC3_3 _) _     ) = BitSize 48
+  bitSize (ParamTime (CUC4   _) _     ) = BitSize 32
+  bitSize (ParamTime (CUC4_1 _) _     ) = BitSize 40
+  bitSize (ParamTime (CUC4_2 _) _     ) = BitSize 48
+  bitSize (ParamTime (CUC4_3 _) _     ) = BitSize 56
+  bitSize (ParamTime UxTime     _     ) = BitSize 64
+  bitSize (ParamDeduced x             ) = BitSize (fromMaybe 0 x)
+  bitSize ParamSavedSynthetic           = BitSize 0
 
 
 -- | Converts from a 'PTC' and a 'PFC' value (according to the SCOS-2000 MIB ICD 6.9)
@@ -218,32 +251,91 @@ ptcPfcToParamType (PTC 7) (PFC x ) _ = Right $ ParamOctet (Just x)
 ptcPfcToParamType (PTC 8) (PFC 0 ) _ = Right $ ParamString Nothing
 ptcPfcToParamType (PTC 8) (PFC x ) _ = Right $ ParamString (Just x)
 ptcPfcToParamType (PTC 9) (PFC 0 ) _ = Left "PTC=9 PFC=0 not supported"
-ptcPfcToParamType (PTC 9) (PFC 1) Nothing =
-  Right $ ParamTime (CDS6 False) CorrelationYes
-ptcPfcToParamType (PTC 9) (PFC 1) (Just True) =
-  Right $ ParamTime (CDS6 False) CorrelationYes
-ptcPfcToParamType (PTC 9) (PFC 1) (Just False) =
-  Right $ ParamTime (CDS6 False) CorrelationNo
-ptcPfcToParamType (PTC 9) (PFC 2) Nothing =
-  Right $ ParamTime (CDS8 False) CorrelationYes
-ptcPfcToParamType (PTC 9) (PFC 2) (Just True) =
-  Right $ ParamTime (CDS8 False) CorrelationYes
-ptcPfcToParamType (PTC 9) (PFC 2) (Just False) =
-  Right $ ParamTime (CDS8 False) CorrelationNo
-ptcPfcToParamType (PTC 9) (PFC 17) Nothing =
-  Right $ ParamTime (CUC4Coarse2Fine False) CorrelationYes
-ptcPfcToParamType (PTC 9) (PFC 17) (Just True) =
-  Right $ ParamTime (CUC4Coarse2Fine False) CorrelationYes
-ptcPfcToParamType (PTC 9) (PFC 17) (Just False) =
-  Right $ ParamTime (CUC4Coarse2Fine False) CorrelationNo
-ptcPfcToParamType (PTC 10) (PFC 17) _ =
-  Right $ ParamTime (CUC4Coarse2Fine True) CorrelationNo
+ptcPfcToParamType (PTC 9) (PFC 1) corr =
+  Right $ ParamTime (CDS6 False) (determineCorr corr)
+ptcPfcToParamType (PTC 9) (PFC 2) corr =
+  Right $ ParamTime (CDS8 False) (determineCorr corr)
+ptcPfcToParamType (PTC 9) (PFC 3) corr =
+  Right $ ParamTime (CUC1 False) (determineCorr corr)
+ptcPfcToParamType (PTC 9) (PFC 4) corr =
+  Right $ ParamTime (CUC1_1 False) (determineCorr corr)
+ptcPfcToParamType (PTC 9) (PFC 5) corr =
+  Right $ ParamTime (CUC1_2 False) (determineCorr corr)
+ptcPfcToParamType (PTC 9) (PFC 6) corr =
+  Right $ ParamTime (CUC1_3 False) (determineCorr corr)
+ptcPfcToParamType (PTC 9) (PFC 7) corr =
+  Right $ ParamTime (CUC2 False) (determineCorr corr)
+ptcPfcToParamType (PTC 9) (PFC 8) corr =
+  Right $ ParamTime (CUC2_1 False) (determineCorr corr)
+ptcPfcToParamType (PTC 9) (PFC 9) corr =
+  Right $ ParamTime (CUC2_2 False) (determineCorr corr)
+ptcPfcToParamType (PTC 9) (PFC 10) corr =
+  Right $ ParamTime (CUC2_3 False) (determineCorr corr)
+ptcPfcToParamType (PTC 9) (PFC 11) corr =
+  Right $ ParamTime (CUC3 False) (determineCorr corr)
+ptcPfcToParamType (PTC 9) (PFC 12) corr =
+  Right $ ParamTime (CUC3_1 False) (determineCorr corr)
+ptcPfcToParamType (PTC 9) (PFC 13) corr =
+  Right $ ParamTime (CUC3_2 False) (determineCorr corr)
+ptcPfcToParamType (PTC 9) (PFC 14) corr =
+  Right $ ParamTime (CUC3_3 False) (determineCorr corr)
+ptcPfcToParamType (PTC 9) (PFC 15) corr =
+  Right $ ParamTime (CUC4 False) (determineCorr corr)
+ptcPfcToParamType (PTC 9) (PFC 16) corr =
+  Right $ ParamTime (CUC4_1 False) (determineCorr corr)
+ptcPfcToParamType (PTC 9) (PFC 17) corr =
+  Right $ ParamTime (CUC4_2 False) (determineCorr corr)
+ptcPfcToParamType (PTC 9) (PFC 18) corr =
+  Right $ ParamTime (CUC4_3 False) (determineCorr corr)
+ptcPfcToParamType (PTC 9) (PFC 30) corr =
+  Right $ ParamTime UxTime (determineCorr corr)
+
+ptcPfcToParamType (PTC 10) (PFC 3) corr =
+  Right $ ParamTime (CUC1 True) (determineCorr corr)
+ptcPfcToParamType (PTC 10) (PFC 4) corr =
+  Right $ ParamTime (CUC1_1 True) (determineCorr corr)
+ptcPfcToParamType (PTC 10) (PFC 5) corr =
+  Right $ ParamTime (CUC1_2 True) (determineCorr corr)
+ptcPfcToParamType (PTC 10) (PFC 6) corr =
+  Right $ ParamTime (CUC1_3 True) (determineCorr corr)
+ptcPfcToParamType (PTC 10) (PFC 7) corr =
+  Right $ ParamTime (CUC2 True) (determineCorr corr)
+ptcPfcToParamType (PTC 10) (PFC 8) corr =
+  Right $ ParamTime (CUC2_1 True) (determineCorr corr)
+ptcPfcToParamType (PTC 10) (PFC 9) corr =
+  Right $ ParamTime (CUC2_2 True) (determineCorr corr)
+ptcPfcToParamType (PTC 10) (PFC 10) corr =
+  Right $ ParamTime (CUC2_3 True) (determineCorr corr)
+ptcPfcToParamType (PTC 10) (PFC 11) corr =
+  Right $ ParamTime (CUC3 True) (determineCorr corr)
+ptcPfcToParamType (PTC 10) (PFC 12) corr =
+  Right $ ParamTime (CUC3_1 True) (determineCorr corr)
+ptcPfcToParamType (PTC 10) (PFC 13) corr =
+  Right $ ParamTime (CUC3_2 True) (determineCorr corr)
+ptcPfcToParamType (PTC 10) (PFC 14) corr =
+  Right $ ParamTime (CUC3_3 True) (determineCorr corr)
+ptcPfcToParamType (PTC 10) (PFC 15) corr =
+  Right $ ParamTime (CUC4 True) (determineCorr corr)
+ptcPfcToParamType (PTC 10) (PFC 16) corr =
+  Right $ ParamTime (CUC4_1 True) (determineCorr corr)
+ptcPfcToParamType (PTC 10) (PFC 17) corr =
+  Right $ ParamTime (CUC4_2 True) (determineCorr corr)
+ptcPfcToParamType (PTC 10) (PFC 18) corr =
+  Right $ ParamTime (CUC4_3 True) (determineCorr corr)
+
 ptcPfcToParamType (PTC 11) (PFC 0) _ = Right $ ParamDeduced Nothing
 ptcPfcToParamType (PTC 11) (PFC x) _ = Right $ ParamDeduced (Just x)
 ptcPfcToParamType (PTC 13) (PFC 0) _ = Right ParamSavedSynthetic
 ptcPfcToParamType ptc pfc _ =
   Left $ "Unsupported: " <> textDisplay ptc <> " " <> textDisplay pfc
 
+
+{-# INLINABLE determineCorr #-}
+determineCorr :: Maybe Bool -> Correlate
+determineCorr = maybe CorrelationYes go
+ where
+  go True  = CorrelationYes
+  go False = CorrelationNo
 
 
 instance NFData ParamType
@@ -334,15 +426,15 @@ data TMParameterDef = TMParameterDef {
     deriving(Show, Generic)
 makeLenses ''TMParameterDef
 
-getWidth :: TMParameterDef -> BitSize 
+getWidth :: TMParameterDef -> BitSize
 getWidth def = bitSize (def ^. fpType)
 
-getPaddedWidth :: TMParameterDef -> BitSize 
-getPaddedWidth def = 
-  let w = bitSize (def ^. fpType) in
-  case def ^. fpWidth of 
-    Just b -> let !res = w + b in res 
-    Nothing -> w 
+getPaddedWidth :: TMParameterDef -> BitSize
+getPaddedWidth def =
+  let w = bitSize (def ^. fpType)
+  in  case def ^. fpWidth of
+        Just b  -> let !res = w + b in res
+        Nothing -> w
 
 instance NFData TMParameterDef
 instance Serialise TMParameterDef

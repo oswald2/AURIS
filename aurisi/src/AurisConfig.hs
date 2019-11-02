@@ -17,33 +17,33 @@ import           RIO
 import qualified RIO.ByteString.Lazy           as B
 import qualified RIO.Text                      as T
 import           Data.Aeson
+import           Data.Aeson.Encode.Pretty       ( encodePretty )
 
 import           Data.PUS.Config
 
 
 
 data AurisConfig = AurisConfig {
-    aurisMission :: Text 
+    aurisMission :: Text
     , aurisNctrsHost :: Text
-    , aurisNctrsTMPort :: Int 
-    , aurisNctrsTCPort :: Int 
-    , aurisNctrsAdminPort :: Int 
-    , aurisMIB :: Maybe Text 
+    , aurisNctrsTMPort :: Int
+    , aurisNctrsTCPort :: Int
+    , aurisNctrsAdminPort :: Int
+    , aurisMIB :: Maybe Text
     , aurisPusConfig :: Config
     }
     deriving(Eq,Generic)
 
 
-defaultConfig :: AurisConfig 
-defaultConfig = AurisConfig {
-        aurisPusConfig = Data.PUS.Config.defaultConfig
-        , aurisMission = "DEFAULT"
-        , aurisNctrsHost = "localhost"
-        , aurisNctrsTMPort = 2502
-        , aurisNctrsTCPort = 32111 
-        , aurisNctrsAdminPort =32110
-        , aurisMIB = Nothing
-        }
+defaultConfig :: AurisConfig
+defaultConfig = AurisConfig { aurisPusConfig = Data.PUS.Config.defaultConfig
+                            , aurisMission        = "DEFAULT"
+                            , aurisNctrsHost      = "localhost"
+                            , aurisNctrsTMPort    = 2502
+                            , aurisNctrsTCPort    = 32111
+                            , aurisNctrsAdminPort = 32110
+                            , aurisMIB            = Nothing
+                            }
 
 defaultConfigFileName :: FilePath
 defaultConfigFileName = "AURISi.cfg"
@@ -56,7 +56,7 @@ instance ToJSON AurisConfig where
 
 -- | write the config in JSON format to a file. Uses the aeson for conversion to/from JSON
 writeConfigJSON :: MonadIO m => AurisConfig -> FilePath -> m ()
-writeConfigJSON cfg path = liftIO $ encodeFile path cfg
+writeConfigJSON cfg path = liftIO $ B.writeFile path (encodePretty cfg)
 
 
 -- | Load a config from a file in JSON format and return it.

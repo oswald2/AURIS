@@ -25,11 +25,15 @@ module Data.DataModel
   , dmTMPackets
   , dmPacketIdIdx
   , empty
+  , writeDataModel
+  , readDataModel
   )
 where
 
 import           RIO
 import qualified RIO.HashMap                   as HM
+import qualified RIO.ByteString.Lazy           as BL
+import qualified RIO.Text                      as T
 import           Control.Lens                   ( makeLenses )
 
 import           Data.Text.Short                ( ShortText )
@@ -87,26 +91,39 @@ instance Serialise DataModel where
 
 encodeDataModel :: DataModel -> Encoding
 encodeDataModel model =
-  encodeListLen 5 
+  encodeListLen 5
     <> encode (_dmCalibrations model)
     <> encode (_dmSyntheticParams model)
     <> encodeHashTable (_dmParameters model)
     <> encode (_dmPacketIdIdx model)
     <> encodeHashTable (_dmTMPackets model)
 
-decodeDataModel :: Decoder s DataModel 
-decodeDataModel = do 
-  _len <- decodeListLen 
-  calibs <- decode 
-  synths <- decode 
-  params <- decodeHashTable 
-  idx <- decode 
-  packets <- decodeHashTable 
-  return DataModel {
-    _dmCalibrations = calibs 
-    , _dmSyntheticParams = synths 
-    , _dmParameters = params 
-    , _dmPacketIdIdx = idx 
-    , _dmTMPackets = packets
-  }
+decodeDataModel :: Decoder s DataModel
+decodeDataModel = do
+  _len    <- decodeListLen
+  calibs  <- decode
+  synths  <- decode
+  params  <- decodeHashTable
+  idx     <- decode
+  packets <- decodeHashTable
+  return DataModel { _dmCalibrations    = calibs
+                   , _dmSyntheticParams = synths
+                   , _dmParameters      = params
+                   , _dmPacketIdIdx     = idx
+                   , _dmTMPackets       = packets
+                   }
+
+-- | Serializes the 'DataModel' and writes it to a file. Uses 
+-- the serialise library under the hood.
+writeDataModel :: (MonadIO m) => FilePath -> DataModel -> m ()
+writeDataModel path model = liftIO $ BL.writeFile path (serialise model)
+
+-- | Reads the serialized 'DataModel' from a file
+readDataModel :: (MonadIO m) => FilePath -> m (Either Text DataModel)
+readDataModel path = do
+  res <- deserialiseOrFail <$> BL.readFile path
+  case res of
+    Left  (DeserialiseFailure _ err) -> return $ Left (T.pack err)
+    Right model                      -> return (Right model)
+
 

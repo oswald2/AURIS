@@ -30,6 +30,8 @@ module General.GetBitField
     , getMilExtended
     , Word48
     , Int48
+    , Word24 
+    , Int24
     )
 where
 
@@ -41,7 +43,7 @@ import           Data.Bits
 import           Data.ReinterpretCast
 
 import           General.Types
-
+import           General.SizeOf
 
 -- | This class is for getting values out of 'ByteString' in case the
 -- value is byte-aligned.
@@ -105,6 +107,15 @@ newtype Word48 = Word48 { getWord48Val :: Word64 }
 newtype Int48 = Int48 { getInt48Val :: Int64 }
     deriving (Eq, Ord, Enum, Num, Real, Integral, Show, Bits, Generic)
 
+newtype Word24 = Word24 { getWord24Val :: Word32 }
+    deriving (Eq, Ord, Enum, Num, Real, Integral, Show, Bits, Generic)
+
+newtype Int24 = Int24 { getInt24Val :: Int32 }
+    deriving (Eq, Ord, Enum, Num, Real, Integral, Show, Bits, Generic)
+
+
+instance FixedSize Word24 where 
+  fixedSizeOf = 3
 
 instance GetValue Word48 where
   getValue bytes (ByteOffset idx) BiE =
@@ -115,7 +126,7 @@ instance GetValue Word48 where
           b4   = fromIntegral (bytes `B.index` (idx + 4)) `shiftL` 8
           b5   = fromIntegral (bytes `B.index` (idx + 5))
           !val = b0 .|. b1 .|. b2 .|. b3 .|. b4 .|. b5
-      in  val
+      in Word48 val
   getValue bytes (ByteOffset idx) LiE =
       let b0   = fromIntegral (bytes `B.index` idx)
           b1   = fromIntegral (bytes `B.index` (idx + 1)) `shiftL` 8
@@ -124,14 +135,38 @@ instance GetValue Word48 where
           b4   = fromIntegral (bytes `B.index` (idx + 4)) `shiftL` 32
           b5   = fromIntegral (bytes `B.index` (idx + 5)) `shiftL` 40
           !val = b0 .|. b1 .|. b2 .|. b3 .|. b4 .|. b5
-      in  val
+      in Word48 val
   {-# INLINABLE getValue #-}
+
+instance GetValue Word24 where 
+  getValue bytes (ByteOffset idx) BiE = 
+    let b0   = fromIntegral (bytes `B.index` (idx + 3)) `shiftL` 16
+        b1   = fromIntegral (bytes `B.index` (idx + 4)) `shiftL` 8
+        b2   = fromIntegral (bytes `B.index` (idx + 5))
+        !val = b0 .|. b1 .|. b2
+    in Word24 val
+  getValue bytes (ByteOffset idx) LiE =
+    let b0   = fromIntegral (bytes `B.index` idx)
+        b1   = fromIntegral (bytes `B.index` (idx + 1)) `shiftL` 8
+        b2   = fromIntegral (bytes `B.index` (idx + 2)) `shiftL` 16
+        !val = b0 .|. b1 .|. b2 
+    in Word24 val
+  {-# INLINABLE getValue #-}
+
+
 
 instance GetValue Int48 where
   getValue bytes off endian =
     let val = getWord48Val $ getValue @Word48 bytes off endian
         !val2 = if val .&. 0x00_00_80_00_00_00_00_00 /= 0 then val .|. 0xFF_FF_00_00_00_00_00_00 else val
     in Int48 (fromIntegral val2)
+
+instance GetValue Int24 where 
+  getValue bytes off endian = 
+    let val = getWord24Val $ getValue @Word24 bytes off endian 
+        !val2 = if val .&. 0x00_80_00_00 /= 0 then val .|. 0xFF_00_00_00 else val
+    in Int24 (fromIntegral val2)
+
 
 instance GetValue Word64 where
     getValue bytes (ByteOffset idx) BiE =

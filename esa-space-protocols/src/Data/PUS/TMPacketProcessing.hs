@@ -10,6 +10,7 @@ where
 import           RIO
 import qualified RIO.ByteString                as B
 import qualified RIO.Vector                    as V
+--import qualified RIO.Text                      as T
 import           RIO.List                      ( iterate )
 import           Conduit
 import           Control.Lens                  ( (.~) )
@@ -64,6 +65,9 @@ packetProcessorC
        )
     => ConduitT (ByteString, ExtractedDU PUSPacket) TMPacket m ()
 packetProcessorC = awaitForever $ \pkt@(oct, pusPkt) -> do
+
+    logDebug $ display ("packetProcessorC: got packet: " :: Text) <> displayShow pkt
+
     model' <- view getDataModel
     model  <- readTVarIO model'
     cfg <- view getConfig
@@ -452,13 +456,181 @@ extractParamValue epoch oct def =
         let val = B.drop (unByteOffset (toByteOffset off)) oct
         in TMValOctet val
 
-    readTime off (CUC4Coarse2Fine delta) =
-        let !sec = getValue @Int32 oct (toByteOffset off) BiE
-            !mic = getValue @Int16 oct (toByteOffset off + 4) BiE
-            !encTime = mkCUCTime (fromIntegral sec) (fromIntegral mic) delta
-            st = cucTimeToSunTime epoch encTime
-        in
-        TMValTime st
+    readTime off (CUC1 False) = 
+      let !sec = getValue @Word8 oct (toByteOffset off) BiE 
+          !encTime = mkCUC sec False
+      in TMValTime (cucTimeToSunTime epoch encTime)
+    readTime off (CUC1 True) = 
+      let !sec = getValue @Int8 oct (toByteOffset off) BiE 
+          !encTime = mkCUC sec True
+      in TMValTime (cucTimeToSunTime epoch encTime)
+    
+    readTime off (CUC1_1 False) = 
+      let !sec = getValue @Word8 oct (toByteOffset off) BiE 
+          !mic = getValue @Word8 oct (toByteOffset off + 1) BiE
+          !encTime = mkCUC_1 sec mic False
+      in TMValTime (cucTimeToSunTime epoch encTime)
+    readTime off (CUC1_1 True) = 
+      let !sec = getValue @Int8 oct (toByteOffset off) BiE 
+          !mic = getValue @Word8 oct (toByteOffset off + 1) BiE
+          !encTime = mkCUC_1 sec mic True
+      in TMValTime (cucTimeToSunTime epoch encTime)
+        
+    readTime off (CUC1_2 False) = 
+      let !sec = getValue @Word8 oct (toByteOffset off) BiE 
+          !mic = getValue @Word16 oct (toByteOffset off + 1) BiE
+          !encTime = mkCUC_2 sec mic False
+      in TMValTime (cucTimeToSunTime epoch encTime)
+    readTime off (CUC1_2 True) = 
+      let !sec = getValue @Int8 oct (toByteOffset off) BiE 
+          !mic = getValue @Word16 oct (toByteOffset off + 1) BiE
+          !encTime = mkCUC_2 sec mic True
+      in TMValTime (cucTimeToSunTime epoch encTime)
+
+    readTime off (CUC1_3 False) = 
+        let !sec = getValue @Word8 oct (toByteOffset off) BiE 
+            !mic = getValue @Word24 oct (toByteOffset off + 1) BiE
+            !encTime = mkCUC_3 sec mic False
+        in TMValTime (cucTimeToSunTime epoch encTime)
+    readTime off (CUC1_3 True) = 
+        let !sec = getValue @Int8 oct (toByteOffset off) BiE 
+            !mic = getValue @Word24 oct (toByteOffset off + 1) BiE
+            !encTime = mkCUC_3 sec mic True
+        in TMValTime (cucTimeToSunTime epoch encTime)
+
+    readTime off (CUC2 False) = 
+        let !sec = getValue @Word16 oct (toByteOffset off) BiE 
+            !encTime = mkCUC sec False
+        in TMValTime (cucTimeToSunTime epoch encTime)
+    readTime off (CUC2 True) = 
+        let !sec = getValue @Int16 oct (toByteOffset off) BiE 
+            !encTime = mkCUC sec True
+        in TMValTime (cucTimeToSunTime epoch encTime)
+    
+    readTime off (CUC2_1 False) = 
+      let !sec = getValue @Word16 oct (toByteOffset off) BiE 
+          !mic = getValue @Word8 oct (toByteOffset off + 1) BiE
+          !encTime = mkCUC_1 sec mic False
+      in TMValTime (cucTimeToSunTime epoch encTime)
+    readTime off (CUC2_1 True) = 
+      let !sec = getValue @Int16 oct (toByteOffset off) BiE 
+          !mic = getValue @Word8 oct (toByteOffset off + 1) BiE
+          !encTime = mkCUC_1 sec mic True
+      in TMValTime (cucTimeToSunTime epoch encTime)
+        
+    readTime off (CUC2_2 False) = 
+      let !sec = getValue @Word16 oct (toByteOffset off) BiE 
+          !mic = getValue @Word16 oct (toByteOffset off + 1) BiE
+          !encTime = mkCUC_2 sec mic False
+      in TMValTime (cucTimeToSunTime epoch encTime)
+    readTime off (CUC2_2 True) = 
+      let !sec = getValue @Int16 oct (toByteOffset off) BiE 
+          !mic = getValue @Word16 oct (toByteOffset off + 1) BiE
+          !encTime = mkCUC_2 sec mic True
+      in TMValTime (cucTimeToSunTime epoch encTime)
+
+    readTime off (CUC2_3 False) = 
+        let !sec = getValue @Word16 oct (toByteOffset off) BiE 
+            !mic = getValue @Word24 oct (toByteOffset off + 1) BiE
+            !encTime = mkCUC_3 sec mic False
+        in TMValTime (cucTimeToSunTime epoch encTime)
+    readTime off (CUC2_3 True) = 
+        let !sec = getValue @Int16 oct (toByteOffset off) BiE 
+            !mic = getValue @Word24 oct (toByteOffset off + 1) BiE
+            !encTime = mkCUC_3 sec mic True
+        in TMValTime (cucTimeToSunTime epoch encTime)
+
+    readTime off (CUC3 False) = 
+        let !sec = getValue @Word24 oct (toByteOffset off) BiE 
+            !encTime = mkCUC sec False
+        in TMValTime (cucTimeToSunTime epoch encTime)
+    readTime off (CUC3 True) = 
+        let !sec = getValue @Int24 oct (toByteOffset off) BiE 
+            !encTime = mkCUC sec True
+        in TMValTime (cucTimeToSunTime epoch encTime)
+  
+    readTime off (CUC3_1 False) = 
+      let !sec = getValue @Word24 oct (toByteOffset off) BiE 
+          !mic = getValue @Word8 oct (toByteOffset off + 1) BiE
+          !encTime = mkCUC_1 sec mic False
+      in TMValTime (cucTimeToSunTime epoch encTime)
+    readTime off (CUC3_1 True) = 
+      let !sec = getValue @Int24 oct (toByteOffset off) BiE 
+          !mic = getValue @Word8 oct (toByteOffset off + 1) BiE
+          !encTime = mkCUC_1 sec mic True
+      in TMValTime (cucTimeToSunTime epoch encTime)
+        
+    readTime off (CUC3_2 False) = 
+      let !sec = getValue @Word24 oct (toByteOffset off) BiE 
+          !mic = getValue @Word16 oct (toByteOffset off + 1) BiE
+          !encTime = mkCUC_2 sec mic False
+      in TMValTime (cucTimeToSunTime epoch encTime)
+    readTime off (CUC3_2 True) = 
+      let !sec = getValue @Int24 oct (toByteOffset off) BiE 
+          !mic = getValue @Word16 oct (toByteOffset off + 1) BiE
+          !encTime = mkCUC_2 sec mic True
+      in TMValTime (cucTimeToSunTime epoch encTime)
+
+    readTime off (CUC3_3 False) = 
+        let !sec = getValue @Word24 oct (toByteOffset off) BiE 
+            !mic = getValue @Word24 oct (toByteOffset off + 1) BiE
+            !encTime = mkCUC_3 sec mic False
+        in TMValTime (cucTimeToSunTime epoch encTime)
+    readTime off (CUC3_3 True) = 
+        let !sec = getValue @Int24 oct (toByteOffset off) BiE 
+            !mic = getValue @Word24 oct (toByteOffset off + 1) BiE
+            !encTime = mkCUC_3 sec mic True
+        in TMValTime (cucTimeToSunTime epoch encTime)
+
+
+    readTime off (CUC4 False) = 
+        let !sec = getValue @Word32 oct (toByteOffset off) BiE 
+            !encTime = mkCUC sec False
+        in TMValTime (cucTimeToSunTime epoch encTime)
+    readTime off (CUC4 True) = 
+        let !sec = getValue @Int32 oct (toByteOffset off) BiE 
+            !encTime = mkCUC sec True
+        in TMValTime (cucTimeToSunTime epoch encTime)
+  
+    readTime off (CUC4_1 False) = 
+      let !sec = getValue @Word32 oct (toByteOffset off) BiE 
+          !mic = getValue @Word8 oct (toByteOffset off + 1) BiE
+          !encTime = mkCUC_1 sec mic False
+      in TMValTime (cucTimeToSunTime epoch encTime)
+    readTime off (CUC4_1 True) = 
+      let !sec = getValue @Int32 oct (toByteOffset off) BiE 
+          !mic = getValue @Word8 oct (toByteOffset off + 1) BiE
+          !encTime = mkCUC_1 sec mic True
+      in TMValTime (cucTimeToSunTime epoch encTime)
+        
+    readTime off (CUC4_2 False) = 
+      let !sec = getValue @Word32 oct (toByteOffset off) BiE 
+          !mic = getValue @Word16 oct (toByteOffset off + 1) BiE
+          !encTime = mkCUC_2 sec mic False
+      in TMValTime (cucTimeToSunTime epoch encTime)
+    readTime off (CUC4_2 True) = 
+      let !sec = getValue @Int32 oct (toByteOffset off) BiE 
+          !mic = getValue @Word16 oct (toByteOffset off + 1) BiE
+          !encTime = mkCUC_2 sec mic True
+      in TMValTime (cucTimeToSunTime epoch encTime)
+
+    readTime off (CUC4_3 False) = 
+        let !sec = getValue @Word32 oct (toByteOffset off) BiE 
+            !mic = getValue @Word24 oct (toByteOffset off + 1) BiE
+            !encTime = mkCUC_3 sec mic False
+        in TMValTime (cucTimeToSunTime epoch encTime)
+    readTime off (CUC4_3 True) = 
+        let !sec = getValue @Int32 oct (toByteOffset off) BiE 
+            !mic = getValue @Word24 oct (toByteOffset off + 1) BiE
+            !encTime = mkCUC_3 sec mic True
+        in TMValTime (cucTimeToSunTime epoch encTime)
+
+    readTime off UxTime = 
+        let !sec = getValue @Word32 oct (toByteOffset off) BiE 
+            !mic = getValue @Word32 oct (toByteOffset off + 1) BiE
+            !encTime = mkCUCTime (fromIntegral sec) (fromIntegral mic) False
+        in TMValTime (cucTimeToSunTime epoch encTime)
+  
     readTime off (CDS8 _) =
         let !days = getValue oct (toByteOffset off) BiE
             !milli = getValue oct (toByteOffset off + 2) BiE

@@ -29,8 +29,8 @@ import           Graphics.UI.FLTK.LowLevel.Fl_Enumerations
 
 
 data ColumnDefinition = ColumnDefinition {
-    _columnName :: Text,
-    _columnWidth :: Int
+    _columnName :: Text
+    ,_columnWidth :: Int
 }
 
 

@@ -1,0 +1,36 @@
+{
+    "aurisNctrsTMPort": 2502,
+    "aurisNctrsHost": "localhost",
+    "aurisNctrsTCPort": 32111,
+    "aurisMIB": null,
+    "aurisNctrsAdminPort": 32110,
+    "aurisMission": "DEFAULT",
+    "aurisPusConfig": {
+        "cfgUnknownSPID": 5071,
+        "cfgEpoch": "UnixTime",
+        "cfgInterfacePort": 55555,
+        "cfgRandomizerStartValue": 255,
+        "cfgVCIDs": [
+            {
+                "getVCID": 0
+            },
+            {
+                "getVCID": 1
+            }
+        ],
+        "cfgLeapSeconds": {
+            "fromLeaps": 17
+        },
+        "cfgSCID": {
+            "getSCID": 0
+        },
+        "cfgMaxTMFrameLen": 1115,
+        "cfgCltuBlockSize": "CltuBS_8",
+        "cfgEDEN": {
+            "cfgEdenHost": "localhost",
+            "cfgEdenPort": 40300
+        },
+        "cfgTMSegLength": "TMSegment65536",
+        "cfgTMFrameHasCRC": true
+    }
+}

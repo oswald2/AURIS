@@ -1,9 +1,12 @@
+{-# LANGUAGE 
+  NoImplicitPrelude
+#-}
 module AurisMissionSpecific
   ( getMissionSpecific
   )
 where
 
-import           RIO
+import           RIO 
 
 import           Data.PUS.MissionSpecific.Definitions
 

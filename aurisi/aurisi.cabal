@@ -61,15 +61,18 @@ Executable AURISi
     containers,
     esa-base,
     esa-space-protocols,
+    esa-mib,
     gui-base,
     auris-tmph,
     mcs-interface,
     optparse-generic,
     gitrev,
     aeson,
+    aeson-pretty,
     conduit,
     conduit-extra,
-    directory
+    directory,
+    filepath
 
   Other-Modules: AURISi
 
@@ -119,16 +122,16 @@ Executable AURISi
   if flag(llvm)
         ghc-options: -O2 -Wall -Wcompat -Widentities -Wincomplete-record-updates
                      -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
-                     -funbox-strict-fields -fllvm -optlo-O3
+                     -funbox-strict-fields -fllvm -optlo-O3 -threaded -rtsopts
   else 
     if flag(optimize) 
         ghc-options: -O2 -Wall -Wcompat -Widentities -Wincomplete-record-updates
                      -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
-                     -funbox-strict-fields
+                     -funbox-strict-fields  -threaded -rtsopts
     else 
         ghc-options: -O0 -Wall -Wcompat -Widentities -Wincomplete-record-updates
                      -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
-                     -funbox-strict-fields
+                     -funbox-strict-fields  -threaded -rtsopts
 
 
   if impl(ghc >= 7.10) && flag(FastCompile)
@@ -143,16 +146,4 @@ Executable AURISi
 
 
 
-
-executable WriteAurisConfig
-    main-is: WriteAurisConfig.hs
-    default-language: Haskell2010
-    hs-source-dirs: src/test
-    ghc-options: -Wall -O
-    build-depends:
-        base,
-        rio,
-        bytestring, 
-        aeson,
-        esa-space-protocols
 
