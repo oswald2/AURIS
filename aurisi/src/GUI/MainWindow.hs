@@ -30,7 +30,9 @@ import           Graphics.UI.FLTK.LowLevel.FLTKHS
 
 import           Model.TMPacketModel
 import           Model.ScrollingTableModel
+
 import           GUI.TMPacketTable
+import           GUI.ScrollingTable
 import           GUI.Colors
 
 import           Data.PUS.TMPacket
@@ -51,13 +53,13 @@ makeLenses ''TMPacketTab
 
 tmpTabAddRow :: TMPacketTab -> TMPacket -> IO ()
 tmpTabAddRow tab pkt = do
-  GUI.TMPacketTable.addRow (tab ^. tmpTable) (tab ^. tmpModel) pkt
+  addRow (tab ^. tmpTable) (tab ^. tmpModel) pkt
 
 
 createTMPTab :: TMPacketTabFluid -> IO TMPacketTab
 createTMPTab TMPacketTabFluid {..} = do
   model <- tableModelNew
-  table <- setupTable _tmpfTabGroup model
+  table <- setupTable _tmpfTabGroup model GUI.TMPacketTable.colDefinitions
   mcsGroupSetColor _tmpfTabGroup
 
   pure $ TMPacketTab _tmpfTabButtonAdd table model

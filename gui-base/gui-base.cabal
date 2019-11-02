@@ -64,6 +64,7 @@ library
   exposed-modules:
     GUI.Colors
     GUI.Utils
+    GUI.ScrollingTable
     Model.ScrollingTableModel
 
   -- Modules included in this library but not exported.
@@ -77,6 +78,49 @@ library
     , rio
     , fltkhs
     , containers
+    , lens
+
+
+  default-extensions:
+        AutoDeriveTypeable
+        BangPatterns
+        BinaryLiterals
+        ConstraintKinds
+        DataKinds
+        DefaultSignatures
+        DeriveDataTypeable
+        DeriveFoldable
+        DeriveFunctor
+        DeriveGeneric
+        DeriveTraversable
+        DoAndIfThenElse
+        EmptyDataDecls
+        ExistentialQuantification
+        FlexibleContexts
+        FlexibleInstances
+        FunctionalDependencies
+        GADTs
+        GeneralizedNewtypeDeriving
+        InstanceSigs
+        KindSignatures
+        LambdaCase
+        MonadFailDesugaring
+        MultiParamTypeClasses
+        MultiWayIf
+        NamedFieldPuns
+        NoImplicitPrelude
+        OverloadedStrings
+        PartialTypeSignatures
+        PatternGuards
+        PolyKinds
+        RankNTypes
+        RecordWildCards
+        ScopedTypeVariables
+        StandaloneDeriving
+        TupleSections
+        TypeFamilies
+        TypeSynonymInstances
+        ViewPatterns
 
   -- Directories containing source files.
   hs-source-dirs:      src

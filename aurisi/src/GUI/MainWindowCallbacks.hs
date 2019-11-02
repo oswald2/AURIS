@@ -12,27 +12,16 @@ where
 
 
 import           RIO
---import qualified RIO.ByteString                as B
 import qualified RIO.Vector                    as V
---import           Data.Text.IO
 
 import           Graphics.UI.FLTK.LowLevel.FLTKHS
---import qualified Graphics.UI.FLTK.LowLevel.FL as FL
---import Graphics.UI.FLTK.LowLevel.Fl_Types
---import Graphics.UI.FLTK.LowLevel.Fl_Enumerations
 
 import           GUI.MainWindow
-import           GUI.TMPacketTable
+import           GUI.ScrollingTable
 
---import           Data.PUS.PUSPacket
---import           Data.PUS.EncTime
 import           General.APID
---import           Data.PUS.ExtractedDU
---import           Data.PUS.SegmentationFlags
 import           General.PUSTypes
---import           Data.PUS.PUSDfh
 import           Data.PUS.TMPacket
---import           Protocol.ProtocolInterfaces
 
 import           General.Time
 

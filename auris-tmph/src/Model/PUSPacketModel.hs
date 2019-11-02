@@ -5,9 +5,9 @@
     , FlexibleInstances
     , TemplateHaskell
 #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 module Model.PUSPacketModel
   ( PUSPacketModel
-  , ModelValue(..)
   , ToCellText(..)
   )
 where
@@ -28,30 +28,30 @@ import           General.Hexdump
 
 import           Model.ScrollingTableModel
 
-import           Graphics.UI.FLTK.LowLevel.FLTKHS
 import           Graphics.UI.FLTK.LowLevel.Fl_Enumerations
 
 
 
 
-newtype ModelValue = ModelValue { getModelValue :: ExtractedDU PUSPacket}
 
-type PUSPacketModel = TableModel ModelValue 
+type PUSPacketModel = TableModel (ExtractedDU PUSPacket)
 
 
-instance ToCellText ModelValue where
-  toCellText Nothing _ = ("", alignLeft)
-  toCellText (Just (ModelValue pkt)) (Column 0) =
-    (T.pack $ maybe "" show (pusPktTime (pkt ^. epDU . pusDfh)), alignLeft)
-  toCellText (Just (ModelValue pkt)) (Column 1) = (textDisplay (pkt ^. epERT), alignLeft)
-  toCellText (Just (ModelValue pkt)) (Column 2) =
-    (textDisplay (pkt ^. epDU . pusHdr . pusHdrTcApid), alignRight)
-  toCellText (Just (ModelValue pkt)) (Column 3) =
-    (textDisplay (pusType (pkt ^. epDU . pusDfh)), alignRight)
-  toCellText (Just (ModelValue pkt)) (Column 4) =
-    (textDisplay (pusSubType (pkt ^. epDU . pusDfh)), alignRight)
-  toCellText (Just (ModelValue pkt)) (Column 5) =
-    (textDisplay (pkt ^. epDU . pusHdr . pusHdrTcSsc), alignRight)
-  toCellText (Just (ModelValue pkt)) (Column 6) =
-    (hexdumpLineBS (pkt ^. epDU . pusData), alignLeft)
-  toCellText (Just _) _ = ("", alignLeft)
+instance ToCellText (ExtractedDU PUSPacket) where
+  toCellText Nothing _ = DisplayCell "" alignLeft
+  toCellText (Just pkt) ColumnDefinition { _columnNumber = 0 } =
+    DisplayCell (T.pack $ maybe "" show (pusPktTime (pkt ^. epDU . pusDfh)))
+                alignLeft
+  toCellText (Just pkt) ColumnDefinition { _columnNumber = 1 } =
+    DisplayCell (textDisplay (pkt ^. epERT)) alignLeft
+  toCellText (Just pkt) ColumnDefinition { _columnNumber = 2 } =
+    DisplayCell (textDisplay (pkt ^. epDU . pusHdr . pusHdrTcApid)) alignRight
+  toCellText (Just pkt) ColumnDefinition { _columnNumber = 3 } =
+    DisplayCell (textDisplay (pusType (pkt ^. epDU . pusDfh))) alignRight
+  toCellText (Just pkt) ColumnDefinition { _columnNumber = 4 } =
+    DisplayCell (textDisplay (pusSubType (pkt ^. epDU . pusDfh))) alignRight
+  toCellText (Just pkt) ColumnDefinition { _columnNumber = 5 } =
+    DisplayCell (textDisplay (pkt ^. epDU . pusHdr . pusHdrTcSsc)) alignRight
+  toCellText (Just pkt) ColumnDefinition { _columnNumber = 6 } =
+    DisplayCell (hexdumpLineBS (pkt ^. epDU . pusData)) alignLeft
+  toCellText (Just _) _ = DisplayCell "" alignLeft

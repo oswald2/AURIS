@@ -1,36 +1,43 @@
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 module Model.TMPacketModel
   ( TMPacketModel
-  , ModelValue(..)
   , ToCellText(..)
   )
 where
 
 import           RIO
-import qualified RIO.Text                      as T
-import qualified Data.Text.Short as ST
+import qualified Data.Text.Short               as ST
 import           Data.PUS.TMPacket
-
-import           General.Hexdump
 
 import           Model.ScrollingTableModel
 
-import           Graphics.UI.FLTK.LowLevel.FLTKHS
 import           Graphics.UI.FLTK.LowLevel.Fl_Enumerations
 
 
-newtype ModelValue = ModelValue TMPacket 
 
-type TMPacketModel = TableModel ModelValue
+type TMPacketModel = TableModel TMPacket
 
-instance ToCellText ModelValue where
-  toCellText Nothing _ = ("", alignLeft)
-  toCellText (Just (ModelValue pkt)) (Column 0) = (textDisplay (pkt ^. tmpSPID), alignRight)
-  toCellText (Just (ModelValue pkt)) (Column 1) = (ST.toText (pkt ^. tmpMnemonic), alignLeft)
-  toCellText (Just (ModelValue pkt)) (Column 2) = (ST.toText (pkt ^. tmpDescr), alignLeft)
-  toCellText (Just (ModelValue pkt)) (Column 3) = (textDisplay (pkt ^. tmpTimeStamp), alignLeft)
-  toCellText (Just (ModelValue pkt)) (Column 4) = (textDisplay (pkt ^. tmpERT), alignLeft)
-  toCellText (Just (ModelValue pkt)) (Column 5) = (textDisplay (pkt ^. tmpAPID), alignLeft)
-  toCellText (Just (ModelValue pkt)) (Column 6) = (textDisplay (pkt ^. tmpType), alignLeft)
-  toCellText (Just (ModelValue pkt)) (Column 7) = (textDisplay (pkt ^. tmpSubType), alignLeft)
-  toCellText (Just (ModelValue pkt)) (Column 8) = (textDisplay (pkt ^. tmpSSC), alignLeft)
-  toCellText (Just (ModelValue pkt)) (Column 9) = (textDisplay (pkt ^. tmpVCID), alignLeft)
+
+instance ToCellText TMPacket where
+  toCellText Nothing _ = DisplayCell "" alignLeft
+  toCellText (Just pkt) ColumnDefinition { _columnNumber = 0 } =
+    DisplayCell (textDisplay (pkt ^. tmpSPID)) alignRight
+  toCellText (Just pkt) ColumnDefinition { _columnNumber = 1 } =
+    DisplayCell (ST.toText (pkt ^. tmpMnemonic)) alignLeft
+  toCellText (Just pkt) ColumnDefinition { _columnNumber = 2 } =
+    DisplayCell (ST.toText (pkt ^. tmpDescr)) alignLeft
+  toCellText (Just pkt) ColumnDefinition { _columnNumber = 3 } =
+    DisplayCell (textDisplay (pkt ^. tmpTimeStamp)) alignLeft
+  toCellText (Just pkt) ColumnDefinition { _columnNumber = 4 } =
+    DisplayCell (textDisplay (pkt ^. tmpERT)) alignLeft
+  toCellText (Just pkt) ColumnDefinition { _columnNumber = 5 } =
+    DisplayCell (textDisplay (pkt ^. tmpAPID)) alignLeft
+  toCellText (Just pkt) ColumnDefinition { _columnNumber = 6 } =
+    DisplayCell (textDisplay (pkt ^. tmpType)) alignLeft
+  toCellText (Just pkt) ColumnDefinition { _columnNumber = 7 } =
+    DisplayCell (textDisplay (pkt ^. tmpSubType)) alignLeft
+  toCellText (Just pkt) ColumnDefinition { _columnNumber = 8 } =
+    DisplayCell (textDisplay (pkt ^. tmpSSC)) alignLeft
+  toCellText (Just pkt) ColumnDefinition { _columnNumber = 9 } =
+    DisplayCell (textDisplay (pkt ^. tmpVCID)) alignLeft
+  toCellText _ _ = DisplayCell "" alignLeft
