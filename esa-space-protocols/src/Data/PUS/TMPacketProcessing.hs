@@ -27,6 +27,7 @@ import           Data.TM.Parameter
 import           Data.TM.Value
 import           Data.TM.Validity
 
+import           Data.PUS.Config
 import           Data.PUS.ExtractedDU
 import           Data.PUS.PUSPacket
 import           Data.PUS.PUSDfh
@@ -50,11 +51,13 @@ packetProcessorC
        , HasCorrelationState env
        , HasPUSState env
        , HasLogFunc env
+       , HasConfig env
        )
     => ConduitT (ByteString, ExtractedDU PUSPacket) TMPacket m ()
 packetProcessorC = awaitForever $ \pkt@(oct, pusPkt) -> do
     model' <- view getDataModel
     model  <- readTVarIO model'
+    cfg <- view getConfig
     let def' = getPackeDefinition model pkt
     case def' of
         Just def -> do 
@@ -73,6 +76,9 @@ packetProcessorC = awaitForever $ \pkt@(oct, pusPkt) -> do
                             <> ". Packet ignored."
             else yieldM $ processPacket def pkt
         Nothing  -> do
+            -- if we have a packet, that is not found in the data model,
+            -- we create a new TM packet from it where the data part 
+            -- is the data part of the PUS packet
             logWarn
                 $  "No packet defintion found for packet: APID:"
                 <> display (pusPkt ^. epDU . pusHdr . pusHdrTcApid)
@@ -80,7 +86,25 @@ packetProcessorC = awaitForever $ \pkt@(oct, pusPkt) -> do
                 <> display (pusType (pusPkt ^. epDU . pusDfh))
                 <> " SubType:"
                 <> display (pusSubType (pusPkt ^. epDU . pusDfh))
+            (timeStamp, _epoch) <- getTimeStamp pkt 
 
+            let param = TMParameter {
+                  _pName = "Content"
+                  , _pTime = timeStamp
+                  , _pValue = TMValue (TMValOctet (pusPkt ^. epDU . pusData)) clearValidity
+                  , _pEngValue = Nothing
+                  }
+
+            yield TMPacket {
+              _tmpSPID = cfgUnknownSPID cfg
+              , _tmpAPID = pusPkt ^. epDU . pusHdr . pusHdrTcApid
+              , _tmpType = pusType (pusPkt ^. epDU . pusDfh)
+              , _tmpSubType = pusSubType (pusPkt ^. epDU . pusDfh)
+              , _tmpERT = pusPkt ^. epERT
+              , _tmpTimeStamp = timeStamp
+              , _tmpVCID = pusPkt ^. epVCID 
+              , _tmpParams = V.singleton param
+              }
 
 
 -- | Main function to detect the packet identification of a newly received

@@ -41,6 +41,7 @@
 #-}
 module Data.PUS.TMPacket
   ( TMPacket(..)
+  , isUnknownPacket
   )
 where
 
@@ -54,7 +55,7 @@ import           General.PUSTypes
 import           General.APID
 
 import           Data.TM.Parameter
---import           Data.PUS.Value
+import           Data.PUS.Config
 
 --import           General.Types
 import           General.Time
@@ -75,3 +76,7 @@ instance Serialise TMPacket
 instance FromJSON TMPacket
 instance ToJSON TMPacket where
   toEncoding = genericToEncoding defaultOptions
+
+
+isUnknownPacket :: Config -> TMPacket -> Bool
+isUnknownPacket cfg pkt = _tmpSPID pkt == cfgUnknownSPID cfg

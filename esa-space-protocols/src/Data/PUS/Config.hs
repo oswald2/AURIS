@@ -78,6 +78,9 @@ data Config = Config {
     , cfgEpoch :: EpochType
     -- | Specified the used leap seconds
     , cfgLeapSeconds :: LeapSeconds
+    -- | Packets, which cannot be identified will be given this 
+    -- SPID
+    , cfgUnknownSPID :: SPID 
 } deriving (Eq, Generic)
 
 instance FromJSON Config
@@ -121,6 +124,7 @@ defaultConfig = Config { cfgCltuBlockSize        = CltuBS_8
                        , cfgEDEN                 = Just defaultEdenConfig
                        , cfgEpoch                = UnixTime
                        , cfgLeapSeconds          = 17
+                       , cfgUnknownSPID          = SPID 5071
                        }
 
 -- | write the config as a serialized string to a file. Uses the Show class for serizalization
