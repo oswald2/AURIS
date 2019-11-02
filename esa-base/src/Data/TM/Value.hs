@@ -184,6 +184,8 @@ data TMValueSimple =
     | TMValString !ShortText
     -- | the value is an octet string (binary value)
     | TMValOctet !ByteString
+    -- | A value containing nothing
+    | TMValNothing
     deriving(Show, Generic)
 
 -- | A simple null value
@@ -210,12 +212,14 @@ instance ToJSON TMValueSimple where
     toJSON (TMValTime   x) = object ["tmValTime" .= x]
     toJSON (TMValString x) = object ["tmValString" .= x]
     toJSON (TMValOctet  x) = object ["tmValOctet" .= makeByteString64 x]
+    toJSON TMValNothing       = object ["tmValNothing" .= ("" :: Text)]
     toEncoding (TMValInt    x) = pairs ("tmValInt" .= x)
     toEncoding (TMValUInt   x) = pairs ("tmValUInt" .= x)
     toEncoding (TMValDouble x) = pairs ("tmValDouble" .= x)
     toEncoding (TMValTime   x) = pairs ("tmValTime" .= x)
     toEncoding (TMValString x) = pairs ("tmValString" .= x)
     toEncoding (TMValOctet  x) = pairs ("tmValOctet" .= makeByteString64 x)
+    toEncoding TMValNothing    = pairs ("tmValNothing" .= ("" :: Text))
 
 
 -- | parses a 'ShortText' to a integer value. It takes the 'PTC' and 'PFC' type descriptors
@@ -306,6 +310,7 @@ instance ToDouble TMValue where
     toDouble TMValue { _tmvalValue = (TMValTime x) }   = toDouble x
     toDouble TMValue { _tmvalValue = (TMValString _) } = 0
     toDouble TMValue { _tmvalValue = (TMValOctet _) }  = 0
+    toDouble TMValue { _tmvalValue = TMValNothing }    = 0 
 
 
 -- | a null value

@@ -36,7 +36,7 @@ import           Data.PUS.PUSPacket
 import           Data.PUS.COP1Types
 import           Data.PUS.ExtractedDU
 import           Data.PUS.TMFrame
-
+import           Data.PUS.TMPacket 
 
 -- | The events themselves
 data Event = EVCommanding EventCommanding
@@ -70,6 +70,7 @@ data EventTelemetry =
     | EVTMRejectedSpillOverPkt PUSPacket
     | EVTMFrameReceived (ExtractedDU TMFrame)
     | EVTMPUSPacketReceived (ExtractedDU PUSPacket)
+    | EVTMPacketDecoded TMPacket
     deriving (Show, Generic)
 
 instance Serialise EventTelemetry

@@ -3,3 +3,8 @@ resolver: lts-14.11
 extra-deps:
 - fltkhs-0.8.0.2
 allow-newer: true
+
+packages: 
+- .
+- ../esa-base
+- ../esa-space-protocols

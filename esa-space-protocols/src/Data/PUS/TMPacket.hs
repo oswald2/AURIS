@@ -1,55 +1,29 @@
 {-# LANGUAGE
-    AutoDeriveTypeable
-    , BangPatterns
-    , BinaryLiterals
-    , ConstraintKinds
-    , DataKinds
-    , DefaultSignatures
-    , DeriveDataTypeable
-    , DeriveFoldable
-    , DeriveFunctor
-    , DeriveGeneric
-    , DeriveTraversable
-    , DoAndIfThenElse
-    , EmptyDataDecls
-    , ExistentialQuantification
-    , FlexibleContexts
-    , FlexibleInstances
-    , FunctionalDependencies
-    , GADTs
-    , GeneralizedNewtypeDeriving
-    , InstanceSigs
-    , KindSignatures
-    , LambdaCase
-    , MonadFailDesugaring
-    , MultiParamTypeClasses
-    , MultiWayIf
-    , NamedFieldPuns
-    , NoImplicitPrelude
-    , OverloadedStrings
-    , PartialTypeSignatures
-    , PatternGuards
-    , PolyKinds
-    , RankNTypes
-    , RecordWildCards
-    , ScopedTypeVariables
-    , StandaloneDeriving
-    , TupleSections
-    , TypeFamilies
-    , TypeSynonymInstances
-    , ViewPatterns
+  TemplateHaskell
 #-}
 module Data.PUS.TMPacket
   ( TMPacket(..)
   , isUnknownPacket
+  , tmpSPID 
+  , tmpMnemonic 
+  , tmpDescr 
+  , tmpAPID
+  , tmpType 
+  , tmpSubType 
+  , tmpERT 
+  , tmpTimeStamp
+  , tmpVCID
+  , tmpSSC 
+  , tmpParams
   )
 where
 
 
 import           RIO
-
+import           Control.Lens                   ( makeLenses )
 import           Codec.Serialise
 import           Data.Aeson
+import           Data.Text.Short                ( ShortText )
 
 import           General.PUSTypes
 import           General.APID
@@ -63,14 +37,18 @@ import           General.Time
 
 data TMPacket = TMPacket {
     _tmpSPID :: !SPID
+    , _tmpMnemonic :: !ShortText
+    , _tmpDescr :: !ShortText
     , _tmpAPID :: !APID
     , _tmpType :: !PUSType
     , _tmpSubType :: !PUSSubType
     , _tmpERT :: !SunTime
     , _tmpTimeStamp :: !SunTime
     , _tmpVCID :: !VCID
+    , _tmpSSC :: !SSC
     , _tmpParams :: Vector TMParameter
     } deriving (Show, Generic)
+makeLenses ''TMPacket
 
 instance Serialise TMPacket
 instance FromJSON TMPacket

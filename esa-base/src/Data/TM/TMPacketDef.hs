@@ -26,45 +26,45 @@ extraction should be done.
     TemplateHaskell
 #-}
 module Data.TM.TMPacketDef
-    ( TMPacketDef(..)
-    , SuperCommutated(..)
-    , TMParamLocation(..)
-    , TMPacketParams(..)
-    , PIDEvent(..)
-    , tmpdSPID
-    , tmpdType
-    , tmpdSubType
-    , tmpdApid
-    , tmpdPI1Val
-    , tmpdPI2Val
-    , tmpdName
-    , tmpdParams
-    , tmpdDescr
-    , tmpdUnit
-    , tmpdTime
-    , tmpdInter
-    , tmpdValid
-    , tmpdCheck
-    , tmpdEvent
-    , scNbOcc
-    , scLgOcc
-    , scTdOcc
-    , tmplName
-    , tmplOffset
-    , tmplTime
-    , tmplSuperComm
-    , tmplParam
-    , isSuperCommutated
-    , TMPacketMap
-    , TMPacketKey(..)
-    , PICSearchIndex(..)
-    , mkPICSearchIndex
-    , emptyPICSearchIndex
-    , ApidKey
-    , TypeSubTypeKey
-    , PacketIDCriteria(..)
-    , picFind
-    )
+  ( TMPacketDef(..)
+  , SuperCommutated(..)
+  , TMParamLocation(..)
+  , TMPacketParams(..)
+  , PIDEvent(..)
+  , tmpdSPID
+  , tmpdType
+  , tmpdSubType
+  , tmpdApid
+  , tmpdPI1Val
+  , tmpdPI2Val
+  , tmpdName
+  , tmpdParams
+  , tmpdDescr
+  , tmpdUnit
+  , tmpdTime
+  , tmpdInter
+  , tmpdValid
+  , tmpdCheck
+  , tmpdEvent
+  , scNbOcc
+  , scLgOcc
+  , scTdOcc
+  , tmplName
+  , tmplOffset
+  , tmplTime
+  , tmplSuperComm
+  , tmplParam
+  , isSuperCommutated
+  , TMPacketMap
+  , TMPacketKey(..)
+  , PICSearchIndex(..)
+  , mkPICSearchIndex
+  , emptyPICSearchIndex
+  , ApidKey
+  , TypeSubTypeKey
+  , PacketIDCriteria(..)
+  , picFind
+  )
 where
 
 import           RIO
@@ -73,6 +73,10 @@ import           Data.Text.Short                ( ShortText )
 import           Data.HashTable.ST.Basic        ( IHashTable )
 import qualified Data.HashTable.ST.Basic       as HT
 import           Control.Lens                   ( makeLenses )
+
+import           Codec.Serialise
+import           Codec.Serialise.Encoding
+import           Codec.Serialise.Decoding
 
 import           General.PUSTypes
 import           General.APID
@@ -98,6 +102,9 @@ data SuperCommutated = SuperCommutated {
   } deriving (Show, Generic)
 makeLenses ''SuperCommutated
 
+instance Serialise SuperCommutated
+
+
 -- | This data type specifies a parameter location and is therefore the
 -- link between a packet and a parameter.
 data TMParamLocation = TMParamLocation {
@@ -116,6 +123,7 @@ data TMParamLocation = TMParamLocation {
   } deriving (Show, Generic)
 makeLenses ''TMParamLocation
 
+instance Serialise TMParamLocation
 
 -- | returns if a param location is supercommutated
 isSuperCommutated :: TMParamLocation -> Bool
@@ -131,6 +139,9 @@ data PIDEvent =
   | PIDAlarm !ShortText
   deriving (Eq, Ord, Show, Generic)
 
+instance Serialise PIDEvent
+
+
 -- | Specifies the parameters contained in the packet. Fixed packets vary only
 -- when supercommutated. Variable packets can have groups, fixed repeaters and
 -- choices.
@@ -141,6 +152,8 @@ data TMPacketParams =
     , _tmvpDfhSize :: !Word8
   }
   deriving (Show, Generic)
+
+instance Serialise TMPacketParams
 
 -- | The TM packet definition. All information to extract the contents of a
 -- packet is contained here.
@@ -163,12 +176,16 @@ data TMPacketDef = TMPacketDef {
     } deriving(Show, Generic)
 makeLenses ''TMPacketDef
 
+
+instance Serialise TMPacketDef
+
 -- | The tuple (APID, PUSType, PUSSubType, PI1, PI2) which is the lookup key
 -- for the packet definition
 data TMPacketKey = TMPacketKey !APID !PUSType !PUSSubType !Int64 !Int64
   deriving (Eq, Show, Generic)
 
 instance Hashable TMPacketKey
+instance Serialise TMPacketKey
 
 -- | The definition of the map which is used. Currently this is a immutable
 -- hash table
@@ -183,22 +200,22 @@ data ApidKey =
   deriving (Show, Generic)
 
 instance Eq ApidKey where
-    (ApidKey t st ap) == (ApidKey t2 st2 ap2) =
-        t == t2 && st == st2 && ap == ap2
+  (ApidKey t st ap) == (ApidKey t2 st2 ap2) = t == t2 && st == st2 && ap == ap2
 
 instance Ord ApidKey where
-    compare (ApidKey t1 st1 ap1) (ApidKey t2 st2 ap2) = case compare ap1 ap2 of
-        EQ -> case compare t1 t2 of
-            EQ -> compare st1 st2
-            x  -> x
-        x -> x
+  compare (ApidKey t1 st1 ap1) (ApidKey t2 st2 ap2) = case compare ap1 ap2 of
+    EQ -> case compare t1 t2 of
+      EQ -> compare st1 st2
+      x  -> x
+    x -> x
 
 instance Hashable ApidKey
+instance Serialise ApidKey
 
 -- | Create an ApidKey
 mkApidKey :: APID -> PUSType -> PUSSubType -> ApidKey
 mkApidKey (APID apid) t st =
-    ApidKey (getPUSTypeVal t) (getPUSSubTypeVal st) apid
+  ApidKey (getPUSTypeVal t) (getPUSSubTypeVal st) apid
 
 -- | Key into the packet identification criteria. Basically a tuple of (Type, Subtype).
 data TypeSubTypeKey =
@@ -207,12 +224,13 @@ data TypeSubTypeKey =
   deriving (Show, Eq, Generic)
 
 instance Ord TypeSubTypeKey where
-    compare (TypeSubTypeKey t1 st1) (TypeSubTypeKey t2 st2) =
-        case compare t1 t2 of
-            EQ -> compare st1 st2
-            x  -> x
+  compare (TypeSubTypeKey t1 st1) (TypeSubTypeKey t2 st2) =
+    case compare t1 t2 of
+      EQ -> compare st1 st2
+      x  -> x
 
 instance Hashable TypeSubTypeKey
+instance Serialise TypeSubTypeKey
 
 -- | Create a 'TypeSubTypeKey'
 mkTypeSubTypeKey :: PUSType -> PUSSubType -> TypeSubTypeKey
@@ -228,6 +246,8 @@ data PacketIDCriteria = PacketIDCriteria {
   , _pidcPIs :: TMPIDefs
   } deriving (Show, Generic)
 
+instance Serialise PacketIDCriteria
+
 
 -- | A search index. The lookup of packet identification criterias is a multiple
 -- step process. First the tuple (APID, Type, Subtype) is looked up. If it is
@@ -241,38 +261,53 @@ data PICSearchIndex = PICSearchIndex {
 
 emptyPICSearchIndex :: PICSearchIndex
 emptyPICSearchIndex = runST $ do
-  PICSearchIndex <$> (HT.new >>= HT.unsafeFreeze) <*> (HT.new >>= HT.unsafeFreeze)
+  PICSearchIndex
+    <$> (HT.new >>= HT.unsafeFreeze)
+    <*> (HT.new >>= HT.unsafeFreeze)
 
+instance Serialise PICSearchIndex where
+  encode = encodeSearchIndex
+  decode = decodeSearchIndex
+
+encodeSearchIndex :: PICSearchIndex -> Encoding
+encodeSearchIndex idx =
+  encodeListLen 2 <> encodeHashTable (_picSiApidMap idx) <> encodeHashTable
+    (_picSiMap idx)
+
+
+decodeSearchIndex :: Decoder s PICSearchIndex
+decodeSearchIndex = do
+  _len <- decodeListLen
+  PICSearchIndex <$> decodeHashTable <*> decodeHashTable
 
 
 picVecToApidMap
-    :: Vector PacketIDCriteria -> IHashTable ApidKey PacketIDCriteria
+  :: Vector PacketIDCriteria -> IHashTable ApidKey PacketIDCriteria
 picVecToApidMap pics = runST $ do
-    ht <- HT.new
-    V.mapM_ (ins ht) pics
-    HT.unsafeFreeze ht
-  where
-    ins ht pic@PacketIDCriteria {..} = do
-        case _pidcAPID of
-            Just apid ->
-                HT.insert ht (mkApidKey apid _pidcType _pidcSubType) pic
-            _ -> return ()
+  ht <- HT.new
+  V.mapM_ (ins ht) pics
+  HT.unsafeFreeze ht
+ where
+  ins ht pic@PacketIDCriteria {..} = do
+    case _pidcAPID of
+      Just apid -> HT.insert ht (mkApidKey apid _pidcType _pidcSubType) pic
+      _         -> return ()
 
 
 picVecToTypeMap
-    :: Vector PacketIDCriteria -> IHashTable TypeSubTypeKey PacketIDCriteria
+  :: Vector PacketIDCriteria -> IHashTable TypeSubTypeKey PacketIDCriteria
 picVecToTypeMap pics = runST $ do
-    ht <- HT.new
-    V.mapM_ (ins ht) pics
-    HT.unsafeFreeze ht
-  where
-    ins ht pic@PacketIDCriteria {..} =
-        HT.insert ht (mkTypeSubTypeKey _pidcType _pidcSubType) pic
+  ht <- HT.new
+  V.mapM_ (ins ht) pics
+  HT.unsafeFreeze ht
+ where
+  ins ht pic@PacketIDCriteria {..} =
+    HT.insert ht (mkTypeSubTypeKey _pidcType _pidcSubType) pic
 
 -- | Create a search index from a Vector of 'PacketIDCriteria'
 mkPICSearchIndex :: Vector PacketIDCriteria -> PICSearchIndex
 mkPICSearchIndex pics =
-    PICSearchIndex (picVecToApidMap pics) (picVecToTypeMap pics)
+  PICSearchIndex (picVecToApidMap pics) (picVecToTypeMap pics)
 
 
 -- | This is one of the most important functions for packet identification.
@@ -283,6 +318,6 @@ mkPICSearchIndex pics =
 -- correct 'TMPacketDef' entry to determine how to extract values
 picFind :: PICSearchIndex -> APID -> PUSType -> PUSSubType -> Maybe TMPIDefs
 picFind PICSearchIndex {..} apid typ subtype =
-    case HT.ilookup _picSiApidMap (mkApidKey apid typ subtype) of
-        Just val -> Just (_pidcPIs val)
-        Nothing  -> _pidcPIs <$> HT.ilookup _picSiMap (mkTypeSubTypeKey typ subtype)
+  case HT.ilookup _picSiApidMap (mkApidKey apid typ subtype) of
+    Just val -> Just (_pidcPIs val)
+    Nothing  -> _pidcPIs <$> HT.ilookup _picSiMap (mkTypeSubTypeKey typ subtype)

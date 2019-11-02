@@ -40,6 +40,8 @@ module General.Types
   , ToDouble(..)
   , FromDouble(..)
   , splitBitOffset
+  , encodeHashTable
+  , decodeHashTable
   )
 where
 
@@ -47,12 +49,18 @@ where
 import           RIO
 import           Data.Binary
 import           Data.Aeson
-import qualified Data.Aeson.Encoding as E
+import qualified Data.Aeson.Encoding           as E
 import           Data.Bits
-import           Data.Text.Short
+import           Data.Text.Short                ( ShortText )
+import qualified Data.Text.Short               as ST
+import           Data.HashTable.ST.Basic        ( IHashTable )
+import           Data.HashTable.ST.Basic       as HT
 
-import           Codec.Serialise
+import           Codec.Serialise               as S
+import           Codec.Serialise.Encoding      as SE
+import           Codec.Serialise.Decoding      as SE
 
+import           Control.Monad                  ( replicateM )
 
 
 
@@ -90,6 +98,8 @@ unByteOffset (ByteOffset x) = x
 newtype BitOffset = BitOffset Int
     deriving (Eq, Ord, Num, Show, Read, Generic, NFData)
 
+instance Serialise BitOffset
+
 -- | constructs a bit offset
 mkBitOffset :: Int -> BitOffset
 mkBitOffset = BitOffset
@@ -107,6 +117,8 @@ data Offset = Offset ByteOffset BitOffset
     deriving (Eq, Show, Read, Generic)
 
 instance NFData Offset
+instance Serialise Offset
+
 
 -- | constructs an 'Offset' from a 'ByteOffset' and a 'BitOffset'
 mkOffset :: ByteOffset -> BitOffset -> Offset
@@ -289,15 +301,31 @@ class FromDouble a where
 
 
 instance Serialise ShortText where
-    encode = Codec.Serialise.encode . toText
-    decode = fromText <$> Codec.Serialise.decode
+  encode = S.encode . ST.toText
+  decode = ST.fromText <$> S.decode
 
 instance FromJSON ShortText where
-    parseJSON = withText "ShortText" $ pure . fromText
+  parseJSON = withText "ShortText" $ pure . ST.fromText
 
 instance ToJSON ShortText where
-    toJSON = String . toText
-    {-# INLINE toJSON #-}
+  toJSON = String . ST.toText
+  {-# INLINE toJSON #-}
 
-    toEncoding = E.text . toText
-    {-# INLINE toEncoding #-}
+  toEncoding = E.text . ST.toText
+  {-# INLINE toEncoding #-}
+
+
+
+encodeHashTable :: (Serialise k, Serialise v) => IHashTable k v -> SE.Encoding
+encodeHashTable ht =
+  let lst = HT.toList ht
+  in  foldl' (\enc (k, v) -> enc <> S.encode k <> S.encode v)
+             (SE.encodeListLen (fromIntegral (length lst)))
+             (HT.toList ht)
+
+decodeHashTable
+  :: (Serialise k, Serialise v, Eq k, Hashable k) => Decoder s (IHashTable k v)
+decodeHashTable = do
+  len <- SE.decodeListLen
+  lst <- replicateM len ((,) <$> S.decode <*> S.decode)
+  return (HT.fromList lst)

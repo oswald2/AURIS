@@ -46,17 +46,17 @@ setupCallbacks window = do
 
 addCB :: MainWindow -> Ref Button -> IO ()
 addCB window _btn = do
-  now <- getCurrentTime
-  let table = window ^. mwTMPTab . tmpTable
-      model = window ^. mwTMPTab . tmpModel
-      pusPkt x = PUSPacket pusHdr' pusDfh' Nothing payload
-       where
-        pusHdr' =
-          PUSHeader 0 0 PUSTM True (APID 256) SegmentStandalone (mkSSC x) 0 0
-        pusDfh' = PUSTMStdHeader 0 3 25 (mkSourceID 0) nullCUCTime
-        payload = B.pack [0 .. 255]
+  -- now <- getCurrentTime
+  -- let table = window ^. mwTMPTab . tmpTable
+  --     model = window ^. mwTMPTab . tmpModel
+  --     pusPkt x = PUSPacket pusHdr' pusDfh' Nothing payload
+  --      where
+  --       pusHdr' =
+  --         PUSHeader 0 0 PUSTM True (APID 256) SegmentStandalone (mkSSC x) 0 0
+  --       pusDfh' = PUSTMStdHeader 0 3 25 (mkSourceID 0) nullCUCTime
+  --       payload = B.pack [0 .. 255]
 
-      epu = ExtractedDU (toFlag Good True) now Nothing IF_NCTRS (VCID 0)
+  --     epu = ExtractedDU (toFlag Good True) now Nothing IF_NCTRS (VCID 0)
 
-  addRow table model (epu (pusPkt 100))
-
+  -- addRow table model (epu (pusPkt 100))
+  return ()

@@ -1,10 +1,4 @@
-{-# LANGUAGE OverloadedStrings
-    , BangPatterns
-    , GeneralizedNewtypeDeriving
-    , DeriveGeneric
-    , RecordWildCards
-#-}
-module GUI.PUSPacketTable
+module GUI.TMPacketTable
   ( setupTable
   , addRow
   )
@@ -23,16 +17,15 @@ import           Graphics.UI.FLTK.LowLevel.Fl_Enumerations
 
 import           GUI.Colors
 
-import           Model.PUSPacketModel
+import           Model.TMPacketModel
 import           Model.ScrollingTableModel
 
-import           Data.PUS.PUSPacket
-import           Data.PUS.ExtractedDU
+import           Data.PUS.TMPacket
 
 
 
 
-setupTable :: Ref Group -> PUSPacketModel -> IO (Ref TableRow)
+setupTable :: Ref Group -> TMPacketModel -> IO (Ref TableRow)
 setupTable group model = do
   rect  <- getRectangle group
   table <- tableRowNew rect
@@ -48,8 +41,7 @@ setupTable group model = do
   pure table
 
 
-
-initializeTable :: Ref TableRow -> PUSPacketModel -> IO ()
+initializeTable :: Ref TableRow -> TMPacketModel -> IO ()
 initializeTable table model = do
   begin table
 
@@ -72,7 +64,9 @@ initializeTable table model = do
   setCols table (Columns nCols)
   setColHeader table True
 
-  mapM_ (\i -> setColWidth table (Column i) (_columnWidth (colDefinitions V.! i))) [0 .. nCols - 1]
+  mapM_
+    (\i -> setColWidth table (Column i) (_columnWidth (colDefinitions V.! i)))
+    [0 .. nCols - 1]
 
   --setColWidthAll table 80
   setColResize table True
@@ -80,11 +74,11 @@ initializeTable table model = do
   end table
 
 
-modelMaxRows :: Int 
+modelMaxRows :: Int
 modelMaxRows = 200
 
 
-addRow :: Ref TableRow -> PUSPacketModel -> ExtractedDU PUSPacket -> IO ()
+addRow :: Ref TableRow -> TMPacketModel -> TMPacket -> IO ()
 addRow table model pkt = do
   (Rows nRows) <- getRows table
   when (nRows < modelMaxRows) $ setRows table (Rows (nRows + 1))
@@ -102,19 +96,22 @@ addRow table model pkt = do
 
 colDefinitions :: Vector ColumnDefinition
 colDefinitions = V.fromList
-  [ ColumnDefinition "Generation Time" 200
+  [ ColumnDefinition  "SPID"            100
+  , ColumnDefinition  "Mnemonic"        200
+  , ColumnDefinition  "Description"     350
+  , ColumnDefinition "Generation Time" 200
   , ColumnDefinition "ERT"             200
   , ColumnDefinition "APID"            60
   , ColumnDefinition "T"               30
   , ColumnDefinition "ST"              30
   , ColumnDefinition "SSC"             50
-  , ColumnDefinition "Data"            800
+  , ColumnDefinition "VC"              30
   ]
 
 
 
 drawCell
-  :: PUSPacketModel
+  :: TMPacketModel
   -> Ref TableRow
   -> TableContext
   -> TableCoordinate
@@ -128,7 +125,8 @@ drawCell model table context tc@(TableCoordinate (Row row) (Column col)) rectang
         tableModelLock model
       ContextEndPage -> do
         tableModelUnlock model
-      ContextColHeader -> drawHeader table (_columnName (colDefinitions V.! col)) rectangle
+      ContextColHeader ->
+        drawHeader table (_columnName (colDefinitions V.! col)) rectangle
       ContextRowHeader -> drawHeader table (T.pack (show row)) rectangle
       ContextCell      -> drawData table model tc rectangle
       _                -> pure ()
@@ -145,14 +143,16 @@ drawHeader table s rectangle = do
 
 
 drawData
-  :: Ref TableRow -> PUSPacketModel -> TableCoordinate -> Rectangle -> IO ()
+  :: Ref TableRow -> TMPacketModel -> TableCoordinate -> Rectangle -> IO ()
 drawData table model (TableCoordinate (Row row) (Column col)) rectangle = do
   flcPushClip rectangle
   flcSetColor mcsTableBG
   flcRectf rectangle
   flcSetColor mcsTableFG
 
-  (txt, align) <- queryTableModelUnlocked model (\s -> toCellText (s S.!? row) (Column col))
+  (txt, align) <- queryTableModelUnlocked
+    model
+    (\s -> toCellText (s S.!? row) (Column col))
 
   flcDrawInBox txt rectangle align Nothing Nothing
 
@@ -160,4 +160,3 @@ drawData table model (TableCoordinate (Row row) (Column col)) rectangle = do
   flcSetColor color'
   flcRect rectangle
   flcPopClip
-

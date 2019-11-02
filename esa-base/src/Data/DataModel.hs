@@ -18,14 +18,14 @@ like calibrations, limit checks, synthetic parameters and so on
     TemplateHaskell
 #-}
 module Data.DataModel
-    ( DataModel(..)
-    , dmCalibrations
-    , dmSyntheticParams
-    , dmParameters
-    , dmTMPackets
-    , dmPacketIdIdx
-    , empty
-    )
+  ( DataModel(..)
+  , dmCalibrations
+  , dmSyntheticParams
+  , dmParameters
+  , dmTMPackets
+  , dmPacketIdIdx
+  , empty
+  )
 where
 
 import           RIO
@@ -34,14 +34,18 @@ import           Control.Lens                   ( makeLenses )
 
 import           Data.Text.Short                ( ShortText )
 
---import           Codec.Serialise
+import           Codec.Serialise
+import           Codec.Serialise.Encoding
+import           Codec.Serialise.Decoding
 
-import           Data.HashTable.ST.Basic
+import           Data.HashTable.ST.Basic       as HT
 
 import           Data.TM.Calibration
 import           Data.TM.Synthetic
 import           Data.TM.TMParameterDef
 import           Data.TM.TMPacketDef
+
+import           General.Types
 
 
 
@@ -65,13 +69,44 @@ makeLenses ''DataModel
 
 empty :: DataModel
 empty =
-    let (params, packets) = runST $ do
-            prm <- new
-            pkts <- new
-            (,) <$> unsafeFreeze prm <*> unsafeFreeze pkts
-    in  DataModel { _dmCalibrations    = HM.empty
-                  , _dmSyntheticParams = HM.empty
-                  , _dmParameters      = params
-                  , _dmPacketIdIdx     = emptyPICSearchIndex
-                  , _dmTMPackets       = packets
-                  }
+  let (params, packets) = runST $ do
+        prm  <- new
+        pkts <- new
+        (,) <$> unsafeFreeze prm <*> unsafeFreeze pkts
+  in  DataModel { _dmCalibrations    = HM.empty
+                , _dmSyntheticParams = HM.empty
+                , _dmParameters      = params
+                , _dmPacketIdIdx     = emptyPICSearchIndex
+                , _dmTMPackets       = packets
+                }
+
+
+instance Serialise DataModel where
+  encode = encodeDataModel
+  decode = decodeDataModel
+
+encodeDataModel :: DataModel -> Encoding
+encodeDataModel model =
+  encodeListLen 5 
+    <> encode (_dmCalibrations model)
+    <> encode (_dmSyntheticParams model)
+    <> encodeHashTable (_dmParameters model)
+    <> encode (_dmPacketIdIdx model)
+    <> encodeHashTable (_dmTMPackets model)
+
+decodeDataModel :: Decoder s DataModel 
+decodeDataModel = do 
+  _len <- decodeListLen 
+  calibs <- decode 
+  synths <- decode 
+  params <- decodeHashTable 
+  idx <- decode 
+  packets <- decodeHashTable 
+  return DataModel {
+    _dmCalibrations = calibs 
+    , _dmSyntheticParams = synths 
+    , _dmParameters = params 
+    , _dmPacketIdIdx = idx 
+    , _dmTMPackets = packets
+  }
+

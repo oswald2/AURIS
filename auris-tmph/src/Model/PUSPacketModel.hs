@@ -7,15 +7,8 @@
 #-}
 module Model.PUSPacketModel
   ( PUSPacketModel
-  , createPUSPacketModel
   , ModelValue(..)
   , ToCellText(..)
-  , addPacketToModel
-  , modelMaxRows
-  , pusPacketModelSize
-  , pusPktModelLock
-  , pusPktModelData
-  , pusPacketQueryUnlocked
   )
 where
 
@@ -23,9 +16,9 @@ where
 import           RIO
 import qualified RIO.Text                      as T
 
-import           Control.Lens                   ( makeLenses )
+--import           Control.Lens                   ( makeLenses )
 
-import qualified Data.Sequence                 as S
+--import qualified Data.Sequence                 as S
 
 import           Data.PUS.PUSPacket
 import           Data.PUS.PUSDfh
@@ -43,52 +36,7 @@ import           Graphics.UI.FLTK.LowLevel.Fl_Enumerations
 
 newtype ModelValue = ModelValue { getModelValue :: ExtractedDU PUSPacket}
 
-data PUSPacketModel = PUSPacketModel {
-    _pusPktModelLock :: MVar ()
-    , _pusPktModelData :: IORef (Seq ModelValue)
-}
-makeLenses ''PUSPacketModel
-
-
-createPUSPacketModel :: IO PUSPacketModel
-createPUSPacketModel = PUSPacketModel <$> newMVar () <*> newIORef (S.empty)
-
-
-queryModel :: PUSPacketModel -> (Seq ModelValue -> a) -> IO a
-queryModel model f = do
-  takeMVar (model ^. pusPktModelLock)
-  dat <- readIORef (model ^. pusPktModelData)
-
-  let result = f dat
-
-  putMVar (model ^. pusPktModelLock) ()
-  return result
-
-pusPacketQueryUnlocked :: PUSPacketModel -> (Seq ModelValue -> a) -> IO a
-pusPacketQueryUnlocked model f = do
-  dat <- readIORef (model ^. pusPktModelData)
-  pure (f dat)
-
-
-
-addPacketToModel :: ExtractedDU PUSPacket -> PUSPacketModel -> IO PUSPacketModel
-addPacketToModel pkt model = do
-  takeMVar (model ^. pusPktModelLock)
-  dat <- readIORef (model ^. pusPktModelData)
-
-  let len    = S.length dat
-      newDat = if len < modelMaxRows
-        then ModelValue pkt S.<| dat
-        else case dat of
-          dropped S.:|> _x -> ModelValue pkt S.<| dropped
-          S.Empty          -> S.singleton (ModelValue pkt)
-
-  writeIORef (model ^. pusPktModelData) newDat
-  putMVar (model ^. pusPktModelLock) ()
-  return model
-
-pusPacketModelSize :: PUSPacketModel -> IO Int
-pusPacketModelSize model = queryModel model S.length
+type PUSPacketModel = TableModel ModelValue 
 
 
 instance ToCellText ModelValue where

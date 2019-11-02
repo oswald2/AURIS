@@ -1,6 +1,7 @@
 {-# LANGUAGE TypeApplications #-}
 module Data.PUS.TMPacketProcessing
     ( packetProcessorC
+    , raiseTMPacketC
     , getPackeDefinition
     )
 where
@@ -36,12 +37,20 @@ import           Data.PUS.TMPacket
 import           Data.PUS.EncTime
 import           Data.PUS.PUSState
 import           Data.PUS.CRC
+import           Data.PUS.Events
 
 import           General.GetBitField
 import           General.Types
 import           General.Time
 
 
+
+raiseTMPacketC :: (MonadIO m, MonadReader env m, HasGlobalState env) 
+  => ConduitT TMPacket TMPacket m () 
+raiseTMPacketC = awaitForever $ \pkt -> do 
+  env <- ask 
+  liftIO $ raiseEvent env (EVTelemetry (EVTMPacketDecoded pkt))
+  yield pkt 
 
 
 packetProcessorC
@@ -95,16 +104,22 @@ packetProcessorC = awaitForever $ \pkt@(oct, pusPkt) -> do
                   , _pEngValue = Nothing
                   }
 
-            yield TMPacket {
-              _tmpSPID = cfgUnknownSPID cfg
-              , _tmpAPID = pusPkt ^. epDU . pusHdr . pusHdrTcApid
-              , _tmpType = pusType (pusPkt ^. epDU . pusDfh)
-              , _tmpSubType = pusSubType (pusPkt ^. epDU . pusDfh)
-              , _tmpERT = pusPkt ^. epERT
-              , _tmpTimeStamp = timeStamp
-              , _tmpVCID = pusPkt ^. epVCID 
-              , _tmpParams = V.singleton param
-              }
+                tmpkt = TMPacket {
+                    _tmpSPID = cfgUnknownSPID cfg
+                    , _tmpMnemonic = "UNKNOWN PACKET"
+                    , _tmpDescr = ""
+                    , _tmpAPID = pusPkt ^. epDU . pusHdr . pusHdrTcApid
+                    , _tmpType = pusType (pusPkt ^. epDU . pusDfh)
+                    , _tmpSubType = pusSubType (pusPkt ^. epDU . pusDfh)
+                    , _tmpERT = pusPkt ^. epERT
+                    , _tmpTimeStamp = timeStamp
+                    , _tmpVCID = pusPkt ^. epVCID 
+                    , _tmpSSC = pusPkt ^. epDU . pusHdr . pusHdrTcSsc
+                    , _tmpParams = V.singleton param
+                    }
+
+            yield tmpkt 
+
 
 
 -- | Main function to detect the packet identification of a newly received
@@ -155,12 +170,15 @@ processPacket pktDef pkt@(_, pusDU) = do
     params <- getParameters timestamp epoch pktDef pkt 
     let tmPacket = TMPacket {
       _tmpSPID = _tmpdSPID pktDef
+      , _tmpMnemonic = _tmpdName pktDef
+      , _tmpDescr = _tmpdDescr pktDef
       , _tmpAPID = _tmpdApid pktDef 
       , _tmpType = _tmpdType pktDef 
       , _tmpSubType = _tmpdSubType pktDef
       , _tmpERT = pusDU ^. epERT
       , _tmpTimeStamp = timestamp 
       , _tmpVCID = pusDU ^. epVCID
+      , _tmpSSC = pusDU ^. epDU . pusHdr . pusHdrTcSsc
       , _tmpParams = params
       }
     return tmPacket
@@ -230,14 +248,14 @@ getFixedParams :: (MonadIO m, MonadReader env m, HasPUSState env, HasCorrelation
   -> (ByteString, ExtractedDU PUSPacket) 
   -> Vector TMParamLocation 
   -> m (Vector TMParameter) 
-getFixedParams timestamp ert epoch def (oct, ep) locs = do 
-  bldr <- V.foldM (go oct) VB.empty locs
+getFixedParams timestamp ert epoch _def (oct', _ep) locs = do 
+  bldr <- V.foldM (go oct') VB.empty locs
   return (VB.build bldr)  
   where 
     go oct bldr loc = do 
       case _tmplSuperComm loc of 
         Just sup -> do 
-          let newLocs = unroll timestamp loc sup 
+          let newLocs = unroll loc sup 
               func (l, ts) = do 
                 v <- getParamValue epoch ert oct l 
                 return TMParameter {
@@ -262,8 +280,8 @@ getFixedParams timestamp ert epoch def (oct, ep) locs = do
               }
           return (bldr <> VB.singleton paramValue)
           
-    unroll :: SunTime -> TMParamLocation -> SuperCommutated -> [(TMParamLocation, SunTime)]
-    unroll timestamp loc sup = 
+    unroll :: TMParamLocation -> SuperCommutated -> [(TMParamLocation, SunTime)]
+    unroll loc sup = 
       let n = sup ^. scNbOcc in 
       if n <= 1 
         then [(loc, timestamp <+> (loc ^. tmplTime))] 
@@ -325,25 +343,33 @@ extractParamValue epoch oct def =
     in
         case def ^. tmplParam . fpType of
             ParamInteger w ->
-                let v = readIntParam oct (_tmplOffset def) (BitSize w) endian
+                let v = readIntParam (_tmplOffset def) (BitSize w) endian
                 in  (TMValue v clearValidity, CorrelationNo)
             ParamUInteger w ->
-                let v = readUIntParam oct (_tmplOffset def) (BitSize w) endian
+                let v = readUIntParam (_tmplOffset def) (BitSize w) endian
                 in  (TMValue v clearValidity, CorrelationNo)
             ParamDouble dt ->
-                let v = readDoubleParam oct (_tmplOffset def) endian dt
+                let v = readDoubleParam (_tmplOffset def) endian dt
                 in  (TMValue v clearValidity, CorrelationNo)
             ParamString w ->
-                let v = readString oct (_tmplOffset def) w
+                let v = readString (_tmplOffset def) w
                 in  (TMValue v clearValidity, CorrelationNo)
             ParamOctet w ->
-                let v = readOctet oct (_tmplOffset def) w
+                let v = readOctet (_tmplOffset def) w
                 in (TMValue v clearValidity, CorrelationNo)
             ParamTime tt ct ->
-                let v = readTime oct (_tmplOffset def) epoch tt
+                let v = readTime (_tmplOffset def) tt
                 in (TMValue v clearValidity, ct)
+            ParamDeduced _ -> 
+                -- TODO handle deduced params
+                (TMValue TMValNothing clearValidity, CorrelationNo)
+            ParamSavedSynthetic -> 
+                -- TODO handle synthetic params
+                (TMValue TMValNothing clearValidity, CorrelationNo)
+            
+            
   where
-    readIntParam oct off width endian = if isByteAligned off
+    readIntParam off width endian = if isByteAligned off
         then case width of
             8 ->
                 TMValInt
@@ -363,10 +389,8 @@ extractParamValue epoch oct def =
             w  -> TMValInt (getBitFieldInt64 oct (_tmplOffset def) w endian)
         else
             TMValInt
-                (fromIntegral
-                    (getBitFieldInt64 oct (_tmplOffset def) width endian)
-                )
-    readUIntParam oct off width endian = if isByteAligned off
+                (getBitFieldInt64 oct (_tmplOffset def) width endian)
+    readUIntParam off width endian = if isByteAligned off
         then case width of
             8 ->
                 TMValUInt
@@ -388,54 +412,54 @@ extractParamValue epoch oct def =
         else TMValUInt (getBitFieldWord64 oct (_tmplOffset def) width endian)
 
 
-    readDoubleParam oct off endian DTDouble = if isByteAligned off
+    readDoubleParam off endian DTDouble = if isByteAligned off
         then TMValDouble (getValue @Double oct (toByteOffset off) endian)
         else TMValDouble (getBitFieldDouble oct (toOffset off) endian)
-    readDoubleParam oct off endian DTFloat = if isByteAligned off
+    readDoubleParam off endian DTFloat = if isByteAligned off
         then TMValDouble
             (realToFrac (getValue @Float oct (toByteOffset off) endian))
         else TMValDouble
             (realToFrac (getBitFieldFloat oct (toOffset off) endian))
-    readDoubleParam oct off endian DTMilSingle = if isByteAligned off
+    readDoubleParam off endian DTMilSingle = if isByteAligned off
         then
             TMValDouble
                 (getMilSingle
                     (getValue @MILSingle oct (toByteOffset off) endian)
                 )
         else TMValDouble (getBitFieldMilSingle oct (toOffset off) endian)
-    readDoubleParam oct off endian DTMilExtended = if isByteAligned off
+    readDoubleParam off endian DTMilExtended = if isByteAligned off
         then TMValDouble
             (getMilExtended
                 (getValue @MILExtended oct (toByteOffset off) endian)
             )
         else TMValDouble (getBitFieldMilExtended oct (toOffset off) endian)
 
-    readString oct off (Just w) =
+    readString off (Just w) =
         let val = B.take w $ B.drop (unByteOffset (toByteOffset off)) oct
         in  case ST.fromByteString val of
                 Just x  -> TMValString x
                 Nothing -> TMValString "UNDEFINED"
-    readString oct off Nothing =
+    readString off Nothing =
         let val = B.drop (unByteOffset (toByteOffset off)) oct
         in  case ST.fromByteString val of
                 Just x  -> TMValString x
                 Nothing -> TMValString "UNDEFINED"
 
-    readOctet oct off (Just w) =
+    readOctet off (Just w) =
         let val = B.take w $ B.drop (unByteOffset (toByteOffset off)) oct
         in TMValOctet val
-    readOctet oct off Nothing =
+    readOctet off Nothing =
         let val = B.drop (unByteOffset (toByteOffset off)) oct
         in TMValOctet val
 
-    readTime oct off epoch (CUC4Coarse2Fine delta) =
+    readTime off (CUC4Coarse2Fine delta) =
         let !sec = getValue @Int32 oct (toByteOffset off) BiE
             !mic = getValue @Int16 oct (toByteOffset off + 4) BiE
             !encTime = mkCUCTime (fromIntegral sec) (fromIntegral mic) delta
             st = cucTimeToSunTime epoch encTime
         in
         TMValTime st
-    readTime oct off epoch (CDS8 delta) =
+    readTime off (CDS8 _) =
         let !days = getValue oct (toByteOffset off) BiE
             !milli = getValue oct (toByteOffset off + 2) BiE
             !micro = getValue oct (toByteOffset off + 6) BiE
@@ -443,7 +467,7 @@ extractParamValue epoch oct def =
             st = cdsTimeToSunTime epoch encTime
         in
         TMValTime st
-    readTime oct off epoch (CDS6 delta) =
+    readTime off (CDS6 _) =
         let !days = getValue oct (toByteOffset off) BiE
             !milli = getValue oct (toByteOffset off + 2) BiE
             !encTime = mkCDSTime days milli Nothing

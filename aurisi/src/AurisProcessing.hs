@@ -19,11 +19,10 @@ import           Conduit.SocketConnector
 import           Data.PUS.GlobalState
 import           Data.PUS.MissionSpecific.Definitions
 import           Data.PUS.TMFrameExtractor
+import           Data.PUS.TMPacketProcessing
 import           Data.PUS.NcduToTMFrame
 import           Protocol.NCTRS
 import           Protocol.ProtocolInterfaces
-
---import           General.ShowConduit
 
 import           Interface.Interface
 import           Interface.Events
@@ -55,7 +54,8 @@ runTMChain cfg = do
           .| ncduToTMFrameC
           .| storeFrameC
           .| tmFrameExtraction IF_NCTRS
-          .| raisePUSPacketC
+          .| packetProcessorC
+          .| raiseTMPacketC
 
       ignoreConduit = awaitForever $ \_ -> pure ()
 

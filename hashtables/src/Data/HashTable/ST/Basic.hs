@@ -98,6 +98,7 @@ module Data.HashTable.ST.Basic
   , ilookup
   , fold
   , Data.HashTable.ST.Basic.toList
+  , Data.HashTable.ST.Basic.fromList
   ) where
 
 
@@ -118,6 +119,7 @@ import           Data.Semigroup
 #endif
 import qualified Data.Primitive.ByteArray          as A
 import           Data.STRef
+import           Control.Monad.ST                  (runST)
 import           GHC.Exts
 import           Prelude                           hiding (lookup, mapM_, read)
 ------------------------------------------------------------------------------
@@ -950,3 +952,11 @@ toList = fold f []
   where
     f !l !t = (t:l)
 {-# INLINE toList #-}
+
+
+fromList :: (Eq k, Hashable k) => [(k,v)] -> IHashTable k v 
+fromList lst = runST $ do 
+  let len = length lst 
+  ht <- newSized len 
+  Control.Monad.forM_ lst (uncurry (insert ht))
+  unsafeFreeze ht

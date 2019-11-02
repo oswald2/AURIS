@@ -1,17 +1,9 @@
-{-# LANGUAGE OverloadedStrings
-    , BangPatterns
-    , NoImplicitPrelude
-    , RecordWildCards
-    , NamedFieldPuns
-    , TemplateHaskell
-    , DataKinds
-    , DeriveGeneric     
-    , FlexibleInstances 
-    , OverloadedStrings 
-    , StandaloneDeriving
-    , TypeOperators    
+{-# LANGUAGE 
+  TemplateHaskell 
+  , DataKinds
+  , TypeOperators  
 #-}
-module Main where
+module Main where  
 
 import           RIO
 --import qualified RIO.ByteString                as B

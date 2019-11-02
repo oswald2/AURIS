@@ -20,7 +20,7 @@ import           Control.Monad.Except
 
 import           Data.HashTable.ST.Basic        ( IHashTable )
 import qualified Data.HashTable.ST.Basic       as HT
-import qualified Data.HashTable.Class          as HT
+import qualified Data.HashTable.Class          as HTC
 
 import           Data.Either
 import           Data.Text.Short                ( ShortText )
@@ -261,7 +261,7 @@ loadPackets mibPath parameters = do
             (fromIntegral (_tmpdPI1Val pkt)) (fromIntegral (_tmpdPI2Val pkt))
         lst = map (\x -> (key x, x)) packets
     hm <- liftEither $ runST $ do
-      ht <- HT.fromList lst
+      ht <- HTC.fromList lst
       Right <$> HT.unsafeFreeze ht
     return (warnings, hm)
 

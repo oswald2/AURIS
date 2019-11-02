@@ -23,12 +23,13 @@ import           Data.PUS.Config
 
 
 data AurisConfig = AurisConfig {
-    aurisPusConfig :: Config
-    , aurisMission :: Text 
+    aurisMission :: Text 
     , aurisNctrsHost :: Text
     , aurisNctrsTMPort :: Int 
     , aurisNctrsTCPort :: Int 
     , aurisNctrsAdminPort :: Int 
+    , aurisMIB :: Maybe Text 
+    , aurisPusConfig :: Config
     }
     deriving(Eq,Generic)
 
@@ -41,6 +42,7 @@ defaultConfig = AurisConfig {
         , aurisNctrsTMPort = 2502
         , aurisNctrsTCPort = 32111 
         , aurisNctrsAdminPort =32110
+        , aurisMIB = Nothing
         }
 
 defaultConfigFileName :: FilePath

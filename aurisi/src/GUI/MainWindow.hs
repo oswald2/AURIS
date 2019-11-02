@@ -18,7 +18,7 @@ module GUI.MainWindow
   , tmpTable
   , tmpModel
   , createTMPTab
-  , mwAddPUSPacket
+  , mwAddTMPacket
   )
 where
 
@@ -28,12 +28,12 @@ import           Control.Lens                   ( makeLenses )
 
 import           Graphics.UI.FLTK.LowLevel.FLTKHS
 
-import           Model.PUSPacketModel
-import           GUI.PUSPacketTable
+import           Model.TMPacketModel
+import           Model.ScrollingTableModel
+import           GUI.TMPacketTable
 import           GUI.Colors
 
-import           Data.PUS.ExtractedDU
-import           Data.PUS.PUSPacket
+import           Data.PUS.TMPacket
 
 
 
@@ -45,18 +45,18 @@ data TMPacketTabFluid = TMPacketTabFluid {
 data TMPacketTab = TMPacketTab {
     _tmpTabButtonAdd :: Ref Button
     , _tmpTable :: Ref TableRow
-    , _tmpModel :: PUSPacketModel
+    , _tmpModel :: TMPacketModel
 }
 makeLenses ''TMPacketTab
 
-tmpTabAddRow :: TMPacketTab -> ExtractedDU PUSPacket -> IO ()
+tmpTabAddRow :: TMPacketTab -> TMPacket -> IO ()
 tmpTabAddRow tab pkt = do
-  GUI.PUSPacketTable.addRow (tab ^. tmpTable) (tab ^. tmpModel) pkt
+  GUI.TMPacketTable.addRow (tab ^. tmpTable) (tab ^. tmpModel) pkt
 
 
 createTMPTab :: TMPacketTabFluid -> IO TMPacketTab
 createTMPTab TMPacketTabFluid {..} = do
-  model <- createPUSPacketModel
+  model <- tableModelNew
   table <- setupTable _tmpfTabGroup model
   mcsGroupSetColor _tmpfTabGroup
 
@@ -84,6 +84,6 @@ data MainWindow = MainWindow {
 makeLenses ''MainWindow
 
 
-mwAddPUSPacket :: MainWindow -> ExtractedDU PUSPacket -> IO ()
-mwAddPUSPacket window pkt = do
-    tmpTabAddRow (window ^. mwTMPTab) pkt
+mwAddTMPacket :: MainWindow -> TMPacket -> IO ()
+mwAddTMPacket window pkt = do
+  tmpTabAddRow (window ^. mwTMPTab) pkt

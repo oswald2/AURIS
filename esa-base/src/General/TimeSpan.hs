@@ -30,16 +30,25 @@ where
 
 import           RIO
 import           Data.Coerce
+import           Codec.Serialise
 
-data Hours = Hours
-data Minutes = Minutes
-data Seconds = Seconds
-data MilliSeconds = MilliSeconds
-data MicroSeconds = MicroSeconds
+
+data Hours = Hours deriving Generic
+data Minutes = Minutes  deriving Generic
+data Seconds = Seconds deriving Generic
+data MilliSeconds = MilliSeconds deriving Generic
+data MicroSeconds = MicroSeconds deriving Generic
+
+instance Serialise Hours
+instance Serialise Minutes 
+instance Serialise Seconds 
+instance Serialise MilliSeconds 
+instance Serialise MicroSeconds 
+
 
 -- | We store the time internally in micro seconds precision
 newtype TimeSpn a = TimeSpn { getSpan :: Int64 }
-    deriving (Eq, Ord, Num, Show, Read)
+    deriving (Eq, Ord, Num, Show, Read, Generic)
 
 class ToMicro a where
     toMicro :: a -> Double -> Int64
@@ -56,7 +65,7 @@ instance ToMicro Minutes where
 instance ToMicro Hours where
   toMicro _ val = truncate (val * 3600 * 1_000_000)
 
-
+instance Serialise a => Serialise (TimeSpn a)
 
 mkTimeSpan :: ToMicro a => a -> Double -> TimeSpn a
 mkTimeSpan t val = TimeSpn (toMicro t val)
@@ -66,7 +75,7 @@ getMicro (TimeSpn val) = val
 
 
 newtype TimeSpan = TimeSpan Int64
-    deriving (Eq, Ord, Num, Show, Read)
+    deriving (Eq, Ord, Num, Show, Read, Generic)
 
 class ToTimeSpan a where
     toTimeSpan :: a -> TimeSpan
@@ -81,6 +90,8 @@ instance ToTimeSpan (TimeSpn Minutes) where
   toTimeSpan = coerce
 instance ToTimeSpan (TimeSpn Hours) where
   toTimeSpan = coerce
+
+instance Serialise TimeSpan
 
 toMilliSeconds :: TimeSpan -> TimeSpn MilliSeconds
 toMilliSeconds = coerce

@@ -26,10 +26,7 @@ runGeneralTCPReconnectClient
 runGeneralTCPReconnectClient csettings delay f = do
   (term, result) <- catch
     worker
-    (\e -> do
-      logWarn
-          ("Could not connect, reconnecting... (" <> displayShow (e :: IOError))
-        >> return (False, undefined)
+    (\(_ :: IOError) -> return (False, undefined)
     )
   if term
     then return result

@@ -40,7 +40,7 @@ packages:
 - .
 - ../esa-base
 - ../esa-mib
-
+- ../esa-db
 
 # Dependency packages to be pulled from upstream that are not in the resolver
 # (e.g., acme-missiles-0.3)
@@ -50,8 +50,6 @@ extra-deps:
 - attoparsec-time-1
 - bytestring-to-vector-0.3.0.1
 - hw-prim-bits-0.1.0.4
-- github: oswald2/esa-db
-  commit: master
 
 
 # Override default flag values for local packages and extra-deps

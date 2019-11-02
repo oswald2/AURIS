@@ -95,6 +95,9 @@ instance ToJSON VCID where
   toEncoding = genericToEncoding defaultOptions
 instance Hashable VCID
 
+instance Display VCID where 
+  display (VCID x) = display x
+
 -- | A buidler for the VCID
 vcidBuilder :: VCID -> Builder
 vcidBuilder (VCID x) = word8 x
@@ -362,6 +365,9 @@ instance Serialise SPID
 instance FromJSON SPID
 instance ToJSON SPID where
   toEncoding = genericToEncoding defaultOptions
+
+instance Display SPID where 
+  display (SPID x) = display x
 
 newtype PTC = PTC Int
     deriving (Eq, Ord, Num, Show, Read, Generic)
