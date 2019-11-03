@@ -76,6 +76,9 @@ runProcessing cfg missionSpecific mibPath interface mainWindow = do
       -- logWarn "A warning message"
       -- logError "Error message. Very important"
 
+      -- let l x = logWarn $ display ("Warning " :: Text) <> displayShow x  
+      -- mapM_ l [1..212]
+
       runTMChain cfg
     pure ()
 
