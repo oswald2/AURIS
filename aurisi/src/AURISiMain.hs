@@ -87,12 +87,13 @@ createMainWindow MainWindowFluid {..} = do
   -- mcsWidgetSetColor _mfSaveFile
 --   mcsButtonSetColor _mfArmButton
 --   mcsButtonSetColor _mfGoButton
-  let mainWindow = MainWindow { _mwWindow   = _mfWindow
-                              , _mwOpenFile = _mfOpenFile
-                              , _mwSaveFile = _mfSaveFile
-                              , _mwProgress = _mfProgress
-                              , _mwTabs     = _mfTabs
-                              , _mwTMPTab   = tmpTab
+  let mainWindow = MainWindow { _mwWindow         = _mfWindow
+                              , _mwOpenFile       = _mfOpenFile
+                              , _mwSaveFile       = _mfSaveFile
+                              , _mwProgress       = _mfProgress
+                              , _mwTabs           = _mfTabs
+                              , _mwTMPTab         = tmpTab
+                              , _mwMessageDisplay = _mfMessageDisplay
                               }
   pure mainWindow
 
@@ -164,8 +165,9 @@ main = do
         missionSpecific           <- getMissionSpecific cfg
         -- start the processing chains
         _processingThread         <- async
-          $ runProcessing cfg missionSpecific (importmib opts) interface
+          $ runProcessing cfg missionSpecific (importmib opts) interface mainWindow
         -- run the FLTK GUI
+
         FL.run >> FL.flush
 
 

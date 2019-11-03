@@ -46,6 +46,7 @@ Executable AURISi
   Other-modules:
     GUI.MainWindow
     GUI.MainWindowCallbacks
+    GUI.MessageDisplay
     AurisInterface
     AurisProcessing
     AurisConfig

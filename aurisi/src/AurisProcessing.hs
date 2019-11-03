@@ -32,11 +32,13 @@ import           AurisConfig
 import           Data.DataModel
 import           Data.MIB.LoadMIB
 
-import           System.Directory               
+import           System.Directory
 import           System.FilePath
 
+import           GUI.MessageDisplay             ( messageAreaLogFunc )
+import           GUI.MainWindow                 ( MainWindow )
 
-configPath :: FilePath 
+configPath :: FilePath
 configPath = ".config/AURISi"
 
 
@@ -47,14 +49,21 @@ defaultMIBFile = configPath </> "data_model.raw"
 
 
 runProcessing
-  :: AurisConfig -> PUSMissionSpecific -> Maybe FilePath -> Interface -> IO ()
-runProcessing cfg missionSpecific mibPath interface = do
+  :: AurisConfig
+  -> PUSMissionSpecific
+  -> Maybe FilePath
+  -> Interface
+  -> MainWindow
+  -> IO ()
+runProcessing cfg missionSpecific mibPath interface mainWindow = do
   defLogOptions <- logOptionsHandle stdout True
-  let logOptions = setLogMinLevel (convLogLevel (aurisLogLevel cfg)) defLogOptions
+  let logOptions =
+        setLogMinLevel (convLogLevel (aurisLogLevel cfg)) defLogOptions
   withLogFunc logOptions $ \logFunc -> do
+    let logf = logFunc <> messageAreaLogFunc mainWindow
     state <- newGlobalState (aurisPusConfig cfg)
                             missionSpecific
-                            logFunc
+                            logf
                             (ifRaiseEvent interface . EventPUS)
 
     runRIO state $ do
@@ -62,6 +71,10 @@ runProcessing cfg missionSpecific mibPath interface = do
       model <- loadDataModel mibPath
       var   <- view getDataModel
       atomically $ writeTVar var model
+
+      -- logInfo "An info message"
+      -- logWarn "A warning message"
+      -- logError "Error message. Very important"
 
       runTMChain cfg
     pure ()
@@ -96,7 +109,7 @@ loadDataModel
   :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env)
   => Maybe FilePath
   -> m DataModel
-loadDataModel opts = do 
+loadDataModel opts = do
   home <- liftIO $ getHomeDirectory
   case opts of
     Just str -> do

@@ -14,6 +14,7 @@ module GUI.MainWindow
   , mwProgress
   , mwTabs
   , mwTMPTab
+  , mwMessageDisplay
   , tmpTabButtonAdd
   , tmpTable
   , tmpModel
@@ -72,6 +73,7 @@ data MainWindowFluid = MainWindowFluid {
     , _mfProgress :: Ref Progress
     , _mfTabs :: Ref Tabs
     , _mfTMPTab :: TMPacketTabFluid
+    , _mfMessageDisplay :: Ref Browser
     }
 
 
@@ -82,6 +84,7 @@ data MainWindow = MainWindow {
     , _mwProgress :: Ref Progress
     , _mwTabs :: Ref Tabs
     , _mwTMPTab :: TMPacketTab
+    , _mwMessageDisplay :: Ref Browser
     }
 makeLenses ''MainWindow
 

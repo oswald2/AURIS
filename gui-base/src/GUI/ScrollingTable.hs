@@ -139,6 +139,11 @@ drawHeader table s rectangle = do
   flcPopClip
 
 
+padRectangle :: Rectangle -> Int -> Rectangle 
+padRectangle (Rectangle (Position (X x) (Y y)) (Size (Width w) (Height h))) pad = 
+  (Rectangle (Position (X (x + pad)) (Y y)) (Size (Width (w - 2 * pad)) (Height h))) 
+
+
 drawData
   :: (ToCellText a)
   => Ref TableRow
@@ -157,7 +162,7 @@ drawData table model (TableCoordinate (Row row) (Column _col)) colDef rectangle
     cell <- queryTableModelUnlocked model (\s -> toCellText (s S.!? row) colDef)
 
     flcDrawInBox (_dispcText cell)
-                 rectangle
+                 (padRectangle rectangle 5)
                  (_dispcAlignment cell)
                  Nothing
                  Nothing
