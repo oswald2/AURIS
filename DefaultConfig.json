@@ -32,5 +32,8 @@
         },
         "cfgTMSegLength": "TMSegment65536",
         "cfgTMFrameHasCRC": true
+    },
+    "aurisLogLevel": {
+        "tag": "LogLevelInfo"
     }
 }
