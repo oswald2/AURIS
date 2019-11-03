@@ -67,7 +67,7 @@ import           General.Types
 
 -- | Time types. CUC Time is standard unix time with normal encoding of
 -- | 4 bytes coards and 2 bytes fine time
-data CUCTime = CUCTime !Int64 !Int32 !Bool
+data CUCTime = CUCTime !Int64 !Word32 !Bool
     deriving (Eq, Show, Read, Generic, NFData)
 
 instance Binary CUCTime
@@ -107,7 +107,7 @@ mkCUCTime sec usec delta =
       sign             = if sec < 0 || usec < 0 then (-1) else 1
       newSec           = (abs sec + fromIntegral restsec)
       newMicro         = usec'
-  in  CUCTime (sign * newSec) (fromIntegral sign * newMicro) delta
+  in  CUCTime (sign * newSec) (fromIntegral newMicro) delta
 
 
 mkCUC :: Integral a => a -> Bool -> CUCTime
@@ -248,7 +248,7 @@ cdsTimeParser = do
 
 
 {-# INLINABLE toEncoded #-}
-toEncoded :: Int64 -> Int32 -> (Word32, Word16)
+toEncoded :: Int64 -> Word32 -> (Word32, Word16)
 toEncoded sec mic =
   let sign :: Int
       !sign = if sec < 0 || mic < 0 then (-1) else 1
@@ -278,33 +278,39 @@ cucTimeParser (CUCTime _ _ delta) = do
 {-# INLINABLE cucTimeFromBinary #-}
 cucTimeFromBinary :: Word32 -> Word16 -> Bool -> CUCTime
 cucTimeFromBinary se m delta =
-  let val :: Word64
-      val = fromIntegral se `shiftL` 16 .|. fromIntegral m
-      (s, val') =
-          let s' = val .&. 0x800000000000 /= 0
-          in  if s'
-                then (s', complement ((val .|. 0xFFFF000000000000) - 1))
-                else (s', val)
-      sec = sign * fromIntegral (val' `shiftR` 16) .&. 0xFFFFFFFF
-      micro :: Double
-      micro  = fromIntegral (val' .&. 0xFFFF)
-      micro' = sign * round (micro * 65536.0 * 1000000.0)
-      sign   = if s then (-1) else 1
-  in  CUCTime (sign * sec) (fromIntegral micro') delta
+  -- let val :: Word64
+  --     val = fromIntegral se `shiftL` 16 .|. fromIntegral m
+  --     (s, val') =
+  --         let s' = val .&. 0x800000000000 /= 0
+  --         in  if s'
+  --               then (s', complement ((val .|. 0xFFFF000000000000) - 1))
+  --               else (s', val)
+  --     sec = sign * fromIntegral (val' `shiftR` 16) .&. 0xFFFFFFFF
+  --     micro :: Double
+  --     micro  = fromIntegral (val' .&. 0xFFFF)
+  --     micro' = sign * round (micro * 65536.0 * 1000000.0)
+  --     sign   = if s then (-1) else 1
+  -- in  CUCTime (sign * sec) (fromIntegral micro') delta
+    let val1 :: Int32 
+        !val1 = fromIntegral se
+        micro :: Double 
+        micro = fromIntegral m
+        micro' = round (micro * 65536.0 * 1000000.0)
+    in CUCTime (fromIntegral val1) micro' delta 
 
 
 instance TimeRepConversion CUCTime where
   {-# INLINABLE timeToWord64 #-}
-  timeToWord64 (CUCTime sec usec delta) = timeToWord64' sec usec delta
+  timeToWord64 (CUCTime sec usec delta) = timeToWord64' sec (fromIntegral usec) delta
   {-# INLINABLE word64ToTime #-}
   word64ToTime val delta =
-    let (sec, mic) = word64ToTime' val in CUCTime sec mic delta
+    let (sec, mic) = word64ToTime' val in CUCTime sec (fromIntegral mic) delta
 
   {-# INLINABLE timeToMicro #-}
-  timeToMicro (CUCTime sec usec delta) = timeToMicro' sec usec delta
+  timeToMicro (CUCTime sec usec delta) = timeToMicro' sec (fromIntegral usec) delta
   {-# INLINABLE microToTime #-}
   microToTime val delta =
-    let (sec, mic) = microToTime' val in CUCTime sec mic delta
+    let (sec, mic) = microToTime' val in CUCTime sec (fromIntegral mic) delta
 
 
 

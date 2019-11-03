@@ -139,7 +139,7 @@ tcFrameParser = do
 -- | A conduit for encoding a TC Transfer Frame into a ByteString for transmission
 {-# INLINABLE tcFrameEncodeC #-}
 tcFrameEncodeC
-    :: (MonadIO m, MonadReader env m, HasGlobalState env, HasLogFunc env)
+    :: (MonadIO m, MonadReader env m, HasGlobalState env)
     => ConduitT TCFrameTransport EncodedTCFrame m ()
 tcFrameEncodeC = do
     f <- await

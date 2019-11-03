@@ -70,6 +70,7 @@ class (HasConfig env,
     HasFOPState env,
     HasMissionSpecific env,
     HasCorrelationState env,
+    HasLogFunc env, 
     HasDataModel env) => HasGlobalState env where
     raiseEvent :: env -> Event -> IO ()
 

@@ -228,7 +228,7 @@ loadSyntheticParameters path' = do
                     let syn = zipWith f files (rights ols)
                         f p ol = (fromString (takeFileName p), ol)
                         !hm = HM.fromList syn
-                    return (Right hm)
+                    loadHCsynths hm
                 else
                     do
                         return
@@ -236,7 +236,37 @@ loadSyntheticParameters path' = do
                     $  T.concat
                     $  ["Error parsing synthetic parameters: " :: Text]
                     <> intersperse "\n" (lefts ols)
-
+    where 
+      loadHCsynths synths = do
+        let path = path' </> "hcsynthetic"
+        doesDirectoryExist path >>= \x -> if not x
+            then
+                do
+                    pure
+                $  Left
+                $  "Could not read  hard-coded synthetic parameters: directory '"
+                <> T.pack path
+                <> "' does not exist"
+            else do
+                -- traceM ("Path: " <> (T.pack path))
+                files' <- listDirectory path
+                files  <- filterM doesFileExist (map (path </>) files')
+                -- traceM ("files: " <> (T.pack (show files)))
+                ols    <- forM files parseOL
+                -- traceM ("ols: " <> (T.pack (show ols)))
+                if all isRight ols
+                    then do
+                        let syn = zipWith f files (rights ols)
+                            f p ol = (fromString (takeFileName p), ol)
+                            !hm = foldl' (\h (n, s) -> HM.insert n s h) synths syn
+                        return (Right hm)
+                    else
+                        do
+                            return
+                        $  Left
+                        $  T.concat
+                        $  ["Error parsing synthetic parameters: " :: Text]
+                        <> intersperse "\n" (lefts ols)
 
 
 loadPackets :: (MonadIO m, MonadReader env m, HasLogFunc env)

@@ -66,7 +66,7 @@ import           General.Time
 import           Protocol.ProtocolInterfaces
 import           General.SizeOf
 
---import           General.Hexdump
+import           General.Hexdump
 
 
 data RestartVCException = RestartVCException
@@ -106,12 +106,16 @@ tmFrameDecodeC = do
       Left err -> do
         let msg = T.pack err
         liftIO $ raiseEvent env (EVAlarms (EVIllegalTMFrame msg))
-      Right (bs, frame) -> case tmFrameCheckCRC cfg bs of
-        Left  err -> liftIO $ raiseEvent env (EVTelemetry (EVTMFailedCRC err))
-        Right ()  -> do
-          let f    = TMStoreFrame time frame bs
-              time = cdsTimeToSunTime (epoch1958 (LeapSeconds 0)) ert
-          yield f
+      Right (bs, frame) -> do 
+        
+        logDebug $ display ("Received TM Frame: " :: Text) <> displayShow frame
+
+        case tmFrameCheckCRC cfg bs of
+          Left  err -> liftIO $ raiseEvent env (EVTelemetry (EVTMFailedCRC err))
+          Right ()  -> do
+            let f    = TMStoreFrame time frame bs
+                time = cdsTimeToSunTime (epoch1958 (LeapSeconds 0)) ert
+            yield f
 
 
 
@@ -139,7 +143,6 @@ tmFrameSwitchVC
      , MonadThrow m
      , MonadReader env m
      , HasGlobalState env
-     , HasLogFunc env
      )
   => ProtocolInterface
   -> TBQueue (ByteString, ExtractedDU PUSPacket)
@@ -156,8 +159,8 @@ tmFrameSwitchVC interf outQueue = do
   cont <- mapM proc vcids
   -- create the threads
   let threadFunc a@(_vcid, queue) = do
-        res <- tryDeep $ runConduitRes
-          (tmFrameExtractionChain queue outQueue interf)
+        res <- tryDeep
+          $ runConduitRes (tmFrameExtractionChain queue outQueue interf)
         case res of
           Left  RestartVCException -> threadFunc a
           Right x                  -> pure x
@@ -206,17 +209,20 @@ checkFrameCountC pIf = go Nothing
     case x of
       Nothing     -> return ()
       Just frame' -> do
-        --traceM $ "checkFrameCountC: " <> T.pack (show frame)
+        
+        logDebug $ display ("checkFrameCountC: " :: Text) <> displayShow frame'
+        
         let frame      = frame' ^. tmstFrame
             !vcfc      = frame ^. tmFrameHdr . tmFrameVCFC
             yieldNoGap = do
-              let ep = ExtractedDU { _epQuality = toFlag Good True
-                                   , _epERT     = frame' ^. tmstTime
-                                   , _epGap     = Nothing
-                                   , _epSource  = pIf
-                                   , _epVCID    = frame ^. tmFrameHdr . tmFrameVcID
-                                   , _epDU      = frame
-                                   }
+              let ep = ExtractedDU
+                    { _epQuality = toFlag Good True
+                    , _epERT     = frame' ^. tmstTime
+                    , _epGap     = Nothing
+                    , _epSource  = pIf
+                    , _epVCID    = frame ^. tmFrameHdr . tmFrameVcID
+                    , _epDU      = frame
+                    }
               --traceM "Yield no gap"
               unless (isIdleTmFrame frame) $ yield ep
         -- traceM $ "TM Frame: VCFC: " <> T.pack (show vcfc)
@@ -241,6 +247,7 @@ checkFrameCountC pIf = go Nothing
                     , _epDU      = frame
                     }
                 --traceM "Yield gap!"
+                logDebug $ display ("Detected VC Gap: " :: Text) <> displayShow ep
                 unless (isIdleTmFrame frame) $ yield ep
                 go (Just vcfc)
           Nothing -> do
@@ -263,11 +270,11 @@ extractPktFromTMFramesC missionSpecific pIf = loop True B.empty
     -> ByteString
     -> ConduitT (ExtractedDU TMFrame) ExtDuTMFrame m ()
   loop initial spillOverData = do
-    -- traceM
-    --   $  "loop spill len: "
-    --   <> T.pack (show (B.length spillOverData))
-    --   <> " spillOverData:\n"
-    --   <> hexdumpBS spillOverData
+    logDebug 
+      $  display ("loop spill len: " :: Text)
+      <> displayShow (B.length spillOverData)
+      <> display (" spillOverData:\n" :: Text)
+      <> display (hexdumpBS spillOverData)
     x <- await
     case x of
       Nothing    -> pure ()
@@ -278,11 +285,11 @@ extractPktFromTMFramesC missionSpecific pIf = loop True B.empty
                 -- we have a gap, so process the spill-over packet
             rejectSpillOver spillOverData
             let (_prev, rest) = tmFrameGetPrevAndRest frame'
-            -- traceM
-            --   $  "gap: prev: "
-            --   <> T.pack (show (B.length _prev))
-            --   <> " rest: "
-            --   <> T.pack (show (B.length rest))
+            logDebug 
+              $  display ("gap: prev: " :: Text)
+              <> displayShow (B.length _prev)
+              <> display (" rest: " :: Text)
+              <> displayShow (B.length rest)
             loop True rest
           else do
                 -- when we have no gap, just continue processing
@@ -296,23 +303,23 @@ extractPktFromTMFramesC missionSpecific pIf = loop True B.empty
                           in  rest
                     (pkts, spill) = chunkPackets pdat
 
-                -- traceM
-                --   $  T.pack (show (length pkts))
-                --   <> " Initial Pkts: "
-                --   <> T.pack (show pkts)
-                --   <> "\nspill:\n"
-                --   <> hexdumpBS spill
-                yieldMany (map (\i-> ExtDuTMFrame (frame, i)) pkts)
+                logDebug
+                  $  displayShow (length pkts)
+                  <> display (" Initial Pkts: " :: Text)
+                  <> displayShow pkts
+                  <> display ("\nspill:\n" :: Text)
+                  <> display (hexdumpBS spill)
+                yieldMany (map (\i -> ExtDuTMFrame (frame, i)) pkts)
                 loop False spill
               else do
                 let dat           = spillOverData <> frame' ^. tmFrameData
                     (pkts, spill) = chunkPackets dat
-                -- traceM
-                --   $  T.pack (show (length pkts))
-                --   <> " Pkts: "
-                --   <> T.pack (show pkts)
-                --   <> "\nspill:\n"
-                --   <> hexdumpBS spill
+                logDebug
+                  $  displayShow (length pkts)
+                  <> display (" Pkts: " :: Text)
+                  <> displayShow pkts
+                  <> display ("\nspill:\n" :: Text)
+                  <> display (hexdumpBS spill)
                 yieldMany (map (\i -> ExtDuTMFrame (frame, i)) pkts)
                 loop False spill
 
@@ -369,6 +376,7 @@ type PktStore = HashMap PktKey IntermediatePacket
 
 data PacketPart = PacketPart {
     ppHeader :: !PUSHeader
+    , ppHeaderBin :: !ByteString
     , ppBody :: !ByteString
 }
 
@@ -379,13 +387,13 @@ data PacketPart = PacketPart {
 -- either a complete standalone packet or a segment
 segmentedPacketParser :: TMSegmentLen -> Parser PacketPart
 segmentedPacketParser segLen = do
-  hdr <- pusPktHdrParser
+  (hdrBin, hdr) <- A.match pusPktHdrParser
   case hdr ^. pusHdrSeqFlags of
     SegmentStandalone -> do
       let len = hdr ^. pusHdrTcLength + 1
       body <- A.take (fromIntegral len)
-      pure (PacketPart hdr body)
-    _ -> PacketPart hdr <$> packetBody hdr segLen
+      pure (PacketPart hdr hdrBin body)
+    _ -> PacketPart hdr hdrBin <$> packetBody hdr segLen
 
 
 -- | Reconstructs the packet from its parts. In case the packet is
@@ -409,15 +417,22 @@ pktReconstructorC
 pktReconstructorC missionSpecific pIf segLen pktStore = do
   x <- await
   case x of
-    Nothing        -> return ()
+    Nothing                            -> return ()
     Just (ExtDuTMFrame (epu, _), part) -> do
       let hdr    = ppHeader part
+          hdrBin = ppHeaderBin part
           pktKey = mkPktKey hdr
-          ert = epu ^. epERT
-          vcid = epu ^. epVCID
+          ert    = epu ^. epERT
+          vcid   = epu ^. epVCID
       case hdr ^. pusHdrSeqFlags of
         SegmentStandalone -> do
-          processFinishedPacket missionSpecific pIf ert hdr vcid (ppBody part)
+          processFinishedPacket missionSpecific
+                                pIf
+                                ert
+                                hdr
+                                hdrBin
+                                vcid
+                                (ppBody part)
           pktReconstructorC missionSpecific pIf segLen pktStore
         SegmentFirst -> do
           let newStore = processFirstSegment hdr part pktStore
@@ -453,10 +468,11 @@ processFinishedPacket
   -> ProtocolInterface
   -> SunTime
   -> PUSHeader
+  -> ByteString
   -> VCID
   -> ByteString
   -> ConduitT w (ByteString, ExtractedDU PUSPacket) m ()
-processFinishedPacket missionSpecific pIf ert hdr vcid body = do
+processFinishedPacket missionSpecific pIf ert hdr hdrBin vcid body = do
   case A.parseOnly (pusPktParserPayload missionSpecific pIf hdr) body of
     Left err -> do
       logWarn $ display ("Error parsing TM packet: " :: Text) <> display
@@ -471,7 +487,7 @@ processFinishedPacket missionSpecific pIf ert hdr vcid body = do
                            }
           extrPkt = pusPkt ^. protContent
       -- only pass on the packet if it is not an Idle Pkt
-      unless (pusPktIsIdle extrPkt) $ yield (body, ep)
+      unless (pusPktIsIdle extrPkt) $ yield (hdrBin <> body, ep)
 
 processFirstSegment :: PUSHeader -> PacketPart -> PktStore -> PktStore
 processFirstSegment hdr part pktStore =
@@ -549,42 +565,48 @@ processLastSegment
   -> PktStore
   -> PktKey
   -> PacketPart
-  -> ConduitT w (ByteString, ExtractedDU PUSPacket) m PktStore
-processLastSegment missionSpecific pIf segLen ert vcid pktStore pktKey part = do
-  let body = ppBody part
-      apid = hdr ^. pusHdrTcApid
-      ssc  = hdr ^. pusHdrTcSsc
-      hdr  = ppHeader part
+  -> ConduitT
+       w
+       (ByteString, ExtractedDU PUSPacket)
+       m
+       PktStore
+processLastSegment missionSpecific pIf segLen ert vcid pktStore pktKey part =
+  do
+    let body   = ppBody part
+        apid   = hdr ^. pusHdrTcApid
+        ssc    = hdr ^. pusHdrTcSsc
+        hdr    = ppHeader part
+        hdrBin = ppHeaderBin part
 
-  case HM.lookup pktKey pktStore of
-    Nothing -> do
-      logWarn
-        $  "Error: no segment of TM packet found APID: "
-        <> display apid
-        <> " SSC: "
-        <> display ssc
-      return pktStore
-    Just pkt -> if checkGapsValid segLen pkt hdr
-      then do
-        let newStore = HM.delete pktKey pktStore
-            newBody  = impBody pkt `B.append` body
-        processFinishedPacket missionSpecific pIf ert hdr vcid newBody
-        return newStore
-      else do
-        let newStore = padGap pktStore pktKey pkt hdr
-            msg =
-              "Detected gap in segmented TM APID: "
-                <> display apid
-                <> " SSC: "
-                <> display ssc
-                <> ". Packet discarded."
-        logWarn msg
-        return newStore
+    case HM.lookup pktKey pktStore of
+      Nothing -> do
+        logWarn
+          $  "Error: no segment of TM packet found APID: "
+          <> display apid
+          <> " SSC: "
+          <> display ssc
+        return pktStore
+      Just pkt -> if checkGapsValid segLen pkt hdr
+        then do
+          let newStore = HM.delete pktKey pktStore
+              newBody  = impBody pkt `B.append` body
+          processFinishedPacket missionSpecific pIf ert hdr hdrBin vcid newBody
+          return newStore
+        else do
+          let newStore = padGap pktStore pktKey pkt hdr
+              msg =
+                "Detected gap in segmented TM APID: "
+                  <> display apid
+                  <> " SSC: "
+                  <> display ssc
+                  <> ". Packet discarded."
+          logWarn msg
+          return newStore
 
 newtype ExtDuTMFrame = ExtDuTMFrame (ExtractedDU TMFrame, ByteString)
 
 instance GetPayload ExtDuTMFrame where
-    getPayload (ExtDuTMFrame x) = snd x
+  getPayload (ExtDuTMFrame x) = snd x
 
 
 -- | Conduit which takes 'ByteString' and extracts PUS Packets out of
@@ -596,7 +618,6 @@ pusPacketDecodeC
      , MonadThrow m
      , MonadReader env m
      , HasGlobalState env
-     , HasLogFunc env
      )
   => ProtocolInterface
   -> ConduitT ExtDuTMFrame (ByteString, ExtractedDU PUSPacket) m ()
@@ -627,16 +648,13 @@ tmFrameExtractionChain
      , MonadThrow m
      , MonadReader env m
      , HasGlobalState env
-     , HasLogFunc env
      )
   => TBQueue TMStoreFrame
   -> TBQueue (ByteString, ExtractedDU PUSPacket)
   -> ProtocolInterface
   -> ConduitT () Void m ()
 tmFrameExtractionChain queue outQueue interf =
-  sourceTBQueue queue
-    .| tmFrameExtraction interf
-    .| sinkTBQueue outQueue
+  sourceTBQueue queue .| tmFrameExtraction interf .| sinkTBQueue outQueue
 
 
 -- | A conduit chain. Reads 'TMFrame' s,
@@ -647,7 +665,6 @@ tmFrameExtraction
      , MonadThrow m
      , MonadReader env m
      , HasGlobalState env
-     , HasLogFunc env
      )
   => ProtocolInterface
   -> ConduitT TMStoreFrame (ByteString, ExtractedDU PUSPacket) m ()
@@ -682,7 +699,11 @@ packetBody hdr segLen = do
 
 raisePUSPacketC
   :: (MonadIO m, MonadReader env m, HasGlobalState env)
-  => ConduitT (ByteString, ExtractedDU PUSPacket) (ByteString, ExtractedDU PUSPacket) m ()
+  => ConduitT
+       (ByteString, ExtractedDU PUSPacket)
+       (ByteString, ExtractedDU PUSPacket)
+       m
+       ()
 raisePUSPacketC = do
   env <- ask
   awaitForever $ \p@(_, pkt) -> do

@@ -109,7 +109,7 @@ convertPacket tpcfs plfs paramHT pid@PIDentry {..} =
                 else TError (T.concat (L.intersperse ("\n" :: Text) errs))
 
 
-    getVariableParams = TWarn "Not implemented"
+    getVariableParams = TWarn "Variable Packets Not yet implemented"
 
 
 

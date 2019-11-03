@@ -43,6 +43,7 @@ import           Data.PUS.Events
 import           General.GetBitField
 import           General.Types
 import           General.Time
+--import           General.Hexdump
 
 
 
@@ -79,11 +80,11 @@ packetProcessorC = awaitForever $ \pkt@(oct, pusPkt) -> do
               case crcCheck oct of 
                 Left err -> logError $ "CRC Check on TM packet failed: " 
                       <> display err <> ". Packet ignored."
-                Right (chk, payload, crcCalcd, crcPkt) -> do 
+                Right (chk, payload, crcReceived, crcCalcd) -> do 
                   if chk 
                     then yieldM $ processPacket def (payload, pusPkt) 
                     else logError $ "CRC Check on TM packet failed: received: " 
-                            <> display crcPkt 
+                            <> display crcReceived 
                             <> ", calculated: " 
                             <> display crcCalcd
                             <> ". Packet ignored."
@@ -165,13 +166,19 @@ extractPIVal bytes TMPIDef {..}
 
 
 processPacket
-    :: (MonadIO m, MonadReader env m, HasPUSState env, HasCorrelationState env)
+    :: (MonadIO m, MonadReader env m, HasPUSState env, HasCorrelationState env, HasLogFunc env)
     => TMPacketDef
     -> (ByteString, ExtractedDU PUSPacket)
     -> m TMPacket
 processPacket pktDef pkt@(_, pusDU) = do
     (timestamp, epoch) <- getTimeStamp pkt
+
+    logDebug $ display ("TimeStamp: " :: Text) <> display timestamp <> display (". Getting parameters..." :: Text)
+
     params <- getParameters timestamp epoch pktDef pkt 
+
+    logDebug $ display ("Got Parameters: " :: Text) <> displayShow params
+
     let tmPacket = TMPacket {
       _tmpSPID = _tmpdSPID pktDef
       , _tmpMnemonic = _tmpdName pktDef

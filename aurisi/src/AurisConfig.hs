@@ -10,6 +10,7 @@ module AurisConfig
   , AurisConfig.loadConfigJSON
   , AurisConfig.defaultConfig
   , defaultConfigFileName
+  , convLogLevel
   )
 where
 
@@ -22,6 +23,27 @@ import           Data.Aeson.Encode.Pretty       ( encodePretty )
 import           Data.PUS.Config
 
 
+data ConfigLogLevel = 
+  LogLevelDebug 
+  | LogLevelInfo
+  | LogLevelWarn
+  | LogLevelError
+  | LogLevelOther !Text 
+  deriving (Eq, Show, Read, Generic)
+
+instance FromJSON ConfigLogLevel 
+instance ToJSON ConfigLogLevel where 
+  toEncoding = genericToEncoding defaultOptions
+
+convLogLevel :: ConfigLogLevel -> LogLevel 
+convLogLevel LogLevelDebug = LevelDebug 
+convLogLevel LogLevelInfo = LevelInfo 
+convLogLevel LogLevelWarn = LevelWarn 
+convLogLevel LogLevelError = LevelError 
+convLogLevel (LogLevelOther x) = LevelOther x 
+
+
+
 
 data AurisConfig = AurisConfig {
     aurisMission :: Text
@@ -30,6 +52,7 @@ data AurisConfig = AurisConfig {
     , aurisNctrsTCPort :: Int
     , aurisNctrsAdminPort :: Int
     , aurisMIB :: Maybe Text
+    , aurisLogLevel :: ConfigLogLevel
     , aurisPusConfig :: Config
     }
     deriving(Eq,Generic)
@@ -42,6 +65,7 @@ defaultConfig = AurisConfig { aurisPusConfig = Data.PUS.Config.defaultConfig
                             , aurisNctrsTMPort    = 2502
                             , aurisNctrsTCPort    = 32111
                             , aurisNctrsAdminPort = 32110
+                            , aurisLogLevel       = LogLevelInfo
                             , aurisMIB            = Nothing
                             }
 

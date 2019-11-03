@@ -50,7 +50,7 @@ runProcessing
   :: AurisConfig -> PUSMissionSpecific -> Maybe FilePath -> Interface -> IO ()
 runProcessing cfg missionSpecific mibPath interface = do
   defLogOptions <- logOptionsHandle stdout True
-  let logOptions = setLogMinLevel LevelDebug defLogOptions
+  let logOptions = setLogMinLevel (convLogLevel (aurisLogLevel cfg)) defLogOptions
   withLogFunc logOptions $ \logFunc -> do
     state <- newGlobalState (aurisPusConfig cfg)
                             missionSpecific

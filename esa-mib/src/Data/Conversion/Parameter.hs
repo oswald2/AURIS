@@ -102,7 +102,7 @@ convertParameter curs calibHM synthHM pcfs p@PCFentry {..} =
         Left  err    -> TError err
         Right calibs -> getNatur typ calibs
 
-    getNatur !typ !calib = case getParamNatur _pcfName _pcfNatur synthHM of
+    getNatur !typ !calib = case getParamNatur _pcfName _pcfNatur p synthHM of
         TError err   -> TError err
         TWarn  err   -> TWarn err
         TOk    !natur -> case getDefVal typ calib natur of
@@ -159,15 +159,20 @@ convertParameter curs calibHM synthHM pcfs p@PCFentry {..} =
 getParamNatur
     :: ShortText
     -> Char
+    -> PCFentry
     -> HashMap ShortText Synthetic
     -> TriState Text Text ParamNatur
-getParamNatur paramName t synthHM
+getParamNatur paramName t PCFentry {..} synthHM
     | t == 'R' = TOk NaturRaw
     | t == 'D' || t == 'H' || t == 'S' = case HM.lookup paramName synthHM of
         Nothing ->
-            TWarn
-                $  "Error: no synthetic definition found for parameter: "
-                <> toText paramName
+            case HM.lookup _pcfRelated synthHM of 
+              Nothing -> 
+                TWarn
+                    $  "Warning: no synthetic definition found for parameter: "
+                    <> toText paramName
+              Just syn -> 
+                TOk $ NaturSynthetic syn
         Just syn -> TOk $ NaturSynthetic syn
     | t == 'P' = TWarn "SPEL synthetic parameters not yet implemented"
     | t == 'C' = TOk NaturConstant

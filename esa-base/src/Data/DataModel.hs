@@ -70,7 +70,7 @@ data DataModel = DataModel {
     deriving (Show, Generic)
 makeLenses ''DataModel
 
-
+-- | returns an empty data model. 
 empty :: DataModel
 empty =
   let (params, packets) = runST $ do
