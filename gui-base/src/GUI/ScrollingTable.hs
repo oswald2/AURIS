@@ -11,9 +11,10 @@ This module is used for drawing the table widget. A table is associated with
 a 'ScrollingTableModel', which holds the data to be displayed
 -}
 module GUI.ScrollingTable
-  ( setupTable
-  , addRow
-  )
+    ( setupTable
+    , addRow
+    , setupCallback
+    )
 where
 
 import           RIO
@@ -25,6 +26,8 @@ import qualified Data.Sequence                 as S
 
 import           Graphics.UI.FLTK.LowLevel.FLTKHS
 import           Graphics.UI.FLTK.LowLevel.Fl_Enumerations
+import qualified Graphics.UI.FLTK.LowLevel.FL  as FL
+
 
 import           GUI.Colors
 
@@ -37,58 +40,62 @@ import           Model.ScrollingTableModel
 -- | Setup a FLTKHS table for a given 'TableModel' with the given
 -- 'ColumnDefinition's.
 setupTable
-  :: (ToCellText a)
-  => Ref Group
-  -> TableModel a
-  -> Vector ColumnDefinition
-  -> IO (Ref TableRow)
+    :: (ToCellText a)
+    => Ref Group
+    -> TableModel a
+    -> Vector ColumnDefinition
+    -> IO (Ref TableRow)
 setupTable group model colDefinitions = do
-  rect  <- getRectangle group
-  table <- tableRowNew rect
-                       Nothing
-                       Nothing
-                       (drawCell model colDefinitions)
-                       defaultCustomWidgetFuncs
-                       defaultCustomTableFuncs
-  initializeTable table model colDefinitions
-  add group table
-  mcsGroupSetColor group
+    rect  <- getRectangle group
+    table <- tableRowNew rect
+                         Nothing
+                         Nothing
+                         (drawCell model colDefinitions)
+                         defaultCustomWidgetFuncs
+                         defaultCustomTableFuncs
+    initializeTable table model colDefinitions
+    add group table
+    mcsGroupSetColor group
 
-  pure table
+    pure table
 
 
 initializeTable
-  :: Ref TableRow -> TableModel a -> Vector ColumnDefinition -> IO ()
+    :: Ref TableRow -> TableModel a -> Vector ColumnDefinition -> IO ()
 initializeTable table model colDefinitions = do
-  begin table
+    begin table
 
-  -- set colors
-  setColor table mcsBackground
-  setColorWithBgSel table mcsBackground mcsTableBG
-  setLabelcolor table mcsFontColor
-  setColHeaderColor table mcsWidgetBG
-  setRowHeaderColor table mcsWidgetBG
+    -- set colors
+    setColor table mcsBackground
+    --setColorWithBgSel table mcsBackground mcsTableBG
+    setSelectionColor table mcsTableSelectionColor
+    setLabelcolor table mcsFontColor
+    setColHeaderColor table mcsWidgetBG
+    setRowHeaderColor table mcsWidgetBG
 
-  -- set properties
-  nRows <- tableModelSize model
-  setRows table (Rows nRows)
-  setRowHeader table False
-  setRowHeightAll table 20
-  setRowResize table False
-  setType table SelectMulti
+    -- set properties
+    nRows <- tableModelSize model
+    setRows table (Rows nRows)
+    setRowHeader table False
+    setRowHeightAll table 20
+    setRowResize table False
+    setType table SelectMulti
+    setWhen table [WhenRelease]
 
-  let nCols = V.length colDefinitions
-  setCols table (Columns nCols)
-  setColHeader table True
+    let nCols = V.length colDefinitions
+    setCols table (Columns nCols)
+    setColHeader table True
 
-  mapM_
-    (\i -> setColWidth table (Column i) (_columnWidth (colDefinitions V.! i)))
-    [0 .. nCols - 1]
+    mapM_
+        (\i ->
+            setColWidth table (Column i) (_columnWidth (colDefinitions V.! i))
+        )
+        [0 .. nCols - 1]
 
-  --setColWidthAll table 80
-  setColResize table True
+    --setColWidthAll table 80
+    setColResize table True
+    end table
 
-  end table
 
 
 modelMaxRows :: Int
@@ -99,75 +106,110 @@ modelMaxRows = 200
 -- The table is redrawn afterwards
 addRow :: Ref TableRow -> TableModel a -> a -> IO ()
 addRow table model pkt = do
-  (Rows nRows) <- getRows table
-  when (nRows < modelMaxRows) $ setRows table (Rows (nRows + 1))
-  void $ tableModelAddValue model modelMaxRows pkt
-  redraw table
+    (Rows nRows) <- getRows table
+    when (nRows < modelMaxRows) $ setRows table (Rows (nRows + 1))
+    void $ tableModelAddValue model modelMaxRows pkt
+    redraw table
 
 
 drawCell
-  :: (ToCellText a)
-  => TableModel a
-  -> Vector ColumnDefinition
-  -> Ref TableRow
-  -> TableContext
-  -> TableCoordinate
-  -> Rectangle
-  -> IO ()
+    :: (ToCellText a)
+    => TableModel a
+    -> Vector ColumnDefinition
+    -> Ref TableRow
+    -> TableContext
+    -> TableCoordinate
+    -> Rectangle
+    -> IO ()
 drawCell model colDefinitions table context tc@(TableCoordinate (Row row) (Column col)) rectangle
-  = do
-    case context of
-      ContextStartPage -> do
-        flcSetFont helvetica (FontSize 14)
-        tableModelLock model
-      ContextEndPage -> do
-        tableModelUnlock model
-      ContextColHeader ->
-        drawHeader table (_columnName (colDefinitions V.! col)) rectangle
-      ContextRowHeader -> drawHeader table (T.pack (show row)) rectangle
-      ContextCell -> drawData table model tc (colDefinitions V.! col) rectangle
-      _ -> pure ()
+    = do
+        case context of
+            ContextStartPage -> do
+                flcSetFont helvetica (FontSize 14)
+                tableModelLock model
+            ContextEndPage -> do
+                tableModelUnlock model
+            ContextColHeader -> drawHeader
+                table
+                (_columnName (colDefinitions V.! col))
+                rectangle
+            ContextRowHeader -> drawHeader table (T.pack (show row)) rectangle
+            ContextCell ->
+                drawData table model tc (colDefinitions V.! col) rectangle
+            _ -> pure ()
 
 
 drawHeader :: Ref TableRow -> Text -> Rectangle -> IO ()
 drawHeader table s rectangle = do
-  flcPushClip rectangle
-  rhc <- getRowHeaderColor table
-  flcDrawBox ThinUpBox rectangle rhc
-  flcSetColor mcsTableFG
-  flcDrawInBox s rectangle alignCenter Nothing Nothing
-  flcPopClip
+    flcPushClip rectangle
+    rhc <- getRowHeaderColor table
+    flcDrawBox ThinUpBox rectangle rhc
+    flcSetColor mcsTableFG
+    flcDrawInBox s rectangle alignCenter Nothing Nothing
+    flcPopClip
 
 
 padRectangle :: Rectangle -> Int -> Rectangle
-padRectangle (Rectangle (Position (X x) (Y y)) (Size (Width w) (Height h))) pad =
-  Rectangle (Position (X (x + pad)) (Y y)) (Size (Width (w - 2 * pad)) (Height h))
+padRectangle (Rectangle (Position (X x) (Y y)) (Size (Width w) (Height h))) pad
+    = Rectangle (Position (X (x + pad)) (Y y))
+                (Size (Width (w - 2 * pad)) (Height h))
 
 
 drawData
-  :: (ToCellText a)
-  => Ref TableRow
-  -> TableModel a
-  -> TableCoordinate
-  -> ColumnDefinition
-  -> Rectangle
-  -> IO ()
+    :: (ToCellText a)
+    => Ref TableRow
+    -> TableModel a
+    -> TableCoordinate
+    -> ColumnDefinition
+    -> Rectangle
+    -> IO ()
 drawData table model (TableCoordinate (Row row) (Column _col)) colDef rectangle
-  = do
-    flcPushClip rectangle
-    flcSetColor mcsTableBG
-    flcRectf rectangle
-    flcSetColor mcsTableFG
+    = do
+        flcPushClip rectangle
 
-    cell <- queryTableModelUnlocked model (\s -> toCellText (s S.!? row) colDef)
+        bgColor <- do
+            isSelected' <- getRowSelected table (Row row)
+            case isSelected' of
+                Right is' ->
+                    if is' then getSelectionColor table else return mcsTableBG
+                Left _ -> return mcsTableBG
+        flcSetColor bgColor
 
-    flcDrawInBox (_dispcText cell)
-                 (padRectangle rectangle 5)
-                 (_dispcAlignment cell)
-                 Nothing
-                 Nothing
+        flcRectf rectangle
+        flcSetColor mcsTableFG
 
-    color' <- getColor table
-    flcSetColor color'
-    flcRect rectangle
-    flcPopClip
+        cell <- queryTableModelUnlocked
+            model
+            (\s -> toCellText (s S.!? row) colDef)
+
+        flcDrawInBox (_dispcText cell)
+                     (padRectangle rectangle 5)
+                     (_dispcAlignment cell)
+                     Nothing
+                     Nothing
+
+        color' <- getColor table
+        flcSetColor color'
+        flcRect rectangle
+        flcPopClip
+
+
+
+setupCallback :: Ref TableRow -> (Row -> IO ()) -> IO ()
+setupCallback table doubleClickCB = do
+  setCallback table (eventCallback doubleClickCB)
+
+
+eventCallback :: (Row -> IO()) -> Ref TableRow -> IO ()
+eventCallback doubleClickCB table  = do
+    r <- callbackRow table
+    context'   <- callbackContext table
+    case context' of
+        ContextCell -> do
+            event'       <- FL.eventIsClick
+            mouseButton' <- FL.eventButton
+            clicks'      <- FL.eventClicks
+            case mouseButton' of
+                Nothing  -> return ()
+                Just mb' -> when (event' && mb' == Mouse_Left && clicks' == 1) $ doubleClickCB r
+        _ -> return ()

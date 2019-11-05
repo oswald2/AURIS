@@ -8,6 +8,7 @@ module GUI.MainWindow
   ( MainWindowFluid(..)
   , MainWindow(..)
   , TMPacketTabFluid(..)
+  , TMPacketTab(..)
   , createMainWindow
   , mwWindow
   , mwOpenFile
@@ -15,6 +16,8 @@ module GUI.MainWindow
   , mwProgress
   , mwTabs
   , mwTMPTab
+  , mwTMPGroup
+  , mwTMFGroup
   , mwMessageDisplay
   , tmpTabButtonAdd
   , tmpTable

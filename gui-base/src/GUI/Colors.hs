@@ -26,6 +26,11 @@ mcsTableBG = Color 0x7d7d7d00
 mcsTableFG :: Color
 mcsTableFG = Color 0xffffff00
 
+mcsTableSelectionColor :: Color
+mcsTableSelectionColor = Color 0x0000aa00
+
+
+
 
 mcsWindowSetColor :: Ref Window -> IO ()
 mcsWindowSetColor w = do
@@ -69,3 +74,9 @@ mcsBrowserSetColor ::Ref Browser -> IO ()
 mcsBrowserSetColor w = do
   setColor w mcsWidgetBG
   setColorWithBgSel w mcsWidgetBG mcsWidgetFG
+
+
+mcsTableSetColor :: Ref TableRow -> IO ()
+mcsTableSetColor w = do
+  setColor w mcsTableBG
+  setSelectionColor w mcsTableSelectionColor
