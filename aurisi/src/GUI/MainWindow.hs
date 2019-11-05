@@ -8,6 +8,7 @@ module GUI.MainWindow
   ( MainWindowFluid(..)
   , MainWindow(..)
   , TMPacketTabFluid(..)
+  , createMainWindow
   , mwWindow
   , mwOpenFile
   , mwSaveFile
@@ -73,6 +74,8 @@ data MainWindowFluid = MainWindowFluid {
     , _mfProgress :: Ref Progress
     , _mfTabs :: Ref Tabs
     , _mfTMPTab :: TMPacketTabFluid
+    , _mfTMPGroup :: Ref Group
+    , _mfTMFGroup :: Ref Group
     , _mfMessageDisplay :: Ref Browser
     }
 
@@ -84,6 +87,8 @@ data MainWindow = MainWindow {
     , _mwProgress :: Ref Progress
     , _mwTabs :: Ref Tabs
     , _mwTMPTab :: TMPacketTab
+    , _mwTMPGroup :: Ref Group
+    , _mwTMFGroup :: Ref Group
     , _mwMessageDisplay :: Ref Browser
     }
 makeLenses ''MainWindow
@@ -92,3 +97,31 @@ makeLenses ''MainWindow
 mwAddTMPacket :: MainWindow -> TMPacket -> IO ()
 mwAddTMPacket window pkt = do
   tmpTabAddRow (window ^. mwTMPTab) pkt
+
+
+
+createMainWindow :: MainWindowFluid -> IO MainWindow
+createMainWindow MainWindowFluid {..} = do
+    tmpTab <- createTMPTab _mfTMPTab
+    mcsWindowSetColor _mfWindow
+    mcsTabsSetColor _mfTabs
+    mcsGroupSetColor _mfTMPGroup
+    mcsGroupSetColor _mfTMFGroup
+    mcsBrowserSetColor _mfMessageDisplay
+
+    -- mcsWidgetSetColor _mfOpenFile
+    -- mcsWidgetSetColor _mfSaveFile
+  --   mcsButtonSetColor _mfArmButton
+  --   mcsButtonSetColor _mfGoButton
+    let mainWindow = MainWindow { _mwWindow         = _mfWindow
+                                , _mwOpenFile       = _mfOpenFile
+                                , _mwSaveFile       = _mfSaveFile
+                                , _mwProgress       = _mfProgress
+                                , _mwTabs           = _mfTabs
+                                , _mwTMPTab         = tmpTab
+                                , _mwTMPGroup       = _mfTMPGroup
+                                , _mwTMFGroup       = _mfTMFGroup
+                                , _mwMessageDisplay = _mfMessageDisplay
+                                }
+    pure mainWindow
+

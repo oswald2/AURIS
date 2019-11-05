@@ -1,5 +1,5 @@
 # data file for the Fltk User Interface Designer (fluid)
-version 1.0304
+version 1.0400
 header_name {.h}
 code_name {.cxx}
 decl {import GUI.MainWindow} {private local
@@ -12,7 +12,7 @@ Function {makeWindow(IO(MainWindowFluid))} {open
 } {
   Fl_Window mainWindow {
     label AURISi open
-    xywh {369 51 1230 755} type Double color 30 labelcolor 6 resizable visible
+    xywh {433 77 1230 755} type Double color 30 labelcolor 6 hide resizable
   } {
     Fl_Menu_Bar menuBar {open
       xywh {0 5 1230 30} color 30 labelcolor 6 textcolor 6
@@ -61,7 +61,7 @@ Function {makeWindow(IO(MainWindowFluid))} {open
     Fl_Group messagesGroup {open
       xywh {0 620 1230 115} resizable
     } {
-      Fl_Browser messageDisplay {selected
+      Fl_Browser messageDisplay {
         xywh {0 620 1230 115} color 30 textcolor 61 resizable
       }
     }
@@ -78,6 +78,8 @@ let { window = MainWindowFluid { _mfWindow = mainWindow
     , _mfProgress = mainProgress
     , _mfTabs = mainTab
     , _mfTMPTab = tmpTab
+    , _mfTMPGroup = tabTMPackets
+    , _mfTMFGroup = tabTMFrames
     , _mfMessageDisplay = messageDisplay
     }};
     return window} {}

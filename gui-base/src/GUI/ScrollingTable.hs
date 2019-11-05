@@ -1,6 +1,6 @@
 {-|
 Module      : GUI.ScrollingTable
-Description : Provides actually the FLTKHS based drawing of the table 
+Description : Provides actually the FLTKHS based drawing of the table
 Copyright   : (c) Michael Oswald, 2019
 License     : BSD-3
 Maintainer  : michael.oswald@onikudaki.net
@@ -34,8 +34,8 @@ import           Model.ScrollingTableModel
 
 
 
--- | Setup a FLTKHS table for a given 'TableModel' with the given 
--- 'ColumnDefinition's. 
+-- | Setup a FLTKHS table for a given 'TableModel' with the given
+-- 'ColumnDefinition's.
 setupTable
   :: (ToCellText a)
   => Ref Group
@@ -139,9 +139,9 @@ drawHeader table s rectangle = do
   flcPopClip
 
 
-padRectangle :: Rectangle -> Int -> Rectangle 
-padRectangle (Rectangle (Position (X x) (Y y)) (Size (Width w) (Height h))) pad = 
-  (Rectangle (Position (X (x + pad)) (Y y)) (Size (Width (w - 2 * pad)) (Height h))) 
+padRectangle :: Rectangle -> Int -> Rectangle
+padRectangle (Rectangle (Position (X x) (Y y)) (Size (Width w) (Height h))) pad =
+  Rectangle (Position (X (x + pad)) (Y y)) (Size (Width (w - 2 * pad)) (Height h))
 
 
 drawData
