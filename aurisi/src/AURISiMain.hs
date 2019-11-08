@@ -54,7 +54,8 @@ dirty | $(gitDirty) = "true"
 ui :: IO MainWindow
 ui = do
     window     <- makeWindow
-    mainWindow <- createMainWindow window
+    paramDetails <- makeParamDetailsWindow
+    mainWindow <- createMainWindow window paramDetails
     setupCallbacks mainWindow
     showWidget (_mwWindow mainWindow)
     pure mainWindow

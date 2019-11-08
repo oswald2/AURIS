@@ -5,6 +5,9 @@ code_name {.cxx}
 decl {import GUI.MainWindow} {private local
 }
 
+decl {import GUI.ParamDetailWindow} {private local
+}
+
 decl {import Graphics.UI.FLTK.LowLevel.FLTKHS} {private local
 }
 
@@ -12,7 +15,7 @@ Function {makeWindow(IO(MainWindowFluid))} {open
 } {
   Fl_Window mainWindow {
     label AURISi open
-    xywh {311 67 1230 755} type Double color 30 labelcolor 6 resizable visible
+    xywh {311 67 1255 755} type Double color 30 labelcolor 6 resizable visible
   } {
     Fl_Menu_Bar menuBar {open
       xywh {0 5 1230 30} color 30 labelcolor 6 textcolor 6
@@ -35,7 +38,7 @@ Function {makeWindow(IO(MainWindowFluid))} {open
       xywh {0 735 1230 20}
     }
     Fl_Tabs mainTab {open
-      xywh {0 35 1230 585}
+      xywh {0 35 1230 590}
     } {
       Fl_Group tabTMFrames {
         label {TM Frames} open
@@ -47,24 +50,17 @@ Function {makeWindow(IO(MainWindowFluid))} {open
       }
       Fl_Group tabTMPackets {
         label {TM Packets} open
-        xywh {0 65 1230 555} resizable
+        xywh {0 65 1230 560} resizable
       } {
-        Fl_Tile tmPacketTile {open
-          xywh {0 100 1230 520}
-        } {
-          Fl_Group tableTMPackets {open
-            xywh {0 100 1125 520}
-          } {}
-          Fl_Group tmTableParams {open
-            xywh {1120 100 110 520}
-          } {}
-        }
-        Fl_Group groupTMPHeader {open
-          xywh {0 65 1230 35}
+        Fl_Group tableTMPackets {open
+          xywh {5 105 1220 520} box THIN_DOWN_FRAME
+        } {}
+        Fl_Group groupTMPHeader {open selected
+          xywh {0 70 1230 35} box THIN_UP_FRAME
         } {
           Fl_Button buttonAdd {
             label Add
-            xywh {1125 70 100 25}
+            xywh {1120 75 100 25}
           }
         }
       }
@@ -83,13 +79,7 @@ Function {makeWindow(IO(MainWindowFluid))} {open
     }
 
     };
-    
-let { tmpParTab = TMPParamTabFluid {
-        _tmppTabGroup = tmTableParams
-        }
-
-    };
-    
+        
 let { window = MainWindowFluid { _mfWindow = mainWindow
     , _mfOpenFile = menuOpenFile
     , _mfSaveFile = menuSaveFile
@@ -99,11 +89,31 @@ let { window = MainWindowFluid { _mfWindow = mainWindow
     , _mfTMPGroup = tabTMPackets
     , _mfTMFGroup = tabTMFrames
     , _mfTMPHeaderGroup = groupTMPHeader
-    , _mfTMPTile = tmPacketTile
-    , _mfTMParamGroup = tmTableParams
-    , _mfTMPParTab = tmpParTab
     , _mfMessageDisplay = messageDisplay
     }};
-    return window} {selected
+    return window} {}
+}
+
+Function {makeParamDetailsWindow(IO(ParamDetailWindowFluid))} {
+  comment {Function to return a parameter details window} open
+} {
+  Fl_Window tmParamDetailsWindow {
+    label {TM Parameter Details} open
+    xywh {561 130 635 635} type Double visible
+  } {
+    Fl_Group groupFilter {
+      label Filter open
+      xywh {5 20 625 55} box THIN_UP_FRAME align 5
+    } {}
+    Fl_Group groupParamDetails {
+      label Parameters open
+      xywh {5 100 625 535} box THIN_DOWN_FRAME align 5
+    } {}
   }
+  code {let { paramDetailwindow = ParamDetailWindowFluid { 
+     _pdwfWindow = tmParamDetailsWindow
+    , _pdfwFilterGroup = groupFilter
+    , _pdfwParamDetailsGroup = groupParamDetails
+    }};
+return paramDetailwindow} {}
 }

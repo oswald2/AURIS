@@ -12,8 +12,8 @@ where
 
 
 import           RIO
-import qualified RIO.Text                      as T
-import qualified Data.Text.IO                  as T
+-- import qualified RIO.Text                      as T
+-- import qualified Data.Text.IO                  as T
 import qualified RIO.Vector                    as V
 import qualified Data.Sequence                 as S
 
@@ -27,9 +27,9 @@ import           Model.ScrollingTableModel
 import           General.APID
 import           General.PUSTypes
 import           Data.PUS.TMPacket
-import           Data.TM.Parameter
-import           Data.TM.Value
-import           Data.TM.Validity
+-- import           Data.TM.Parameter
+-- import           Data.TM.Value
+-- import           Data.TM.Validity
 
 import           General.Time
 
@@ -37,8 +37,6 @@ import           General.Time
 
 setupCallbacks :: MainWindow -> IO ()
 setupCallbacks window = do
-    -- buff <- textBufferNew Nothing Nothing
-    -- setBuffer (window ^. mwTextEditor) (Just buff)
   setCallback (window ^. mwTMPTab . tmpTabButtonAdd) (addCB window)
 
   GUI.ScrollingTable.setupCallback (window ^. mwTMPTab . tmpTable)
@@ -74,21 +72,6 @@ addCB window _btn = do
 
   addRow table model pusPkt
 
-  addCB2 window _btn
   return ()
 
-
-addCB2 :: MainWindow -> Ref Button -> IO ()
-addCB2 window _btn = do
-  now <- getCurrentTime
-  let table = window ^. mwTMParams . tmppTable
-      model = window ^. mwTMParams . tmppModel
-      param = TMParameter { _pName     = "TestParam"
-                          , _pTime     = now
-                          , _pValue    = TMValue (TMValInt 10) clearValidity
-                          , _pEngValue = Nothing
-                          }
-
-  addRow table model param
-  return ()
 
