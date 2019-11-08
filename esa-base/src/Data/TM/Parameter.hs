@@ -12,16 +12,20 @@ from a packet. This is a value, while a parameter definition is the "type" of
 the parameter
 -}
 {-# LANGUAGE
-    OverloadedStrings
-    , BangPatterns
-    , NoImplicitPrelude
+  TemplateHaskell
 #-}
 module Data.TM.Parameter
-    ( TMParameter(..)
-    )
+  ( TMParameter(..)
+  , pName 
+  , pTime  
+  , pValue 
+  , pEngValue
+
+  )
 where
 
 import           RIO
+import           Control.Lens                   ( makeLenses )
 import           Data.Text.Short
 import           Codec.Serialise
 import           Data.Aeson
@@ -44,6 +48,7 @@ data TMParameter = TMParameter {
     -- | the engineering (calibrated) value if applicable
     , _pEngValue :: Maybe TMValue
 } deriving (Show, Generic)
+makeLenses ''TMParameter
 
 instance NFData TMParameter
 instance Serialise TMParameter

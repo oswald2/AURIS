@@ -1,5 +1,5 @@
 # data file for the Fltk User Interface Designer (fluid)
-version 1.0400
+version 1.0304
 header_name {.h}
 code_name {.cxx}
 decl {import GUI.MainWindow} {private local
@@ -12,7 +12,7 @@ Function {makeWindow(IO(MainWindowFluid))} {open
 } {
   Fl_Window mainWindow {
     label AURISi open
-    xywh {433 77 1230 755} type Double color 30 labelcolor 6 hide resizable
+    xywh {311 67 1230 755} type Double color 30 labelcolor 6 resizable visible
   } {
     Fl_Menu_Bar menuBar {open
       xywh {0 5 1230 30} color 30 labelcolor 6 textcolor 6
@@ -49,12 +49,23 @@ Function {makeWindow(IO(MainWindowFluid))} {open
         label {TM Packets} open
         xywh {0 65 1230 555} resizable
       } {
-        Fl_Group tableTMPackets {open
-          xywh {0 90 1230 530}
-        } {}
-        Fl_Button buttonAdd {
-          label Add
-          xywh {1125 65 105 25}
+        Fl_Tile tmPacketTile {open
+          xywh {0 100 1230 520}
+        } {
+          Fl_Group tableTMPackets {open
+            xywh {0 100 1125 520}
+          } {}
+          Fl_Group tmTableParams {open
+            xywh {1120 100 110 520}
+          } {}
+        }
+        Fl_Group groupTMPHeader {open
+          xywh {0 65 1230 35}
+        } {
+          Fl_Button buttonAdd {
+            label Add
+            xywh {1125 70 100 25}
+          }
         }
       }
     }
@@ -72,6 +83,13 @@ Function {makeWindow(IO(MainWindowFluid))} {open
     }
 
     };
+    
+let { tmpParTab = TMPParamTabFluid {
+        _tmppTabGroup = tmTableParams
+        }
+
+    };
+    
 let { window = MainWindowFluid { _mfWindow = mainWindow
     , _mfOpenFile = menuOpenFile
     , _mfSaveFile = menuSaveFile
@@ -80,7 +98,12 @@ let { window = MainWindowFluid { _mfWindow = mainWindow
     , _mfTMPTab = tmpTab
     , _mfTMPGroup = tabTMPackets
     , _mfTMFGroup = tabTMFrames
+    , _mfTMPHeaderGroup = groupTMPHeader
+    , _mfTMPTile = tmPacketTile
+    , _mfTMParamGroup = tmTableParams
+    , _mfTMPParTab = tmpParTab
     , _mfMessageDisplay = messageDisplay
     }};
-    return window} {}
+    return window} {selected
+  }
 }

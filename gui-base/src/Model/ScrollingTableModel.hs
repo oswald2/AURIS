@@ -19,10 +19,12 @@ module Model.ScrollingTableModel
   , DisplayCell(..)
   , TableModel
   , tableModelNew
+  , tableModelNewFromFoldable
   , queryTableModel 
   , queryTableModelUnlocked
   , tableModelSize
   , tableModelAddValue
+  , tableModelSetValues
   , tableModelLock
   , tableModelUnlock
   , columnNumber 
@@ -104,6 +106,14 @@ data TableModel a = TableModel {
 tableModelNew :: IO (TableModel a)
 tableModelNew = TableModel <$> newMVar () <*> newIORef S.empty
 
+
+-- | Creates a new 'TableModel' from an existing 'Foldable'. 
+tableModelNewFromFoldable :: (Foldable t) => t a -> IO (TableModel a)
+tableModelNewFromFoldable t = do 
+  let s = S.fromList (toList t)
+  TableModel <$> newMVar () <*> newIORef s
+
+
 -- | Locks the 'MVar' of the table model. This is necessary in the 
 -- drawing functions of the table. The FLTKHS table calls the draw 
 -- function for each cell, but the context of the cell is different.
@@ -164,3 +174,11 @@ tableModelAddValue model !modelMaxRows !x = do
             S.Empty          -> S.singleton x
     writeIORef (_tabMData model) newDat
 
+
+-- | Set the complete model values at once from a 'Foldable'. Old values 
+-- are discarded
+tableModelSetValues :: (Foldable t) => TableModel a -> t a -> IO () 
+tableModelSetValues model t = do 
+  let !s = S.fromList (toList t)
+  withLockedTableModel model $ \_ -> do 
+    writeIORef (_tabMData model) s

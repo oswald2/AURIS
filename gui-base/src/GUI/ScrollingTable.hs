@@ -14,6 +14,7 @@ module GUI.ScrollingTable
     ( setupTable
     , addRow
     , setupCallback
+    , setTableFromModel
     )
 where
 
@@ -96,6 +97,14 @@ initializeTable table model colDefinitions = do
     setColResize table True
     end table
 
+
+-- | refresh a table from a model. There is no maxRow check, so 
+-- the model is displayed as-is
+setTableFromModel :: Ref TableRow -> TableModel a -> IO ()
+setTableFromModel table model = do 
+  nRows <- tableModelSize model
+  setRows table (Rows nRows)
+  redraw table 
 
 
 modelMaxRows :: Int

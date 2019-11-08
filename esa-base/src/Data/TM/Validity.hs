@@ -148,3 +148,5 @@ isUndefinedValue (Validity x) = x .&. undefinedValue /= 0
 {-# INLINABLE setUndefinedValue #-}
 setUndefinedValue :: Validity -> Validity
 setUndefinedValue (Validity x) = Validity (x .|. undefinedValue)
+
+

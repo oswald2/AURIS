@@ -45,8 +45,10 @@ library
   exposed-modules:
     GUI.PUSPacketTable
     GUI.TMPacketTable
+    GUI.TMPParamTable
     Model.PUSPacketModel
     Model.TMPacketModel
+    Model.TMPParamModel
 
 
 
