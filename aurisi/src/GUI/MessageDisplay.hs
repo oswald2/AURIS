@@ -19,8 +19,8 @@ import           General.Time
 messageAreaLogFunc :: MainWindow -> LogFunc
 messageAreaLogFunc window = mkLogFunc (addMessageLine window)
 
-maxMsgs :: Int 
-maxMsgs = 200 
+maxMsgs :: Int
+maxMsgs = 200
 
 
 addMessageLine
@@ -66,12 +66,12 @@ addMessageLine window _stack source level builder = do
     LevelOther lvl -> do
       let text = utf8BuilderToText $ display lvl <> display source <> builder
       dispMsg text
-  
-  where 
+
+  where
     dispMsg text = do
       let msgDisplay = window ^. mwMessageDisplay
-      withFLLock $ do 
+      withFLLock $ do
         size <- getSize msgDisplay
         when (size > maxMsgs) $ remove msgDisplay (LineNumber 1)
-        add msgDisplay text
+        mapM_ (add msgDisplay) (T.lines text)
 

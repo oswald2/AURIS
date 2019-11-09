@@ -1,9 +1,9 @@
 {
     "aurisNctrsTMPort": 2502,
     "aurisNctrsHost": "localhost",
-    "aurisNctrsTCPort": 32111,
+    "aurisNctrsTCPort": 20009,
     "aurisMIB": null,
-    "aurisNctrsAdminPort": 32110,
+    "aurisNctrsAdminPort": 20010,
     "aurisMission": "DEFAULT",
     "aurisPusConfig": {
         "cfgUnknownSPID": 5071,
@@ -22,7 +22,7 @@
             "fromLeaps": 17
         },
         "cfgSCID": {
-            "getSCID": 0
+            "getSCID": 151
         },
         "cfgMaxTMFrameLen": 1115,
         "cfgCltuBlockSize": "CltuBS_8",

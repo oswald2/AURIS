@@ -20,6 +20,10 @@ mcsWidgetFG = Color 0x7d7d7d00
 mcsFontColor :: Color
 mcsFontColor = Color 0xADE2E600
 
+mcsEmphColor :: Color
+mcsEmphColor = Color 0xD9D9A800
+
+
 mcsTableBG :: Color
 mcsTableBG = Color 0x7d7d7d00
 
@@ -70,6 +74,13 @@ mcsGroupSetColor w = do
     setColorWithBgSel w mcsBackground mcsWidgetFG
     setLabelcolor w mcsFontColor
 
+mcsHeaderGroupSetColor :: Ref Group -> IO ()
+mcsHeaderGroupSetColor w = do
+    setColor w mcsWidgetBG
+    setColorWithBgSel w mcsWidgetBG mcsFontColor
+    setLabelcolor w mcsFontColor
+
+
 mcsBrowserSetColor ::Ref Browser -> IO ()
 mcsBrowserSetColor w = do
   setColor w mcsWidgetBG
@@ -80,3 +91,18 @@ mcsTableSetColor :: Ref TableRow -> IO ()
 mcsTableSetColor w = do
   setColor w mcsTableBG
   setSelectionColor w mcsTableSelectionColor
+
+
+mcsOutputSetColor :: Ref Output -> IO ()
+mcsOutputSetColor w = do
+  setColor w mcsWidgetBG
+  setColorWithBgSel w mcsWidgetBG mcsWidgetFG
+  setLabelcolor w mcsFontColor
+  setTextcolor w mcsEmphColor
+
+mcsLabelSetColor :: Ref Output -> IO ()
+mcsLabelSetColor w = do
+  setColor w mcsWidgetBG
+  setColorWithBgSel w mcsWidgetBG mcsWidgetFG
+  setLabelcolor w mcsFontColor
+  setTextcolor w mcsEmphColor

@@ -1,4 +1,4 @@
-{-# LANGUAGE 
+{-# LANGUAGE
   TemplateHaskell
 #-}
 module GUI.ParamDetailWindow
@@ -7,7 +7,7 @@ module GUI.ParamDetailWindow
   , createTMParamDetailWindow
   , parDetWinSetValues
 
-  , pdwWindow 
+  , pdwWindow
   , pdwFilterGroup
   , pdwParamDetailsTable
 
@@ -80,7 +80,7 @@ createTMParamDetailWindow :: ParamDetailWindowFluid -> IO ParamDetailWindow
 createTMParamDetailWindow ParamDetailWindowFluid {..} = do
   paramTable <- createTMParamTable _pdfwParamDetailsGroup
   mcsWindowSetColor _pdwfWindow
-  
+
   mcsGroupSetColor _pdfwFilterGroup
   mcsGroupSetColor _pdfwParamDetailsGroup
 

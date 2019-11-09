@@ -1,4 +1,4 @@
-{-# LANGUAGE 
+{-# LANGUAGE
     OverloadedStrings
     , BangPatterns
     , NoImplicitPrelude
@@ -23,24 +23,24 @@ import           Data.Aeson.Encode.Pretty       ( encodePretty )
 import           Data.PUS.Config
 
 
-data ConfigLogLevel = 
-  LogLevelDebug 
+data ConfigLogLevel =
+  LogLevelDebug
   | LogLevelInfo
   | LogLevelWarn
   | LogLevelError
-  | LogLevelOther !Text 
+  | LogLevelOther !Text
   deriving (Eq, Show, Read, Generic)
 
-instance FromJSON ConfigLogLevel 
-instance ToJSON ConfigLogLevel where 
+instance FromJSON ConfigLogLevel
+instance ToJSON ConfigLogLevel where
   toEncoding = genericToEncoding defaultOptions
 
-convLogLevel :: ConfigLogLevel -> LogLevel 
-convLogLevel LogLevelDebug = LevelDebug 
-convLogLevel LogLevelInfo = LevelInfo 
-convLogLevel LogLevelWarn = LevelWarn 
-convLogLevel LogLevelError = LevelError 
-convLogLevel (LogLevelOther x) = LevelOther x 
+convLogLevel :: ConfigLogLevel -> LogLevel
+convLogLevel LogLevelDebug = LevelDebug
+convLogLevel LogLevelInfo = LevelInfo
+convLogLevel LogLevelWarn = LevelWarn
+convLogLevel LogLevelError = LevelError
+convLogLevel (LogLevelOther x) = LevelOther x
 
 
 
@@ -63,8 +63,8 @@ defaultConfig = AurisConfig { aurisPusConfig = Data.PUS.Config.defaultConfig
                             , aurisMission        = "DEFAULT"
                             , aurisNctrsHost      = "localhost"
                             , aurisNctrsTMPort    = 2502
-                            , aurisNctrsTCPort    = 32111
-                            , aurisNctrsAdminPort = 32110
+                            , aurisNctrsTCPort    = 20009
+                            , aurisNctrsAdminPort = 20010
                             , aurisLogLevel       = LogLevelInfo
                             , aurisMIB            = Nothing
                             }

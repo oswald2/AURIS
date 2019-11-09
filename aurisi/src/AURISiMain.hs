@@ -53,9 +53,9 @@ dirty | $(gitDirty) = "true"
 
 ui :: IO MainWindow
 ui = do
-    window     <- makeWindow
+    window <- makeWindow
     paramDetails <- makeParamDetailsWindow
-    mainWindow <- createMainWindow window paramDetails
+    mainWindow   <- createMainWindow window paramDetails
     setupCallbacks mainWindow
     showWidget (_mwWindow mainWindow)
     pure mainWindow
@@ -129,6 +129,8 @@ main = do
 
                 -- create the main window
                 mainWindow                <- ui
+
+                mwSetMission mainWindow (aurisMission cfg)
                 -- setup the interface
                 (interface, _eventThread) <- initialiseInterface mainWindow
                 -- determine the mission-specific functionality
