@@ -35,7 +35,6 @@ mcsTableSelectionColor = Color 0x0000aa00
 
 
 
-
 mcsWindowSetColor :: Ref Window -> IO ()
 mcsWindowSetColor w = do
     setColor w mcsBackground

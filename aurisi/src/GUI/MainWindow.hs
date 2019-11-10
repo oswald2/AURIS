@@ -25,14 +25,18 @@ module GUI.MainWindow
     , mwSetMission
     , mwDeskHeaderGroup
     , mwTMParamDetailWindow
+    , mwLogo
     )
 where
 
 import           RIO
-
+import qualified RIO.Text                      as T
+import qualified Data.Text.IO                  as T
+import           Data.Text.Encoding             ( decodeUtf8 )
 import           Control.Lens                   ( makeLenses )
 
 import           Graphics.UI.FLTK.LowLevel.FLTKHS
+--import qualified Graphics.UI.FLTK.LowLevel.FL  as FL
 
 --import           Model.TMPacketModel
 --import           Model.ScrollingTableModel
@@ -43,6 +47,7 @@ import           GUI.TMPacketTab
 import           GUI.Colors
 import           GUI.ParamDetailWindow
 import           GUI.Utils
+import           GUI.Logo
 
 import           Data.PUS.TMPacket
 
@@ -63,6 +68,7 @@ data MainWindowFluid = MainWindowFluid {
     , _mfMessageDisplay :: Ref Browser
     , _mfMission :: Ref Output
     , _mfDeskHeaderGroup :: Ref Group
+    , _mfLogoGroup :: Ref Group
     }
 
 
@@ -80,6 +86,7 @@ data MainWindow = MainWindow {
     , _mwMessageDisplay :: Ref Browser
     , _mwMission :: Ref Output
     , _mwDeskHeaderGroup :: Ref Group
+    , _mwLogo :: Ref Widget
     }
 makeLenses ''MainWindow
 
@@ -90,11 +97,11 @@ mwAddTMPacket window pkt = do
 
 mwSetTMParameters :: MainWindow -> TMPacket -> IO ()
 mwSetTMParameters window pkt = do
-  tmpTabDetailSetValues (window ^. mwTMPTab) pkt
+    tmpTabDetailSetValues (window ^. mwTMPTab) pkt
 
 mwSetMission :: MainWindow -> Text -> IO ()
 mwSetMission window mission = do
-  void $ setValue (window ^. mwMission) mission
+    void $ setValue (window ^. mwMission) mission
 
 
 createMainWindow :: MainWindowFluid -> ParamDetailWindowFluid -> IO MainWindow
@@ -119,6 +126,15 @@ createMainWindow MainWindowFluid {..} paramDetailWindow = do
 
     pdetw <- createTMParamDetailWindow paramDetailWindow
 
+    rectangle' <- getRectangle _mfLogoGroup
+
+    widget' <- widgetCustom rectangle'
+        Nothing
+        drawLogo
+        defaultCustomWidgetFuncs
+
+    add _mfTMPHeaderGroup widget'
+
     -- mcsWidgetSetColor _mfOpenFile
     -- mcsWidgetSetColor _mfSaveFile
   --   mcsButtonSetColor _mfArmButton
@@ -135,7 +151,30 @@ createMainWindow MainWindowFluid {..} paramDetailWindow = do
                                 , _mwTMParamDetailWindow = pdetw
                                 , _mwMessageDisplay      = _mfMessageDisplay
                                 , _mwMission             = _mfMission
-                                , _mwDeskHeaderGroup  = _mfDeskHeaderGroup
+                                , _mwDeskHeaderGroup     = _mfDeskHeaderGroup
+                                , _mwLogo                = widget'
                                 }
     pure mainWindow
+
+
+drawLogo :: Ref Widget -> IO ()
+drawLogo widget = do
+    logo <- svgImageNew aurisLogo
+    case logo of
+        Left err -> do
+            T.putStrLn $ "Could not load logo: " <> T.pack (show err)
+            exitFailure
+        Right svg -> do
+            rectangle' <- getRectangle widget
+            let (x', y', _w', _h') = fromRectangle rectangle'
+            flcPushClip rectangle'
+
+            flcSetColor mcsTableFG
+            flcRectf rectangle'
+
+            draw svg (Position (X x') (Y y'))
+            destroy svg
+
+            flcPopClip
+
 

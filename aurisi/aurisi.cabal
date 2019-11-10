@@ -49,6 +49,7 @@ Executable AURISi
     GUI.TMPacketTab
     GUI.ParamDetailWindow
     GUI.MessageDisplay
+    GUI.Logo
     AurisInterface
     AurisProcessing
     AurisConfig
@@ -76,7 +77,8 @@ Executable AURISi
     conduit-extra,
     directory,
     filepath,
-    text-short
+    text-short,
+    file-embed
 
   Other-Modules: AURISi
 

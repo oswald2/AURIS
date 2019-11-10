@@ -21,90 +21,90 @@ Function {makeWindow(IO(MainWindowFluid))} {open
       xywh {0 1030 1920 20}
     }
     Fl_Tabs mainTab {open
-      xywh {0 45 1975 870} resizable
+      xywh {0 65 1970 850} resizable
     } {
       Fl_Group tabTMFrames {
         label {TM Frames} open
-        xywh {0 65 1920 850} hide
+        xywh {0 85 1915 830} hide
       } {
         Fl_Group tableTMFrames {open
-          xywh {0 90 1920 825}
+          xywh {0 110 1915 805}
         } {}
       }
       Fl_Group tabTMPackets {
-        label {TM Packets} open
-        xywh {0 65 1975 850}
+        label {TM Packets} open selected
+        xywh {0 85 1970 830}
       } {
         Fl_Group tableTMPackets {open
-          xywh {0 105 1225 810} box THIN_DOWN_FRAME
+          xywh {0 125 1220 790} box THIN_DOWN_FRAME
         } {}
         Fl_Group groupTMPHeader {open
-          xywh {0 70 1920 35} box THIN_UP_FRAME
+          xywh {0 90 1915 35} box THIN_UP_FRAME
         } {
           Fl_Button buttonAdd {
             label Add
-            xywh {1815 75 100 25}
+            xywh {1810 95 100 25}
           }
         }
         Fl_Group groupTMPDetails {open
-          xywh {1225 105 750 810}
+          xywh {1220 125 750 790}
         } {
           Fl_Group groupDetailHeader {
             label Details open
-            xywh {1230 135 685 135} box THIN_UP_FRAME align 5
+            xywh {1225 155 685 135} box THIN_UP_FRAME align 5
           } {
             Fl_Output spidLabel {
               label {SPID:}
-              xywh {1325 140 105 20} box FLAT_BOX
+              xywh {1320 160 105 20} box FLAT_BOX
             }
             Fl_Output mnemonicLabel {
               label {Mnemonic:}
-              xywh {1520 140 190 20} box FLAT_BOX
+              xywh {1515 160 190 20} box FLAT_BOX
             }
             Fl_Output descrLabel {
               label {Description:}
-              xywh {1325 165 580 20} box FLAT_BOX
+              xywh {1320 185 580 20} box FLAT_BOX
             }
             Fl_Output apidLabel {
               label {APID:}
-              xywh {1325 190 110 20} box FLAT_BOX
+              xywh {1320 210 110 20} box FLAT_BOX
             }
             Fl_Output typeLabel {
               label {Type:}
-              xywh {1485 190 45 20} box FLAT_BOX
+              xywh {1480 210 45 20} box FLAT_BOX
             }
             Fl_Output subTypeLabel {
               label {SubType:}
-              xywh {1610 190 45 20} box FLAT_BOX
+              xywh {1605 210 45 20} box FLAT_BOX
             }
             Fl_Output labelPI1 {
               label {PI1:}
-              xywh {1695 190 45 20} box FLAT_BOX
+              xywh {1690 210 45 20} box FLAT_BOX
             }
             Fl_Output labelPI2 {
               label {PI2:}
-              xywh {1780 190 45 20} box FLAT_BOX
+              xywh {1775 210 45 20} box FLAT_BOX
             }
             Fl_Output labelTimeStamp {
               label {Timestamp:}
-              xywh {1325 215 260 20} box FLAT_BOX
+              xywh {1320 235 260 20} box FLAT_BOX
             }
             Fl_Output labelERT {
               label {ERT:}
-              xywh {1630 215 275 20} box FLAT_BOX
+              xywh {1625 235 275 20} box FLAT_BOX
             }
             Fl_Output labelVCID {
               label {VC:}
-              xywh {1485 240 45 20} box FLAT_BOX
+              xywh {1480 260 45 20} box FLAT_BOX
             }
             Fl_Output labelSSC {
               label {SSC:}
-              xywh {1325 240 110 20} box FLAT_BOX
+              xywh {1320 260 110 20} box FLAT_BOX
             }
           }
           Fl_Group groupParamDetails {
             label Parameters open
-            xywh {1230 295 685 620} box THIN_DOWN_FRAME align 5
+            xywh {1225 315 685 600} box THIN_DOWN_FRAME align 5
           } {}
         }
       }
@@ -117,10 +117,10 @@ Function {makeWindow(IO(MainWindowFluid))} {open
       }
     }
     Fl_Group deskHeaderGroup {open
-      xywh {0 0 1920 40} box THIN_UP_FRAME
+      xywh {0 0 1920 65} box THIN_UP_FRAME
     } {
       Fl_Menu_Bar menuBar {open
-        xywh {5 5 1915 35} box FLAT_BOX color 30 labelcolor 6 textcolor 6
+        xywh {70 35 1850 30} box FLAT_BOX color 30 labelcolor 6 textcolor 6
       } {
         Submenu menuFile {
           label {&File} open
@@ -137,9 +137,12 @@ Function {makeWindow(IO(MainWindowFluid))} {open
         }
       }
       Fl_Output labelMission {
-        label {Mission:} selected
-        xywh {525 10 105 20} box FLAT_BOX textfont 10
+        label {Mission:}
+        xywh {135 10 105 20} box FLAT_BOX textfont 10
       }
+      Fl_Group logoGroup {open
+        xywh {5 5 65 60}
+      } {}
     }
   }
   code {let { tmpTab = TMPacketTabFluid {
@@ -165,6 +168,8 @@ Function {makeWindow(IO(MainWindowFluid))} {open
 
     };
         
+        
+        
 let { window = MainWindowFluid { _mfWindow = mainWindow
     , _mfOpenFile = menuOpenFile
     , _mfSaveFile = menuSaveFile
@@ -177,6 +182,7 @@ let { window = MainWindowFluid { _mfWindow = mainWindow
     , _mfMessageDisplay = messageDisplay
     , _mfMission = labelMission
     , _mfDeskHeaderGroup = deskHeaderGroup
+    , _mfLogoGroup = logoGroup
     }};
     return window} {}
 }
