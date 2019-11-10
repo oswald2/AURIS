@@ -55,51 +55,51 @@ Function {makeWindow(IO(MainWindowFluid))} {open
           } {
             Fl_Output spidLabel {
               label {SPID:}
-              xywh {1325 140 105 25} box FLAT_BOX
+              xywh {1325 140 105 20} box FLAT_BOX
             }
             Fl_Output mnemonicLabel {
               label {Mnemonic:}
-              xywh {1520 140 190 25} box FLAT_BOX
+              xywh {1520 140 190 20} box FLAT_BOX
             }
             Fl_Output descrLabel {
               label {Description:}
-              xywh {1325 165 580 25} box FLAT_BOX
+              xywh {1325 165 580 20} box FLAT_BOX
             }
             Fl_Output apidLabel {
               label {APID:}
-              xywh {1325 190 110 25} box FLAT_BOX
+              xywh {1325 190 110 20} box FLAT_BOX
             }
             Fl_Output typeLabel {
               label {Type:}
-              xywh {1485 190 45 25} box FLAT_BOX
+              xywh {1485 190 45 20} box FLAT_BOX
             }
             Fl_Output subTypeLabel {
               label {SubType:}
-              xywh {1610 190 45 25} box FLAT_BOX
+              xywh {1610 190 45 20} box FLAT_BOX
             }
             Fl_Output labelPI1 {
               label {PI1:}
-              xywh {1695 190 45 25} box FLAT_BOX
+              xywh {1695 190 45 20} box FLAT_BOX
             }
             Fl_Output labelPI2 {
               label {PI2:}
-              xywh {1780 190 45 25} box FLAT_BOX
+              xywh {1780 190 45 20} box FLAT_BOX
             }
             Fl_Output labelTimeStamp {
               label {Timestamp:}
-              xywh {1325 215 260 25} box FLAT_BOX
+              xywh {1325 215 260 20} box FLAT_BOX
             }
             Fl_Output labelERT {
-              label {ERT:} selected
-              xywh {1630 215 275 25} box FLAT_BOX
+              label {ERT:}
+              xywh {1630 215 275 20} box FLAT_BOX
             }
             Fl_Output labelVCID {
               label {VC:}
-              xywh {1485 240 45 25} box FLAT_BOX
+              xywh {1485 240 45 20} box FLAT_BOX
             }
             Fl_Output labelSSC {
               label {SSC:}
-              xywh {1325 240 110 25} box FLAT_BOX
+              xywh {1325 240 110 20} box FLAT_BOX
             }
           }
           Fl_Group groupParamDetails {
@@ -120,7 +120,7 @@ Function {makeWindow(IO(MainWindowFluid))} {open
       xywh {0 0 1920 40} box THIN_UP_FRAME
     } {
       Fl_Menu_Bar menuBar {open
-        xywh {0 5 460 30} box FLAT_BOX color 30 labelcolor 6 textcolor 6
+        xywh {5 5 1915 35} box FLAT_BOX color 30 labelcolor 6 textcolor 6
       } {
         Submenu menuFile {
           label {&File} open
@@ -137,8 +137,8 @@ Function {makeWindow(IO(MainWindowFluid))} {open
         }
       }
       Fl_Output labelMission {
-        label {Mission:}
-        xywh {525 5 105 25} box FLAT_BOX textfont 10
+        label {Mission:} selected
+        xywh {525 10 105 20} box FLAT_BOX textfont 10
       }
     }
   }

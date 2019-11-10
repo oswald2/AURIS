@@ -75,7 +75,8 @@ Executable AURISi
     conduit,
     conduit-extra,
     directory,
-    filepath
+    filepath,
+    text-short
 
   Other-Modules: AURISi
 

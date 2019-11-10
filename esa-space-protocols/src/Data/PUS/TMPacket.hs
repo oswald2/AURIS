@@ -2,20 +2,22 @@
   TemplateHaskell
 #-}
 module Data.PUS.TMPacket
-  ( TMPacket(..)
-  , isUnknownPacket
-  , tmpSPID 
-  , tmpMnemonic 
-  , tmpDescr 
-  , tmpAPID
-  , tmpType 
-  , tmpSubType 
-  , tmpERT 
-  , tmpTimeStamp
-  , tmpVCID
-  , tmpSSC 
-  , tmpParams
-  )
+    ( TMPacket(..)
+    , isUnknownPacket
+    , tmpSPID
+    , tmpMnemonic
+    , tmpDescr
+    , tmpAPID
+    , tmpType
+    , tmpSubType
+    , tmpPI1
+    , tmpPI2
+    , tmpERT
+    , tmpTimeStamp
+    , tmpVCID
+    , tmpSSC
+    , tmpParams
+    )
 where
 
 
@@ -42,6 +44,8 @@ data TMPacket = TMPacket {
     , _tmpAPID :: !APID
     , _tmpType :: !PUSType
     , _tmpSubType :: !PUSSubType
+    , _tmpPI1 :: !Word32
+    , _tmpPI2 :: !Word32
     , _tmpERT :: !SunTime
     , _tmpTimeStamp :: !SunTime
     , _tmpVCID :: !VCID
@@ -53,7 +57,7 @@ makeLenses ''TMPacket
 instance Serialise TMPacket
 instance FromJSON TMPacket
 instance ToJSON TMPacket where
-  toEncoding = genericToEncoding defaultOptions
+    toEncoding = genericToEncoding defaultOptions
 
 
 isUnknownPacket :: Config -> TMPacket -> Bool

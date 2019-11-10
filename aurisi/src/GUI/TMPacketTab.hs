@@ -21,7 +21,7 @@ where
 
 
 import           RIO
-
+import qualified Data.Text.Short               as ST
 import           Control.Lens                   ( makeLenses )
 
 import           Graphics.UI.FLTK.LowLevel.FLTKHS
@@ -141,9 +141,22 @@ createTMPTab TMPacketTabFluid {..} = do
                      }
 
 tmpTabDetailSetValues :: TMPacketTab -> TMPacket -> IO ()
-tmpTabDetailSetValues window pkt = do
-    let table = window ^. tmpParametersTable
-        model = window ^. tmpParametersModel
+tmpTabDetailSetValues g pkt = do
+    let table = g ^. tmpParametersTable
+        model = g ^. tmpParametersModel
     tableModelSetValues model (pkt ^. tmpParams)
     setTableFromModel table model
+
+    void $ setValue (g ^. tmpLabelSPID) (textDisplay (pkt ^. tmpSPID))
+    void $ setValue (g ^. tmpLabelDescr) (ST.toText (pkt ^. tmpDescr))
+    void $ setValue (g ^. tmpLabelMnemo) (ST.toText (pkt ^. tmpMnemonic))
+    void $ setValue (g ^. tmpLabelAPID) (textDisplay (pkt ^. tmpAPID))
+    void $ setValue (g ^. tmpLabelType) (textDisplay (pkt ^. tmpType))
+    void $ setValue (g ^. tmpLabelSubType) (textDisplay (pkt ^. tmpSubType))
+    void $ setValue (g ^. tmpLabelPI1) (textDisplay (pkt ^. tmpPI1))
+    void $ setValue (g ^. tmpLabelPI2) (textDisplay (pkt ^. tmpPI2))
+    void $ setValue (g ^. tmpLabelTimestmap) (textDisplay (pkt ^. tmpTimeStamp))
+    void $ setValue (g ^. tmpLabelERT) (textDisplay (pkt ^. tmpERT))
+    void $ setValue (g ^. tmpLabelSSC) (textDisplay (pkt ^. tmpSSC))
+    void $ setValue (g ^. tmpLabelVC) (textDisplay (pkt ^. tmpVCID))
 
