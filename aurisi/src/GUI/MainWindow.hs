@@ -25,14 +25,14 @@ module GUI.MainWindow
     , mwSetMission
     , mwDeskHeaderGroup
     , mwTMParamDetailWindow
-    , mwLogo
+    , mwLogoBox
     )
 where
 
 import           RIO
 import qualified RIO.Text                      as T
 import qualified Data.Text.IO                  as T
-import           Data.Text.Encoding             ( decodeUtf8 )
+--import           Data.Text.Encoding             ( decodeUtf8 )
 import           Control.Lens                   ( makeLenses )
 
 import           Graphics.UI.FLTK.LowLevel.FLTKHS
@@ -69,6 +69,7 @@ data MainWindowFluid = MainWindowFluid {
     , _mfMission :: Ref Output
     , _mfDeskHeaderGroup :: Ref Group
     , _mfLogoGroup :: Ref Group
+    , _mfLogoBox :: Ref Box
     }
 
 
@@ -86,7 +87,7 @@ data MainWindow = MainWindow {
     , _mwMessageDisplay :: Ref Browser
     , _mwMission :: Ref Output
     , _mwDeskHeaderGroup :: Ref Group
-    , _mwLogo :: Ref Widget
+    , _mwLogoBox :: Ref Box
     }
 makeLenses ''MainWindow
 
@@ -126,14 +127,7 @@ createMainWindow MainWindowFluid {..} paramDetailWindow = do
 
     pdetw <- createTMParamDetailWindow paramDetailWindow
 
-    rectangle' <- getRectangle _mfLogoGroup
-
-    widget' <- widgetCustom rectangle'
-        Nothing
-        drawLogo
-        defaultCustomWidgetFuncs
-
-    add _mfTMPHeaderGroup widget'
+    initLogo _mfLogoBox
 
     -- mcsWidgetSetColor _mfOpenFile
     -- mcsWidgetSetColor _mfSaveFile
@@ -152,29 +146,18 @@ createMainWindow MainWindowFluid {..} paramDetailWindow = do
                                 , _mwMessageDisplay      = _mfMessageDisplay
                                 , _mwMission             = _mfMission
                                 , _mwDeskHeaderGroup     = _mfDeskHeaderGroup
-                                , _mwLogo                = widget'
+                                , _mwLogoBox             = _mfLogoBox
                                 }
     pure mainWindow
 
 
-drawLogo :: Ref Widget -> IO ()
-drawLogo widget = do
+initLogo :: Ref Box -> IO ()
+initLogo box = do
     logo <- svgImageNew aurisLogo
     case logo of
         Left err -> do
             T.putStrLn $ "Could not load logo: " <> T.pack (show err)
             exitFailure
         Right svg -> do
-            rectangle' <- getRectangle widget
-            let (x', y', _w', _h') = fromRectangle rectangle'
-            flcPushClip rectangle'
-
-            flcSetColor mcsTableFG
-            flcRectf rectangle'
-
-            draw svg (Position (X x') (Y y'))
-            destroy svg
-
-            flcPopClip
-
+          setImage box (Just svg)
 

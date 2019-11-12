@@ -32,7 +32,7 @@ Function {makeWindow(IO(MainWindowFluid))} {open
         } {}
       }
       Fl_Group tabTMPackets {
-        label {TM Packets} open selected
+        label {TM Packets} open
         xywh {0 85 1970 830}
       } {
         Fl_Group tableTMPackets {open
@@ -142,7 +142,11 @@ Function {makeWindow(IO(MainWindowFluid))} {open
       }
       Fl_Group logoGroup {open
         xywh {5 5 65 60}
-      } {}
+      } {
+        Fl_Box logoBox {
+          xywh {5 5 65 60}
+        }
+      }
     }
   }
   code {let { tmpTab = TMPacketTabFluid {
@@ -183,8 +187,10 @@ let { window = MainWindowFluid { _mfWindow = mainWindow
     , _mfMission = labelMission
     , _mfDeskHeaderGroup = deskHeaderGroup
     , _mfLogoGroup = logoGroup
+    , _mfLogoBox = logoBox
     }};
-    return window} {}
+    return window} {selected
+  }
 }
 
 Function {makeParamDetailsWindow(IO(ParamDetailWindowFluid))} {
