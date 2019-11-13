@@ -6,8 +6,8 @@
     , NoImplicitPrelude
 #-}
 module GUI.MainWindowCallbacks
-    ( GUI.MainWindowCallbacks.setupCallbacks
-    )
+  ( GUI.MainWindowCallbacks.setupCallbacks
+  )
 where
 
 
@@ -22,6 +22,7 @@ import           Graphics.UI.FLTK.LowLevel.FLTKHS
 import           GUI.MainWindow
 import           GUI.ScrollingTable
 import           GUI.TMPacketTab
+import           GUI.About
 
 import           Model.ScrollingTableModel
 
@@ -38,44 +39,46 @@ import           General.Time
 
 setupCallbacks :: MainWindow -> IO ()
 setupCallbacks window = do
-    setCallback (window ^. mwTMPTab . tmpTabButtonAdd) (addCB window)
+  setCallback (window ^. mwTMPTab . tmpTabButtonAdd) (addCB window)
 
-    GUI.ScrollingTable.setupCallback (window ^. mwTMPTab . tmpTable)
-                                     (doubleClickTMP window)
+  GUI.ScrollingTable.setupCallback (window ^. mwTMPTab . tmpTable)
+                                   (doubleClickTMP window)
 
-    pure ()
+  setCallback (window ^. mwMainMenu . mmAbout) (aboutCB window)
+  pure ()
 
 
 doubleClickTMP :: MainWindow -> Row -> IO ()
 doubleClickTMP window (Row row') = do
-    res <- queryTableModel (window ^. mwTMPTab . tmpModel)
-        $ \s -> S.lookup row' s
-    forM_ res (mwSetTMParameters window)
+  res <- queryTableModel (window ^. mwTMPTab . tmpModel) $ \s -> S.lookup row' s
+  forM_ res (mwSetTMParameters window)
 
 
 
 addCB :: MainWindow -> Ref Button -> IO ()
 addCB window _btn = do
-    now <- getCurrentTime
-    let table  = window ^. mwTMPTab . tmpTable
-        model  = window ^. mwTMPTab . tmpModel
-        pusPkt = TMPacket { _tmpSPID      = SPID 1
-                          , _tmpMnemonic  = "Mnemo"
-                          , _tmpDescr     = "Test Packet to be added"
-                          , _tmpAPID      = APID 256
-                          , _tmpType      = mkPUSType 3
-                          , _tmpSubType   = mkPUSSubType 25
-                          , _tmpPI1       = 0
-                          , _tmpPI2       = 0
-                          , _tmpERT       = now
-                          , _tmpTimeStamp = now
-                          , _tmpVCID      = VCID 1
-                          , _tmpSSC       = mkSSC 12
-                          , _tmpParams    = V.empty
-                          }
+  now <- getCurrentTime
+  let table  = window ^. mwTMPTab . tmpTable
+      model  = window ^. mwTMPTab . tmpModel
+      pusPkt = TMPacket { _tmpSPID      = SPID 1
+                        , _tmpMnemonic  = "Mnemo"
+                        , _tmpDescr     = "Test Packet to be added"
+                        , _tmpAPID      = APID 256
+                        , _tmpType      = mkPUSType 3
+                        , _tmpSubType   = mkPUSSubType 25
+                        , _tmpPI1       = 0
+                        , _tmpPI2       = 0
+                        , _tmpERT       = now
+                        , _tmpTimeStamp = now
+                        , _tmpVCID      = VCID 1
+                        , _tmpSSC       = mkSSC 12
+                        , _tmpParams    = V.empty
+                        }
 
-    addRow table model pusPkt
+  addRow table model pusPkt
 
-    return ()
+  return ()
 
 
+aboutCB :: MainWindow -> Ref MenuItemBase -> IO ()
+aboutCB MainWindow {..} _ = aboutWindowShow _mwAboutWindow

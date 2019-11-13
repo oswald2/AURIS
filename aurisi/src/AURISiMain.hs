@@ -16,6 +16,7 @@ import           AURISi
 
 import           GUI.MainWindow
 import           GUI.MainWindowCallbacks
+import           GUI.About
 
 import           Options.Generic
 
@@ -24,41 +25,23 @@ import           AurisProcessing
 import           AurisConfig
 import           AurisMissionSpecific
 
-import           Development.GitRev
-
 import           GHC.Conc
 import           System.Directory               ( doesFileExist )
 
 
 
 
-aurisVersion :: Text
-aurisVersion = T.concat
-    [ "AURISi Version: 0.1.0.0 "
-    , "Branch: "
-    , $(gitBranch)
-    , " "
-    , $(gitHash)
-    , "\ndirty: "
-    , dirty
-    , "\nCommit Date: "
-    , $(gitCommitDate)
-    ]
-
-dirty :: Text
-dirty | $(gitDirty) = "true"
-      | otherwise  = "false"
 
 
 
 ui :: IO MainWindow
 ui = do
-    window <- makeWindow
-    paramDetails <- makeParamDetailsWindow
-    mainWindow   <- createMainWindow window paramDetails
-    setupCallbacks mainWindow
-    showWidget (_mwWindow mainWindow)
-    pure mainWindow
+  window      <- makeWindow
+  aboutWindow <- makeAboutWindow
+  mainWindow  <- createMainWindow window aboutWindow
+  setupCallbacks mainWindow
+  showWidget (_mwWindow mainWindow)
+  pure mainWindow
 
 
 
@@ -81,69 +64,65 @@ deriving instance Show (Options Unwrapped)
 
 main :: IO ()
 main = do
-    np <- getNumProcessors
-    setNumCapabilities np
+  np <- getNumProcessors
+  setNumCapabilities np
 
-    opts <- unwrapRecord "AURISi"
-    if version opts
-        then T.putStrLn aurisVersion
-        else if writeconfig opts
-            then do
-                writeConfigJSON defaultConfig "DefaultConfig.json"
-                T.putStrLn "Wrote default config to file 'DefaultConfig.json'"
-                exitSuccess
-            else do
-                cfg <- case config opts of
-                    Nothing -> do
-                        ex <- doesFileExist defaultConfigFileName
-                        if ex
-                            then do
-                                T.putStrLn
-                                    $  "Loading default config from "
-                                    <> T.pack defaultConfigFileName
-                                    <> "..."
-                                res <- loadConfigJSON defaultConfigFileName
-                                case res of
-                                    Left err -> do
-                                        T.putStrLn
-                                            $  "Error loading config: "
-                                            <> err
-                                        exitFailure
-                                    Right c -> pure c
-                            else do
-                                T.putStrLn "Using default config"
-                                return defaultConfig
-                    Just path -> do
-                        T.putStrLn
-                            $  "Loading configuration from file "
-                            <> T.pack path
-                        res <- loadConfigJSON path
-                        case res of
-                            Left err -> do
-                                T.putStrLn $ "Error loading config: " <> err
-                                exitFailure
-                            Right c -> pure c
+  opts <- unwrapRecord "AURISi"
+  if version opts
+    then T.putStrLn aurisVersion
+    else if writeconfig opts
+      then do
+        writeConfigJSON defaultConfig "DefaultConfig.json"
+        T.putStrLn "Wrote default config to file 'DefaultConfig.json'"
+        exitSuccess
+      else do
+        cfg <- case config opts of
+          Nothing -> do
+            ex <- doesFileExist defaultConfigFileName
+            if ex
+              then do
+                T.putStrLn
+                  $  "Loading default config from "
+                  <> T.pack defaultConfigFileName
+                  <> "..."
+                res <- loadConfigJSON defaultConfigFileName
+                case res of
+                  Left err -> do
+                    T.putStrLn $ "Error loading config: " <> err
+                    exitFailure
+                  Right c -> pure c
+              else do
+                T.putStrLn "Using default config"
+                return defaultConfig
+          Just path -> do
+            T.putStrLn $ "Loading configuration from file " <> T.pack path
+            res <- loadConfigJSON path
+            case res of
+              Left err -> do
+                T.putStrLn $ "Error loading config: " <> err
+                exitFailure
+              Right c -> pure c
 
-                -- need to call it once in main before the GUI is started
-                void $ FL.lock
+        -- need to call it once in main before the GUI is started
+        void $ FL.lock
 
-                -- create the main window
-                mainWindow                <- ui
+        -- create the main window
+        mainWindow <- ui
 
-                mwSetMission mainWindow (aurisMission cfg)
-                -- setup the interface
-                (interface, _eventThread) <- initialiseInterface mainWindow
-                -- determine the mission-specific functionality
-                missionSpecific           <- getMissionSpecific cfg
-                -- start the processing chains
-                _processingThread <- async $ runProcessing cfg
+        mwSetMission mainWindow (aurisMission cfg)
+        -- setup the interface
+        (interface, _eventThread) <- initialiseInterface mainWindow
+        -- determine the mission-specific functionality
+        missionSpecific           <- getMissionSpecific cfg
+        -- start the processing chains
+        _processingThread         <- async $ runProcessing cfg
                                                            missionSpecific
                                                            (importmib opts)
                                                            interface
                                                            mainWindow
-                -- run the FLTK GUI
+        -- run the FLTK GUI
 
-                FL.run >> FL.flush
+        FL.run >> FL.flush
 
 
 

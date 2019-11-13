@@ -14,7 +14,7 @@ colDefinitions :: Vector ColumnDefinition
 colDefinitions = mkColumnDefinitions
   [ ColumnDefinition 0 "SPID"            100
   , ColumnDefinition 1 "Mnemonic"        100
-  , ColumnDefinition 2 "Description"     350
+  , ColumnDefinition 2 "Description"     330
   , ColumnDefinition 3 "Generation Time" 200
   , ColumnDefinition 4 "ERT"             200
   , ColumnDefinition 5 "APID"            60

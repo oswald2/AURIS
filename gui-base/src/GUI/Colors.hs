@@ -33,6 +33,8 @@ mcsTableFG = Color 0xffffff00
 mcsTableSelectionColor :: Color
 mcsTableSelectionColor = Color 0x0000aa00
 
+mcsWhite :: Color
+mcsWhite = Color 0xffffff00
 
 
 mcsWindowSetColor :: Ref Window -> IO ()
@@ -105,3 +107,19 @@ mcsLabelSetColor w = do
   setColorWithBgSel w mcsWidgetBG mcsWidgetFG
   setLabelcolor w mcsFontColor
   setTextcolor w mcsEmphColor
+
+mcsScrolledSetColor :: Ref Scrolled -> IO ()
+mcsScrolledSetColor w = do
+  setColor w mcsWidgetBG
+  setColorWithBgSel w mcsWidgetBG mcsWidgetFG
+
+mcsTextDisplaySetColor :: Ref TextDisplay -> IO ()
+mcsTextDisplaySetColor w = do
+  setColor w mcsTableBG
+  setColorWithBgSel w mcsTableBG mcsTableFG
+  setTextcolor w mcsTableFG
+
+mcsProgressSetColor :: Ref Progress -> IO ()
+mcsProgressSetColor w = do
+  setColor w mcsBackground
+  setColorWithBgSel w mcsBackground mcsTableSelectionColor

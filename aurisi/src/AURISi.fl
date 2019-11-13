@@ -5,7 +5,7 @@ code_name {.cxx}
 decl {import GUI.MainWindow} {private local
 }
 
-decl {import GUI.ParamDetailWindow} {private local
+decl {import GUI.About} {private local
 }
 
 decl {import Graphics.UI.FLTK.LowLevel.FLTKHS} {private local
@@ -15,137 +15,153 @@ Function {makeWindow(IO(MainWindowFluid))} {open
 } {
   Fl_Window mainWindow {
     label AURISi open
-    xywh {1920 29 1920 1051} type Double color 30 labelcolor 6 resizable visible
+    xywh {82 47 1755 1020} type Double color 30 labelcolor 6 hide
   } {
-    Fl_Progress mainProgress {
-      xywh {0 1030 1920 20}
-    }
-    Fl_Tabs mainTab {open
-      xywh {0 65 1970 850} resizable
+    Fl_Scroll mainScrolled {open
+      xywh {0 0 1755 1025}
     } {
-      Fl_Group tabTMFrames {
-        label {TM Frames} open
-        xywh {0 85 1915 830} hide
+      Fl_Group deskHeaderGroup {open
+        xywh {5 5 1755 65} box THIN_UP_FRAME
       } {
-        Fl_Group tableTMFrames {open
-          xywh {0 110 1915 805}
+        Fl_Group rGroup1 {open
+          xywh {245 15 1515 20} resizable
         } {}
-      }
-      Fl_Group tabTMPackets {
-        label {TM Packets} open
-        xywh {0 85 1970 830}
-      } {
-        Fl_Group tableTMPackets {open
-          xywh {0 125 1220 790} box THIN_DOWN_FRAME
-        } {}
-        Fl_Group groupTMPHeader {open
-          xywh {0 90 1915 35} box THIN_UP_FRAME
+        Fl_Menu_Bar menuBar {open
+          xywh {75 40 1683 25} box FLAT_BOX color 30 labelcolor 6 textcolor 6
         } {
-          Fl_Button buttonAdd {
-            label Add
-            xywh {1810 95 100 25}
+          Submenu menuFile {
+            label {&File} open
+            xywh {10 10 70 21}
+          } {
+            MenuItem menuSaveFile {
+              label {Save File}
+              xywh {10 10 36 21}
+            }
+            MenuItem menuOpenFile {
+              label {&Open}
+              xywh {10 10 36 21}
+            }
+          }
+          Submenu menuHelp {
+            label Help open
+            xywh {0 0 100 20}
+          } {
+            MenuItem menuItemAbout {
+              label About
+              xywh {0 0 100 20}
+            }
           }
         }
-        Fl_Group groupTMPDetails {open
-          xywh {1220 125 750 790}
+        Fl_Output labelMission {
+          label {Mission:}
+          xywh {140 15 105 20} box FLAT_BOX textfont 10
+        }
+        Fl_Group logoGroup {open
+          xywh {10 10 65 60}
         } {
-          Fl_Group groupDetailHeader {
-            label Details open
-            xywh {1225 155 685 135} box THIN_UP_FRAME align 5
-          } {
-            Fl_Output spidLabel {
-              label {SPID:}
-              xywh {1320 160 105 20} box FLAT_BOX
-            }
-            Fl_Output mnemonicLabel {
-              label {Mnemonic:}
-              xywh {1515 160 190 20} box FLAT_BOX
-            }
-            Fl_Output descrLabel {
-              label {Description:}
-              xywh {1320 185 580 20} box FLAT_BOX
-            }
-            Fl_Output apidLabel {
-              label {APID:}
-              xywh {1320 210 110 20} box FLAT_BOX
-            }
-            Fl_Output typeLabel {
-              label {Type:}
-              xywh {1480 210 45 20} box FLAT_BOX
-            }
-            Fl_Output subTypeLabel {
-              label {SubType:}
-              xywh {1605 210 45 20} box FLAT_BOX
-            }
-            Fl_Output labelPI1 {
-              label {PI1:}
-              xywh {1690 210 45 20} box FLAT_BOX
-            }
-            Fl_Output labelPI2 {
-              label {PI2:}
-              xywh {1775 210 45 20} box FLAT_BOX
-            }
-            Fl_Output labelTimeStamp {
-              label {Timestamp:}
-              xywh {1320 235 260 20} box FLAT_BOX
-            }
-            Fl_Output labelERT {
-              label {ERT:}
-              xywh {1625 235 275 20} box FLAT_BOX
-            }
-            Fl_Output labelVCID {
-              label {VC:}
-              xywh {1480 260 45 20} box FLAT_BOX
-            }
-            Fl_Output labelSSC {
-              label {SSC:}
-              xywh {1320 260 110 20} box FLAT_BOX
-            }
+          Fl_Box logoBox {selected
+            xywh {10 10 65 60} color 7
           }
-          Fl_Group groupParamDetails {
-            label Parameters open
-            xywh {1225 315 685 600} box THIN_DOWN_FRAME align 5
+        }
+      }
+      Fl_Tabs mainTab {
+        xywh {5 70 1753 825}
+      } {
+        Fl_Group tabTMFrames {
+          label {TM Frames} open
+          xywh {5 90 1915 803} hide
+        } {
+          Fl_Group tableTMFrames {open
+            xywh {5 115 1065 684}
           } {}
         }
-      }
-    }
-    Fl_Group messagesGroup {open
-      xywh {0 915 1920 115}
-    } {
-      Fl_Browser messageDisplay {
-        xywh {0 915 1920 115} color 30 textcolor 61
-      }
-    }
-    Fl_Group deskHeaderGroup {open
-      xywh {0 0 1920 65} box THIN_UP_FRAME
-    } {
-      Fl_Menu_Bar menuBar {open
-        xywh {70 35 1850 30} box FLAT_BOX color 30 labelcolor 6 textcolor 6
-      } {
-        Submenu menuFile {
-          label {&File} open
-          xywh {5 5 70 21}
+        Fl_Group tabTMPackets {
+          label {TM Packets} open
+          xywh {5 90 1751 804} hotspot
         } {
-          MenuItem menuSaveFile {
-            label {Save File}
-            xywh {5 5 36 21}
+          Fl_Group tableTMPackets {open
+            xywh {5 130 1136 762} box THIN_DOWN_FRAME
+          } {}
+          Fl_Group groupTMPHeader {open
+            xywh {5 95 1745 35} box THIN_UP_FRAME
+          } {
+            Fl_Button buttonAdd {
+              label Add
+              xywh {1645 100 100 25}
+            }
           }
-          MenuItem menuOpenFile {
-            label {&Open}
-            xywh {5 5 36 21}
+          Fl_Group groupTMPDetails {open
+            xywh {1140 130 615 762}
+          } {
+            Fl_Group groupDetailHeader {
+              label Details open
+              xywh {1145 150 605 135} box THIN_UP_FRAME align 5
+            } {
+              Fl_Output spidLabel {
+                label {SPID:}
+                xywh {1240 155 105 20} box FLAT_BOX
+              }
+              Fl_Output mnemonicLabel {
+                label {Mnemonic:}
+                xywh {1435 155 190 20} box FLAT_BOX
+              }
+              Fl_Output descrLabel {
+                label {Description:}
+                xywh {1240 180 500 20} box FLAT_BOX
+              }
+              Fl_Output apidLabel {
+                label {APID:}
+                xywh {1240 205 110 20} box FLAT_BOX
+              }
+              Fl_Output typeLabel {
+                label {Type:}
+                xywh {1400 205 45 20} box FLAT_BOX
+              }
+              Fl_Output subTypeLabel {
+                label {SubType:}
+                xywh {1525 205 45 20} box FLAT_BOX
+              }
+              Fl_Output labelPI1 {
+                label {PI1:}
+                xywh {1610 205 45 20} box FLAT_BOX
+              }
+              Fl_Output labelPI2 {
+                label {PI2:}
+                xywh {1695 205 45 20} box FLAT_BOX
+              }
+              Fl_Output labelTimeStamp {
+                label {Timestamp:}
+                xywh {1240 230 260 20} box FLAT_BOX
+              }
+              Fl_Output labelERT {
+                label {ERT:}
+                xywh {1545 230 195 20} box FLAT_BOX
+              }
+              Fl_Output labelVCID {
+                label {VC:}
+                xywh {1400 255 45 20} box FLAT_BOX
+              }
+              Fl_Output labelSSC {
+                label {SSC:}
+                xywh {1240 255 110 20} box FLAT_BOX
+              }
+            }
+            Fl_Group groupParamDetails {
+              label Parameters open
+              xywh {1145 320 605 572} box THIN_DOWN_FRAME align 5
+            } {}
           }
         }
       }
-      Fl_Output labelMission {
-        label {Mission:}
-        xywh {135 10 105 20} box FLAT_BOX textfont 10
-      }
-      Fl_Group logoGroup {open
-        xywh {5 5 65 60}
+      Fl_Group messagesGroup {open
+        xywh {5 896 1755 91}
       } {
-        Fl_Box logoBox {
-          xywh {5 5 65 60}
+        Fl_Browser messageDisplay {
+          xywh {5 896 1753 90} color 30 textcolor 61
         }
+      }
+      Fl_Progress mainProgress {
+        xywh {3 986 1751 20}
       }
     }
   }
@@ -172,11 +188,14 @@ Function {makeWindow(IO(MainWindowFluid))} {open
 
     };
         
-        
+let { mainMenu = MainMenu {
+    _mmOpenFile = menuOpenFile
+  , _mmSaveFile = menuSaveFile
+  , _mmAbout = menuItemAbout
+  }};
+
         
 let { window = MainWindowFluid { _mfWindow = mainWindow
-    , _mfOpenFile = menuOpenFile
-    , _mfSaveFile = menuSaveFile
     , _mfProgress = mainProgress
     , _mfTabs = mainTab
     , _mfTMPTab = tmpTab
@@ -188,35 +207,39 @@ let { window = MainWindowFluid { _mfWindow = mainWindow
     , _mfDeskHeaderGroup = deskHeaderGroup
     , _mfLogoGroup = logoGroup
     , _mfLogoBox = logoBox
+    , _mfMainScrolled = mainScrolled
+    , _mfMainMenu = mainMenu
     }};
-    return window} {selected
-  }
+    return window} {}
 }
 
-Function {makeParamDetailsWindow(IO(ParamDetailWindowFluid))} {
-  comment {Function to return a parameter details window} open
+Function {makeAboutWindow(IO(AboutWindowFluid))} {open
 } {
-  Fl_Window tmParamDetailsWindow {
-    label {TM Parameter Details} open
-    xywh {1081 185 635 635} type Double hide
+  Fl_Window aboutWin {
+    label About open
+    xywh {588 180 795 295} type Double visible
   } {
-    Fl_Group groupTMPDetails {open
-      xywh {0 0 635 640}
+    Fl_Group groupAbout {open
+      xywh {0 0 795 295}
     } {
-      Fl_Group groupDetails {
-        label Details open
-        xywh {5 20 625 60} box THIN_UP_FRAME align 5
-      } {}
-      Fl_Group groupParamDetails {
-        label Parameters open
-        xywh {5 105 630 535} box THIN_DOWN_FRAME align 5
-      } {}
+      Fl_Box logoBox {
+        xywh {0 0 255 255} box BORDER_BOX
+      }
+      Fl_Button buttonClose {
+        label OK
+        xywh {675 260 115 30}
+      }
+      Fl_Text_Display aboutText {
+        xywh {260 0 530 255}
+      }
     }
   }
-  code {let { paramDetailwindow = ParamDetailWindowFluid { 
-     _pdwfWindow = tmParamDetailsWindow
-    , _pdfwFilterGroup = groupDetails
-    , _pdfwParamDetailsGroup = groupParamDetails
-    }};
-return paramDetailwindow} {}
+  code {let { aboutWindow = AboutWindowFluid {
+  _awWindow = aboutWin
+  , _awLogo = logoBox
+  , _awText = aboutText
+  , _awButtonOK = buttonClose
+  } };
+  initAboutWindow aboutWindow;
+  return aboutWindow} {}
 }
