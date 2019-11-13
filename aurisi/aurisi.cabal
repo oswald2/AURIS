@@ -47,7 +47,7 @@ Executable AURISi
     GUI.MainWindow
     GUI.MainWindowCallbacks
     GUI.TMPacketTab
-    GUI.ParamDetailWindow
+    GUI.TMFrameTab
     GUI.MessageDisplay
     GUI.Logo
     GUI.About

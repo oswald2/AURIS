@@ -65,7 +65,7 @@ defaultConfig = AurisConfig { aurisPusConfig = Data.PUS.Config.defaultConfig
                             , aurisNctrsTMPort    = 2502
                             , aurisNctrsTCPort    = 20009
                             , aurisNctrsAdminPort = 20010
-                            , aurisLogLevel       = LogLevelInfo
+                            , aurisLogLevel       = LogLevelDebug
                             , aurisMIB            = Nothing
                             }
 

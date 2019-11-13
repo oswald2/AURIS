@@ -57,6 +57,7 @@ module Data.PUS.TMFrame
   , isIdleTmFrame
   , tmFrameFHType
   , tmFrameDefaultHeader
+  , displayFHP
   )
 where
 
@@ -154,7 +155,6 @@ tmFrameNoFirstHeader :: Word16
 tmFrameNoFirstHeader = 0x7FF
 
 
-
 -- | The frame itself. It consists of a header, the data part and optionally
 -- a CLCW (called OCF in TM terminology) and optionally a CRC value. Presence
 -- of the CLCW is indicated in the header via the 'tmFrameOpControl' flag, the
@@ -214,6 +214,13 @@ tmFrameFHType frame =
         | fh == tmFrameIdlePtr       -> FirstHeaderIdle
         | otherwise                  -> FirstHeaderNonZero
 
+displayFHP :: TMFrame -> Text
+displayFHP frame =
+  let fhp = frame ^. tmFrameHdr . tmFrameFirstHeaderPtr
+  in
+  if | fhp == tmFrameIdlePtr -> "IDLE"
+      | fhp == tmFrameNoFirstHeader -> "NO FHP"
+      | otherwise -> textDisplay fhp
 
 
 {-# INLINABLE tmFrameCheckOrder #-}

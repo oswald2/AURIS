@@ -24,38 +24,34 @@ module GUI.MainWindow
   , mwTMFGroup
   , mwMessageDisplay
   , mwAddTMPacket
+  , mwAddTMFrame
   , mwSetTMParameters
   , mwSetMission
   , mwDeskHeaderGroup
   , mwLogoBox
   , mwMainMenu
   , mwAboutWindow
+  , mwFrameTab
   )
 where
 
 import           RIO
 import qualified RIO.Text                      as T
 import qualified Data.Text.IO                  as T
---import           Data.Text.Encoding             ( decodeUtf8 )
 import           Control.Lens                   ( makeLenses )
 
 import           Graphics.UI.FLTK.LowLevel.FLTKHS
---import qualified Graphics.UI.FLTK.LowLevel.FL  as FL
 
---import           Model.TMPacketModel
---import           Model.ScrollingTableModel
-
---import           GUI.TMPacketTable
 import           GUI.TMPacketTab
---import           GUI.ScrollingTable
+import           GUI.TMFrameTab
 import           GUI.Colors
-import           GUI.ParamDetailWindow
 import           GUI.Utils
 import           GUI.Logo
 import           GUI.About
 
 import           Data.PUS.TMPacket
-
+import           Data.PUS.ExtractedDU
+import           Data.PUS.TMFrame
 
 
 data MainMenu = MainMenu {
@@ -80,8 +76,8 @@ data MainWindowFluid = MainWindowFluid {
     , _mfLogoBox :: Ref Box
     , _mfMainScrolled :: Ref Scrolled
     , _mfMainMenu :: MainMenu
+    , _mfFrameTab :: TMFrameTabFluid
     }
-
 
 
 data MainWindow = MainWindow {
@@ -98,6 +94,7 @@ data MainWindow = MainWindow {
     , _mwLogoBox :: Ref Box
     , _mwMainMenu :: MainMenu
     , _mwAboutWindow :: AboutWindowFluid
+    , _mwFrameTab :: TMFrameTab
     }
 makeLenses ''MainWindow
 
@@ -113,6 +110,11 @@ mwSetTMParameters :: MainWindow -> TMPacket -> IO ()
 mwSetTMParameters window pkt = do
   tmpTabDetailSetValues (window ^. mwTMPTab) pkt
 
+mwAddTMFrame :: MainWindow -> ExtractedDU TMFrame -> IO ()
+mwAddTMFrame window frame = do
+  tmfTabAddRow (window ^. mwFrameTab) (frame ^. epDU)
+
+
 mwSetMission :: MainWindow -> Text -> IO ()
 mwSetMission window mission = do
   void $ setValue (window ^. mwMission) mission
@@ -121,6 +123,7 @@ mwSetMission window mission = do
 createMainWindow :: MainWindowFluid -> AboutWindowFluid -> IO MainWindow
 createMainWindow MainWindowFluid {..} aboutWindow = do
   tmpTab <- createTMPTab _mfTMPTab
+  tmfTab <- createTMFTab _mfFrameTab
   mcsWindowSetColor _mfWindow
 
   -- maximizeWindow _mfWindow
@@ -159,6 +162,7 @@ createMainWindow MainWindowFluid {..} aboutWindow = do
                               , _mwLogoBox         = _mfLogoBox
                               , _mwMainMenu        = _mfMainMenu
                               , _mwAboutWindow     = aboutWindow
+                              , _mwFrameTab        = tmfTab
                               }
   pure mainWindow
 

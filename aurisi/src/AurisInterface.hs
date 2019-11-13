@@ -10,6 +10,8 @@ module AurisInterface
 where
 
 import           RIO
+import qualified RIO.Text                      as T
+import qualified Data.Text.IO                  as T
 import           Interface.Interface
 import           Interface.Events
 import           Data.PUS.Events
@@ -35,12 +37,13 @@ eventProcessorThread mainWindow queue = forever $ do
   eventProcessor mainWindow event
 
 eventProcessor :: MainWindow -> IfEvent -> IO ()
-eventProcessor _g (EventPUS (EVTelemetry (EVTMFrameReceived _frame))) =
-  pure ()
 -- eventProcessor g (EventPUS (EVTelemetry (EVTMPUSPacketReceived pkt))) = do
 --     withFLLock (mwAddPUSPacket g pkt)
-eventProcessor g (EventPUS (EVTelemetry (EVTMPacketDecoded pkt))) = do
+eventProcessor g  (EventPUS (EVTelemetry (EVTMPacketDecoded pkt   ))) = do
   withFLLock (mwAddTMPacket g pkt)
+eventProcessor g (EventPUS (EVTelemetry (EVTMFrameReceived frame))) = do
+  T.putStrLn $ "AURISInterface: received frame: " <> T.pack (show frame)
+  withFLLock (mwAddTMFrame g frame)
 eventProcessor _ _ = pure ()
 
 

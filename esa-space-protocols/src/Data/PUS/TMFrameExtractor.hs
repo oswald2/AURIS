@@ -31,6 +31,7 @@ module Data.PUS.TMFrameExtractor
   , tmFrameDecodeC
   , storeFrameC
   , raisePUSPacketC
+  , raiseFrameC
   )
 where
 
@@ -106,8 +107,8 @@ tmFrameDecodeC = do
       Left err -> do
         let msg = T.pack err
         liftIO $ raiseEvent env (EVAlarms (EVIllegalTMFrame msg))
-      Right (bs, frame) -> do 
-        
+      Right (bs, frame) -> do
+
         logDebug $ display ("Received TM Frame: " :: Text) <> displayShow frame
 
         case tmFrameCheckCRC cfg bs of
@@ -139,11 +140,7 @@ storeFrameC = awaitForever $ \sf -> do
 -- @outQueue is the final 'TBQueue', where extracted PUS Packets are sent
 -- for parameter processing
 tmFrameSwitchVC
-  :: ( MonadUnliftIO m
-     , MonadThrow m
-     , MonadReader env m
-     , HasGlobalState env
-     )
+  :: (MonadUnliftIO m, MonadThrow m, MonadReader env m, HasGlobalState env)
   => ProtocolInterface
   -> TBQueue (ByteString, ExtractedDU PUSPacket)
   -> ConduitT TMStoreFrame Void m ()
@@ -191,6 +188,14 @@ tmFrameSwitchVC interf outQueue = do
   conduit
 
 
+raiseFrameC
+  :: (MonadIO m, MonadReader env m, HasGlobalState env)
+  => ConduitT (ExtractedDU TMFrame) (ExtractedDU TMFrame) m ()
+raiseFrameC = awaitForever $ \frame -> do
+  env <- ask
+  logDebug $ "Raising frame: " <> displayShow frame
+  liftIO $ raiseEvent env (EVTelemetry (EVTMFrameReceived frame))
+  yield frame
 
 
 
@@ -209,9 +214,9 @@ checkFrameCountC pIf = go Nothing
     case x of
       Nothing     -> return ()
       Just frame' -> do
-        
+
         logDebug $ display ("checkFrameCountC: " :: Text) <> displayShow frame'
-        
+
         let frame      = frame' ^. tmstFrame
             !vcfc      = frame ^. tmFrameHdr . tmFrameVCFC
             yieldNoGap = do
@@ -247,7 +252,9 @@ checkFrameCountC pIf = go Nothing
                     , _epDU      = frame
                     }
                 --traceM "Yield gap!"
-                logDebug $ display ("Detected VC Gap: " :: Text) <> displayShow ep
+                logDebug
+                  $  display ("Detected VC Gap: " :: Text)
+                  <> displayShow ep
                 unless (isIdleTmFrame frame) $ yield ep
                 go (Just vcfc)
           Nothing -> do
@@ -270,7 +277,7 @@ extractPktFromTMFramesC missionSpecific pIf = loop True B.empty
     -> ByteString
     -> ConduitT (ExtractedDU TMFrame) ExtDuTMFrame m ()
   loop initial spillOverData = do
-    logDebug 
+    logDebug
       $  display ("loop spill len: " :: Text)
       <> displayShow (B.length spillOverData)
       <> display (" spillOverData:\n" :: Text)
@@ -285,7 +292,7 @@ extractPktFromTMFramesC missionSpecific pIf = loop True B.empty
                 -- we have a gap, so process the spill-over packet
             rejectSpillOver spillOverData
             let (_prev, rest) = tmFrameGetPrevAndRest frame'
-            logDebug 
+            logDebug
               $  display ("gap: prev: " :: Text)
               <> displayShow (B.length _prev)
               <> display (" rest: " :: Text)
@@ -614,11 +621,7 @@ instance GetPayload ExtDuTMFrame where
 -- could not be parsed. The PUS Packets are wrapped in a 'ProtocolPacket'
 -- which also indicates it's source interface
 pusPacketDecodeC
-  :: ( MonadIO m
-     , MonadThrow m
-     , MonadReader env m
-     , HasGlobalState env
-     )
+  :: (MonadIO m, MonadThrow m, MonadReader env m, HasGlobalState env)
   => ProtocolInterface
   -> ConduitT ExtDuTMFrame (ByteString, ExtractedDU PUSPacket) m ()
 pusPacketDecodeC pIf = do
@@ -644,11 +647,7 @@ pusPacketDecodeC pIf = do
 -- it's own thread and distributes the frames according to their
 -- virtual channel ID
 tmFrameExtractionChain
-  :: ( MonadIO m
-     , MonadThrow m
-     , MonadReader env m
-     , HasGlobalState env
-     )
+  :: (MonadIO m, MonadThrow m, MonadReader env m, HasGlobalState env)
   => TBQueue TMStoreFrame
   -> TBQueue (ByteString, ExtractedDU PUSPacket)
   -> ProtocolInterface
@@ -661,11 +660,7 @@ tmFrameExtractionChain queue outQueue interf =
 -- extracts the packets from the frames, passes them to the PUS Packet
 -- parser and passes that on downstream.
 tmFrameExtraction
-  :: ( MonadIO m
-     , MonadThrow m
-     , MonadReader env m
-     , HasGlobalState env
-     )
+  :: (MonadIO m, MonadThrow m, MonadReader env m, HasGlobalState env)
   => ProtocolInterface
   -> ConduitT TMStoreFrame (ByteString, ExtractedDU PUSPacket) m ()
 tmFrameExtraction interf = do
@@ -673,6 +668,7 @@ tmFrameExtraction interf = do
   let missionSpecific = st ^. getMissionSpecific
 
   checkFrameCountC interf
+    .| raiseFrameC
     .| extractPktFromTMFramesC missionSpecific interf
     .| pusPacketDecodeC interf
 

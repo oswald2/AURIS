@@ -22,6 +22,7 @@ import           Graphics.UI.FLTK.LowLevel.FLTKHS
 import           GUI.MainWindow
 import           GUI.ScrollingTable
 import           GUI.TMPacketTab
+import           GUI.TMFrameTab
 import           GUI.About
 
 import           Model.ScrollingTableModel
@@ -43,6 +44,8 @@ setupCallbacks window = do
 
   GUI.ScrollingTable.setupCallback (window ^. mwTMPTab . tmpTable)
                                    (doubleClickTMP window)
+
+  GUI.TMFrameTab.setupCallbacks (window ^. mwFrameTab)
 
   setCallback (window ^. mwMainMenu . mmAbout) (aboutCB window)
   pure ()
