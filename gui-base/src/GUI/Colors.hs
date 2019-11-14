@@ -45,7 +45,7 @@ mcsGreen :: Color
 mcsGreen = Color 0x00CC0000
 
 mcsYellow :: Color
-mcsYellow = Color 0xffff0000
+mcsYellow = Color 0xeeee0000
 
 
 mcsWindowSetColor :: Ref Window -> IO ()

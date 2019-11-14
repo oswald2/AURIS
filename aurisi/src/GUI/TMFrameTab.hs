@@ -26,7 +26,10 @@ import           GUI.TMFrameTable
 import           GUI.ScrollingTable
 import           GUI.Colors
 
+import           Data.PUS.ExtractedDU
 import           Data.PUS.TMFrame
+import           Data.PUS.CLCW
+
 import           General.Hexdump
 
 
@@ -42,7 +45,7 @@ data CLCWFluid = CLCWFluid {
   , _clcwfFarmB :: Ref Output
   , _clcwfGroup :: Ref Group
   }
-
+makeLenses ''CLCWFluid
 
 data TMFrameTabFluid = TMFrameTabFluid {
   _tmffTabGroup :: Ref Group
@@ -92,7 +95,7 @@ data TMFrameTab = TMFrameTab {
 makeLenses ''TMFrameTab
 
 
-tmfTabAddRow :: TMFrameTab -> TMFrame -> IO ()
+tmfTabAddRow :: TMFrameTab -> ExtractedDU TMFrame -> IO ()
 tmfTabAddRow tab frame = do
   addRow (tab ^. tmfFrameTable) (tab ^. tmfFrameModel) frame
 
@@ -182,32 +185,68 @@ createTMFTab TMFrameTabFluid {..} = do
                   }
 
 
-tmfTabDetailsSetValues :: TMFrameTab -> TMFrame -> IO ()
+tmfTabDetailsSetValues :: TMFrameTab -> ExtractedDU TMFrame -> IO ()
 tmfTabDetailsSetValues g frame = do
+  let frameHdr = frame ^. epDU . tmFrameHdr
   void $ setValue (g ^. tmfOutputSCID)
-                  (textDisplay (frame ^. tmFrameHdr . tmFrameScID))
+                  (textDisplay (frameHdr ^. tmFrameScID))
   void $ setValue (g ^. tmfOutputVCID)
-                  (textDisplay (frame ^. tmFrameHdr . tmFrameVcID))
+                  (textDisplay (frameHdr ^. tmFrameVcID))
   void $ setValue
     (g ^. tmfOutputOCF)
-    (if frame ^. tmFrameHdr . tmFrameOpControl then "Y" else "N")
+    (if frameHdr ^. tmFrameOpControl then "Y" else "N")
   void $ setValue (g ^. tmfOutputMCFC)
-                  (textDisplay (frame ^. tmFrameHdr . tmFrameMCFC))
+                  (textDisplay (frameHdr ^. tmFrameMCFC))
   void $ setValue (g ^. tmfOutputVCFC)
-                  (textDisplay (frame ^. tmFrameHdr . tmFrameVCFC))
-  void $ setValue (g ^. tmfOutputFHP) (displayFHP frame)
+                  (textDisplay (frameHdr ^. tmFrameVCFC))
+  void $ setValue (g ^. tmfOutputFHP) (displayFHP (frame ^. epDU))
   void $ setValue (g ^. tmfOutputSeg)
-                  (T.pack (show (frame ^. tmFrameHdr . tmFrameSegID)))
+                  (T.pack (show (frameHdr ^. tmFrameSegID)))
   void $ setValue (g ^. tmfOutputDFH)
-                  (if frame ^. tmFrameHdr . tmFrameDfh then "Y" else "N")
+                  (if frameHdr ^. tmFrameDfh then "Y" else "N")
   void $ setValue
     (g ^. tmfOutputOrder)
-    (if frame ^. tmFrameHdr . tmFrameOrder then "REVERSE" else "FORWARD")
+    (if frameHdr ^. tmFrameOrder then "REVERSE" else "FORWARD")
   void $ setValue
     (g ^. tmfOutputSync)
-    (if frame ^. tmFrameHdr . tmFrameSync then "ASYNC" else "SYNC")
+    (if frameHdr ^. tmFrameSync then "ASYNC" else "SYNC")
 
-  setText (g ^. tmfDumpBuffer) (hexdumpBS (frame ^. tmFrameData))
+  setText (g ^. tmfDumpBuffer) (hexdumpBS (frame ^. epDU . tmFrameData))
+
+  -- also set the CLCW values
+  case frame ^. epDU . tmFrameOCF of 
+    Nothing -> return () 
+    Just c -> setCLCWValues g (unpackValues c)
+
+
+setCLCWValues :: TMFrameTab -> CLCW -> IO ()
+setCLCWValues window clcw = do
+  let cl = window ^. tmfCLCW
+
+  void $ setValue (cl ^. clcwfVCID) (textDisplay (clcw ^. clcwVcID))
+  void $ setValue (cl ^. clcwfReportVal) (textDisplay (clcw ^. clcwReportVal))
+  void $ setValue (cl ^. clcwfFarmB) (textDisplay (clcw ^. clcwBCounter))
+
+  if clcw ^. clcwNoRF
+    then mcsBoxAlarm (cl ^. clcwfNoRF) txtNoRF
+    else mcsBoxGreen (cl ^. clcwfNoRF) txtOkRF
+
+  if clcw ^. clcwNoBitLock
+    then mcsBoxAlarm (cl ^. clcwfBitLock) txtNoBitlock
+    else mcsBoxGreen (cl ^. clcwfBitLock) txtBitlock
+
+  if clcw ^. clcwLockout
+    then mcsBoxAlarm (cl ^. clcwfLockout) txtLockout
+    else mcsBoxGreen (cl ^. clcwfLockout) txtNoLockout
+
+  if clcw ^. clcwWait
+    then mcsBoxAlarm (cl ^. clcwfWait) txtWait
+    else mcsBoxGreen (cl ^. clcwfWait) txtNoWait
+
+  if clcw ^. clcwRetrans
+    then mcsBoxWarn (cl ^. clcwfRetransmit) txtRetransmit
+    else mcsBoxGreen (cl ^. clcwfRetransmit) txtNoRetransmit
+
 
 
 setupCallbacks :: TMFrameTab -> IO ()

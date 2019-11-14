@@ -112,7 +112,7 @@ mwSetTMParameters window pkt = do
 
 mwAddTMFrame :: MainWindow -> ExtractedDU TMFrame -> IO ()
 mwAddTMFrame window frame = do
-  tmfTabAddRow (window ^. mwFrameTab) (frame ^. epDU)
+  tmfTabAddRow (window ^. mwFrameTab) frame
 
 
 mwSetMission :: MainWindow -> Text -> IO ()
