@@ -10,6 +10,9 @@ module GUI.MainWindow
   , TMPacketTabFluid(..)
   , TMPacketTab(..)
   , MainMenu(..)
+  , NctrsConnGroup(..)
+  , CncConnGroup(..)
+  , EdenConnGroup(..)
   , createMainWindow
   , scrollNew
   , mwWindow
@@ -32,15 +35,17 @@ module GUI.MainWindow
   , mwMainMenu
   , mwAboutWindow
   , mwFrameTab
+  , mwNCTRSConnection
   )
 where
 
 import           RIO
-import qualified RIO.Text                      as T
-import qualified Data.Text.IO                  as T
+--import qualified RIO.Text                      as T
+-- import qualified Data.Text.IO                  as T
 import           Control.Lens                   ( makeLenses )
 
 import           Graphics.UI.FLTK.LowLevel.FLTKHS
+import qualified Graphics.UI.FLTK.LowLevel.FL  as FL
 
 import           GUI.TMPacketTab
 import           GUI.TMFrameTab
@@ -53,6 +58,9 @@ import           Data.PUS.TMPacket
 import           Data.PUS.ExtractedDU
 import           Data.PUS.TMFrame
 
+import           General.Time
+
+
 
 data MainMenu = MainMenu {
     _mmOpenFile :: Ref MenuItemBase
@@ -60,6 +68,69 @@ data MainMenu = MainMenu {
   , _mmAbout :: Ref MenuItemBase
   }
 makeLenses ''MainMenu
+
+
+data NctrsConnGroup = NctrsConnGroup {
+  _mfNctrsConnGroup :: Ref Group
+  , _mfNctrsTCConn :: Ref Box
+  , _mfNctrsTMConn :: Ref Box
+  , _mfNctrsADMConn :: Ref Box
+  , _mfNctrsTClabel :: Ref Box
+  , _mfNctrsTMlabel :: Ref Box
+  , _mfNctrsADMlabel :: Ref Box
+  }
+makeLenses ''NctrsConnGroup
+
+txtConnected :: Text
+txtConnected = "CONNECTED"
+
+txtDisconnected :: Text
+txtDisconnected = "DISCONNECTED"
+
+initNctrsConnGroup :: NctrsConnGroup -> IO ()
+initNctrsConnGroup NctrsConnGroup {..} = do
+  mcsGroupingSetColor _mfNctrsConnGroup
+  mcsBoxLabel _mfNctrsTClabel
+  mcsBoxLabel _mfNctrsTMlabel
+  mcsBoxLabel _mfNctrsADMlabel
+
+  mcsBoxAlarm _mfNctrsTCConn  txtDisconnected
+  mcsBoxAlarm _mfNctrsTMConn  txtDisconnected
+  mcsBoxAlarm _mfNctrsADMConn txtDisconnected
+
+data CncConnGroup = CncConnGroup {
+  _mfCncConnGroup :: Ref Group
+  , _mfCncTCConn :: Ref Box
+  , _mfCncTMConn :: Ref Box
+  , _mfCncLabelTCConn :: Ref Box
+  , _mfCncLabelTMConn :: Ref Box
+  }
+makeLenses ''CncConnGroup
+
+initCncConnGroup :: CncConnGroup -> IO ()
+initCncConnGroup CncConnGroup {..} = do
+  mcsGroupingSetColor _mfCncConnGroup
+  mcsBoxLabel _mfCncLabelTCConn
+  mcsBoxLabel _mfCncLabelTMConn
+
+  mcsBoxAlarm _mfCncTCConn txtDisconnected
+  mcsBoxAlarm _mfCncTMConn txtDisconnected
+
+
+data EdenConnGroup = EdenConnGroup {
+  _mwEdenConnGroup :: Ref Group
+  , _mwEdenConnBox :: Ref Box
+  , _mwEdenLabelConn :: Ref Box
+  }
+makeLenses ''EdenConnGroup
+
+initEdenConnGroup :: EdenConnGroup -> IO ()
+initEdenConnGroup EdenConnGroup {..} = do
+  mcsGroupingSetColor _mwEdenConnGroup
+  mcsBoxLabel _mwEdenLabelConn
+  mcsBoxAlarm _mwEdenConnBox txtDisconnected
+
+
 
 data MainWindowFluid = MainWindowFluid {
     _mfWindow :: Ref Window
@@ -77,6 +148,10 @@ data MainWindowFluid = MainWindowFluid {
     , _mfMainScrolled :: Ref Scrolled
     , _mfMainMenu :: MainMenu
     , _mfFrameTab :: TMFrameTabFluid
+    , _mfNCTRSConn :: NctrsConnGroup
+    , _mfCnCConn :: CncConnGroup
+    , _mfEdenConn :: EdenConnGroup
+    , _mfTimeLabel :: Ref Box
     }
 
 
@@ -95,6 +170,10 @@ data MainWindow = MainWindow {
     , _mwMainMenu :: MainMenu
     , _mwAboutWindow :: AboutWindowFluid
     , _mwFrameTab :: TMFrameTab
+    , _mwNCTRSConn :: NctrsConnGroup
+    , _mwCnCConn :: CncConnGroup
+    , _mwEdenConn :: EdenConnGroup
+    , _mwTimeLabel :: Ref Box
     }
 makeLenses ''MainWindow
 
@@ -145,6 +224,12 @@ createMainWindow MainWindowFluid {..} aboutWindow = do
 
   initLogo _mfLogoBox aurisLogo
 
+  initNctrsConnGroup _mfNCTRSConn
+  initCncConnGroup _mfCnCConn
+  initEdenConnGroup _mfEdenConn
+
+  mcsBoxTime _mfTimeLabel
+
   -- mcsWidgetSetColor _mfOpenFile
   -- mcsWidgetSetColor _mfSaveFile
 --   mcsButtonSetColor _mfArmButton
@@ -163,8 +248,32 @@ createMainWindow MainWindowFluid {..} aboutWindow = do
                               , _mwMainMenu        = _mfMainMenu
                               , _mwAboutWindow     = aboutWindow
                               , _mwFrameTab        = tmfTab
+                              , _mwNCTRSConn       = _mfNCTRSConn
+                              , _mwCnCConn         = _mfCnCConn
+                              , _mwEdenConn        = _mfEdenConn
+                              , _mwTimeLabel       = _mfTimeLabel
                               }
+
+  initTimer mainWindow
   pure mainWindow
 
 
+initTimer :: MainWindow -> IO ()
+initTimer window = do
+  void $ FL.addTimeout 1 (timerCB window)
 
+
+timerCB :: MainWindow -> IO ()
+timerCB window = do
+  now <- getCurrentTime
+  setLabel (window ^. mwTimeLabel) (displayTimeMilli now)
+  void $ FL.repeatTimeout 1 (timerCB window)
+
+
+
+
+mwNCTRSConnection :: MainWindow -> Bool -> IO ()
+mwNCTRSConnection MainWindow {..} True =
+  mcsBoxGreen (_mwNCTRSConn ^. mfNctrsTMConn) txtConnected
+mwNCTRSConnection MainWindow {..} False =
+  mcsBoxAlarm (_mwNCTRSConn ^. mfNctrsTMConn) txtConnected

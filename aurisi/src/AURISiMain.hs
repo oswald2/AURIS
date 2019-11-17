@@ -110,6 +110,7 @@ main = do
         mainWindow <- ui
 
         mwSetMission mainWindow (aurisMission cfg)
+
         -- setup the interface
         (interface, _eventThread) <- initialiseInterface mainWindow
         -- determine the mission-specific functionality

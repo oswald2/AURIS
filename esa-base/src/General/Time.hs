@@ -92,6 +92,7 @@ module General.Time
   , Epoch
   , EpochType(..)
   , EpochTime(..)
+  , displayTimeMilli
   )
 where
 
@@ -366,6 +367,64 @@ displayISO (SunTime t True) =
         secs
         micro
 
+
+displayTimeMilli :: SunTime -> Text
+displayTimeMilli (SunTime t False) =
+  let t1 :: LocalTime
+      t1 = t ^. from microseconds . from posixTime . utcLocalTime utc
+      date          = localDay t1 ^. gregorian
+      time          = localTimeOfDay t1
+      dayOfYear     = odDay $ localDay t1 ^. ordinalDate
+      (secs, micro) = fromEnum (todSec time) `quotRem` 1_000_000
+  in  sformat
+    ( (left 4 '0' %. int)
+    % "."
+    % (left 3 '0' %. int)
+    % "."
+    % (left 2 '0' %. int)
+    % "."
+    % (left 2 '0' %. int)
+    % "."
+    % (left 2 '0' %. int)
+    % "."
+    % (left 3 '0' %. int)
+    )
+    (ymdYear date)
+    dayOfYear
+    (todHour time)
+    (todMin time)
+    secs
+    (micro `quot` 1000)
+displayTimeMilli tt =
+  let secs  = sec `rem` 60
+      mins  = sec `quot` 60 `rem` 60
+      hours = sec `quot` 3600 `rem` 24
+      days  = sec `quot` 86400 `rem` 365
+      years = sec `quot` (86400 * 365)
+      mic   = tdsMicro tt
+      sec   = tdsSecs tt
+      sign  = if sec < 0 then '-' else '+'
+  in  sformat
+        ( Formatting.char
+        % (left 4 '0' %. int)
+        % "."
+        % (left 3 '0' %. int)
+        % "."
+        % (left 2 '0' %. int)
+        % "."
+        % (left 2 '0' %. int)
+        % "."
+        % (left 2 '0' %. int)
+        % "."
+        % (left 3 '0' %. int)
+        )
+        sign
+        years
+        days
+        hours
+        mins
+        secs
+        ((abs mic) `quot` 1000)
 
 instance Display SunTime where
   -- | display a 'SunTime' in SCOS format (with day of year)

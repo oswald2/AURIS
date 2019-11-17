@@ -13,6 +13,9 @@ mcsBackground = Color 0x64646400
 mcsWidgetBG :: Color
 mcsWidgetBG = Color 0x50505000
 
+mcsWidgetBGGroup :: Color
+mcsWidgetBGGroup = Color 0x46464600
+
 mcsWidgetFG :: Color
 mcsWidgetFG = Color 0x7d7d7d00
 
@@ -92,6 +95,12 @@ mcsHeaderGroupSetColor w = do
   setColorWithBgSel w mcsWidgetBG mcsFontColor
   setLabelcolor w mcsFontColor
 
+mcsGroupingSetColor :: Ref Group -> IO ()
+mcsGroupingSetColor w = do
+  setColor w mcsWidgetBGGroup
+  setColorWithBgSel w mcsWidgetBGGroup mcsFontColor
+  setLabelcolor w mcsFontColor
+
 
 mcsBrowserSetColor :: Ref Browser -> IO ()
 mcsBrowserSetColor w = do
@@ -135,6 +144,15 @@ mcsProgressSetColor w = do
   setColor w mcsBackground
   setColorWithBgSel w mcsBackground mcsTableSelectionColor
 
+
+mcsBoxLabel :: Ref Box -> IO ()
+mcsBoxLabel w = do
+  setLabelcolor w mcsFontColor
+
+mcsBoxTime :: Ref Box -> IO ()
+mcsBoxTime w = do
+  setColor w mcsWidgetBGGroup
+  setLabelcolor w mcsEmphColor
 
 mcsBoxAlarm :: Ref Box -> Text -> IO ()
 mcsBoxAlarm w t = do

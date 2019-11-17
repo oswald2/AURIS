@@ -20,6 +20,8 @@ import           Data.PUS.MissionSpecific.Definitions
 import           Data.PUS.TMFrameExtractor
 import           Data.PUS.TMPacketProcessing
 import           Data.PUS.NcduToTMFrame
+import           Data.PUS.Events
+
 import           Protocol.NCTRS
 import           Protocol.ProtocolInterfaces
 import           Control.PUS.Classes
@@ -36,7 +38,10 @@ import           System.Directory
 import           System.FilePath
 
 import           GUI.MessageDisplay             ( messageAreaLogFunc )
-import           GUI.MainWindow                 ( MainWindow )
+import           GUI.MainWindow
+
+
+
 
 configPath :: FilePath
 configPath = ".config/AURISi"
@@ -76,11 +81,14 @@ runProcessing cfg missionSpecific mibPath interface mainWindow = do
       -- logWarn "A warning message"
       -- logError "Error message. Very important"
 
-      -- let l x = logWarn $ display ("Warning " :: Text) <> displayShow x  
+      -- let l x = logWarn $ display ("Warning " :: Text) <> displayShow x
       -- mapM_ l [1..212]
 
       runTMChain cfg
     pure ()
+
+ignoreConduit :: ConduitT i o (ResourceT (RIO GlobalState)) ()
+ignoreConduit = awaitForever $ \_ -> pure ()
 
 
 runTMChain :: AurisConfig -> RIO GlobalState ()
@@ -93,17 +101,18 @@ runTMChain cfg = do
           .| packetProcessorC
           .| raiseTMPacketC
 
-      ignoreConduit = awaitForever $ \_ -> pure ()
 
   runGeneralTCPReconnectClient
-      (clientSettings (aurisNctrsTMPort cfg) (encodeUtf8 (aurisNctrsHost cfg)))
-      200000
-    $ do
-        \app -> void $ runConduitRes (appSource app .| chain .| ignoreConduit)
-        -- \app -> void $ concurrently
-        --   (runConduitRes (chain .| appSink app)-}
-        --  return ())
-        -- (runConduitRes (appSource app .| chain .| ignoreConduit))
+    (clientSettings (aurisNctrsTMPort cfg) (encodeUtf8 (aurisNctrsHost cfg)))
+    200000
+    (tmClient chain)
+
+ where
+  tmClient chain app = do
+    env <- ask
+    liftIO $ raiseEvent env (EVAlarms EVNctrsTmConnected)
+    void $ runConduitRes (appSource app .| chain .| ignoreConduit)
+      `finally` liftIO (raiseEvent env (EVAlarms EVNctrsTmDisconnected))
 
 
 

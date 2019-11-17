@@ -45,7 +45,7 @@ module Data.PUS.EncTime
 where
 
 import           RIO                     hiding ( Builder )
-import qualified RIO.Text                      as T
+--import qualified RIO.Text                      as T
 import           ByteString.StrictBuilder
 
 import           Data.Binary
@@ -273,10 +273,6 @@ cucTimeParser :: CUCTime -> Parser CUCTime
 cucTimeParser (CUCTime _ _ delta) = do
   se <- A.anyWord32be
   m  <- A.anyWord16be
-
-  traceM
-    ("DFH: secs=" <> (T.pack (show se)) <> ", subsec=" <> (T.pack (show m)))
-
   pure (cucTimeFromBinary se m delta)
 
 {-# INLINABLE cucTimeFromBinary #-}

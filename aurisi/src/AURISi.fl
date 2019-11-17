@@ -23,14 +23,14 @@ Function {makeWindow(IO(MainWindowFluid))} {open
     Fl_Scroll mainScrolled {open
       xywh {0 0 1970 1025}
     } {
-      Fl_Group deskHeaderGroup {
-        xywh {5 5 1755 65} box THIN_UP_FRAME
+      Fl_Group deskHeaderGroup {open
+        xywh {5 5 1755 70} box THIN_UP_FRAME
       } {
         Fl_Group rGroup1 {open
-          xywh {245 15 1515 20} resizable
+          xywh {245 15 1515 35} resizable
         } {}
-        Fl_Menu_Bar menuBar {open
-          xywh {75 40 1683 25} box FLAT_BOX color 30 labelcolor 6 textcolor 6
+        Fl_Menu_Bar menuBar {
+          xywh {75 40 203 25} box FLAT_BOX color 30 labelcolor 6 textcolor 6
         } {
           Submenu menuFile {
             label {&File} open
@@ -59,12 +59,76 @@ Function {makeWindow(IO(MainWindowFluid))} {open
           label {Mission:}
           xywh {140 15 105 20} box FLAT_BOX textfont 10
         }
-        Fl_Group logoGroup {open
+        Fl_Group logoGroup {
           xywh {10 10 65 60}
         } {
           Fl_Box logoBox {
             xywh {10 10 65 60} color 7
           }
+        }
+        Fl_Group nctrsConnGroup {
+          xywh {250 10 405 65} box FLAT_BOX color 38
+        } {
+          Fl_Box nctrsTCConn {
+            label DISCONNECTED
+            xywh {255 40 126 25} box FLAT_BOX color 1 labelcolor 7
+          }
+          Fl_Box labelTcNCTRSConn {
+            label {TC NCTRS:}
+            xywh {263 10 110 35}
+          }
+          Fl_Box nctrsTMConn {
+            label DISCONNECTED
+            xywh {390 40 126 25} box FLAT_BOX color 1 labelcolor 7
+          }
+          Fl_Box labelTmNCTRSConn {
+            label {TM NCTRS:}
+            xywh {408 10 90 35}
+          }
+          Fl_Box nctrsADMConn {
+            label DISCONNECTED
+            xywh {525 40 126 25} box FLAT_BOX color 1 labelcolor 7
+          }
+          Fl_Box labelAdmNCTRSConn {
+            label {ADM NCTRS:}
+            xywh {543 10 90 35}
+          }
+        }
+        Fl_Group cncConnGroup {open
+          xywh {665 10 270 65} box FLAT_BOX color 38
+        } {
+          Fl_Box cncTCConn {
+            label DISCONNECTED
+            xywh {670 40 126 25} box FLAT_BOX color 1 labelcolor 7
+          }
+          Fl_Box labelTcCnCConn {
+            label {TC C&C:}
+            xywh {698 15 70 25}
+          }
+          Fl_Box cncTMConn {
+            label DISCONNECTED
+            xywh {805 40 126 25} box FLAT_BOX color 1 labelcolor 7
+          }
+          Fl_Box labelTmCnCConn {
+            label {TM C&C:}
+            xywh {830 15 75 25}
+          }
+        }
+        Fl_Group edenConnGroup {open
+          xywh {950 10 135 65} box FLAT_BOX color 38
+        } {
+          Fl_Box edenConnBox {
+            label DISCONNECTED
+            xywh {955 40 126 25} box FLAT_BOX color 1 labelcolor 7
+          }
+          Fl_Box labelEDENConn {
+            label {EDEN:}
+            xywh {988 15 60 25}
+          }
+        }
+        Fl_Box timeField {
+          label {2010.001.12.00.00.000} selected
+          xywh {1525 10 225 20} box FLAT_BOX color 38 labelfont 5 labelsize 16
         }
       }
       Fl_Tabs mainTab {open
@@ -72,7 +136,7 @@ Function {makeWindow(IO(MainWindowFluid))} {open
       } {
         Fl_Group tabTMFrames {
           label {TM Frames} open
-          xywh {5 90 1965 835} hide
+          xywh {5 90 1965 835}
         } {
           Fl_Group tableTMFrames {open
             xywh {5 136 1046 757} box THIN_DOWN_BOX
@@ -85,7 +149,7 @@ Function {makeWindow(IO(MainWindowFluid))} {open
               xywh {1650 100 90 25}
             }
           }
-          Fl_Group frameDetails {open
+          Fl_Group frameDetails {
             xywh {1055 135 910 762} box THIN_DOWN_BOX
           } {
             Fl_Group groupFrameDetails {
@@ -193,8 +257,8 @@ Function {makeWindow(IO(MainWindowFluid))} {open
           }
         }
         Fl_Group tabTMPackets {
-          label {TM Packets} open
-          xywh {5 90 1751 804} hotspot
+          label {TM Packets}
+          xywh {5 90 1751 804} hide hotspot
         } {
           Fl_Group tableTMPackets {open
             xywh {5 130 1136 762} box THIN_DOWN_FRAME
@@ -231,7 +295,7 @@ Function {makeWindow(IO(MainWindowFluid))} {open
                 xywh {1240 205 110 20} box FLAT_BOX
               }
               Fl_Output typeLabel {
-                label {Type:} selected
+                label {Type:}
                 xywh {1400 205 45 20} box FLAT_BOX
               }
               Fl_Output subTypeLabel {
@@ -353,6 +417,33 @@ let { mainMenu = MainMenu {
   }};
 
         
+let { nctrsConn = NctrsConnGroup {
+  _mfNctrsConnGroup = nctrsConnGroup
+  , _mfNctrsTCConn = nctrsTCConn
+  , _mfNctrsTMConn = nctrsTMConn
+  , _mfNctrsADMConn = nctrsADMConn
+  , _mfNctrsTClabel = labelTcNCTRSConn
+  , _mfNctrsTMlabel = labelTmNCTRSConn
+  , _mfNctrsADMlabel = labelAdmNCTRSConn
+  }};
+        
+        
+let { cncGroup = CncConnGroup {
+  _mfCncConnGroup = cncConnGroup
+  , _mfCncTCConn = cncTCConn
+  , _mfCncTMConn = cncTMConn
+  , _mfCncLabelTCConn = labelTcCnCConn
+  , _mfCncLabelTMConn = labelTmCnCConn
+  }};
+        
+
+let { edenConn = EdenConnGroup {
+  _mwEdenConnGroup = edenConnGroup
+  , _mwEdenConnBox = edenConnBox
+  , _mwEdenLabelConn = labelEDENConn
+  }};
+
+        
 let { window = MainWindowFluid { _mfWindow = mainWindow
     , _mfProgress = mainProgress
     , _mfTabs = mainTab
@@ -368,6 +459,10 @@ let { window = MainWindowFluid { _mfWindow = mainWindow
     , _mfMainScrolled = mainScrolled
     , _mfMainMenu = mainMenu
     , _mfFrameTab = tmfTab
+    , _mfNCTRSConn = nctrsConn
+    , _mfCnCConn = cncGroup
+    , _mfEdenConn = edenConn
+    , _mfTimeLabel = timeField
     }};
     return window} {}
 }
