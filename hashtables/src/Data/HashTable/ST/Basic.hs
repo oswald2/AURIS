@@ -185,7 +185,7 @@ data IHashTable k v = IHashTable {
     } deriving (Generic)
 
 
-instance (Show k, Show v) => Show (IHashTable k v) where 
+instance (Show k, Show v) => Show (IHashTable k v) where
   show = show . Data.HashTable.ST.Basic.toList
 
 ------------------------------------------------------------------------------
@@ -476,7 +476,7 @@ insertRecord !sz !hashes !keys !values !h !key !value = do
 
 
 ------------------------------------------------------------------------------
-checkOverflow :: (Eq k, Hashable k) =>
+checkOverflow :: (Hashable k) =>
                  (HashTable_ s k v)
               -> ST s (HashTable_ s k v)
 checkOverflow ht@(HashTable sz ldRef _ _ _) = do
@@ -954,9 +954,9 @@ toList = fold f []
 {-# INLINE toList #-}
 
 
-fromList :: (Eq k, Hashable k) => [(k,v)] -> IHashTable k v 
-fromList lst = runST $ do 
-  let len = length lst 
-  ht <- newSized len 
+fromList :: (Eq k, Hashable k) => [(k,v)] -> IHashTable k v
+fromList lst = runST $ do
+  let len = length lst
+  ht <- newSized len
   Control.Monad.forM_ lst (uncurry (insert ht))
   unsafeFreeze ht

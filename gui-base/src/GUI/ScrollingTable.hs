@@ -98,13 +98,13 @@ initializeTable table model colDefinitions = do
     end table
 
 
--- | refresh a table from a model. There is no maxRow check, so 
+-- | refresh a table from a model. There is no maxRow check, so
 -- the model is displayed as-is
 setTableFromModel :: Ref TableRow -> TableModel a -> IO ()
-setTableFromModel table model = do 
+setTableFromModel table model = do
   nRows <- tableModelSize model
   setRows table (Rows nRows)
-  redraw table 
+  redraw table
 
 
 modelMaxRows :: Int
@@ -176,20 +176,23 @@ drawData table model (TableCoordinate (Row row) (Column _col)) colDef rectangle
     = do
         flcPushClip rectangle
 
-        bgColor <- do
-            isSelected' <- getRowSelected table (Row row)
-            case isSelected' of
-                Right is' ->
-                    if is' then getSelectionColor table else return mcsTableBG
-                Left _ -> return mcsTableBG
-        flcSetColor bgColor
-
-        flcRectf rectangle
-        flcSetColor mcsTableFG
-
         cell <- queryTableModelUnlocked
             model
             (\s -> toCellText (s S.!? row) colDef)
+
+        (bgColor, fgColor) <- do
+            isSelected' <- getRowSelected table (Row row)
+            case isSelected' of
+                Right is' ->
+                    if is'
+                      then (,mcsTableFG) <$> getSelectionColor table
+                      else return (_dispcCellColor cell, _dispcTextColor cell)
+                Left _ -> return (_dispcCellColor cell, _dispcTextColor cell)
+        flcSetColor bgColor
+
+        flcRectf rectangle
+        flcSetColor (fgColor)
+
 
         flcDrawInBox (_dispcText cell)
                      (padRectangle rectangle 5)

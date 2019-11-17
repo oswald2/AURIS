@@ -21,7 +21,7 @@ Function {makeWindow(IO(MainWindowFluid))} {open
     xywh {110 47 1755 1020} type Double color 30 labelcolor 6 visible
   } {
     Fl_Scroll mainScrolled {open
-      xywh {0 0 1920 1025}
+      xywh {0 0 1970 1025}
     } {
       Fl_Group deskHeaderGroup {
         xywh {5 5 1755 65} box THIN_UP_FRAME
@@ -68,11 +68,11 @@ Function {makeWindow(IO(MainWindowFluid))} {open
         }
       }
       Fl_Tabs mainTab {open
-        xywh {5 70 1915 825}
+        xywh {5 70 1965 855}
       } {
         Fl_Group tabTMFrames {
           label {TM Frames} open
-          xywh {5 90 1915 805}
+          xywh {5 90 1965 835} hide
         } {
           Fl_Group tableTMFrames {open
             xywh {5 136 1046 757} box THIN_DOWN_BOX
@@ -86,103 +86,115 @@ Function {makeWindow(IO(MainWindowFluid))} {open
             }
           }
           Fl_Group frameDetails {open
-            xywh {1055 135 700 760} box THIN_DOWN_BOX
+            xywh {1055 135 910 762} box THIN_DOWN_BOX
           } {
             Fl_Group groupFrameDetails {
               label {Details:} open
-              xywh {1065 160 670 185} box THIN_UP_FRAME labelfont 1 align 5
+              xywh {1065 160 900 220} box THIN_UP_FRAME labelfont 1 align 5
             } {
               Fl_Output frameOutSCID {
                 label {S/C ID:}
-                xywh {1125 170 65 20}
+                xywh {1125 170 65 20} box FLAT_BOX
               }
               Fl_Output frameOutVCID {
                 label {VC ID:}
-                xywh {1245 170 45 20}
+                xywh {1245 170 45 20} box FLAT_BOX
               }
               Fl_Output frameOutOCF {
                 label {OCF:}
-                xywh {1335 170 45 20}
+                xywh {1335 170 45 20} box FLAT_BOX
               }
               Fl_Output frameOutVCFC {
                 label {Virtual Channel Frame Count:}
-                xywh {1295 195 60 20}
+                xywh {1295 195 60 20} box FLAT_BOX
               }
               Fl_Output frameOutMCFC {
                 label {Master Channel Frame Count:}
-                xywh {1295 220 60 20}
+                xywh {1295 220 60 20} box FLAT_BOX
               }
               Fl_Output frameOutFHP {
                 label {First Header Pointer:}
-                xywh {1520 220 80 20}
+                xywh {1520 220 80 20} box FLAT_BOX
               }
               Fl_Output frameOutSegmentation {
                 label {Sementation:}
-                xywh {1520 195 205 20}
+                xywh {1520 195 205 20} box FLAT_BOX
               }
               Fl_Output frameOutDFH {
                 label {DFH:}
-                xywh {1425 170 45 20}
+                xywh {1425 170 45 20} box FLAT_BOX
               }
               Fl_Output frameOutOrder {
                 label {Order:}
-                xywh {1645 170 80 20}
+                xywh {1645 170 80 20} box FLAT_BOX
               }
               Fl_Output frameOutSync {
                 label {Sync:}
-                xywh {1520 170 70 20}
+                xywh {1520 170 70 20} box FLAT_BOX
               }
               Fl_Group clcwGroup {
                 label {CLCW:} open
-                xywh {1075 265 660 75} box THIN_DOWN_FRAME labelfont 1 align 5
+                xywh {1075 295 660 80} box THIN_DOWN_FRAME labelfont 1 align 5
               } {
                 Fl_Output clcwVCID {
                   label {VC ID:}
-                  xywh {1130 275 35 25}
+                  xywh {1130 340 35 25} box FLAT_BOX
                 }
                 Fl_Box clcwBitLock {
                   label {NO BITLOCK}
-                  xywh {1175 275 105 25} box DOWN_BOX color 1 labelcolor 7
+                  xywh {1080 310 126 25} box FLAT_BOX color 1 labelcolor 7
                 }
                 Fl_Box clcwNoRF {
                   label {NO RF}
-                  xywh {1285 275 105 25} box DOWN_BOX color 1 labelcolor 7
+                  xywh {1211 310 126 25} box FLAT_BOX color 1 labelcolor 7
                 }
                 Fl_Box clcwLockout {
                   label LOCKOUT
-                  xywh {1395 275 105 25} box DOWN_BOX color 1 labelcolor 7
+                  xywh {1342 310 126 25} box FLAT_BOX color 1 labelcolor 7
                 }
                 Fl_Box clcwWait {
                   label WAIT
-                  xywh {1505 275 105 25} box DOWN_BOX color 1 labelcolor 7
+                  xywh {1473 310 126 25} box FLAT_BOX color 1 labelcolor 7
                 }
                 Fl_Box clcwRetransmit {
-                  label RETRANSMIT selected
-                  xywh {1615 275 105 25} box DOWN_BOX color 1 labelcolor 7
+                  label {NO RETRANSMIT}
+                  xywh {1605 310 126 25} box FLAT_BOX color 1 labelcolor 7
                 }
                 Fl_Output clcwReportValue {
                   label {Report Value:}
-                  xywh {1185 305 50 25}
+                  xywh {1275 340 50 25} box FLAT_BOX
                 }
                 Fl_Output clcwFarmB {
                   label {FARM-B Counter:}
-                  xywh {1370 305 50 25}
+                  xywh {1460 340 50 25} box FLAT_BOX
                 }
+              }
+              Fl_Output frameOutSource {
+                label {Source:}
+                xywh {1130 245 120 20} box FLAT_BOX
+              }
+              Fl_Output frameOutGap {
+                label {Gap:}
+                xywh {1295 245 60 20} box FLAT_BOX
+              }
+              Fl_Output frameOutQuality {
+                label {Quality:}
+                xywh {1520 245 80 20} box FLAT_BOX
               }
             }
             Fl_Group groupFrameDump {
               label {Data:} open
-              xywh {1065 370 670 520} box THIN_UP_FRAME labelfont 1 align 5
+              xywh {1065 410 670 480} box THIN_UP_FRAME labelfont 1 align 5
             } {
               Fl_Text_Display frameDumpDisplay {
-                xywh {1065 370 670 520} textfont 4
+                xywh {1065 410 670 480} textfont 4
               }
             }
           }
         }
         Fl_Group tabTMPackets {
-          label {TM Packets}
-          xywh {5 90 1751 804} hide hotspot
+          label {TM Packets} open
+          xywh {5 90 1751 804} hotspot
         } {
           Fl_Group tableTMPackets {open
             xywh {5 130 1136 762} box THIN_DOWN_FRAME
@@ -219,7 +231,7 @@ Function {makeWindow(IO(MainWindowFluid))} {open
                 xywh {1240 205 110 20} box FLAT_BOX
               }
               Fl_Output typeLabel {
-                label {Type:}
+                label {Type:} selected
                 xywh {1400 205 45 20} box FLAT_BOX
               }
               Fl_Output subTypeLabel {
@@ -324,6 +336,9 @@ let { tmfTab = TMFrameTabFluid {
     , _tmffOutputDFH = frameOutDFH
     , _tmffOutputOrder = frameOutOrder
     , _tmffOutputSync = frameOutSync
+    , _tmffOutputSource = frameOutSource
+    , _tmffOutputGap = frameOutGap
+    , _tmffOutputQuality = frameOutQuality
     , _tmffCLCW = clcwDisp
     , _tmffGroupFrameDump = groupFrameDump
     , _tmffDumpDisplay = frameDumpDisplay

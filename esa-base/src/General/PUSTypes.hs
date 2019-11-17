@@ -1,3 +1,6 @@
+{-# LANGUAGE
+  AllowAmbiguousTypes
+#-}
 {-|
 Module      : General.PUSTypes
 Description : Collections of various PUS types
@@ -164,6 +167,10 @@ mapIDControl :: MAPID
 mapIDControl = MAPID 63
 
 
+
+class FlagDisplay a where
+  displayFlag :: Bool -> Text
+
 -- | 'Flag' for Ready/Not Ready
 data Ready = Ready
 -- | 'Flag' for Enable/Disable
@@ -175,6 +182,26 @@ data Initialized = Initialized
 -- | 'Flag' for quality
 data Good = Good
 
+instance FlagDisplay Ready where
+  displayFlag True = "READY"
+  displayFlag False = "NOT READY"
+
+instance FlagDisplay Enable where
+  displayFlag True = "ENABLED"
+  displayFlag False = "DISABLED"
+
+instance FlagDisplay OnOff where
+  displayFlag True = "ON"
+  displayFlag False = "OFF"
+
+instance FlagDisplay Initialized where
+  displayFlag True = "INIT"
+  displayFlag False = "UNINIT"
+
+instance FlagDisplay Good where
+  displayFlag True = "GOOD"
+  displayFlag False = "BAD"
+
 
 -- | Generic flag type. To be used with the types above (or new ones)
 newtype Flag a = MkFlag Bool
@@ -185,6 +212,9 @@ instance FromJSON (Flag a)
 instance ToJSON (Flag a) where
   toEncoding = genericToEncoding defaultOptions
 
+
+instance FlagDisplay a => Display (Flag a) where
+  textDisplay (MkFlag x) = displayFlag @a x
 
 -- | Converts a type with the given Bool to a 'Flag'
 toFlag :: t -> Bool -> Flag t

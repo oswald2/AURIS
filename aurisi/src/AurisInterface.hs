@@ -42,7 +42,6 @@ eventProcessor :: MainWindow -> IfEvent -> IO ()
 eventProcessor g  (EventPUS (EVTelemetry (EVTMPacketDecoded pkt   ))) = do
   withFLLock (mwAddTMPacket g pkt)
 eventProcessor g (EventPUS (EVTelemetry (EVTMFrameReceived frame))) = do
-  T.putStrLn $ "AURISInterface: received frame: " <> T.pack (show frame)
   withFLLock (mwAddTMFrame g frame)
 eventProcessor _ _ = pure ()
 

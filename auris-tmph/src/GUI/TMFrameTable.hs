@@ -18,5 +18,8 @@ colDefinitions = mkColumnDefinitions
   , ColumnDefinition 3 "VC FC"  50
   , ColumnDefinition 4 "MC FC"  50
   , ColumnDefinition 5 "DFH"    30
+  , ColumnDefinition 6 "SRC"    50
+  , ColumnDefinition 7 "Gap"    50
+  , ColumnDefinition 8 "Qual"   50
   ]
 

@@ -39,6 +39,13 @@ instance FromJSON ProtocolInterface
 instance ToJSON ProtocolInterface where
     toEncoding = genericToEncoding defaultOptions
 
+
+instance Display ProtocolInterface where
+  textDisplay IF_NCTRS = "NCTRS"
+  textDisplay IF_CNC = "C&C"
+  textDisplay IF_EDEN = "EDEN"
+  textDisplay IF_EDEN_SCOE = "EDEN"
+
 -- | This is a simple data type wrapper around another
 -- type. It just adds a field with a 'ProtocolInterface' value to specify
 -- from which/to which interface the contained packet belongs.

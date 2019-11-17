@@ -1,4 +1,4 @@
-{-# LANGUAGE 
+{-# LANGUAGE
     OverloadedStrings
     , BangPatterns
     , NoImplicitPrelude
@@ -38,20 +38,20 @@ type PUSPacketModel = TableModel (ExtractedDU PUSPacket)
 
 
 instance ToCellText (ExtractedDU PUSPacket) where
-  toCellText Nothing _ = DisplayCell "" alignLeft
+  toCellText Nothing _ = defDisplayCell
   toCellText (Just pkt) ColumnDefinition { _columnNumber = 0 } =
-    DisplayCell (T.pack $ maybe "" show (pusPktTime (pkt ^. epDU . pusDfh)))
+    displayCell (T.pack $ maybe "" show (pusPktTime (pkt ^. epDU . pusDfh)))
                 alignLeft
   toCellText (Just pkt) ColumnDefinition { _columnNumber = 1 } =
-    DisplayCell (textDisplay (pkt ^. epERT)) alignLeft
+    displayCell (textDisplay (pkt ^. epERT)) alignLeft
   toCellText (Just pkt) ColumnDefinition { _columnNumber = 2 } =
-    DisplayCell (textDisplay (pkt ^. epDU . pusHdr . pusHdrTcApid)) alignRight
+    displayCell (textDisplay (pkt ^. epDU . pusHdr . pusHdrTcApid)) alignRight
   toCellText (Just pkt) ColumnDefinition { _columnNumber = 3 } =
-    DisplayCell (textDisplay (pusType (pkt ^. epDU . pusDfh))) alignRight
+    displayCell (textDisplay (pusType (pkt ^. epDU . pusDfh))) alignRight
   toCellText (Just pkt) ColumnDefinition { _columnNumber = 4 } =
-    DisplayCell (textDisplay (pusSubType (pkt ^. epDU . pusDfh))) alignRight
+    displayCell (textDisplay (pusSubType (pkt ^. epDU . pusDfh))) alignRight
   toCellText (Just pkt) ColumnDefinition { _columnNumber = 5 } =
-    DisplayCell (textDisplay (pkt ^. epDU . pusHdr . pusHdrTcSsc)) alignRight
+    displayCell (textDisplay (pkt ^. epDU . pusHdr . pusHdrTcSsc)) alignRight
   toCellText (Just pkt) ColumnDefinition { _columnNumber = 6 } =
-    DisplayCell (hexdumpLineBS (pkt ^. epDU . pusData)) alignLeft
-  toCellText (Just _) _ = DisplayCell "" alignLeft
+    displayCell (hexdumpLineBS (pkt ^. epDU . pusData)) alignLeft
+  toCellText (Just _) _ = defDisplayCell
