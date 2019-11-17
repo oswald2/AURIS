@@ -18,7 +18,7 @@ Function {makeWindow(IO(MainWindowFluid))} {open
 } {
   Fl_Window mainWindow {
     label AURISi open
-    xywh {110 47 1755 1020} type Double color 30 labelcolor 6 visible
+    xywh {110 47 1755 1020} type Double color 30 labelcolor 6 hide
   } {
     Fl_Scroll mainScrolled {open
       xywh {0 0 1970 1025}
@@ -29,7 +29,7 @@ Function {makeWindow(IO(MainWindowFluid))} {open
         Fl_Group rGroup1 {open
           xywh {245 15 1515 35} resizable
         } {}
-        Fl_Menu_Bar menuBar {
+        Fl_Menu_Bar menuBar {open
           xywh {75 40 203 25} box FLAT_BOX color 30 labelcolor 6 textcolor 6
         } {
           Submenu menuFile {
@@ -43,6 +43,19 @@ Function {makeWindow(IO(MainWindowFluid))} {open
             MenuItem menuOpenFile {
               label {&Open}
               xywh {10 10 36 21}
+            }
+          }
+          Submenu menuView {
+            label View open
+            xywh {0 0 100 20}
+          } {
+            MenuItem menuItemFullScreen {
+              label {Full Screen}
+              xywh {0 0 100 20}
+            }
+            MenuItem menuItemFullScreenOff {
+              label {Full Screen Off}
+              xywh {0 0 100 20}
             }
           }
           Submenu menuHelp {
@@ -66,7 +79,7 @@ Function {makeWindow(IO(MainWindowFluid))} {open
             xywh {10 10 65 60} color 7
           }
         }
-        Fl_Group nctrsConnGroup {
+        Fl_Group nctrsConnGroup {selected
           xywh {250 10 405 65} box FLAT_BOX color 38
         } {
           Fl_Box nctrsTCConn {
@@ -94,7 +107,7 @@ Function {makeWindow(IO(MainWindowFluid))} {open
             xywh {543 10 90 35}
           }
         }
-        Fl_Group cncConnGroup {open
+        Fl_Group cncConnGroup {
           xywh {665 10 270 65} box FLAT_BOX color 38
         } {
           Fl_Box cncTCConn {
@@ -114,7 +127,7 @@ Function {makeWindow(IO(MainWindowFluid))} {open
             xywh {830 15 75 25}
           }
         }
-        Fl_Group edenConnGroup {open
+        Fl_Group edenConnGroup {
           xywh {950 10 135 65} box FLAT_BOX color 38
         } {
           Fl_Box edenConnBox {
@@ -127,7 +140,7 @@ Function {makeWindow(IO(MainWindowFluid))} {open
           }
         }
         Fl_Box timeField {
-          label {2010.001.12.00.00.000} selected
+          label {2010.001.12.00.00.000}
           xywh {1525 10 225 20} box FLAT_BOX color 38 labelfont 5 labelsize 16
         }
       }
@@ -413,6 +426,8 @@ let { tmfTab = TMFrameTabFluid {
 let { mainMenu = MainMenu {
     _mmOpenFile = menuOpenFile
   , _mmSaveFile = menuSaveFile
+  , _mmFullScreen = menuItemFullScreen
+  , _mmFullScreenOff = menuItemFullScreenOff
   , _mmAbout = menuItemAbout
   }};
 
@@ -464,7 +479,8 @@ let { window = MainWindowFluid { _mfWindow = mainWindow
     , _mfEdenConn = edenConn
     , _mfTimeLabel = timeField
     }};
-    return window} {}
+    return window} {selected
+  }
 }
 
 Function {makeAboutWindow(IO(AboutWindowFluid))} {open

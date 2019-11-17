@@ -65,6 +65,8 @@ import           General.Time
 data MainMenu = MainMenu {
     _mmOpenFile :: Ref MenuItemBase
   , _mmSaveFile :: Ref MenuItemBase
+  , _mmFullScreen :: Ref MenuItemBase
+  , _mmFullScreenOff :: Ref MenuItemBase
   , _mmAbout :: Ref MenuItemBase
   }
 makeLenses ''MainMenu
@@ -129,6 +131,7 @@ initEdenConnGroup EdenConnGroup {..} = do
   mcsGroupingSetColor _mwEdenConnGroup
   mcsBoxLabel _mwEdenLabelConn
   mcsBoxAlarm _mwEdenConnBox txtDisconnected
+
 
 
 
@@ -255,7 +258,21 @@ createMainWindow MainWindowFluid {..} aboutWindow = do
                               }
 
   initTimer mainWindow
+
+  --rect <- getRectangle _mfWindow
+  setCallback (mainWindow ^. mwMainMenu . mmFullScreen) (fullScreen mainWindow)
+  setCallback (mainWindow ^. mwMainMenu . mmFullScreenOff)
+              (fullScreenOff mainWindow)
+
   pure mainWindow
+
+
+fullScreen :: MainWindow -> Ref MenuItemBase -> IO ()
+fullScreen window _ = makeFullscreen (window ^. mwWindow)
+
+fullScreenOff :: MainWindow -> Ref MenuItemBase -> IO ()
+fullScreenOff window _ = fullscreenOff (window ^. mwWindow) Nothing
+
 
 
 initTimer :: MainWindow -> IO ()
