@@ -105,21 +105,40 @@ makeLenses ''TMFrameTab
 tmfTabAddRow :: TMFrameTab -> ExtractedDU TMFrame -> IO ()
 tmfTabAddRow tab frame = do
   addRow (tab ^. tmfFrameTable) (tab ^. tmfFrameModel) frame
+  (TableCoordinate (Row row') _, _) <- getSelection (tab ^. tmfFrameTable)
+  when (row' /= -1 ) $ do
+    sel' <- getRowSelected (tab ^. tmfFrameTable) (Row row')
+    case sel' of
+      Left _ -> return ()
+      Right is -> when is $ do
+        f' <- queryTableModel (tab ^. tmfFrameModel) (S.!? row')
+        forM_ f' (tmfTabDetailsSetValues tab)
 
 
+txtNoBitlock :: Text
 txtNoBitlock = "NO BITLOCK"
+txtBitlock :: Text
 txtBitlock = "BITLOCK"
 
+
+txtNoRF :: Text
 txtNoRF = "NO RF"
+txtOkRF :: Text
 txtOkRF = "RF"
 
+txtNoLockout :: Text
 txtNoLockout = "NO LOCKOUT"
+txtLockout :: Text
 txtLockout = "LOCKOUT"
 
+txtWait :: Text
 txtWait = "WAIT"
+txtNoWait :: Text
 txtNoWait = "NO WAIT"
 
+txtRetransmit :: Text
 txtRetransmit = "RETRANSMIT"
+txtNoRetransmit :: Text
 txtNoRetransmit = "NO RETRANSMIT"
 
 

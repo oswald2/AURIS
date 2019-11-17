@@ -80,7 +80,7 @@ initializeTable table model colDefinitions = do
     setRowHeader table False
     setRowHeightAll table 20
     setRowResize table False
-    setType table SelectMulti
+    setType table SelectSingle
     setWhen table [WhenRelease]
 
     let nCols = V.length colDefinitions
