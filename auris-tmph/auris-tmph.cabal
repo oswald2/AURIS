@@ -47,6 +47,8 @@ library
     GUI.TMPacketTable
     GUI.TMPParamTable
     GUI.TMFrameTable
+    GUI.TMPacketTab
+    GUI.TMFrameTab
     Model.PUSPacketModel
     Model.TMPacketModel
     Model.TMPParamModel

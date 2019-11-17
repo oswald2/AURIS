@@ -191,7 +191,7 @@ drawData table model (TableCoordinate (Row row) (Column _col)) colDef rectangle
         flcSetColor bgColor
 
         flcRectf rectangle
-        flcSetColor (fgColor)
+        flcSetColor fgColor
 
 
         flcDrawInBox (_dispcText cell)
