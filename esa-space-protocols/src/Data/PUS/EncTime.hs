@@ -45,7 +45,7 @@ module Data.PUS.EncTime
 where
 
 import           RIO                     hiding ( Builder )
-
+import qualified RIO.Text                      as T
 import           ByteString.StrictBuilder
 
 import           Data.Binary
@@ -135,7 +135,7 @@ cucTimeIsDelta (CUCTime _ _ x) = x
 
 {-# INLINABLE cucTimeSetDelta #-}
 cucTimeSetDelta :: CUCTime -> Bool -> CUCTime
-cucTimeSetDelta (CUCTime s m _) x = (CUCTime s m x)
+cucTimeSetDelta (CUCTime s m _) = CUCTime s m
 
 
 {-# INLINABLE mkCDSTime #-}
@@ -273,6 +273,10 @@ cucTimeParser :: CUCTime -> Parser CUCTime
 cucTimeParser (CUCTime _ _ delta) = do
   se <- A.anyWord32be
   m  <- A.anyWord16be
+
+  traceM
+    ("DFH: secs=" <> (T.pack (show se)) <> ", subsec=" <> (T.pack (show m)))
+
   pure (cucTimeFromBinary se m delta)
 
 {-# INLINABLE cucTimeFromBinary #-}
@@ -291,23 +295,25 @@ cucTimeFromBinary se m delta =
   --     micro' = sign * round (micro * 65536.0 * 1000000.0)
   --     sign   = if s then (-1) else 1
   -- in  CUCTime (sign * sec) (fromIntegral micro') delta
-    let val1 :: Int32 
-        !val1 = fromIntegral se
-        micro :: Double 
-        micro = fromIntegral m
-        micro' = round (micro * 65536.0 * 1000000.0)
-    in CUCTime (fromIntegral val1) micro' delta 
+  let val1 :: Int32
+      !val1 = fromIntegral se
+      micro :: Double
+      micro  = fromIntegral m
+      micro' = round (micro / 65536.0 * 1000000.0)
+  in  CUCTime (fromIntegral val1) micro' delta
 
 
 instance TimeRepConversion CUCTime where
   {-# INLINABLE timeToWord64 #-}
-  timeToWord64 (CUCTime sec usec delta) = timeToWord64' sec (fromIntegral usec) delta
+  timeToWord64 (CUCTime sec usec delta) =
+    timeToWord64' sec (fromIntegral usec) delta
   {-# INLINABLE word64ToTime #-}
   word64ToTime val delta =
     let (sec, mic) = word64ToTime' val in CUCTime sec (fromIntegral mic) delta
 
   {-# INLINABLE timeToMicro #-}
-  timeToMicro (CUCTime sec usec delta) = timeToMicro' sec (fromIntegral usec) delta
+  timeToMicro (CUCTime sec usec delta) =
+    timeToMicro' sec (fromIntegral usec) delta
   {-# INLINABLE microToTime #-}
   microToTime val delta =
     let (sec, mic) = microToTime' val in CUCTime sec (fromIntegral mic) delta
