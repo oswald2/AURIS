@@ -21,6 +21,7 @@ import           Data.MIB.PID
 import           Data.MIB.TPCF
 import           Data.MIB.PLF
 import           Data.MIB.PIC
+import           Data.MIB.VPD
 import           Data.MIB.Types
 
 import           Data.TM.TMPacketDef
@@ -43,20 +44,22 @@ import           Data.Conversion.Types
 convertPackets
     :: HashMap Word32 TPCFentry
     -> Vector PLFentry
+    -> Vector VPDentry
     -> IHashTable ShortText TMParameterDef
     -> Vector PIDentry
     -> Either Text (Warnings, [TMPacketDef])
-convertPackets tpcfs plfs paramHT =
-    handleTriState . map (convertPacket tpcfs plfs paramHT) . V.toList
+convertPackets tpcfs plfs vpds paramHT =
+    handleTriState . map (convertPacket tpcfs plfs vpds paramHT) . V.toList
 
 
 convertPacket
     :: HashMap Word32 TPCFentry
     -> Vector PLFentry
+    -> Vector VPDentry
     -> IHashTable ShortText TMParameterDef
     -> PIDentry
     -> TriState Text Text (Warnings, TMPacketDef)
-convertPacket tpcfs plfs paramHT pid@PIDentry {..} =
+convertPacket tpcfs plfs vpds paramHT pid@PIDentry {..} =
     case if _pidTPSD == -1 then getFixedParams else getVariableParams of
         TError err -> TError err
         TWarn  err -> TWarn err

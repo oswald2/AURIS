@@ -30,6 +30,8 @@ import           Model.ScrollingTableModel
 import           General.APID
 import           General.PUSTypes
 import           Data.PUS.TMPacket
+import           Data.TM.TMPacketDef
+
 -- import           Data.TM.Parameter
 -- import           Data.TM.Value
 -- import           Data.TM.Validity
@@ -75,6 +77,7 @@ addCB window _btn = do
                         , _tmpTimeStamp = now
                         , _tmpVCID      = VCID 1
                         , _tmpSSC       = mkSSC 12
+                        , _tmpEvent     = PIDNo
                         , _tmpParams    = V.empty
                         }
 

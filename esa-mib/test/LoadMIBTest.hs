@@ -22,7 +22,7 @@ import           Data.MIB.PID                  as PID
 import           Data.MIB.PLF                  as PLF
 import           Data.MIB.TPCF                 as TPCF
 
-import           Data.TM.TMParameterDef
+--import           Data.TM.TMParameterDef
 
 import           Test.Hspec
 import           Text.Show.Pretty

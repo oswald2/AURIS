@@ -1,5 +1,6 @@
 module GUI.MessageDisplay
   ( addMessageLine
+  , addMessageLine'
   , messageAreaLogFunc
   )
 where
@@ -25,7 +26,11 @@ maxMsgs = 200
 
 addMessageLine
   :: MainWindow -> CallStack -> LogSource -> LogLevel -> Utf8Builder -> IO ()
-addMessageLine window _stack source level builder = do
+addMessageLine window _stack = addMessageLine' window
+
+addMessageLine'
+  :: MainWindow -> LogSource -> LogLevel -> Utf8Builder -> IO ()
+addMessageLine' window source level builder = do
   now <- getCurrentTime
 
   let src ::Utf8Builder

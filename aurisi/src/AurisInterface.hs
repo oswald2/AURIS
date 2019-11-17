@@ -18,6 +18,7 @@ import           Interface.Events
 import           Data.PUS.Events
 
 import           GUI.MainWindow
+import           GUI.MainWindowActions
 import           GUI.Utils
 
 --import qualified Graphics.UI.FLTK.LowLevel.FL  as FL
@@ -49,6 +50,15 @@ eventProcessor g (EventPUS (EVAlarms EVNctrsTmConnected)) = do
 
 eventProcessor g (EventPUS (EVAlarms EVNctrsTmDisconnected)) = do
   withFLLock (mwNCTRSConnection g False)
+
+eventProcessor g (EventPUS (EVAlarms (EVPacketInfo txt))) = do
+  withFLLock (mwLogInfo g txt)
+
+eventProcessor g (EventPUS (EVAlarms (EVPacketWarn txt))) = do
+  withFLLock (mwLogWarn g txt)
+
+eventProcessor g (EventPUS (EVAlarms (EVPacketAlarm txt))) = do
+  withFLLock (mwLogAlarm g txt)
 
 eventProcessor _ _ = pure ()
 

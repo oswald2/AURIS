@@ -36,6 +36,7 @@ import qualified Data.MIB.PID                  as PID
 import qualified Data.MIB.TPCF                 as TPCF
 import qualified Data.MIB.PLF                  as PLF
 import qualified Data.MIB.PIC                  as PIC
+import qualified Data.MIB.VPD                  as VPD
 
 import           Data.DataModel
 
@@ -236,7 +237,7 @@ loadSyntheticParameters path' = do
                     $  T.concat
                     $  ["Error parsing synthetic parameters: " :: Text]
                     <> intersperse "\n" (lefts ols)
-    where 
+    where
       loadHCsynths synths = do
         let path = path' </> "hcsynthetic"
         doesDirectoryExist path >>= \x -> if not x
@@ -279,13 +280,15 @@ loadPackets mibPath parameters = do
     pids' <- PID.loadFromFile mibPath
     tpcfs' <- TPCF.loadFromFile mibPath
     plfs' <- PLF.loadFromFile mibPath
+    vpds' <- VPD.loadFromFile mibPath
 
     let pid = fromRight V.empty pids'
         tpcf = fromRight V.empty tpcfs'
         plf = fromRight V.empty plfs'
+        vpd = fromRight V.empty vpds'
         tpcfMap = TPCF.getTPCFMap tpcf
 
-    (warnings, packets) <- liftEither $ convertPackets tpcfMap plf parameters pid
+    (warnings, packets) <- liftEither $ convertPackets tpcfMap plf vpd parameters pid
     let key pkt = TMPacketKey (_tmpdApid pkt)
             (_tmpdType pkt) (_tmpdSubType pkt)
             (fromIntegral (_tmpdPI1Val pkt)) (fromIntegral (_tmpdPI2Val pkt))

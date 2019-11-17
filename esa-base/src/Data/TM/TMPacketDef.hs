@@ -73,6 +73,7 @@ import           Data.Text.Short                ( ShortText )
 import           Data.HashTable.ST.Basic        ( IHashTable )
 import qualified Data.HashTable.ST.Basic       as HT
 import           Control.Lens                   ( makeLenses )
+import qualified Data.Aeson                    as AE
 
 import           Codec.Serialise
 import           Codec.Serialise.Encoding
@@ -140,7 +141,9 @@ data PIDEvent =
   deriving (Eq, Ord, Show, Generic)
 
 instance Serialise PIDEvent
-
+instance AE.FromJSON PIDEvent
+instance AE.ToJSON PIDEvent where
+  toEncoding = AE.genericToEncoding AE.defaultOptions
 
 -- | Specifies the parameters contained in the packet. Fixed packets vary only
 -- when supercommutated. Variable packets can have groups, fixed repeaters and

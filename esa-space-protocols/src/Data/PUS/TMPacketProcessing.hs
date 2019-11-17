@@ -58,11 +58,7 @@ raiseTMPacketC = awaitForever $ \pkt -> do
 packetProcessorC
     :: ( MonadIO m
        , MonadReader env m
-       , HasDataModel env
-       , HasCorrelationState env
-       , HasPUSState env
-       , HasLogFunc env
-       , HasConfig env
+       , HasGlobalState env
        )
     => ConduitT (ByteString, ExtractedDU PUSPacket) TMPacket m ()
 packetProcessorC = awaitForever $ \pkt@(oct, pusPkt) -> do
@@ -122,6 +118,7 @@ packetProcessorC = awaitForever $ \pkt@(oct, pusPkt) -> do
                     , _tmpTimeStamp = timeStamp
                     , _tmpVCID = pusPkt ^. epVCID
                     , _tmpSSC = pusPkt ^. epDU . pusHdr . pusHdrTcSsc
+                    , _tmpEvent = PIDNo
                     , _tmpParams = V.singleton param
                     }
 
@@ -172,7 +169,7 @@ extractPIVal bytes TMPIDef {..}
 
 
 processPacket
-    :: (MonadIO m, MonadReader env m, HasPUSState env, HasCorrelationState env, HasLogFunc env)
+    :: (MonadIO m, MonadReader env m, HasGlobalState env)
     => TMPacketDef
     -> TMPacketKey
     -> (ByteString, ExtractedDU PUSPacket)
@@ -199,8 +196,40 @@ processPacket pktDef (TMPacketKey _apid _t _st pi1 pi2) pkt@(_, pusDU) = do
       , _tmpTimeStamp = timestamp
       , _tmpVCID = pusDU ^. epVCID
       , _tmpSSC = pusDU ^. epDU . pusHdr . pusHdrTcSsc
+      , _tmpEvent = _tmpdEvent pktDef
       , _tmpParams = params
       }
+
+    -- check for an event
+    case _tmpdEvent pktDef of
+      PIDNo -> return ()
+      PIDInfo txt -> do
+        env <- ask
+        let msg = utf8BuilderToText $ display ("SPID: " :: Text)
+               <> display (_tmpdSPID pktDef)
+               <> " APID: " <> display (_tmpdApid pktDef)
+               <> " Type: " <> display (_tmpdType pktDef)
+               <> " SubType: " <> display (_tmpdSubType pktDef)
+               <> " Msg: " <> display (ST.toText txt)
+        liftIO $ raiseEvent env (EVAlarms (EVPacketInfo msg))
+      PIDWarning txt -> do
+        env <- ask
+        let msg = utf8BuilderToText $ display ("SPID: " :: Text)
+               <> display (_tmpdSPID pktDef)
+               <> " APID: " <> display (_tmpdApid pktDef)
+               <> " Type: " <> display (_tmpdType pktDef)
+               <> " SubType: " <> display (_tmpdSubType pktDef)
+               <> " Msg: " <> display (ST.toText txt)
+        liftIO $ raiseEvent env (EVAlarms (EVPacketWarn msg))
+      PIDAlarm txt -> do
+        env <- ask
+        let msg = utf8BuilderToText $ display ("SPID: " :: Text)
+               <> display (_tmpdSPID pktDef)
+               <> " APID: " <> display (_tmpdApid pktDef)
+               <> " Type: " <> display (_tmpdType pktDef)
+               <> " SubType: " <> display (_tmpdSubType pktDef)
+               <> " Msg: " <> display (ST.toText txt)
+        liftIO $ raiseEvent env (EVAlarms (EVPacketAlarm msg))
     return tmPacket
 
 
@@ -555,7 +584,6 @@ extractParamValue epoch oct def =
             !mic = getValue @Word24 oct (toByteOffset off + 1) BiE
             !encTime = mkCUC_3 sec mic True
         in TMValTime (cucTimeToSunTime epoch encTime)
-
     readTime off (CUC3 False) =
         let !sec = getValue @Word24 oct (toByteOffset off) BiE
             !encTime = mkCUC sec False

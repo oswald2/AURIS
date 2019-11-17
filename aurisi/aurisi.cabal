@@ -46,6 +46,7 @@ Executable AURISi
   Other-modules:
     GUI.MainWindow
     GUI.MainWindowCallbacks
+    GUI.MainWindowActions
     GUI.MessageDisplay
     GUI.Logo
     GUI.About

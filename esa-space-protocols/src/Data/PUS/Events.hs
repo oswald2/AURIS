@@ -88,6 +88,9 @@ data EventAlarm =
     | EVIllegalAction Text
     | EVNctrsTmConnected
     | EVNctrsTmDisconnected
+    | EVPacketInfo Text
+    | EVPacketWarn Text
+    | EVPacketAlarm Text
     deriving (Show, Generic)
 
 instance Serialise EventAlarm

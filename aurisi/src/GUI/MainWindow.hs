@@ -50,7 +50,7 @@ import qualified Graphics.UI.FLTK.LowLevel.FL  as FL
 import           GUI.TMPacketTab
 import           GUI.TMFrameTab
 import           GUI.Colors
-import           GUI.Utils
+--import           GUI.Utils
 import           GUI.Logo
 import           GUI.About
 
@@ -294,3 +294,5 @@ mwNCTRSConnection MainWindow {..} True =
   mcsBoxGreen (_mwNCTRSConn ^. mfNctrsTMConn) txtConnected
 mwNCTRSConnection MainWindow {..} False =
   mcsBoxAlarm (_mwNCTRSConn ^. mfNctrsTMConn) txtConnected
+
+
