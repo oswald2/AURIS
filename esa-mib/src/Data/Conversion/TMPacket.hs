@@ -60,7 +60,7 @@ convertPacket
     -> PIDentry
     -> TriState Text Text (Warnings, TMPacketDef)
 convertPacket tpcfs plfs vpds paramHT pid@PIDentry {..} =
-    case if _pidTPSD == -1 then getFixedParams else getVariableParams of
+    case if _pidTPSD == -1 then getFixedParams else getVariableParams pid vpds of
         TError err -> TError err
         TWarn  err -> TWarn err
         TOk (warnings, params) ->
@@ -112,7 +112,6 @@ convertPacket tpcfs plfs vpds paramHT pid@PIDentry {..} =
                 else TError (T.concat (L.intersperse ("\n" :: Text) errs))
 
 
-    getVariableParams = TWarn "Variable Packets Not yet implemented"
 
 
 
@@ -147,6 +146,57 @@ convertSuperComm PLFentry {..} = case (_plfNbOcc, _plfLgOcc, _plfTdOcc) of
     _ -> Nothing
 
 
+getVariableParams :: PIDentry
+  -> Vector VPDentry
+  -> TriState Text Text (Maybe Text, TMPacketParams)
+getVariableParams PIDentry {..} vpds =
+  let params = V.fromList . map convertVPD . L.sortBy c . filter f . toList $ vpds
+      f vpd = vpdTpsd vpd == _pidTPSD
+      c v1 v2 = compare (vpdPos v1) (vpdPos v2)
+      varParams = TMVariableParams {
+          _tmvpTPSD = _pidTPSD
+          , _tmvpDfhSize = fromIntegral _pidDfhSize
+          , _tmvpParams = params
+        }
+  in
+  TOk (Nothing, varParams)
+
+
+convertVPD :: VPDentry -> TMVarParamDef
+convertVPD VPDentry {..} =
+  TMVarParamDef {
+    _tmvpName = vpdName
+    , _tmvpNat = modifier vpdGrpSize vpdFixRep vpdChoice vpdPidRef
+    , _tmvpDisDesc = vpdDisDesc
+    , _tmvpDisp = vpdWidth > 0
+    , _tmvpJustify = align vpdJustify
+    , _tmvpNewline = getDefaultChar vpdNewLine == 'Y'
+    , _tmvpDispCols = dispFormat vpdDChar
+    , _tmvpRadix = radix vpdForm
+    , _tmvpOffset = BitOffset (getDefaultInt vpdOffset)
+  }
+  where
+    modifier (DefaultTo grp) (DefaultTo fixed) (CharDefaultTo choice) (CharDefaultTo pidref)
+      | grp > 0 = TMVarGroup (fromIntegral grp)
+      | fixed > 0 = TMVarFixedRep (fromIntegral fixed)
+      | choice == 'Y' = TMVarChoice
+      | pidref == 'Y' = TMVarPidRef
+      | otherwise = TMVarNothing
+
+    align (CharDefaultTo 'R') = TMVarRight
+    align (CharDefaultTo 'C') = TMVarCenter
+    align _ = TMVarLeft
+
+    dispFormat (DefaultTo 1) = TMVarDispNameVal
+    dispFormat (DefaultTo 2) = TMVarDispNameValDesc
+    dispFormat _ = TMVarDispValue
+
+    radix (CharDefaultTo 'N') = TMVarNormal
+    radix (CharDefaultTo 'D') = TMVarDecimal
+    radix (CharDefaultTo 'H') = TMVarHex
+    radix (CharDefaultTo 'O') = TMVarOctal
+    radix (CharDefaultTo 'B') = TMVarBinary
+    radix _ = TMVarNormal
 
 charToPIDEvent :: Char -> ShortText -> PIDEvent
 charToPIDEvent 'N' _    = PIDNo

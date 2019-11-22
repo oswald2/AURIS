@@ -157,7 +157,7 @@ data TMVarParamModifier =
   | TMVarGroup !Word16
   | TMVarFixedRep !Word16
   | TMVarChoice
-  | TMPidRef
+  | TMVarPidRef
   deriving (Show, Generic)
 
 instance Serialise TMVarParamModifier
@@ -194,14 +194,14 @@ instance Serialise TMVarRadix
 
 data TMVarParamDef = TMVarParamDef {
   _tmvpName :: !ShortText
-  , _tmvpNat :: Maybe TMVarParamModifier
+  , _tmvpNat :: !TMVarParamModifier
   , _tmvpDisDesc :: !ShortText
   , _tmvpDisp :: !Bool
   , _tmvpJustify :: TMVarAlignment
   , _tmvpNewline :: !Bool
   , _tmvpDispCols :: !TMVarDisp
   , _tmvpRadix :: !TMVarRadix
-  , _tmvpOffset :: !Int16
+  , _tmvpOffset :: !BitOffset
   } deriving (Show, Generic)
 
 instance Serialise TMVarParamDef
