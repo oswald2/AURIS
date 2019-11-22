@@ -210,6 +210,7 @@ processPacket pktDef (TMPacketKey _apid _t _st pi1 pi2) pkt@(_, pusDU) = do
                <> " APID: " <> display (_tmpdApid pktDef)
                <> " Type: " <> display (_tmpdType pktDef)
                <> " SubType: " <> display (_tmpdSubType pktDef)
+               <> " SSC: " <> display (_tmpSSC tmPacket)
                <> " Msg: " <> display (ST.toText txt)
         liftIO $ raiseEvent env (EVAlarms (EVPacketInfo msg))
       PIDWarning txt -> do
@@ -219,6 +220,7 @@ processPacket pktDef (TMPacketKey _apid _t _st pi1 pi2) pkt@(_, pusDU) = do
                <> " APID: " <> display (_tmpdApid pktDef)
                <> " Type: " <> display (_tmpdType pktDef)
                <> " SubType: " <> display (_tmpdSubType pktDef)
+               <> " SSC: " <> display (_tmpSSC tmPacket)
                <> " Msg: " <> display (ST.toText txt)
         liftIO $ raiseEvent env (EVAlarms (EVPacketWarn msg))
       PIDAlarm txt -> do
@@ -228,6 +230,7 @@ processPacket pktDef (TMPacketKey _apid _t _st pi1 pi2) pkt@(_, pusDU) = do
                <> " APID: " <> display (_tmpdApid pktDef)
                <> " Type: " <> display (_tmpdType pktDef)
                <> " SubType: " <> display (_tmpdSubType pktDef)
+               <> " SSC: " <> display (_tmpSSC tmPacket)
                <> " Msg: " <> display (ST.toText txt)
         liftIO $ raiseEvent env (EVAlarms (EVPacketAlarm msg))
     return tmPacket
@@ -286,7 +289,7 @@ getParameters timestamp epoch def pkt = do
   let ert = snd pkt ^. epERT
   case def ^. tmpdParams of
     TMFixedParams paramLocations -> getFixedParams timestamp ert epoch def pkt paramLocations
-    TMVariableParams tpsd dfhSize -> getVariableParams timestamp def pkt tpsd dfhSize
+    TMVariableParams tpsd dfhSize varParams -> getVariableParams timestamp def pkt tpsd dfhSize varParams
 
 
 getFixedParams :: (MonadIO m, MonadReader env m, HasPUSState env, HasCorrelationState env)
@@ -365,6 +368,7 @@ getVariableParams ::
   -> (ByteString, ExtractedDU PUSPacket)
   -> Int
   -> Word8
+  -> Vector TMVarParamDef
   -> m (Vector TMParameter)
 getVariableParams = undefined
 

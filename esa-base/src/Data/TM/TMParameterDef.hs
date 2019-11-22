@@ -393,7 +393,7 @@ data TMParameterDef = TMParameterDef {
     , _fpType :: !ParamType
     -- | the padding width. This is not the width of the parameter, which is
     -- given in the '_fpType' field, but if the parameter should have additional
-    -- padding to the next one
+    -- padding to the next one. Only used for variable packets
     , _fpWidth :: Maybe BitSize
     -- | Reference to the validity parameter. If the validity parameter has a value
     -- equal to '_fpValidityValue', the validity to set to true for this parameter

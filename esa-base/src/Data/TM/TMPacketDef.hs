@@ -29,6 +29,11 @@ module Data.TM.TMPacketDef
   ( TMPacketDef(..)
   , SuperCommutated(..)
   , TMParamLocation(..)
+  , TMVarParamDef(..)
+  , TMVarParamModifier(..)
+  , TMVarAlignment(..)
+  , TMVarDisp(..)
+  , TMVarRadix(..)
   , TMPacketParams(..)
   , PIDEvent(..)
   , tmpdSPID
@@ -145,6 +150,62 @@ instance AE.FromJSON PIDEvent
 instance AE.ToJSON PIDEvent where
   toEncoding = AE.genericToEncoding AE.defaultOptions
 
+
+
+data TMVarParamModifier =
+  TMVarNothing
+  | TMVarGroup !Word16
+  | TMVarFixedRep !Word16
+  | TMVarChoice
+  | TMPidRef
+  deriving (Show, Generic)
+
+instance Serialise TMVarParamModifier
+
+
+data TMVarAlignment =
+  TMVarLeft
+  | TMVarRight
+  | TMVarCenter
+  deriving (Show, Generic)
+
+instance Serialise TMVarAlignment
+
+
+data TMVarDisp =
+  TMVarDispValue
+  | TMVarDispNameVal
+  | TMVarDispNameValDesc
+  deriving (Show, Generic)
+
+instance Serialise TMVarDisp
+
+data TMVarRadix =
+  TMVarBinary
+  | TMVarOctal
+  | TMVarDecimal
+  | TMVarHex
+  | TMVarNormal
+  deriving (Show, Generic)
+
+instance Serialise TMVarRadix
+
+
+
+data TMVarParamDef = TMVarParamDef {
+  _tmvpName :: !ShortText
+  , _tmvpNat :: Maybe TMVarParamModifier
+  , _tmvpDisDesc :: !ShortText
+  , _tmvpDisp :: !Bool
+  , _tmvpJustify :: TMVarAlignment
+  , _tmvpNewline :: !Bool
+  , _tmvpDispCols :: !TMVarDisp
+  , _tmvpRadix :: !TMVarRadix
+  , _tmvpOffset :: !Int16
+  } deriving (Show, Generic)
+
+instance Serialise TMVarParamDef
+
 -- | Specifies the parameters contained in the packet. Fixed packets vary only
 -- when supercommutated. Variable packets can have groups, fixed repeaters and
 -- choices.
@@ -153,6 +214,7 @@ data TMPacketParams =
   | TMVariableParams {
     _tmvpTPSD :: !Int
     , _tmvpDfhSize :: !Word8
+    , _tmvpParams :: Vector TMVarParamDef
   }
   deriving (Show, Generic)
 
