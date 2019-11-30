@@ -17,6 +17,7 @@ module Data.PUS.TMPacket
   , tmpVCID
   , tmpSSC
   , tmpParams
+  , tmpEvent
   )
 where
 

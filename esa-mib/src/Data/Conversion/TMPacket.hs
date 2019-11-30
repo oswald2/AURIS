@@ -40,7 +40,9 @@ import           Data.Conversion.Types
 
 
 
-
+-- | convert packet information from a SCOS-2000 compatible MIB into a 
+-- 'TMPacketDef'. If there is a non-recoverable error, returns @Left error@
+-- else a @Right (Warnings, [TMPacketDef])@
 convertPackets
     :: HashMap Word32 TPCFentry
     -> Vector PLFentry
@@ -52,6 +54,8 @@ convertPackets tpcfs plfs vpds paramHT =
     handleTriState . map (convertPacket tpcfs plfs vpds paramHT) . V.toList
 
 
+-- | convert a single packet from a SCOS-2000 compatible MIB into a 
+-- 'TMPacketDef'
 convertPacket
     :: HashMap Word32 TPCFentry
     -> Vector PLFentry
@@ -150,7 +154,7 @@ getVariableParams :: PIDentry
   -> Vector VPDentry
   -> TriState Text Text (Maybe Text, TMPacketParams)
 getVariableParams PIDentry {..} vpds =
-  let params = V.fromList . map convertVPD . L.sortBy c . filter f . toList $ vpds
+  let params = generateVarParams . map convertVPD . L.sortBy c . filter f . toList $ vpds
       f vpd = vpdTpsd vpd == _pidTPSD
       c v1 v2 = compare (vpdPos v1) (vpdPos v2)
       varParams = TMVariableParams {
@@ -161,6 +165,22 @@ getVariableParams PIDentry {..} vpds =
   in
   TOk (Nothing, varParams)
 
+
+generateVarParams :: [TMVarParamDef] -> VarParams 
+generateVarParams = go
+    where 
+        go :: [TMVarParamDef] -> VarParams
+        go [] = VarParamsEmpty 
+        go (v@TMVarParamDef {_tmvpNat = TMVarNothing} : vs) = VarNormal v (go vs)
+        go (v@TMVarParamDef {_tmvpNat = TMVarGroup n} : vs) = 
+            let n' = fromIntegral n in
+            VarGroup v (go (take n' vs)) (go (drop n' vs))
+        go (TMVarParamDef {_tmvpNat = TMVarFixedRep rep n} : vs) = 
+            let n' = fromIntegral n in
+            VarFixed rep (go (take n' vs)) (go (drop n' vs))
+        go (v@TMVarParamDef {_tmvpNat = TMVarChoice} : _) = VarChoice v 
+        go (v@TMVarParamDef {_tmvpNat = TMVarPidRef} : vs) = VarPidRef v (go vs)
+    
 
 convertVPD :: VPDentry -> TMVarParamDef
 convertVPD VPDentry {..} =
@@ -177,8 +197,8 @@ convertVPD VPDentry {..} =
   }
   where
     modifier (DefaultTo grp) (DefaultTo fixed) (CharDefaultTo choice) (CharDefaultTo pidref)
+      | fixed > 0 = TMVarFixedRep (fromIntegral fixed) (fromIntegral grp)
       | grp > 0 = TMVarGroup (fromIntegral grp)
-      | fixed > 0 = TMVarFixedRep (fromIntegral fixed)
       | choice == 'Y' = TMVarChoice
       | pidref == 'Y' = TMVarPidRef
       | otherwise = TMVarNothing

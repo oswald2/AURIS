@@ -301,8 +301,7 @@ getFixedParams :: (MonadIO m, MonadReader env m, HasPUSState env, HasCorrelation
   -> Vector TMParamLocation
   -> m (Vector TMParameter)
 getFixedParams timestamp ert epoch _def (oct', _ep) locs = do
-  bldr <- V.foldM (go oct') VB.empty locs
-  return (VB.build bldr)
+  VB.build <$> V.foldM (go oct') VB.empty locs
   where
     go oct bldr loc = do
       case _tmplSuperComm loc of
@@ -368,7 +367,7 @@ getVariableParams ::
   -> (ByteString, ExtractedDU PUSPacket)
   -> Int
   -> Word8
-  -> Vector TMVarParamDef
+  -> VarParams 
   -> m (Vector TMParameter)
 getVariableParams = undefined
 

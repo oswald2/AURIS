@@ -36,6 +36,7 @@ module Data.TM.TMPacketDef
   , TMVarRadix(..)
   , TMPacketParams(..)
   , PIDEvent(..)
+  , VarParams(..)
   , tmpdSPID
   , tmpdType
   , tmpdSubType
@@ -155,7 +156,10 @@ instance AE.ToJSON PIDEvent where
 data TMVarParamModifier =
   TMVarNothing
   | TMVarGroup !Word16
-  | TMVarFixedRep !Word16
+  | TMVarFixedRep {
+    _fixRepN :: !Word16 
+    , _fixRepGroupSize :: !Word16
+  }
   | TMVarChoice
   | TMVarPidRef
   deriving (Show, Generic)
@@ -206,6 +210,28 @@ data TMVarParamDef = TMVarParamDef {
 
 instance Serialise TMVarParamDef
 
+
+data VarParams = 
+  VarParamsEmpty
+  | VarNormal !TMVarParamDef !VarParams
+  | VarGroup {
+    _grpRepeater :: !TMVarParamDef 
+    , _grpGroup :: !VarParams
+    , _grpRest ::  !VarParams 
+  }
+  | VarFixed {
+    _fixedReps :: !Word16 
+    , _fixedGroup :: !VarParams 
+    , _fixedRest :: !VarParams 
+  }
+  | VarChoice !TMVarParamDef 
+  | VarPidRef !TMVarParamDef !VarParams
+  deriving (Show, Generic)
+
+instance Serialise VarParams
+
+
+
 -- | Specifies the parameters contained in the packet. Fixed packets vary only
 -- when supercommutated. Variable packets can have groups, fixed repeaters and
 -- choices.
@@ -214,7 +240,7 @@ data TMPacketParams =
   | TMVariableParams {
     _tmvpTPSD :: !Int
     , _tmvpDfhSize :: !Word8
-    , _tmvpParams :: Vector TMVarParamDef
+    , _tmvpParams :: VarParams
   }
   deriving (Show, Generic)
 

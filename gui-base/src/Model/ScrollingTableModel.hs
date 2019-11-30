@@ -110,7 +110,7 @@ displayCell txt align = defDisplayCell { _dispcText = txt, _dispcAlignment = ali
 -- return a 'DisplayCell' with a 'Text' representation of the member part
 -- for this column.
 class ToCellText a where
-    toCellText :: Maybe a -> ColumnDefinition -> DisplayCell
+    toCellText :: a -> ColumnDefinition -> DisplayCell
 
 
 -- | A table model. Determines, how the data behind the table are stored.

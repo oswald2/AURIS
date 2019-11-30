@@ -38,20 +38,19 @@ type PUSPacketModel = TableModel (ExtractedDU PUSPacket)
 
 
 instance ToCellText (ExtractedDU PUSPacket) where
-  toCellText Nothing _ = defDisplayCell
-  toCellText (Just pkt) ColumnDefinition { _columnNumber = 0 } =
+  toCellText pkt ColumnDefinition { _columnNumber = 0 } =
     displayCell (T.pack $ maybe "" show (pusPktTime (pkt ^. epDU . pusDfh)))
                 alignLeft
-  toCellText (Just pkt) ColumnDefinition { _columnNumber = 1 } =
+  toCellText pkt ColumnDefinition { _columnNumber = 1 } =
     displayCell (textDisplay (pkt ^. epERT)) alignLeft
-  toCellText (Just pkt) ColumnDefinition { _columnNumber = 2 } =
+  toCellText pkt ColumnDefinition { _columnNumber = 2 } =
     displayCell (textDisplay (pkt ^. epDU . pusHdr . pusHdrTcApid)) alignRight
-  toCellText (Just pkt) ColumnDefinition { _columnNumber = 3 } =
+  toCellText pkt ColumnDefinition { _columnNumber = 3 } =
     displayCell (textDisplay (pusType (pkt ^. epDU . pusDfh))) alignRight
-  toCellText (Just pkt) ColumnDefinition { _columnNumber = 4 } =
+  toCellText pkt ColumnDefinition { _columnNumber = 4 } =
     displayCell (textDisplay (pusSubType (pkt ^. epDU . pusDfh))) alignRight
-  toCellText (Just pkt) ColumnDefinition { _columnNumber = 5 } =
+  toCellText pkt ColumnDefinition { _columnNumber = 5 } =
     displayCell (textDisplay (pkt ^. epDU . pusHdr . pusHdrTcSsc)) alignRight
-  toCellText (Just pkt) ColumnDefinition { _columnNumber = 6 } =
+  toCellText pkt ColumnDefinition { _columnNumber = 6 } =
     displayCell (hexdumpLineBS (pkt ^. epDU . pusData)) alignLeft
-  toCellText (Just _) _ = defDisplayCell
+  toCellText _ _ = defDisplayCell
