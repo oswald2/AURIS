@@ -43,6 +43,7 @@ import           Data.PUS.Events
 import           General.GetBitField
 import           General.Types
 import           General.Time
+
 --import           General.Hexdump
 
 
@@ -289,7 +290,7 @@ getParameters timestamp epoch def pkt = do
   let ert = snd pkt ^. epERT
   case def ^. tmpdParams of
     TMFixedParams paramLocations -> getFixedParams timestamp ert epoch def pkt paramLocations
-    TMVariableParams tpsd dfhSize varParams -> getVariableParams timestamp def pkt tpsd dfhSize varParams
+    TMVariableParams tpsd dfhSize varParams -> getVariableParams timestamp ert epoch def pkt tpsd dfhSize varParams
 
 
 getFixedParams :: (MonadIO m, MonadReader env m, HasPUSState env, HasCorrelationState env)
@@ -308,7 +309,7 @@ getFixedParams timestamp ert epoch _def (oct', _ep) locs = do
         Just sup -> do
           let newLocs = unroll loc sup
               func (l, ts) = do
-                v <- getParamValue epoch ert oct l
+                v <- getParamValue epoch ert oct (l ^. tmplOffset) (l ^. tmplParam)
                 return TMParameter {
                     _pName = _tmplName loc
                     , _pTime = ts
@@ -318,7 +319,7 @@ getFixedParams timestamp ert epoch _def (oct', _ep) locs = do
           vals <- mapM func newLocs
           return (bldr <> VB.foldable vals)
         Nothing -> do
-          val <- getParamValue epoch ert oct loc
+          val <- getParamValue epoch ert oct (loc ^. tmplOffset) (loc ^. tmplParam)
 
           let parTime = if tOffset == nullRelTime then timestamp else timestamp <+> tOffset
               tOffset = _tmplTime loc
@@ -361,21 +362,88 @@ getFixedParams timestamp ert epoch _def (oct', _ep) locs = do
 
 
 
-getVariableParams ::
+getVariableParams :: (MonadIO m, MonadReader env m, 
+    HasPUSState env, HasCorrelationState env) => 
   SunTime
+  -> SunTime 
+  -> Epoch 
   -> TMPacketDef
   -> (ByteString, ExtractedDU PUSPacket)
   -> Int
   -> Word8
   -> VarParams 
   -> m (Vector TMParameter)
-getVariableParams = undefined
+getVariableParams timestamp ert epoch _def (oct', _ep) _tpsd dfhSize varParams = do 
+    let offset = mkOffset (fromIntegral dfhSize * 8) 0
+    params <- go offset varParams 
+    return (VB.build (snd params))
+    where 
+        go !offset VarParamsEmpty = return (offset, VB.empty)
+        -- Normal parameter, just extract the value, recurse for the rest 
+        go !offset (VarNormal vpdParDef rest) = do 
+            let newOffset = offset .+. getPaddedWidth parDef
+                parDef = vpdParDef ^. tmvpParam
+            val <- getParamValue epoch ert oct' offset parDef
+            
+            let !param = TMParameter {
+                    _pName = vpdParDef ^. tmvpName
+                    , _pTime = timestamp 
+                    , _pValue = val 
+                    , _pEngValue = Nothing
+                    }
+            
+            (lastOff, next) <- go newOffset rest 
+
+            return (lastOff, VB.singleton param <> next)
+
+        -- Group repeater. 
+        go !offset (VarGroup repeater group rest) = do 
+            let newOffset = offset .+. getPaddedWidth parDef 
+                parDef = repeater ^. tmvpParam 
+            -- The value specifies, how often the group is repeated
+            nval <- getParamValue epoch ert oct' offset parDef 
+            (lastOff, parVals) <- case nval of 
+                TMValue (TMValInt x) _ -> processGroup x newOffset group 
+                TMValue (TMValUInt x) _ -> processGroup (fromIntegral x) newOffset group 
+                TMValue (TMValDouble x) _ -> processGroup (truncate x) newOffset group 
+                _ -> go newOffset rest 
+            
+            -- now take the rest of the packet 
+            (lastOff2, parVals2) <- go lastOff rest 
+            return (lastOff2, parVals <> parVals2)
+
+        -- Fixed repeater. 
+        go !offset (VarFixed reps group rest) = do 
+            -- reps specifies, how often the group is repeated
+            (lastOff, parVals) <- processGroup (fromIntegral reps) offset group 
+
+            -- now take the rest of the packet 
+            (lastOff2, parVals2) <- go lastOff rest 
+            return (lastOff2, parVals <> parVals2)
+
+        -- TODO
+        go offset (VarChoice _par) = do 
+            traceM "CHOICE parameters not yet implemented"
+            return (offset, VB.empty)
+        go offset (VarPidRef _ _) = do
+            traceM "CHOICE parameters not yet implemented"
+            return (offset, VB.empty)
+
+
+        processGroup 0 offset _ = return (offset, VB.empty)
+        processGroup !n offset params = do 
+            (newOff, parVals) <- go offset params 
+            (lastOff, nextVals) <- processGroup (n - 1) newOff params 
+            return (lastOff, parVals <> nextVals)
+
+
+
 
 
 getParamValue :: (MonadIO m, MonadReader env m, HasPUSState env, HasCorrelationState env)
-  => Epoch -> SunTime -> ByteString -> TMParamLocation -> m TMValue
-getParamValue epoch ert oct def = do
-  let (val, corr) = extractParamValue epoch oct def
+  => Epoch -> SunTime -> ByteString -> Offset -> TMParameterDef -> m TMValue
+getParamValue epoch ert oct off parDef = do
+  let (val, corr) = extractParamValue epoch oct off parDef 
   if corr == CorrelationYes
     then do
       case val ^. tmvalValue of
@@ -387,30 +455,33 @@ getParamValue epoch ert oct def = do
 
 
 
-extractParamValue :: Epoch -> ByteString -> TMParamLocation -> (TMValue, Correlate)
-extractParamValue epoch oct def =
-    let
-        par    = def ^. tmplParam
-        endian = par ^. fpEndian
+extractParamValue :: 
+    Epoch 
+    -> ByteString 
+    -> Offset 
+    -> TMParameterDef 
+    -> (TMValue, Correlate)
+extractParamValue epoch oct offset par =
+    let endian = par ^. fpEndian
     in
-        case def ^. tmplParam . fpType of
+        case par ^. fpType of
             ParamInteger w ->
-                let v = readIntParam (_tmplOffset def) (BitSize w) endian
+                let v = readIntParam offset (BitSize w) endian
                 in  (TMValue v clearValidity, CorrelationNo)
             ParamUInteger w ->
-                let v = readUIntParam (_tmplOffset def) (BitSize w) endian
+                let v = readUIntParam offset (BitSize w) endian
                 in  (TMValue v clearValidity, CorrelationNo)
             ParamDouble dt ->
-                let v = readDoubleParam (_tmplOffset def) endian dt
+                let v = readDoubleParam offset endian dt
                 in  (TMValue v clearValidity, CorrelationNo)
             ParamString w ->
-                let v = readString (_tmplOffset def) w
+                let v = readString offset w
                 in  (TMValue v clearValidity, CorrelationNo)
             ParamOctet w ->
-                let v = readOctet (_tmplOffset def) w
+                let v = readOctet offset w
                 in (TMValue v clearValidity, CorrelationNo)
             ParamTime tt ct ->
-                let v = readTime (_tmplOffset def) tt
+                let v = readTime offset tt
                 in (TMValue v clearValidity, ct)
             ParamDeduced _ ->
                 -- TODO handle deduced params
@@ -438,10 +509,10 @@ extractParamValue epoch oct def =
                         (getValue @Int32 oct (toByteOffset off) endian)
                     )
             64 -> TMValInt (getValue @Int64 oct (toByteOffset off) endian)
-            w  -> TMValInt (getBitFieldInt64 oct (_tmplOffset def) w endian)
+            w  -> TMValInt (getBitFieldInt64 oct offset w endian)
         else
             TMValInt
-                (getBitFieldInt64 oct (_tmplOffset def) width endian)
+                (getBitFieldInt64 oct offset width endian)
     readUIntParam off width endian = if isByteAligned off
         then case width of
             8 ->
@@ -460,8 +531,8 @@ extractParamValue epoch oct def =
                         (getValue @Word32 oct (toByteOffset off) endian)
                     )
             64 -> TMValUInt (getValue @Word64 oct (toByteOffset off) endian)
-            w  -> TMValUInt (getBitFieldWord64 oct (_tmplOffset def) w endian)
-        else TMValUInt (getBitFieldWord64 oct (_tmplOffset def) width endian)
+            w  -> TMValUInt (getBitFieldWord64 oct offset w endian)
+        else TMValUInt (getBitFieldWord64 oct offset width endian)
 
 
     readDoubleParam off endian DTDouble = if isByteAligned off

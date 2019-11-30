@@ -1,9 +1,9 @@
 module Data.Conversion.TMPacket
-    ( convertPacket
-    , convertPackets
-    , charToPIDEvent
-    , picSeachIndexFromPIC
-    )
+  ( convertPacket
+  , convertPackets
+  , charToPIDEvent
+  , picSeachIndexFromPIC
+  )
 where
 
 import           RIO
@@ -13,7 +13,7 @@ import qualified RIO.Text                      as T
 import qualified RIO.Vector                    as V
 import           Data.Text.Short                ( ShortText )
 import qualified Data.Text.Short               as ST
-
+import           Data.Either
 import           Data.HashTable.ST.Basic        ( IHashTable )
 import qualified Data.HashTable.ST.Basic       as HT
 
@@ -44,76 +44,74 @@ import           Data.Conversion.Types
 -- 'TMPacketDef'. If there is a non-recoverable error, returns @Left error@
 -- else a @Right (Warnings, [TMPacketDef])@
 convertPackets
-    :: HashMap Word32 TPCFentry
-    -> Vector PLFentry
-    -> Vector VPDentry
-    -> IHashTable ShortText TMParameterDef
-    -> Vector PIDentry
-    -> Either Text (Warnings, [TMPacketDef])
+  :: HashMap Word32 TPCFentry
+  -> Vector PLFentry
+  -> Vector VPDentry
+  -> IHashTable ShortText TMParameterDef
+  -> Vector PIDentry
+  -> Either Text (Warnings, [TMPacketDef])
 convertPackets tpcfs plfs vpds paramHT =
-    handleTriState . map (convertPacket tpcfs plfs vpds paramHT) . V.toList
+  handleTriState . map (convertPacket tpcfs plfs vpds paramHT) . V.toList
 
 
 -- | convert a single packet from a SCOS-2000 compatible MIB into a 
 -- 'TMPacketDef'
 convertPacket
-    :: HashMap Word32 TPCFentry
-    -> Vector PLFentry
-    -> Vector VPDentry
-    -> IHashTable ShortText TMParameterDef
-    -> PIDentry
-    -> TriState Text Text (Warnings, TMPacketDef)
+  :: HashMap Word32 TPCFentry
+  -> Vector PLFentry
+  -> Vector VPDentry
+  -> IHashTable ShortText TMParameterDef
+  -> PIDentry
+  -> TriState Text Text (Warnings, TMPacketDef)
 convertPacket tpcfs plfs vpds paramHT pid@PIDentry {..} =
-    case if _pidTPSD == -1 then getFixedParams else getVariableParams pid vpds of
-        TError err -> TError err
-        TWarn  err -> TWarn err
-        TOk (warnings, params) ->
-            createPacket pid (HM.lookup _pidSPID tpcfs) warnings params
+  case if _pidTPSD == -1 then getFixedParams else getVariableParams pid vpds paramHT of
+    TError err -> TError err
+    TWarn  err -> TWarn err
+    TOk (warnings, params) ->
+      createPacket pid (HM.lookup _pidSPID tpcfs) warnings params
 
-  where
-    createPacket PIDentry {..} tpcf warnings params =
-        let name = case tpcf of
-                Just TPCFentry {..} -> _tpcfName
-                Nothing             -> ""
-        in
-            TOk
-                ( warnings
-                , TMPacketDef
-                    { _tmpdSPID    = SPID _pidSPID
-                    , _tmpdName    = name
-                    , _tmpdDescr   = _pidDescr
-                    , _tmpdType    = mkPUSType (fromIntegral _pidType)
-                    , _tmpdSubType = mkPUSSubType (fromIntegral _pidSubType)
-                    , _tmpdApid    = APID (fromIntegral _pidAPID)
-                    , _tmpdPI1Val  = _pidP1Val
-                    , _tmpdPI2Val  = _pidP2Val
-                    , _tmpdUnit    = _pidUnit
-                    , _tmpdTime    = getPidTime pid
-                    , _tmpdInter   = toSpan _pidInter
-                    , _tmpdValid   = charDefaultToBool _pidValid
-                    , _tmpdCheck   = getDefaultInt _pidCheck /= 0
-                    , _tmpdEvent   = charToPIDEvent (getDefaultChar _pidEvent)
-                                                    _pidEventID
-                    , _tmpdParams  = params
-                    }
-                )
+ where
+  createPacket PIDentry {..} tpcf warnings params =
+    let name = case tpcf of
+          Just TPCFentry {..} -> _tpcfName
+          Nothing             -> ""
+    in  TOk
+          ( warnings
+          , TMPacketDef
+            { _tmpdSPID    = SPID _pidSPID
+            , _tmpdName    = name
+            , _tmpdDescr   = _pidDescr
+            , _tmpdType    = mkPUSType (fromIntegral _pidType)
+            , _tmpdSubType = mkPUSSubType (fromIntegral _pidSubType)
+            , _tmpdApid    = APID (fromIntegral _pidAPID)
+            , _tmpdPI1Val  = _pidP1Val
+            , _tmpdPI2Val  = _pidP2Val
+            , _tmpdUnit    = _pidUnit
+            , _tmpdTime    = getPidTime pid
+            , _tmpdInter   = toSpan _pidInter
+            , _tmpdValid   = charDefaultToBool _pidValid
+            , _tmpdCheck   = getDefaultInt _pidCheck /= 0
+            , _tmpdEvent = charToPIDEvent (getDefaultChar _pidEvent) _pidEventID
+            , _tmpdParams  = params
+            }
+          )
 
-    toSpan :: Maybe Int -> Maybe (TimeSpn MilliSeconds)
-    toSpan = fmap (mkTimeSpan MilliSeconds . fromIntegral)
+  toSpan :: Maybe Int -> Maybe (TimeSpn MilliSeconds)
+  toSpan = fmap (mkTimeSpan MilliSeconds . fromIntegral)
 
 
 
-    getFixedParams =
-        let (errs, pls) =
-                    partitionEithers
-                        . map (convertPacketLocation paramHT)
-                        . L.sort
-                        . filter (\x -> _pidSPID == _plfSPID x)
-                        . toList
-                        $ plfs
-        in  if null errs
-                then TOk (Nothing, TMFixedParams (V.fromList pls))
-                else TError (T.concat (L.intersperse ("\n" :: Text) errs))
+  getFixedParams =
+    let (errs, pls) =
+            partitionEithers
+              . map (convertPacketLocation paramHT)
+              . L.sort
+              . filter (\x -> _pidSPID == _plfSPID x)
+              . toList
+              $ plfs
+    in  if null errs
+          then TOk (Nothing, TMFixedParams (V.fromList pls))
+          else TError (T.concat (L.intersperse ("\n" :: Text) errs))
 
 
 
@@ -121,102 +119,122 @@ convertPacket tpcfs plfs vpds paramHT pid@PIDentry {..} =
 
 
 convertPacketLocation
-    :: IHashTable ShortText TMParameterDef
-    -> PLFentry
-    -> Either Text TMParamLocation
+  :: IHashTable ShortText TMParameterDef
+  -> PLFentry
+  -> Either Text TMParamLocation
 convertPacketLocation ht plf@PLFentry {..} = case HT.ilookup ht _plfName of
-    Just x -> Right TMParamLocation
-        { _tmplName      = _plfName
-        , _tmplOffset    =
-            mkOffset (ByteOffset _plfOffBy) (BitOffset _plfOffBi)
-        , _tmplTime = fromMilli (fromIntegral (getDefaultInt _plfTime)) True
-        , _tmplSuperComm = convertSuperComm plf
-        , _tmplParam     = x
-        }
-    Nothing ->
-        Left
-            $  "PLF: Parameter "
-            <> ST.toText _plfName
-            <> " defined in plf.dat not found"
+  Just x -> Right TMParamLocation
+    { _tmplName      = _plfName
+    , _tmplOffset    = mkOffset (ByteOffset _plfOffBy) (BitOffset _plfOffBi)
+    , _tmplTime      = fromMilli (fromIntegral (getDefaultInt _plfTime)) True
+    , _tmplSuperComm = convertSuperComm plf
+    , _tmplParam     = x
+    }
+  Nothing ->
+    Left
+      $  "PLF: Parameter "
+      <> ST.toText _plfName
+      <> " defined in plf.dat not found"
 
 
 convertSuperComm :: PLFentry -> Maybe SuperCommutated
 convertSuperComm PLFentry {..} = case (_plfNbOcc, _plfLgOcc, _plfTdOcc) of
-    (Just n, Just lg, Just td) -> Just SuperCommutated
-        { _scNbOcc = n
-        , _scLgOcc = mkBitSize lg
-        , _scTdOcc = mkTimeSpan MilliSeconds (fromIntegral td)
-        }
-    _ -> Nothing
+  (Just n, Just lg, Just td) -> Just SuperCommutated
+    { _scNbOcc = n
+    , _scLgOcc = mkBitSize lg
+    , _scTdOcc = mkTimeSpan MilliSeconds (fromIntegral td)
+    }
+  _ -> Nothing
 
 
-getVariableParams :: PIDentry
+getVariableParams
+  :: PIDentry
   -> Vector VPDentry
+  -> IHashTable ShortText TMParameterDef
   -> TriState Text Text (Maybe Text, TMPacketParams)
-getVariableParams PIDentry {..} vpds =
-  let params = generateVarParams . map convertVPD . L.sortBy c . filter f . toList $ vpds
+getVariableParams PIDentry {..} vpds parDefs =
+
+  let params = generateVarParams thisParams
+      (errs, thisParams) =
+          partitionEithers
+            . map (convertVPD parDefs)
+            . L.sortBy c
+            . filter f
+            . toList
+            $ vpds
+      errorMsgs = "Errors importing VPDs: " <> T.intercalate "\n" errs
       f vpd = vpdTpsd vpd == _pidTPSD
       c v1 v2 = compare (vpdPos v1) (vpdPos v2)
-      varParams = TMVariableParams {
-          _tmvpTPSD = _pidTPSD
-          , _tmvpDfhSize = fromIntegral _pidDfhSize
-          , _tmvpParams = params
-        }
-  in
-  TOk (Nothing, varParams)
+      varParams = TMVariableParams { _tmvpTPSD    = _pidTPSD
+                                   , _tmvpDfhSize = fromIntegral _pidDfhSize
+                                   , _tmvpParams  = params
+                                   }
+  in  if not (null errs) then TError errorMsgs else TOk (Nothing, varParams)
 
 
-generateVarParams :: [TMVarParamDef] -> VarParams 
+generateVarParams :: [TMVarParamDef] -> VarParams
 generateVarParams = go
-    where 
-        go :: [TMVarParamDef] -> VarParams
-        go [] = VarParamsEmpty 
-        go (v@TMVarParamDef {_tmvpNat = TMVarNothing} : vs) = VarNormal v (go vs)
-        go (v@TMVarParamDef {_tmvpNat = TMVarGroup n} : vs) = 
-            let n' = fromIntegral n in
-            VarGroup v (go (take n' vs)) (go (drop n' vs))
-        go (TMVarParamDef {_tmvpNat = TMVarFixedRep rep n} : vs) = 
-            let n' = fromIntegral n in
-            VarFixed rep (go (take n' vs)) (go (drop n' vs))
-        go (v@TMVarParamDef {_tmvpNat = TMVarChoice} : _) = VarChoice v 
-        go (v@TMVarParamDef {_tmvpNat = TMVarPidRef} : vs) = VarPidRef v (go vs)
-    
+ where
+  go :: [TMVarParamDef] -> VarParams
+  go [] = VarParamsEmpty
+  go (v@TMVarParamDef { _tmvpNat = TMVarNothing } : vs) = VarNormal v (go vs)
+  go (v@TMVarParamDef { _tmvpNat = TMVarGroup n } : vs) =
+    let n' = fromIntegral n in VarGroup v (go (take n' vs)) (go (drop n' vs))
+  go (TMVarParamDef { _tmvpNat = TMVarFixedRep rep n } : vs) =
+    let n' = fromIntegral n in VarFixed rep (go (take n' vs)) (go (drop n' vs))
+  go (v@TMVarParamDef { _tmvpNat = TMVarChoice } : _ ) = VarChoice v
+  go (v@TMVarParamDef { _tmvpNat = TMVarPidRef } : vs) = VarPidRef v (go vs)
 
-convertVPD :: VPDentry -> TMVarParamDef
-convertVPD VPDentry {..} =
-  TMVarParamDef {
-    _tmvpName = vpdName
-    , _tmvpNat = modifier vpdGrpSize vpdFixRep vpdChoice vpdPidRef
-    , _tmvpDisDesc = vpdDisDesc
-    , _tmvpDisp = vpdWidth > 0
-    , _tmvpJustify = align vpdJustify
-    , _tmvpNewline = getDefaultChar vpdNewLine == 'Y'
+
+convertVPD
+  :: IHashTable ShortText TMParameterDef
+  -> VPDentry
+  -> Either Text TMVarParamDef
+convertVPD parDefs VPDentry {..} = case HT.ilookup parDefs vpdName of
+  Nothing ->
+    Left
+      $  "Cannot find requested parameter "
+      <> ST.toText vpdName
+      <> " in PCF table"
+  Just parDef -> Right TMVarParamDef
+    { _tmvpName     = vpdName
+    , _tmvpNat      = modifier vpdGrpSize vpdFixRep vpdChoice vpdPidRef
+    , _tmvpDisDesc  = vpdDisDesc
+    , _tmvpDisp     = vpdWidth > 0
+    , _tmvpJustify  = align vpdJustify
+    , _tmvpNewline  = getDefaultChar vpdNewLine == 'Y'
     , _tmvpDispCols = dispFormat vpdDChar
-    , _tmvpRadix = radix vpdForm
-    , _tmvpOffset = BitOffset (getDefaultInt vpdOffset)
-  }
-  where
-    modifier (DefaultTo grp) (DefaultTo fixed) (CharDefaultTo choice) (CharDefaultTo pidref)
-      | fixed > 0 = TMVarFixedRep (fromIntegral fixed) (fromIntegral grp)
-      | grp > 0 = TMVarGroup (fromIntegral grp)
-      | choice == 'Y' = TMVarChoice
-      | pidref == 'Y' = TMVarPidRef
-      | otherwise = TMVarNothing
+    , _tmvpRadix    = radix vpdForm
+    , _tmvpOffset   = BitOffset (getDefaultInt vpdOffset)
+    , _tmvpParam    = parDef
+    }
+ where
+  modifier (DefaultTo grp) (DefaultTo fixed) (CharDefaultTo choice) (CharDefaultTo pidref)
+    | fixed > 0
+    = TMVarFixedRep (fromIntegral fixed) (fromIntegral grp)
+    | grp > 0
+    = TMVarGroup (fromIntegral grp)
+    | choice == 'Y'
+    = TMVarChoice
+    | pidref == 'Y'
+    = TMVarPidRef
+    | otherwise
+    = TMVarNothing
 
-    align (CharDefaultTo 'R') = TMVarRight
-    align (CharDefaultTo 'C') = TMVarCenter
-    align _ = TMVarLeft
+  align (CharDefaultTo 'R') = TMVarRight
+  align (CharDefaultTo 'C') = TMVarCenter
+  align _                   = TMVarLeft
 
-    dispFormat (DefaultTo 1) = TMVarDispNameVal
-    dispFormat (DefaultTo 2) = TMVarDispNameValDesc
-    dispFormat _ = TMVarDispValue
+  dispFormat (DefaultTo 1) = TMVarDispNameVal
+  dispFormat (DefaultTo 2) = TMVarDispNameValDesc
+  dispFormat _             = TMVarDispValue
 
-    radix (CharDefaultTo 'N') = TMVarNormal
-    radix (CharDefaultTo 'D') = TMVarDecimal
-    radix (CharDefaultTo 'H') = TMVarHex
-    radix (CharDefaultTo 'O') = TMVarOctal
-    radix (CharDefaultTo 'B') = TMVarBinary
-    radix _ = TMVarNormal
+  radix (CharDefaultTo 'N') = TMVarNormal
+  radix (CharDefaultTo 'D') = TMVarDecimal
+  radix (CharDefaultTo 'H') = TMVarHex
+  radix (CharDefaultTo 'O') = TMVarOctal
+  radix (CharDefaultTo 'B') = TMVarBinary
+  radix _                   = TMVarNormal
 
 charToPIDEvent :: Char -> ShortText -> PIDEvent
 charToPIDEvent 'N' _    = PIDNo
@@ -229,38 +247,38 @@ charToPIDEvent _   _    = PIDNo
 
 picVecToCriteria :: Vector PICentry -> Vector PacketIDCriteria
 picVecToCriteria = V.map conv
-  where
-    conv pic@PICentry {..} = PacketIDCriteria
-        { _pidcAPID    = APID <$> _picApid
-        , _pidcType    = mkPUSType _picType
-        , _pidcSubType = mkPUSSubType _picSubType
-        , _pidcPIs     = convertPIC pic
-        }
+ where
+  conv pic@PICentry {..} = PacketIDCriteria
+    { _pidcAPID    = APID <$> _picApid
+    , _pidcType    = mkPUSType _picType
+    , _pidcSubType = mkPUSSubType _picSubType
+    , _pidcPIs     = convertPIC pic
+    }
 
 
 picSeachIndexFromPIC :: Vector PICentry -> PICSearchIndex
 picSeachIndexFromPIC pics =
-    let p = picVecToCriteria pics in mkPICSearchIndex p
+  let p = picVecToCriteria pics in mkPICSearchIndex p
 
 
 convertPIC :: PICentry -> TMPIDefs
 convertPIC PICentry {..} =
-    let
-        pi1 = if _picPI1Off == -1
-            then Nothing
-            else
-                Just
-                    (TMPIDef (mkByteOffset _picPI1Off)
-                             (mkBitSize (fromIntegral _picPI1Width))
-                    )
-        pi2 = if _picPI2Off == -1
-            then Nothing
-            else
-                Just
-                    (TMPIDef (mkByteOffset _picPI2Off)
-                             (mkBitSize (fromIntegral _picPI2Width))
-                    )
-    in
-        TMPIDefs pi1 pi2
+  let
+    pi1 = if _picPI1Off == -1
+      then Nothing
+      else
+        Just
+          (TMPIDef (mkByteOffset _picPI1Off)
+                   (mkBitSize (fromIntegral _picPI1Width))
+          )
+    pi2 = if _picPI2Off == -1
+      then Nothing
+      else
+        Just
+          (TMPIDef (mkByteOffset _picPI2Off)
+                   (mkBitSize (fromIntegral _picPI2Width))
+          )
+  in
+    TMPIDefs pi1 pi2
 
 

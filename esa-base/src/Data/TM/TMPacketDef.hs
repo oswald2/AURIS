@@ -70,6 +70,16 @@ module Data.TM.TMPacketDef
   , TypeSubTypeKey
   , PacketIDCriteria(..)
   , picFind
+  , tmvpName 
+  , tmvpNat 
+  , tmvpDisDesc
+  , tmvpDisp
+  , tmvpJustify
+  , tmvpNewline
+  , tmvpDispCols
+  , tmvpRadix
+  , tmvpOffset
+  , tmvpParam
   )
 where
 
@@ -206,7 +216,9 @@ data TMVarParamDef = TMVarParamDef {
   , _tmvpDispCols :: !TMVarDisp
   , _tmvpRadix :: !TMVarRadix
   , _tmvpOffset :: !BitOffset
+  , _tmvpParam :: !TMParameterDef
   } deriving (Show, Generic)
+makeLenses '' TMVarParamDef 
 
 instance Serialise TMVarParamDef
 
