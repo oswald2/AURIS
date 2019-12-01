@@ -97,6 +97,7 @@ module Data.HashTable.ST.Basic
   , unsafeFreeze
   , ilookup
   , fold
+  , iempty
   , Data.HashTable.ST.Basic.toList
   , Data.HashTable.ST.Basic.fromList
   ) where
@@ -960,3 +961,6 @@ fromList lst = runST $ do
   ht <- newSized len
   Control.Monad.forM_ lst (uncurry (insert ht))
   unsafeFreeze ht
+
+iempty :: (Eq k, Hashable k) => IHashTable k v 
+iempty = Data.HashTable.ST.Basic.fromList []

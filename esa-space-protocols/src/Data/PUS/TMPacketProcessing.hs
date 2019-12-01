@@ -10,7 +10,7 @@ where
 import           RIO
 import qualified RIO.ByteString                as B
 import qualified RIO.Vector                    as V
---import qualified RIO.Text                      as T
+import qualified RIO.Text                      as T
 import           RIO.List                      ( iterate )
 import           Conduit
 import           Control.Lens                  ( (.~) )
@@ -280,7 +280,8 @@ correlateTMTime inTime ert = do
             return (obtToMcsTim inTime coefficients)
 
 
-getParameters :: (MonadIO m, MonadReader env m, HasPUSState env, HasCorrelationState env)
+getParameters :: (MonadIO m, MonadReader env m, HasPUSState env, 
+    HasCorrelationState env, HasDataModel env)
   => SunTime
   -> Epoch
   -> TMPacketDef
@@ -363,7 +364,7 @@ getFixedParams timestamp ert epoch _def (oct', _ep) locs = do
 
 
 getVariableParams :: (MonadIO m, MonadReader env m, 
-    HasPUSState env, HasCorrelationState env) => 
+    HasPUSState env, HasCorrelationState env, HasDataModel env) => 
   SunTime
   -> SunTime 
   -> Epoch 
@@ -373,7 +374,7 @@ getVariableParams :: (MonadIO m, MonadReader env m,
   -> Word8
   -> VarParams 
   -> m (Vector TMParameter)
-getVariableParams timestamp ert epoch _def (oct', _ep) _tpsd dfhSize varParams = do 
+getVariableParams timestamp ert epoch pktDef (oct', ep) _tpsd dfhSize varParams = do 
     let offset = mkOffset (fromIntegral dfhSize * 8) 0
     params <- go offset varParams 
     return (VB.build (snd params))
@@ -381,9 +382,10 @@ getVariableParams timestamp ert epoch _def (oct', _ep) _tpsd dfhSize varParams =
         go !offset VarParamsEmpty = return (offset, VB.empty)
         -- Normal parameter, just extract the value, recurse for the rest 
         go !offset (VarNormal vpdParDef rest) = do 
-            let newOffset = offset .+. getPaddedWidth parDef
+            let newOffset = offset .+. getPaddedWidth parDef .+. vpdParDef ^. tmvpOffset
+                extractOffset = offset .+. getPadding parDef 
                 parDef = vpdParDef ^. tmvpParam
-            val <- getParamValue epoch ert oct' offset parDef
+            val <- getParamValue epoch ert oct' extractOffset parDef
             
             let !param = TMParameter {
                     _pName = vpdParDef ^. tmvpName
@@ -398,19 +400,27 @@ getVariableParams timestamp ert epoch _def (oct', _ep) _tpsd dfhSize varParams =
 
         -- Group repeater. 
         go !offset (VarGroup repeater group rest) = do 
-            let newOffset = offset .+. getPaddedWidth parDef 
+            let newOffset = offset .+. getPaddedWidth parDef  .+. repeater ^. tmvpOffset
+                extractOffset = offset .+. getPadding parDef 
                 parDef = repeater ^. tmvpParam 
             -- The value specifies, how often the group is repeated
-            nval <- getParamValue epoch ert oct' offset parDef 
+            nval <- getParamValue epoch ert oct' extractOffset parDef 
             (lastOff, parVals) <- case nval of 
                 TMValue (TMValInt x) _ -> processGroup x newOffset group 
                 TMValue (TMValUInt x) _ -> processGroup (fromIntegral x) newOffset group 
                 TMValue (TMValDouble x) _ -> processGroup (truncate x) newOffset group 
                 _ -> go newOffset rest 
             
+            let !param = TMParameter {
+                _pName = repeater ^. tmvpName
+                , _pTime = timestamp 
+                , _pValue = nval 
+                , _pEngValue = Nothing
+                }
+
             -- now take the rest of the packet 
             (lastOff2, parVals2) <- go lastOff rest 
-            return (lastOff2, parVals <> parVals2)
+            return (lastOff2, VB.singleton param <> parVals <> parVals2)
 
         -- Fixed repeater. 
         go !offset (VarFixed reps group rest) = do 
@@ -421,11 +431,49 @@ getVariableParams timestamp ert epoch _def (oct', _ep) _tpsd dfhSize varParams =
             (lastOff2, parVals2) <- go lastOff rest 
             return (lastOff2, parVals <> parVals2)
 
+        go !offset (VarChoice par) = do 
+            let !newOffset = offset .+. getPaddedWidth parDef  .+. par ^. tmvpOffset
+                !extractOffset = offset .+. getPadding parDef 
+                parDef = par ^. tmvpParam 
+            -- The value specifies, how often the group is repeated
+            tpsdval <- getParamValue epoch ert oct' extractOffset parDef
+            
+            let !param = TMParameter {
+                _pName = par ^. tmvpName
+                , _pTime = timestamp 
+                , _pValue = tpsdval 
+                , _pEngValue = Nothing
+                }
+
+            choiceRes <- case tpsdval of 
+                TMValue (TMValInt x) _ -> processChoice x newOffset  
+                TMValue (TMValUInt x) _ -> processChoice (fromIntegral x) newOffset
+                TMValue (TMValDouble x) _ -> processChoice (truncate x) newOffset
+                _ -> return $ Left $ utf8BuilderToText $ 
+                    display @Text "CHOICE parameter " 
+                    <> display (par ^. tmvpName)
+                    <> display @Text ": illegal data type " 
+                    <> displayShow (parDef ^. fpType)
+                    <> display @Text " in packet " 
+                    <> display (pktDef ^. tmpdSPID)
+                    <> display @Text " ("
+                    <> display (pktDef ^. tmpdName)
+                    <> display @Text ") APID: "
+                    <> display (pktDef ^. tmpdApid)
+                    <> display @Text " Type: "
+                    <> display (pktDef ^. tmpdType)
+                    <> display @Text " SubType: "
+                    <> display (pktDef ^. tmpdSubType)
+                    <> display @Text " APID: "
+                    <> display (ep ^. epDU . pusHdr . pusHdrTcSsc)
+
+            case choiceRes of 
+                Left err -> do undefined 
+                Right (lastOffset, params) -> do 
+                    return (lastOffset, VB.singleton param <> params)
+
         -- TODO
-        go offset (VarChoice _par) = do 
-            traceM "CHOICE parameters not yet implemented"
-            return (offset, VB.empty)
-        go offset (VarPidRef _ _) = do
+        go !offset (VarPidRef _ _) = do
             traceM "CHOICE parameters not yet implemented"
             return (offset, VB.empty)
 
@@ -436,8 +484,13 @@ getVariableParams timestamp ert epoch _def (oct', _ep) _tpsd dfhSize varParams =
             (lastOff, nextVals) <- processGroup (n - 1) newOff params 
             return (lastOff, parVals <> nextVals)
 
-
-
+        processChoice !tpsd !offset = do 
+            env <- ask 
+            dm <- readTVarIO (env ^. getDataModel)
+            let vpds = dm ^. dmVPDStructs
+            case HT.ilookup vpds (fromIntegral tpsd) of 
+                Nothing -> return $ Left ("Choice parameter: could not find TPSD " <> T.pack (show tpsd) <> " in VPD")
+                Just struct -> Right <$> go offset struct 
 
 
 getParamValue :: (MonadIO m, MonadReader env m, HasPUSState env, HasCorrelationState env)

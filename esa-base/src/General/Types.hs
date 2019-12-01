@@ -314,6 +314,9 @@ instance ToJSON ShortText where
   toEncoding = E.text . ST.toText
   {-# INLINE toEncoding #-}
 
+instance Display ShortText where 
+  display = display . ST.toText 
+
 
 
 encodeHashTable :: (Serialise k, Serialise v) => IHashTable k v -> SE.Encoding

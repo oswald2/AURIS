@@ -3,6 +3,7 @@ module Data.Conversion.TMPacket
   , convertPackets
   , charToPIDEvent
   , picSeachIndexFromPIC
+  , generateVPDLookup
   )
 where
 
@@ -13,7 +14,6 @@ import qualified RIO.Text                      as T
 import qualified RIO.Vector                    as V
 import           Data.Text.Short                ( ShortText )
 import qualified Data.Text.Short               as ST
-import           Data.Either
 import           Data.HashTable.ST.Basic        ( IHashTable )
 import qualified Data.HashTable.ST.Basic       as HT
 
@@ -46,7 +46,7 @@ import           Data.Conversion.Types
 convertPackets
   :: HashMap Word32 TPCFentry
   -> Vector PLFentry
-  -> Vector VPDentry
+  -> IHashTable Int VarParams
   -> IHashTable ShortText TMParameterDef
   -> Vector PIDentry
   -> Either Text (Warnings, [TMPacketDef])
@@ -59,12 +59,12 @@ convertPackets tpcfs plfs vpds paramHT =
 convertPacket
   :: HashMap Word32 TPCFentry
   -> Vector PLFentry
-  -> Vector VPDentry
+  -> IHashTable Int VarParams
   -> IHashTable ShortText TMParameterDef
   -> PIDentry
   -> TriState Text Text (Warnings, TMPacketDef)
 convertPacket tpcfs plfs vpds paramHT pid@PIDentry {..} =
-  case if _pidTPSD == -1 then getFixedParams else getVariableParams pid vpds paramHT of
+  case if _pidTPSD == -1 then getFixedParams else getVariableParams pid vpds of
     TError err -> TError err
     TWarn  err -> TWarn err
     TOk (warnings, params) ->
@@ -149,27 +149,44 @@ convertSuperComm PLFentry {..} = case (_plfNbOcc, _plfLgOcc, _plfTdOcc) of
 
 getVariableParams
   :: PIDentry
-  -> Vector VPDentry
-  -> IHashTable ShortText TMParameterDef
+  -> IHashTable Int VarParams
   -> TriState Text Text (Maybe Text, TMPacketParams)
-getVariableParams PIDentry {..} vpds parDefs =
+getVariableParams PIDentry {..} vpds=
 
-  let params = generateVarParams thisParams
-      (errs, thisParams) =
-          partitionEithers
-            . map (convertVPD parDefs)
-            . L.sortBy c
-            . filter f
-            . toList
-            $ vpds
-      errorMsgs = "Errors importing VPDs: " <> T.intercalate "\n" errs
-      f vpd = vpdTpsd vpd == _pidTPSD
+  case HT.ilookup vpds _pidTPSD of 
+    Nothing -> TError $ "Could not find TPSD " <> T.pack (show _pidTPSD) <> " in VPD table"
+    Just struct -> 
+      TOk (Nothing , TMVariableParams { _tmvpTPSD    = _pidTPSD
+                                      , _tmvpDfhSize = fromIntegral _pidDfhSize
+                                      , _tmvpParams  = struct 
+                                      }
+          )
+
+
+
+generateVPDLookup :: Vector VPDentry 
+  -> IHashTable ShortText TMParameterDef 
+  -> Either Text (IHashTable Int VarParams)
+generateVPDLookup vpds parDefs = 
+  let tpsds = map (func . L.sortBy c) . L.groupBy tpsdComp . toList $ vpds
       c v1 v2 = compare (vpdPos v1) (vpdPos v2)
-      varParams = TMVariableParams { _tmvpTPSD    = _pidTPSD
-                                   , _tmvpDfhSize = fromIntegral _pidDfhSize
-                                   , _tmvpParams  = params
-                                   }
-  in  if not (null errs) then TError errorMsgs else TOk (Nothing, varParams)
+      tpsdComp v1 v2 = vpdTpsd v1 == vpdTpsd v2 
+      func [] = (-1, [])
+      func l@(x:_) = (vpdTpsd x, l)
+
+      converted = map conv tpsds
+      conv (tpsd, vps) = (tpsd, partitionEithers (map (convertVPD parDefs) vps))
+      errs = concatMap (fst . snd) converted 
+      errorMsgs = "Error on converting VPDs: " <> T.intercalate "\n" errs
+
+      final = HT.fromList $ map conv2 converted 
+      conv2 (!tpsd, (_, !r)) = (tpsd, generateVarParams r)
+  in
+  if not (null errs) 
+    then Left errorMsgs
+    else Right final
+
+
 
 
 generateVarParams :: [TMVarParamDef] -> VarParams

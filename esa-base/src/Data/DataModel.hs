@@ -24,6 +24,7 @@ module Data.DataModel
   , dmParameters
   , dmTMPackets
   , dmPacketIdIdx
+  , dmVPDStructs
   , empty
   , writeDataModel
   , readDataModel
@@ -66,6 +67,11 @@ data DataModel = DataModel {
     , _dmPacketIdIdx :: PICSearchIndex
     -- | A map into the packets
     , _dmTMPackets :: IHashTable TMPacketKey TMPacketDef
+    -- | A map into VPD structures. Used for VPD_CHOICE variable packets.
+    -- They get a value, which is interpreted as a TPSD value, which is looked
+    -- up in this table. The rest of the packet is then replaced with these 
+    -- 'VarParams' structure. 
+    , _dmVPDStructs :: IHashTable Int VarParams
     }
     deriving (Show, Generic)
 makeLenses ''DataModel
@@ -82,6 +88,7 @@ empty =
                 , _dmParameters      = params
                 , _dmPacketIdIdx     = emptyPICSearchIndex
                 , _dmTMPackets       = packets
+                , _dmVPDStructs      = HT.iempty
                 }
 
 
@@ -97,6 +104,7 @@ encodeDataModel model =
     <> encodeHashTable (_dmParameters model)
     <> encode (_dmPacketIdIdx model)
     <> encodeHashTable (_dmTMPackets model)
+    <> encodeHashTable (_dmVPDStructs model)
 
 decodeDataModel :: Decoder s DataModel
 decodeDataModel = do
@@ -106,11 +114,13 @@ decodeDataModel = do
   params  <- decodeHashTable
   idx     <- decode
   packets <- decodeHashTable
+  vpds    <- decodeHashTable 
   return DataModel { _dmCalibrations    = calibs
                    , _dmSyntheticParams = synths
                    , _dmParameters      = params
                    , _dmPacketIdIdx     = idx
                    , _dmTMPackets       = packets
+                   , _dmVPDStructs      = vpds
                    }
 
 -- | Serializes the 'DataModel' and writes it to a file. Uses 

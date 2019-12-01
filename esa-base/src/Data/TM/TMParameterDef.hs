@@ -54,6 +54,7 @@ module Data.TM.TMParameterDef
   , fpEndian
   , getWidth
   , getPaddedWidth
+  , getPadding
   )
 where
 
@@ -435,6 +436,15 @@ getPaddedWidth def =
   in  case def ^. fpWidth of
         Just b  -> let !res = w + b in res
         Nothing -> w
+
+getPadding :: TMParameterDef -> BitSize 
+getPadding def = 
+  case def ^. fpWidth of
+    Nothing -> BitSize 0 
+    Just b -> 
+      let w = b - getWidth def 
+      in if w < 0 then 0 else w 
+
 
 instance NFData TMParameterDef
 instance Serialise TMParameterDef

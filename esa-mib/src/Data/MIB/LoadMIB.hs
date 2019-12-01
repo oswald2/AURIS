@@ -96,9 +96,23 @@ loadMIB mibPath = do
                 maybe (return ())
                       (\w -> logWarn ("On parameter import: " <> display w))
                       wa
-                procPicIdx syns calibs params
+                procVPDs syns calibs params
 
-    procPicIdx syns calibs params = do
+    procVPDs syns calibs params = do 
+        vpds' <- VPD.loadFromFile mibPath 
+        case vpds' of 
+            Left err -> do 
+                logError (display err)
+                return (Left err)
+            Right vpds -> do
+                case generateVPDLookup vpds params of 
+                    Left err -> do
+                        logError (display err)
+                        return (Left err)
+                    Right vpdLookup -> do 
+                        procPicIdx syns calibs params vpdLookup
+
+    procPicIdx syns calibs params vpdLookup = do
       pics' <- PIC.loadFromFile mibPath
       case pics' of
         Left err -> do
@@ -106,10 +120,10 @@ loadMIB mibPath = do
           return (Left err)
         Right pics -> do
           let !pIdx = picSeachIndexFromPIC pics
-          procPackets syns calibs pIdx params
+          procPackets syns calibs pIdx params vpdLookup
 
-    procPackets syns calibs pIdx params = do
-      packets' <- loadPackets mibPath params
+    procPackets syns calibs pIdx params vpdLookup = do
+      packets' <- loadPackets mibPath params vpdLookup
       case packets' of
         Left err -> do
           logError (display err)
@@ -123,6 +137,7 @@ loadMIB mibPath = do
             , _dmParameters      = params
             , _dmPacketIdIdx     = pIdx
             , _dmTMPackets       = packets
+            , _dmVPDStructs      = vpdLookup
             }
 
 
@@ -273,22 +288,21 @@ loadSyntheticParameters path' = do
 loadPackets :: (MonadIO m, MonadReader env m, HasLogFunc env)
   => FilePath
   -> IHashTable ShortText TMParameterDef
+  -> IHashTable Int VarParams
   -> m (Either Text (Warnings, IHashTable TMPacketKey TMPacketDef))
-loadPackets mibPath parameters = do
+loadPackets mibPath parameters vpdLookup = do
   runExceptT $ do
     -- load calibrations
     pids' <- PID.loadFromFile mibPath
     tpcfs' <- TPCF.loadFromFile mibPath
     plfs' <- PLF.loadFromFile mibPath
-    vpds' <- VPD.loadFromFile mibPath
 
     let pid = fromRight V.empty pids'
         tpcf = fromRight V.empty tpcfs'
         plf = fromRight V.empty plfs'
-        vpd = fromRight V.empty vpds'
         tpcfMap = TPCF.getTPCFMap tpcf
 
-    (warnings, packets) <- liftEither $ convertPackets tpcfMap plf vpd parameters pid
+    (warnings, packets) <- liftEither $ convertPackets tpcfMap plf vpdLookup parameters pid
     let key pkt = TMPacketKey (_tmpdApid pkt)
             (_tmpdType pkt) (_tmpdSubType pkt)
             (fromIntegral (_tmpdPI1Val pkt)) (fromIntegral (_tmpdPI2Val pkt))
@@ -296,5 +310,8 @@ loadPackets mibPath parameters = do
     hm <- liftEither $ runST $ do
       ht <- HTC.fromList lst
       Right <$> HT.unsafeFreeze ht
+
+    
+
     return (warnings, hm)
 
