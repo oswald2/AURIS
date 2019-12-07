@@ -1,7 +1,5 @@
 {-# LANGUAGE
-    OverloadedStrings
-    , BangPatterns
-    , NoImplicitPrelude
+    TypeApplications
 #-}
 module AurisProcessing
   ( runProcessing
@@ -111,8 +109,16 @@ runTMChain cfg = do
   tmClient chain app = do
     env <- ask
     liftIO $ raiseEvent env (EVAlarms EVNctrsTmConnected)
-    void $ runConduitRes (appSource app .| chain .| ignoreConduit)
-      `finally` liftIO (raiseEvent env (EVAlarms EVNctrsTmDisconnected))
+    res <- try $ 
+      void $ runConduitRes (appSource app .| chain .| ignoreConduit)
+     
+    liftIO (raiseEvent env (EVAlarms EVNctrsTmDisconnected))
+    case res of 
+      Left (e :: SomeException) -> do 
+        logError $ display @Text "Exception: " <> displayShow e
+        throwM e 
+      Right _ -> return ()
+
 
 
 

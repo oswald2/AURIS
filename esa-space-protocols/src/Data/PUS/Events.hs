@@ -32,11 +32,11 @@ import           Codec.Serialise
 import           Data.Fixed
 
 import           General.PUSTypes
-import           Data.PUS.PUSPacket
-import           Data.PUS.COP1Types
-import           Data.PUS.ExtractedDU
-import           Data.PUS.TMFrame
-import           Data.PUS.TMPacket
+import           Data.PUS.PUSPacket (PUSPacket)
+import           Data.PUS.COP1Types 
+import           Data.PUS.ExtractedDU (ExtractedDU)
+import           Data.PUS.TMFrame (TMFrame)
+import           Data.PUS.TMPacket (TMPacket)
 
 -- | The events themselves
 data Event = EVCommanding EventCommanding

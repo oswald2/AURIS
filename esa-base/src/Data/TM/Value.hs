@@ -37,6 +37,7 @@ module Data.TM.Value
   , charToType
   , charToRadix
   , nullValue
+  , getInt
   )
 where
 
@@ -334,6 +335,14 @@ isNumeric (TMValue (TMValInt    _) _) = True
 isNumeric (TMValue (TMValUInt   _) _) = True
 isNumeric (TMValue (TMValDouble _) _) = True
 isNumeric _                           = False
+
+
+getInt :: TMValue -> Maybe Integer
+getInt (TMValue (TMValInt    x) _) = Just $ fromIntegral x
+getInt (TMValue (TMValUInt   x) _) = Just $ fromIntegral x
+getInt (TMValue (TMValDouble x) _) = Just $ truncate x
+getInt _                           = Nothing
+
 
 -- | Returns, if a value is valid
 isValid :: TMValue -> Bool

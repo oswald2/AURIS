@@ -86,6 +86,10 @@ instance FromJSON ByteOffset
 instance ToJSON ByteOffset where
   toEncoding = genericToEncoding defaultOptions
 
+
+instance Display ByteOffset where 
+  display (ByteOffset x) = display x
+
 -- | constructs a byte offset
 mkByteOffset :: Int -> ByteOffset
 mkByteOffset = ByteOffset
@@ -99,6 +103,9 @@ newtype BitOffset = BitOffset Int
     deriving (Eq, Ord, Num, Show, Read, Generic, NFData)
 
 instance Serialise BitOffset
+
+instance Display BitOffset where 
+  display (BitOffset x) = display x
 
 -- | constructs a bit offset
 mkBitOffset :: Int -> BitOffset
@@ -119,6 +126,11 @@ data Offset = Offset ByteOffset BitOffset
 instance NFData Offset
 instance Serialise Offset
 
+instance Display Offset where 
+  display (Offset b bi) = display ("Offset " :: Text)
+    <> display b 
+    <> " "
+    <> display bi
 
 -- | constructs an 'Offset' from a 'ByteOffset' and a 'BitOffset'
 mkOffset :: ByteOffset -> BitOffset -> Offset
@@ -170,6 +182,9 @@ instance ByteAligned BitSize where
 newtype ByteSize = ByteSize Int
     deriving (Eq, Ord, Num, Bits, Show, Read, Generic, NFData)
 
+instance Display ByteSize where 
+  display (ByteSize x) = display ("ByteSize " :: Text) <> display x
+
 -- | constructs a byte size
 mkByteSize :: Int -> ByteSize
 mkByteSize = ByteSize
@@ -189,6 +204,9 @@ instance Serialise BitSize
 instance FromJSON BitSize
 instance ToJSON BitSize where
   toEncoding = genericToEncoding defaultOptions
+
+instance Display BitSize where 
+  display (BitSize x) = display ("BitSize " :: Text) <> display x
 
 -- | constructs a bit size
 mkBitSize :: Int -> BitSize

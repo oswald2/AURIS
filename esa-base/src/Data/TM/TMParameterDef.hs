@@ -433,10 +433,9 @@ getWidth def = bitSize (def ^. fpType)
 getPaddedWidth :: TMParameterDef -> BitSize
 getPaddedWidth def =
   let w = bitSize (def ^. fpType)
-  in  case def ^. fpWidth of
-        Just b  -> let !res = w + b in res
-        Nothing -> w
+  in  fromMaybe w (def ^. fpWidth)
 
+  
 getPadding :: TMParameterDef -> BitSize 
 getPadding def = 
   case def ^. fpWidth of

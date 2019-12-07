@@ -174,6 +174,7 @@ library
         , resourcet
         , hashtables
         , vector-builder
+        , pretty-show
 
     if flag(llvm)
         ghc-options: -O2 -Wall -Wcompat -Widentities -Wincomplete-record-updates
