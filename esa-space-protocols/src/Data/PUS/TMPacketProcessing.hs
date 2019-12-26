@@ -598,7 +598,7 @@ extractParamValue epoch oct offset par =
                 in  fmap (\v' -> (TMValue v' clearValidity, CorrelationNo)) v 
             ParamDouble dt ->
                 let v = readDoubleParam offset endian dt
-                in  (TMValue v clearValidity, CorrelationNo)
+                in  fmap (\v' -> (TMValue v' clearValidity, CorrelationNo)) v 
             ParamString w ->
                 let v = readString offset w
                 in  (TMValue v clearValidity, CorrelationNo)
@@ -625,51 +625,30 @@ extractParamValue epoch oct offset par =
             64 -> TMValInt <$> getValue @Int64 oct (toByteOffset off) endian
             w  -> TMValInt <$> getBitFieldInt64 oct offset w endian
         else
-            TMValInt
-                (getBitFieldInt64 oct offset width endian)
+            TMValInt <$> getBitFieldInt64 oct offset width endian
+
     readUIntParam off width endian = if isByteAligned off
         then case width of
-            8 ->
-                TMValUInt
-                    (fromIntegral
-                        (getValue @Word8 oct (toByteOffset off) endian)
-                    )
-            16 ->
-                TMValUInt
-                    (fromIntegral
-                        (getValue @Word16 oct (toByteOffset off) endian)
-                    )
-            32 ->
-                TMValUInt
-                    (fromIntegral
-                        (getValue @Word32 oct (toByteOffset off) endian)
-                    )
-            64 -> TMValUInt (getValue @Word64 oct (toByteOffset off) endian)
-            w  -> TMValUInt (getBitFieldWord64 oct offset w endian)
-        else TMValUInt (getBitFieldWord64 oct offset width endian)
+            8 -> TMValUInt . fromIntegral <$> getValue @Word8 oct (toByteOffset off) endian
+            16 -> TMValUInt . fromIntegral <$> getValue @Word16 oct (toByteOffset off) endian
+            32 -> TMValUInt . fromIntegral <$> getValue @Word32 oct (toByteOffset off) endian
+            64 -> TMValUInt <$> getValue @Word64 oct (toByteOffset off) endian
+            w  -> TMValUInt <$> getBitFieldWord64 oct offset w endian
+        else TMValUInt <$> getBitFieldWord64 oct offset width endian
 
 
     readDoubleParam off endian DTDouble = if isByteAligned off
-        then TMValDouble (getValue @Double oct (toByteOffset off) endian)
-        else TMValDouble (getBitFieldDouble oct (toOffset off) endian)
+        then TMValDouble <$> getValue @Double oct (toByteOffset off) endian
+        else TMValDouble <$> getBitFieldDouble oct (toOffset off) endian
     readDoubleParam off endian DTFloat = if isByteAligned off
-        then TMValDouble
-            (realToFrac (getValue @Float oct (toByteOffset off) endian))
-        else TMValDouble
-            (realToFrac (getBitFieldFloat oct (toOffset off) endian))
+        then TMValDouble . realToFrac <$> getValue @Float oct (toByteOffset off) endian
+        else TMValDouble . realToFrac <$> getBitFieldFloat oct (toOffset off) endian
     readDoubleParam off endian DTMilSingle = if isByteAligned off
-        then
-            TMValDouble
-                (getMilSingle
-                    (getValue @MILSingle oct (toByteOffset off) endian)
-                )
-        else TMValDouble (getBitFieldMilSingle oct (toOffset off) endian)
+        then TMValDouble . getMilSingle <$> getValue @MILSingle oct (toByteOffset off) endian 
+        else TMValDouble <$> getBitFieldMilSingle oct (toOffset off) endian
     readDoubleParam off endian DTMilExtended = if isByteAligned off
-        then TMValDouble
-            (getMilExtended
-                (getValue @MILExtended oct (toByteOffset off) endian)
-            )
-        else TMValDouble (getBitFieldMilExtended oct (toOffset off) endian)
+        then TMValDouble . getMilExtended <$> getValue @MILExtended oct (toByteOffset off) endian
+        else TMValDouble <$> getBitFieldMilExtended oct (toOffset off) endian
 
     readString off (Just w) =
         let val = B.take w $ B.drop (unByteOffset (toByteOffset off)) oct
