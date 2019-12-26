@@ -155,20 +155,21 @@ getPackeDefinition model (bytes, pkt) =
 
 extractPIVals :: TMPIDefs -> ByteString -> (Int64, Int64)
 extractPIVals TMPIDefs {..} bytes =
-    let pi1 = fromMaybe 0 $ maybe 0 (extractPIVal bytes) _tmpidP1
-        pi2 = fromMaybe 0 $ maybe 0 (extractPIVal bytes) _tmpidP2
+    let pi1 = fromMaybe 0 $ maybe (Just 0) (extractPIVal bytes) _tmpidP1
+        pi2 = fromMaybe 0 $ maybe (Just 0) (extractPIVal bytes) _tmpidP2
     in  (pi1, pi2)
 
 
 extractPIVal :: ByteString -> TMPIDef -> Maybe Int64
 extractPIVal bytes TMPIDef {..}
-    | _tmpidWidth == 8 = fromIntegral $ getValue @Int8 bytes _tmpidOffset BiE
-    | _tmpidWidth == 16 = fromIntegral $ getValue @Int16 bytes _tmpidOffset BiE
-    | _tmpidWidth == 32 = fromIntegral $ getValue @Int32 bytes _tmpidOffset BiE
-    | _tmpidWidth == 48 = fromIntegral $ getValue @Int48 bytes _tmpidOffset BiE
+    | _tmpidWidth == 8 = fromIntegral <$> getValue @Int8 bytes _tmpidOffset BiE
+    | _tmpidWidth == 16 = fromIntegral <$> getValue @Int16 bytes _tmpidOffset BiE
+    | _tmpidWidth == 32 = fromIntegral <$> getValue @Int32 bytes _tmpidOffset BiE
+    | _tmpidWidth == 48 = fromIntegral <$> getValue @Int48 bytes _tmpidOffset BiE
     | _tmpidWidth == 64 = getValue @Int64 bytes _tmpidOffset BiE
-    | otherwise = fromIntegral
-        (getBitField bytes (toOffset _tmpidOffset) _tmpidWidth)
+    | otherwise = fromIntegral <$> getBitField bytes (toOffset _tmpidOffset) _tmpidWidth
+
+
 
 
 processPacket
@@ -285,7 +286,7 @@ correlateTMTime inTime ert = do
 
 
 getParameters :: (MonadIO m, MonadReader env m, HasPUSState env, 
-    HasCorrelationState env, HasDataModel env, HasLogFunc env)
+    HasCorrelationState env, HasDataModel env)
   => SunTime
   -> Epoch
   -> TMPacketDef
@@ -380,7 +381,7 @@ getFixedParams timestamp ert epoch _def (oct', _ep) locs = do
 
 
 getVariableParams :: (MonadIO m, MonadReader env m, 
-    HasPUSState env, HasCorrelationState env, HasDataModel env, HasLogFunc env) => 
+    HasPUSState env, HasCorrelationState env, HasDataModel env) => 
   SunTime
   -> SunTime 
   -> Epoch 
@@ -390,20 +391,20 @@ getVariableParams :: (MonadIO m, MonadReader env m,
   -> Word8
   -> VarParams 
   -> m (Maybe (Vector TMParameter))
-getVariableParams timestamp ert epoch pktDef (oct', ep) _tpsd dfhSize varParams = do 
+getVariableParams timestamp ert epoch _pktDef (oct', _ep) _tpsd dfhSize varParams = do 
     let offset = mkOffset (fromIntegral dfhSize) 0
     a <- go offset varParams
     case a of 
       Just (_, pars) -> return (Just (VB.build pars))
       Nothing -> return Nothing 
     where 
-        go :: Offset -> VarParams -> m (Maybe (Offset, VB.Builder TMParameter))
+        -- go :: Offset -> VarParams -> m (Maybe (Offset, VB.Builder TMParameter))
         go !offset VarParamsEmpty = do
-            traceM "VarParamsEmpty"
+            -- traceM "VarParamsEmpty"
             return $ Just (offset, VB.empty)
         -- Normal parameter, just extract the value, recurse for the rest 
         go !offset (VarNormal vpdParDef rest) = do 
-            traceM $ "VarNormal rest: " <> T.pack (show rest)
+            -- traceM $ "VarNormal rest: " <> T.pack (show rest)
             let newOffset = offset .+. getPaddedWidth parDef .+. vpdParDef ^. tmvpOffset
                 extractOffset = offset .+. getPadding parDef 
                 parDef = vpdParDef ^. tmvpParam
@@ -446,7 +447,7 @@ getVariableParams timestamp ert epoch pktDef (oct', ep) _tpsd dfhSize varParams 
             
             case nval' of 
               Just nval -> do 
-                traceM $ "N: " <> T.pack (ppShow (getInt nval))
+                -- traceM $ "N: " <> T.pack (ppShow (getInt nval))
                 
                 x <- case nval of 
                     TMValue (TMValInt x) _ -> processGroup x newOffset group 
@@ -462,7 +463,7 @@ getVariableParams timestamp ert epoch pktDef (oct', ep) _tpsd dfhSize varParams 
                         , _pValue = nval 
                         , _pEngValue = Nothing
                         }
-                    traceM $ "Repeater parameter: " <> T.pack (ppShow param)
+                    -- traceM $ "Repeater parameter: " <> T.pack (ppShow param)
                     -- now take the rest of the packet 
                     
                     y <- go lastOff rest
@@ -533,12 +534,12 @@ getVariableParams timestamp ert epoch pktDef (oct', ep) _tpsd dfhSize varParams 
             return (Just (offset, VB.empty))
 
 
-        processGroup :: Int64 -> Offset -> VarParams -> m (Maybe (Offset, VB.Builder TMParameter))
+        -- processGroup :: Int64 -> Offset -> VarParams -> m (Maybe (Offset, VB.Builder TMParameter))
         processGroup 0 offset _ = do 
-            traceM $ "processGroup 0 " <> textDisplay offset
+            -- traceM $ "processGroup 0 " <> textDisplay offset
             return $ Just (offset, VB.empty)
         processGroup !n offset params = do 
-            traceM $ "processGroup " <> textDisplay n <> " offset: " <> textDisplay offset
+            -- traceM $ "processGroup " <> textDisplay n <> " offset: " <> textDisplay offset
             
             x <- go offset params
             case x of 
@@ -553,7 +554,7 @@ getVariableParams timestamp ert epoch pktDef (oct', ep) _tpsd dfhSize varParams 
             
 
         processChoice !tpsd !offset = do 
-            traceM $ "processChoice " <> T.pack (show tpsd)
+            -- traceM $ "processChoice " <> T.pack (show tpsd)
             env <- ask 
             dm <- readTVarIO (env ^. getDataModel)
             let vpds = dm ^. dmVPDStructs
@@ -601,19 +602,19 @@ extractParamValue epoch oct offset par =
                 in  fmap (\v' -> (TMValue v' clearValidity, CorrelationNo)) v 
             ParamString w ->
                 let v = readString offset w
-                in  (TMValue v clearValidity, CorrelationNo)
+                in Just (TMValue v clearValidity, CorrelationNo)
             ParamOctet w ->
                 let v = readOctet offset w
-                in (TMValue v clearValidity, CorrelationNo)
+                in Just (TMValue v clearValidity, CorrelationNo)
             ParamTime tt ct ->
                 let v = readTime offset tt
-                in (TMValue v clearValidity, ct)
+                in fmap (\v' -> (TMValue v' clearValidity, ct)) v 
             ParamDeduced _ ->
                 -- TODO handle deduced params
-                (TMValue TMValNothing clearValidity, CorrelationNo)
+                Just (TMValue TMValNothing clearValidity, CorrelationNo)
             ParamSavedSynthetic ->
                 -- TODO handle synthetic params
-                (TMValue TMValNothing clearValidity, CorrelationNo)
+                Just (TMValue TMValNothing clearValidity, CorrelationNo)
 
 
   where
@@ -670,191 +671,294 @@ extractParamValue epoch oct offset par =
 
     readTime off (CUC1 False) =
       let !sec = getValue @Word8 oct (toByteOffset off) BiE
-          !encTime = mkCUC sec False
-      in TMValTime (cucTimeToSunTime epoch encTime)
+          encTime s = mkCUC s False
+      in 
+      case sec of 
+        Just se -> Just $ TMValTime (cucTimeToSunTime epoch (encTime se))
+        Nothing -> Nothing
     readTime off (CUC1 True) =
       let !sec = getValue @Int8 oct (toByteOffset off) BiE
-          !encTime = mkCUC sec True
-      in TMValTime (cucTimeToSunTime epoch encTime)
+          encTime s = mkCUC s True
+      in 
+      case sec of 
+        Just s -> Just $ TMValTime (cucTimeToSunTime epoch (encTime s))
+        Nothing -> Nothing
 
     readTime off (CUC1_1 False) =
       let !sec = getValue @Word8 oct (toByteOffset off) BiE
           !mic = getValue @Word8 oct (toByteOffset off + 1) BiE
-          !encTime = mkCUC_1 sec mic False
-      in TMValTime (cucTimeToSunTime epoch encTime)
+          encTime s m = mkCUC_1 s m False
+      in 
+      case (sec, mic) of 
+        (Just s, Just m) -> Just $ TMValTime (cucTimeToSunTime epoch (encTime s m))
+        _ -> Nothing
     readTime off (CUC1_1 True) =
       let !sec = getValue @Int8 oct (toByteOffset off) BiE
           !mic = getValue @Word8 oct (toByteOffset off + 1) BiE
-          !encTime = mkCUC_1 sec mic True
-      in TMValTime (cucTimeToSunTime epoch encTime)
+          encTime s m = mkCUC_1 s m True
+      in 
+      case (sec, mic) of 
+        (Just s, Just m) -> Just $ TMValTime (cucTimeToSunTime epoch (encTime s m))
+        _ -> Nothing
 
     readTime off (CUC1_2 False) =
       let !sec = getValue @Word8 oct (toByteOffset off) BiE
           !mic = getValue @Word16 oct (toByteOffset off + 1) BiE
-          !encTime = mkCUC_2 sec mic False
-      in TMValTime (cucTimeToSunTime epoch encTime)
+          encTime s m = mkCUC_2 s m False
+      in
+      case (sec, mic) of 
+        (Just s, Just m) -> Just $ TMValTime (cucTimeToSunTime epoch (encTime s m))
+        _ -> Nothing
     readTime off (CUC1_2 True) =
       let !sec = getValue @Int8 oct (toByteOffset off) BiE
           !mic = getValue @Word16 oct (toByteOffset off + 1) BiE
-          !encTime = mkCUC_2 sec mic True
-      in TMValTime (cucTimeToSunTime epoch encTime)
+          encTime s m = mkCUC_2 s m True
+      in 
+      case (sec, mic) of 
+        (Just s, Just m) -> Just $ TMValTime (cucTimeToSunTime epoch (encTime s m))
+        _ -> Nothing 
 
     readTime off (CUC1_3 False) =
         let !sec = getValue @Word8 oct (toByteOffset off) BiE
             !mic = getValue @Word24 oct (toByteOffset off + 1) BiE
-            !encTime = mkCUC_3 sec mic False
-        in TMValTime (cucTimeToSunTime epoch encTime)
+            encTime s m = mkCUC_3 s m False
+        in 
+        case (sec, mic) of 
+          (Just s, Just m) -> Just $ TMValTime $ cucTimeToSunTime epoch (encTime s m)
+          _ -> Nothing
     readTime off (CUC1_3 True) =
         let !sec = getValue @Int8 oct (toByteOffset off) BiE
             !mic = getValue @Word24 oct (toByteOffset off + 1) BiE
-            !encTime = mkCUC_3 sec mic True
-        in TMValTime (cucTimeToSunTime epoch encTime)
+            encTime s m = mkCUC_3 s m True
+        in 
+        case (sec, mic) of 
+          (Just s, Just m) -> Just $ TMValTime $ cucTimeToSunTime epoch (encTime s m)
+          _ -> Nothing
 
     readTime off (CUC2 False) =
         let !sec = getValue @Word16 oct (toByteOffset off) BiE
-            !encTime = mkCUC sec False
-        in TMValTime (cucTimeToSunTime epoch encTime)
+            encTime s = mkCUC s False
+        in 
+        case sec of 
+          Just s -> Just $ TMValTime $ cucTimeToSunTime epoch (encTime s)
+          _ -> Nothing
     readTime off (CUC2 True) =
         let !sec = getValue @Int16 oct (toByteOffset off) BiE
-            !encTime = mkCUC sec True
-        in TMValTime (cucTimeToSunTime epoch encTime)
+            encTime s = mkCUC s True
+        in 
+        case sec of 
+          Just s -> Just $ TMValTime $ cucTimeToSunTime epoch (encTime s)
+          _ -> Nothing
 
     readTime off (CUC2_1 False) =
       let !sec = getValue @Word16 oct (toByteOffset off) BiE
           !mic = getValue @Word8 oct (toByteOffset off + 1) BiE
-          !encTime = mkCUC_1 sec mic False
-      in TMValTime (cucTimeToSunTime epoch encTime)
+          encTime s m = mkCUC_1 s m False
+      in 
+      case (sec, mic) of 
+        (Just s, Just m) -> Just $ TMValTime $ cucTimeToSunTime epoch (encTime s m)
+        _ -> Nothing
     readTime off (CUC2_1 True) =
       let !sec = getValue @Int16 oct (toByteOffset off) BiE
           !mic = getValue @Word8 oct (toByteOffset off + 1) BiE
-          !encTime = mkCUC_1 sec mic True
-      in TMValTime (cucTimeToSunTime epoch encTime)
+          encTime s m = mkCUC_1 s m True
+      in 
+      case (sec, mic) of 
+        (Just s, Just m) -> Just $ TMValTime $ cucTimeToSunTime epoch (encTime s m)
+        _ -> Nothing
 
     readTime off (CUC2_2 False) =
       let !sec = getValue @Word16 oct (toByteOffset off) BiE
           !mic = getValue @Word16 oct (toByteOffset off + 1) BiE
-          !encTime = mkCUC_2 sec mic False
-      in TMValTime (cucTimeToSunTime epoch encTime)
+          encTime s m = mkCUC_2 s m False
+      in 
+      case (sec, mic) of 
+        (Just s, Just m) -> Just $ TMValTime $ cucTimeToSunTime epoch (encTime s m)
+        _ -> Nothing
     readTime off (CUC2_2 True) =
       let !sec = getValue @Int16 oct (toByteOffset off) BiE
           !mic = getValue @Word16 oct (toByteOffset off + 1) BiE
-          !encTime = mkCUC_2 sec mic True
-      in TMValTime (cucTimeToSunTime epoch encTime)
+          encTime s m = mkCUC_2 s m True
+      in 
+      case (sec, mic) of 
+        (Just s, Just m) -> Just $ TMValTime $ cucTimeToSunTime epoch (encTime s m)
+        _ -> Nothing
 
     readTime off (CUC2_3 False) =
         let !sec = getValue @Word16 oct (toByteOffset off) BiE
             !mic = getValue @Word24 oct (toByteOffset off + 1) BiE
-            !encTime = mkCUC_3 sec mic False
-        in TMValTime (cucTimeToSunTime epoch encTime)
+            encTime s m = mkCUC_3 s m False
+        in 
+        case (sec, mic) of 
+          (Just s, Just m) -> Just $ TMValTime $ cucTimeToSunTime epoch (encTime s m)
+          _ -> Nothing
     readTime off (CUC2_3 True) =
         let !sec = getValue @Int16 oct (toByteOffset off) BiE
             !mic = getValue @Word24 oct (toByteOffset off + 1) BiE
-            !encTime = mkCUC_3 sec mic True
-        in TMValTime (cucTimeToSunTime epoch encTime)
+            encTime s m = mkCUC_3 s m True
+        in 
+        case (sec, mic) of 
+          (Just s, Just m) -> Just $ TMValTime $ cucTimeToSunTime epoch (encTime s m)
+          _ -> Nothing
     readTime off (CUC3 False) =
         let !sec = getValue @Word24 oct (toByteOffset off) BiE
-            !encTime = mkCUC sec False
-        in TMValTime (cucTimeToSunTime epoch encTime)
+            encTime s = mkCUC s False
+        in 
+        case sec of 
+          Just s -> Just $ TMValTime $ cucTimeToSunTime epoch (encTime s)
+          _ -> Nothing
     readTime off (CUC3 True) =
         let !sec = getValue @Int24 oct (toByteOffset off) BiE
-            !encTime = mkCUC sec True
-        in TMValTime (cucTimeToSunTime epoch encTime)
+            encTime s = mkCUC s True
+        in 
+        case sec of 
+          Just s -> Just $ TMValTime $ cucTimeToSunTime epoch (encTime s)
+          _ -> Nothing
 
     readTime off (CUC3_1 False) =
       let !sec = getValue @Word24 oct (toByteOffset off) BiE
           !mic = getValue @Word8 oct (toByteOffset off + 1) BiE
-          !encTime = mkCUC_1 sec mic False
-      in TMValTime (cucTimeToSunTime epoch encTime)
+          encTime s m = mkCUC_1 s m False
+      in 
+      case (sec, mic) of 
+        (Just s, Just m) -> Just $ TMValTime $ cucTimeToSunTime epoch (encTime s m)
+        _ -> Nothing
     readTime off (CUC3_1 True) =
       let !sec = getValue @Int24 oct (toByteOffset off) BiE
           !mic = getValue @Word8 oct (toByteOffset off + 1) BiE
-          !encTime = mkCUC_1 sec mic True
-      in TMValTime (cucTimeToSunTime epoch encTime)
+          encTime s m = mkCUC_1 s m True
+      in 
+      case (sec, mic) of 
+        (Just s, Just m) -> Just $ TMValTime $ cucTimeToSunTime epoch (encTime s m)
+        _ -> Nothing
 
     readTime off (CUC3_2 False) =
       let !sec = getValue @Word24 oct (toByteOffset off) BiE
           !mic = getValue @Word16 oct (toByteOffset off + 1) BiE
-          !encTime = mkCUC_2 sec mic False
-      in TMValTime (cucTimeToSunTime epoch encTime)
+          encTime s m = mkCUC_2 s m False
+      in 
+      case (sec, mic) of 
+        (Just s, Just m) -> Just $ TMValTime $ cucTimeToSunTime epoch (encTime s m)
+        _ -> Nothing
     readTime off (CUC3_2 True) =
       let !sec = getValue @Int24 oct (toByteOffset off) BiE
           !mic = getValue @Word16 oct (toByteOffset off + 1) BiE
-          !encTime = mkCUC_2 sec mic True
-      in TMValTime (cucTimeToSunTime epoch encTime)
+          encTime s m = mkCUC_2 s m True
+      in 
+      case (sec, mic) of 
+        (Just s, Just m) -> Just $ TMValTime $ cucTimeToSunTime epoch (encTime s m)
+        _ -> Nothing
 
     readTime off (CUC3_3 False) =
         let !sec = getValue @Word24 oct (toByteOffset off) BiE
             !mic = getValue @Word24 oct (toByteOffset off + 1) BiE
-            !encTime = mkCUC_3 sec mic False
-        in TMValTime (cucTimeToSunTime epoch encTime)
+            encTime s m = mkCUC_3 s m False
+        in 
+        case (sec, mic) of 
+          (Just s, Just m) -> Just $ TMValTime $ cucTimeToSunTime epoch (encTime s m)
+          _ -> Nothing
     readTime off (CUC3_3 True) =
         let !sec = getValue @Int24 oct (toByteOffset off) BiE
             !mic = getValue @Word24 oct (toByteOffset off + 1) BiE
-            !encTime = mkCUC_3 sec mic True
-        in TMValTime (cucTimeToSunTime epoch encTime)
+            encTime s m = mkCUC_3 s m True
+        in 
+        case (sec, mic) of 
+          (Just s, Just m) -> Just $ TMValTime $ cucTimeToSunTime epoch (encTime s m)
+          _ -> Nothing
 
 
     readTime off (CUC4 False) =
         let !sec = getValue @Word32 oct (toByteOffset off) BiE
-            !encTime = mkCUC sec False
-        in TMValTime (cucTimeToSunTime epoch encTime)
+            encTime s = mkCUC s False
+        in 
+        case sec of 
+          Just s -> Just $ TMValTime $ cucTimeToSunTime epoch (encTime s)
+          _ -> Nothing
     readTime off (CUC4 True) =
         let !sec = getValue @Int32 oct (toByteOffset off) BiE
-            !encTime = mkCUC sec True
-        in TMValTime (cucTimeToSunTime epoch encTime)
+            encTime s = mkCUC s True
+        in 
+        case sec of 
+          Just s -> Just $ TMValTime $ cucTimeToSunTime epoch (encTime s)
+          _ -> Nothing
 
     readTime off (CUC4_1 False) =
       let !sec = getValue @Word32 oct (toByteOffset off) BiE
           !mic = getValue @Word8 oct (toByteOffset off + 1) BiE
-          !encTime = mkCUC_1 sec mic False
-      in TMValTime (cucTimeToSunTime epoch encTime)
+          encTime s m = mkCUC_1 s m False
+      in 
+      case (sec, mic) of 
+        (Just s, Just m) -> Just $ TMValTime $ cucTimeToSunTime epoch (encTime s m)
+        _ -> Nothing
     readTime off (CUC4_1 True) =
       let !sec = getValue @Int32 oct (toByteOffset off) BiE
           !mic = getValue @Word8 oct (toByteOffset off + 1) BiE
-          !encTime = mkCUC_1 sec mic True
-      in TMValTime (cucTimeToSunTime epoch encTime)
+          encTime s m = mkCUC_1 s m True
+      in 
+      case (sec, mic) of 
+        (Just s, Just m) -> Just $ TMValTime $ cucTimeToSunTime epoch (encTime s m)
+        _ -> Nothing
 
     readTime off (CUC4_2 False) =
       let !sec = getValue @Word32 oct (toByteOffset off) BiE
           !mic = getValue @Word16 oct (toByteOffset off + 1) BiE
-          !encTime = mkCUC_2 sec mic False
-      in TMValTime (cucTimeToSunTime epoch encTime)
+          encTime s m = mkCUC_2 s m False
+      in 
+      case (sec, mic) of 
+        (Just s, Just m) -> Just $ TMValTime $ cucTimeToSunTime epoch (encTime s m)
+        _ -> Nothing
     readTime off (CUC4_2 True) =
       let !sec = getValue @Int32 oct (toByteOffset off) BiE
           !mic = getValue @Word16 oct (toByteOffset off + 1) BiE
-          !encTime = mkCUC_2 sec mic True
-      in TMValTime (cucTimeToSunTime epoch encTime)
+          encTime s m = mkCUC_2 s m True
+      in 
+      case (sec, mic) of 
+        (Just s, Just m) -> Just $ TMValTime $ cucTimeToSunTime epoch (encTime s m)
+        _ -> Nothing
 
     readTime off (CUC4_3 False) =
         let !sec = getValue @Word32 oct (toByteOffset off) BiE
             !mic = getValue @Word24 oct (toByteOffset off + 1) BiE
-            !encTime = mkCUC_3 sec mic False
-        in TMValTime (cucTimeToSunTime epoch encTime)
+            encTime s m = mkCUC_3 s m False
+        in 
+        case (sec, mic) of 
+          (Just s, Just m) -> Just $ TMValTime $ cucTimeToSunTime epoch (encTime s m)
+          _ -> Nothing
     readTime off (CUC4_3 True) =
         let !sec = getValue @Int32 oct (toByteOffset off) BiE
             !mic = getValue @Word24 oct (toByteOffset off + 1) BiE
-            !encTime = mkCUC_3 sec mic True
-        in TMValTime (cucTimeToSunTime epoch encTime)
+            encTime s m = mkCUC_3 s m True
+        in 
+        case (sec, mic) of 
+          (Just s, Just m) -> Just $ TMValTime $ cucTimeToSunTime epoch (encTime s m)
+          _ -> Nothing
 
     readTime off UxTime =
         let !sec = getValue @Word32 oct (toByteOffset off) BiE
             !mic = getValue @Word32 oct (toByteOffset off + 1) BiE
-            !encTime = mkCUCTime (fromIntegral sec) (fromIntegral mic) False
-        in TMValTime (cucTimeToSunTime epoch encTime)
+            encTime s m = mkCUCTime (fromIntegral s) (fromIntegral m) False
+        in 
+        case (sec, mic) of 
+          (Just s, Just m) -> Just $ TMValTime $ cucTimeToSunTime epoch (encTime s m)
+          _ -> Nothing
 
     readTime off (CDS8 _) =
         let !days = getValue oct (toByteOffset off) BiE
             !milli = getValue oct (toByteOffset off + 2) BiE
             !micro = getValue oct (toByteOffset off + 6) BiE
-            !encTime = mkCDSTime days milli (Just micro)
-            st = cdsTimeToSunTime epoch encTime
+            encTime d mi mc = mkCDSTime d mi (Just mc)
+            st d mi mc = cdsTimeToSunTime epoch (encTime d mi mc)
         in
-        TMValTime st
+        case (days, milli, micro) of
+          (Just d, Just mi, Just mc) -> Just $ TMValTime (st d mi mc)
+          _ -> Nothing 
     readTime off (CDS6 _) =
         let !days = getValue oct (toByteOffset off) BiE
             !milli = getValue oct (toByteOffset off + 2) BiE
-            !encTime = mkCDSTime days milli Nothing
-            st = cdsTimeToSunTime epoch encTime
+            encTime d mi = mkCDSTime d mi Nothing
+            st d mi = cdsTimeToSunTime epoch (encTime d mi)
         in
-        TMValTime st
-
+        case (days, milli) of
+          (Just d, Just mi) -> Just $ TMValTime (st d mi)
+          _ -> Nothing 
+  
