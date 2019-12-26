@@ -48,34 +48,31 @@ import           General.SizeOf
 -- | This class is for getting values out of 'ByteString' in case the
 -- value is byte-aligned.
 class GetValue a where
-    getValue :: ByteString -> ByteOffset -> Endian -> a
+    getValue :: ByteString -> ByteOffset -> Endian -> Maybe a
 
 
 instance GetValue Word8 where
-    getValue bytes (ByteOffset idx) _ = bytes `B.index` idx
+    getValue bytes (ByteOffset idx) _ = if idx >= B.length bytes then Nothing else Just $ bytes `B.index` idx
     {-# INLINABLE getValue #-}
 
 instance GetValue Int8 where
-    getValue bytes (ByteOffset idx) _ = fromIntegral $ bytes `B.index` idx
+    getValue bytes (ByteOffset idx) _ = if idx >= B.length bytes then Nothing else Just . fromIntegral $ bytes `B.index` idx
     {-# INLINABLE getValue #-}
 
 instance GetValue Word16 where
-    getValue bytes (ByteOffset idx) BiE =
-        let !val =
-                    fromIntegral (bytes `B.index` idx) `shiftL` 8 .|. fromIntegral
+    getValue bytes (ByteOffset idx) byteOrder =
+        let !val = case byteOrder of 
+              BiE -> fromIntegral (bytes `B.index` idx) `shiftL` 8 .|. fromIntegral
                         (bytes `B.index` (idx + 1))
-        in  val
-    getValue bytes (ByteOffset idx) LiE =
-        let !val =
-                    fromIntegral (bytes `B.index` idx + 1)
-                        `shiftL` 8
-                        .|.      fromIntegral (bytes `B.index` idx)
-        in  val
+              LiE -> fromIntegral (bytes `B.index` idx + 1) `shiftL` 8
+                    .|. fromIntegral (bytes `B.index` idx) 
+        in  
+        if idx + 1 >= B.length bytes then Nothing else Just val
     {-# INLINABLE getValue #-}
 
 instance GetValue Int16 where
     getValue bytes off endian =
-        fromIntegral (getValue bytes off endian :: Word16)
+        fromIntegral <$> getValue @Word16 bytes off endian
     {-# INLINABLE getValue #-}
 
 instance GetValue Word32 where
@@ -85,19 +82,19 @@ instance GetValue Word32 where
             b2   = fromIntegral (bytes `B.index` (idx + 2)) `shiftL` 8
             b3   = fromIntegral (bytes `B.index` (idx + 3))
             !val = b0 .|. b1 .|. b2 .|. b3
-        in  val
+        in if idx + 3 >= B.length bytes then Nothing else Just val
     getValue bytes (ByteOffset idx) LiE =
         let b0   = fromIntegral (bytes `B.index` idx)
             b1   = fromIntegral (bytes `B.index` (idx + 1)) `shiftL` 8
             b2   = fromIntegral (bytes `B.index` (idx + 2)) `shiftL` 16
             b3   = fromIntegral (bytes `B.index` (idx + 3)) `shiftL` 24
             !val = b0 .|. b1 .|. b2 .|. b3
-        in  val
+        in if idx + 3 >= B.length bytes then Nothing else Just val
     {-# INLINABLE getValue #-}
 
 instance GetValue Int32 where
     getValue bytes off endian =
-        fromIntegral (getValue bytes off endian :: Word32)
+        fromIntegral <$> getValue @Word32 bytes off endian
     {-# INLINABLE getValue #-}
 
 
@@ -126,7 +123,7 @@ instance GetValue Word48 where
           b4   = fromIntegral (bytes `B.index` (idx + 4)) `shiftL` 8
           b5   = fromIntegral (bytes `B.index` (idx + 5))
           !val = b0 .|. b1 .|. b2 .|. b3 .|. b4 .|. b5
-      in Word48 val
+      in if idx + 5 >= B.length bytes then Nothing else Just . Word48 $ val
   getValue bytes (ByteOffset idx) LiE =
       let b0   = fromIntegral (bytes `B.index` idx)
           b1   = fromIntegral (bytes `B.index` (idx + 1)) `shiftL` 8
@@ -135,7 +132,7 @@ instance GetValue Word48 where
           b4   = fromIntegral (bytes `B.index` (idx + 4)) `shiftL` 32
           b5   = fromIntegral (bytes `B.index` (idx + 5)) `shiftL` 40
           !val = b0 .|. b1 .|. b2 .|. b3 .|. b4 .|. b5
-      in Word48 val
+      in if idx + 5 >= B.length bytes then Nothing else Just . Word48 $ val
   {-# INLINABLE getValue #-}
 
 instance GetValue Word24 where 
@@ -144,28 +141,28 @@ instance GetValue Word24 where
         b1   = fromIntegral (bytes `B.index` (idx + 4)) `shiftL` 8
         b2   = fromIntegral (bytes `B.index` (idx + 5))
         !val = b0 .|. b1 .|. b2
-    in Word24 val
+    in if idx + 2 >= B.length bytes then Nothing else Just . Word24 $ val
   getValue bytes (ByteOffset idx) LiE =
     let b0   = fromIntegral (bytes `B.index` idx)
         b1   = fromIntegral (bytes `B.index` (idx + 1)) `shiftL` 8
         b2   = fromIntegral (bytes `B.index` (idx + 2)) `shiftL` 16
         !val = b0 .|. b1 .|. b2 
-    in Word24 val
+    in if idx + 2 >= B.length bytes then Nothing else Just . Word24 $ val
   {-# INLINABLE getValue #-}
 
 
 
 instance GetValue Int48 where
   getValue bytes off endian =
-    let val = getWord48Val $ getValue @Word48 bytes off endian
-        !val2 = if val .&. 0x00_00_80_00_00_00_00_00 /= 0 then val .|. 0xFF_FF_00_00_00_00_00_00 else val
-    in Int48 (fromIntegral val2)
+    let val = getWord48Val <$> getValue @Word48 bytes off endian
+        !val2 = fmap (\val' -> Int48 . fromIntegral $ if val' .&. 0x00_00_80_00_00_00_00_00 /= 0 then val' .|. 0xFF_FF_00_00_00_00_00_00 else val') val
+    in val2
 
 instance GetValue Int24 where 
   getValue bytes off endian = 
-    let val = getWord24Val $ getValue @Word24 bytes off endian 
-        !val2 = if val .&. 0x00_80_00_00 /= 0 then val .|. 0xFF_00_00_00 else val
-    in Int24 (fromIntegral val2)
+    let val = getWord24Val <$> getValue @Word24 bytes off endian 
+        !val2 = fmap (\val' -> Int24 . fromIntegral $ if val' .&. 0x00_80_00_00 /= 0 then val' .|. 0xFF_00_00_00 else val') val
+    in val2
 
 
 instance GetValue Word64 where
@@ -179,7 +176,7 @@ instance GetValue Word64 where
             b6   = fromIntegral (bytes `B.index` (idx + 6)) `shiftL` 8
             b7   = fromIntegral (bytes `B.index` (idx + 7))
             !val = b0 .|. b1 .|. b2 .|. b3 .|. b4 .|. b5 .|. b6 .|. b7
-        in  val
+        in if idx + 7 >= B.length bytes then Nothing else Just val
     getValue bytes (ByteOffset idx) LiE =
         let b0   = fromIntegral (bytes `B.index` idx)
             b1   = fromIntegral (bytes `B.index` (idx + 1)) `shiftL` 8
@@ -190,19 +187,19 @@ instance GetValue Word64 where
             b6   = fromIntegral (bytes `B.index` (idx + 6)) `shiftL` 48
             b7   = fromIntegral (bytes `B.index` (idx + 7)) `shiftL` 56
             !val = b0 .|. b1 .|. b2 .|. b3 .|. b4 .|. b5 .|. b6 .|. b7
-        in  val
+        in if idx + 7 >= B.length bytes then Nothing else Just val
     {-# INLINABLE getValue #-}
 
 instance GetValue Int64 where
-    getValue bytes off endian = fromIntegral (getValue bytes off endian :: Word64)
+    getValue bytes off endian = fromIntegral <$> getValue @Word64 bytes off endian
     {-# INLINABLE getValue #-}
 
 instance GetValue Double where
-    getValue bytes off endian = wordToDouble (getValue bytes off endian)
+    getValue bytes off endian = wordToDouble <$> getValue bytes off endian
     {-# INLINABLE getValue #-}
 
 instance GetValue Float where
-    getValue bytes off endian = wordToFloat (getValue bytes off endian)
+    getValue bytes off endian = wordToFloat <$> getValue bytes off endian
     {-# INLINABLE getValue #-}
 
 
@@ -211,23 +208,25 @@ newtype MILSingle = MILSingle { getMilSingle :: Double }
   deriving (Show, Generic)
 
 instance GetValue MILSingle where
-  getValue bytes off endian = MILSingle $ decMILSingle $ getValue @Word32 bytes off endian
+  getValue bytes off endian = MILSingle . decMILSingle <$> getValue @Word32 bytes off endian
 
 newtype MILExtended = MILExtended { getMilExtended :: Double }
   deriving (Show, Generic)
 
 instance GetValue MILExtended where
-  getValue bytes off endian = MILExtended . decMILExtended endian . getWord48Val $ getValue @Word48 bytes off endian
+  getValue bytes off endian = MILExtended . decMILExtended endian . getWord48Val <$> getValue @Word48 bytes off endian
 
 -- | Get a octet string out of a 'ByteString' with the defined length
-getValueOctetLen :: ByteString -> ByteOffset -> Int -> ByteString
-getValueOctetLen bytes (ByteOffset idx) len = B.take len (B.drop idx bytes)
+getValueOctetLen :: ByteString -> ByteOffset -> Int -> Maybe ByteString
+getValueOctetLen bytes (ByteOffset idx) len = if idx + len >= B.length bytes
+    then Nothing 
+    else Just $ B.take len (B.drop idx bytes)
 
 -- | Get a octet string out of a 'ByteString', taking all bytes until the
 -- end of the 'ByteString'. This is used for variable Octet strings and Strings
 -- which are at the end of the packet and are consumed till the end
-getValueOctet :: ByteString -> ByteOffset -> ByteString
-getValueOctet bytes (ByteOffset idx) = B.drop idx bytes
+getValueOctet :: ByteString -> ByteOffset -> Maybe ByteString
+getValueOctet bytes (ByteOffset idx) = Just $ B.drop idx bytes
 
 {-# INLINABLE byteSwap48 #-}
 byteSwap48 :: Word48 -> Word48
@@ -268,26 +267,26 @@ signExtend bits w =
 -- value is not byte-aligned (has a bit-offset)
 -- The value has a lenght of 'BitSize', which must be less than 64
 {-# INLINABLE getBitFieldInt64 #-}
-getBitFieldInt64 :: ByteString -> Offset -> BitSize -> Endian -> Int64
-getBitFieldInt64 bytes off bits BiE = signExtend bits (getBitField bytes off bits)
+getBitFieldInt64 :: ByteString -> Offset -> BitSize -> Endian -> Maybe Int64
+getBitFieldInt64 bytes off bits BiE = signExtend bits <$> getBitField bytes off bits
 getBitFieldInt64 bytes off bits LiE =
   let val = getBitField bytes off bits in
-  if | bits == 64 -> fromIntegral . byteSwap64 $ val
-     | bits == 32 -> fromIntegral (byteSwap32 (fromIntegral val :: Word32))
-     | bits == 16 -> fromIntegral (byteSwap16 (fromIntegral val :: Word16))
-     | bits == 48 -> fromIntegral (signExtend48 (byteSwap48 (fromIntegral val)))
+  if | bits == 64 -> fromIntegral . byteSwap64 <$> val
+     | bits == 32 -> fromIntegral . byteSwap32 . fromIntegral <$> val
+     | bits == 16 -> fromIntegral . byteSwap16 . fromIntegral <$> val 
+     | bits == 48 -> fromIntegral . signExtend48 . byteSwap48 . fromIntegral <$> val
      | otherwise -> -- we can't byte-order convert non-byte length values. We
         getBitFieldInt64 bytes off bits BiE
 
 {-# INLINABLE getBitFieldWord64 #-}
-getBitFieldWord64 :: ByteString -> Offset -> BitSize -> Endian -> Word64
+getBitFieldWord64 :: ByteString -> Offset -> BitSize -> Endian -> Maybe Word64
 getBitFieldWord64 bytes off bits BiE = getBitField bytes off bits
 getBitFieldWord64 bytes off bits LiE =
   let val = getBitField bytes off bits in
-    if | bits == 64 -> byteSwap64 val
-       | bits == 32 -> fromIntegral (byteSwap32 (fromIntegral val :: Word32))
-       | bits == 16 -> fromIntegral (byteSwap16 (fromIntegral val :: Word16))
-       | bits == 48 -> fromIntegral (byteSwap48 (fromIntegral val))
+    if | bits == 64 -> byteSwap64 <$> val
+       | bits == 32 -> fromIntegral . byteSwap32 . fromIntegral <$> val
+       | bits == 16 -> fromIntegral . byteSwap16 . fromIntegral <$> val
+       | bits == 48 -> fromIntegral . byteSwap48 . fromIntegral <$> val
        | otherwise -> -- we can't byte-order convert non-byte length values. We
           getBitFieldWord64 bytes off bits BiE
 
@@ -295,23 +294,23 @@ getBitFieldWord64 bytes off bits LiE =
 -- value is not byte-aligned (has a bit-offset)
 -- The value has a lenght of 'BitSize', which must be less than 64
 {-# INLINABLE getBitFieldDouble #-}
-getBitFieldDouble :: ByteString -> Offset -> Endian -> Double
-getBitFieldDouble bytes off BiE = wordToDouble (getBitField bytes off (BitSize 64))
-getBitFieldDouble bytes off LiE = wordToDouble (byteSwap64 (getBitField bytes off (BitSize 64)))
+getBitFieldDouble :: ByteString -> Offset -> Endian -> Maybe Double
+getBitFieldDouble bytes off BiE = wordToDouble <$> getBitField bytes off (BitSize 64)
+getBitFieldDouble bytes off LiE = wordToDouble . byteSwap64 <$> getBitField bytes off (BitSize 64)
 
 {-# INLINABLE getBitFieldFloat #-}
-getBitFieldFloat :: ByteString -> Offset -> Endian -> Float
-getBitFieldFloat bytes off BiE = wordToFloat $ fromIntegral $ getBitField bytes off (BitSize 32)
-getBitFieldFloat bytes off LiE = wordToFloat . byteSwap32 . fromIntegral $ getBitField bytes off (BitSize 32)
+getBitFieldFloat :: ByteString -> Offset -> Endian -> Maybe Float
+getBitFieldFloat bytes off BiE = wordToFloat . fromIntegral <$> getBitField bytes off (BitSize 32)
+getBitFieldFloat bytes off LiE = wordToFloat . byteSwap32 . fromIntegral <$> getBitField bytes off (BitSize 32)
 
 {-# INLINABLE getBitFieldMilSingle #-}
-getBitFieldMilSingle :: ByteString -> Offset -> Endian -> Double
-getBitFieldMilSingle bytes off BiE = decMILSingle . fromIntegral $ getBitField bytes off (BitSize 32)
-getBitFieldMilSingle bytes off LiE = decMILSingle . byteSwap32 . fromIntegral $ getBitField bytes off (BitSize 32)
+getBitFieldMilSingle :: ByteString -> Offset -> Endian -> Maybe Double
+getBitFieldMilSingle bytes off BiE = decMILSingle . fromIntegral <$> getBitField bytes off (BitSize 32)
+getBitFieldMilSingle bytes off LiE = decMILSingle . byteSwap32 . fromIntegral <$> getBitField bytes off (BitSize 32)
 
 {-# INLINABLE getBitFieldMilExtended #-}
-getBitFieldMilExtended :: ByteString -> Offset -> Endian -> Double
-getBitFieldMilExtended bytes off endian = decMILExtended endian $ getBitField bytes off (BitSize 48)
+getBitFieldMilExtended :: ByteString -> Offset -> Endian -> Maybe Double
+getBitFieldMilExtended bytes off endian = decMILExtended endian <$> getBitField bytes off (BitSize 48)
 
 
 
@@ -319,8 +318,8 @@ getBitFieldMilExtended bytes off endian = decMILExtended endian $ getBitField by
 -- value is not byte-aligned (has a bit-offset).
 -- The value has a lenght of 'BitSize', which must be less than 64
 {-# INLINABLE getBitField #-}
-getBitField :: ByteString -> Offset -> BitSize -> Word64
-getBitField bytes off (BitSize nBits) =
+getBitField :: ByteString -> Offset -> BitSize -> Maybe Word64
+getBitField bytes off bs@(BitSize nBits) =
     let
         (ByteOffset idx, BitOffset bitNr) = offsetParts off
         value1 :: Word64
@@ -347,7 +346,7 @@ getBitField bytes off (BitSize nBits) =
                                 ((bytes `B.index` ix) `shiftR` (8 - nb))
                         else val
     in
-    value2
+    if (unByteOffset . fst . offsetParts . nextByteAligned) (off .+. bs) >= B.length bytes then Nothing else Just value2
 
 
 {-# INLINABLE decMILSingle #-}

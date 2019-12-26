@@ -424,32 +424,32 @@ setAlignedValue _   _    _              = pure ()
 
 
 {-# INLINABLE getAlignedValue #-}
-getAlignedValue :: ByteString -> ByteOffset -> Value -> Value
-getAlignedValue byts off ValInt8{}       = ValInt8 $ getValue byts off BiE
-getAlignedValue byts off (ValInt16  b _) = ValInt16 b $ getValue byts off b
-getAlignedValue byts off (ValDouble b _) = ValDouble b $ getValue byts off b
-getAlignedValue byts off (ValString _  ) = ValString $ getValueOctet byts off
+getAlignedValue :: ByteString -> ByteOffset -> Value -> Maybe Value
+getAlignedValue byts off ValInt8{}       = ValInt8 <$> getValue byts off BiE
+getAlignedValue byts off (ValInt16  b _) = ValInt16 b <$> getValue byts off b
+getAlignedValue byts off (ValDouble b _) = ValDouble b <$> getValue byts off b
+getAlignedValue byts off (ValString _  ) = ValString <$> getValueOctet byts off
 getAlignedValue byts off (ValFixedString len _) =
-    ValFixedString len $ getValueOctetLen byts off (fromIntegral len)
-getAlignedValue byts off (ValOctet _) = ValOctet $ getValueOctet byts off
+    ValFixedString len <$> getValueOctetLen byts off (fromIntegral len)
+getAlignedValue byts off (ValOctet _) = ValOctet <$> getValueOctet byts off
 getAlignedValue byts off (ValFixedOctet len _) =
-    ValFixedOctet len $ getValueOctetLen byts off (fromIntegral len)
+    ValFixedOctet len <$> getValueOctetLen byts off (fromIntegral len)
 getAlignedValue byts off (ValCUCTime (CUCTime _ _ delta)) =
-    ValCUCTime $ cucTimeSetDelta (getValue byts off BiE) delta
-getAlignedValue _ _ _ = ValUndefined
+    ValCUCTime . cucTimeSetDelta delta <$> getValue byts off BiE
+getAlignedValue _ _ _ = Just ValUndefined
 
 
 {-# INLINABLE getUnalignedValue #-}
-getUnalignedValue :: ByteString -> Offset -> Value -> Value
+getUnalignedValue :: ByteString -> Offset -> Value -> Maybe Value
 getUnalignedValue byts off ValUInt3{} =
-    ValUInt3 (fromIntegral (getBitFieldWord64 byts off (BitSize 3) BiE))
+    ValUInt3 . fromIntegral <$> getBitFieldWord64 byts off (BitSize 3) BiE
 getUnalignedValue byts off ValInt8{} =
-    ValInt8 (fromIntegral (getBitFieldInt64 byts off (BitSize 8) BiE))
+    ValInt8 . fromIntegral <$> getBitFieldInt64 byts off (BitSize 8) BiE
 getUnalignedValue byts off (ValInt16 b _) =
-    ValInt16 b (fromIntegral (getBitFieldInt64 byts off (BitSize 16) b))
+    ValInt16 b . fromIntegral <$> getBitFieldInt64 byts off (BitSize 16) b
 getUnalignedValue byts off (ValDouble b _) =
-    ValDouble b (getBitFieldDouble byts off b)
-getUnalignedValue _ _ _ = ValUndefined
+    ValDouble b <$> getBitFieldDouble byts off b
+getUnalignedValue _ _ _ = Just ValUndefined
 
 {-# INLINABLE isGettableUnaligned #-}
 isGettableUnaligned :: Value -> Bool

@@ -155,12 +155,12 @@ getPackeDefinition model (bytes, pkt) =
 
 extractPIVals :: TMPIDefs -> ByteString -> (Int64, Int64)
 extractPIVals TMPIDefs {..} bytes =
-    let pi1 = maybe 0 (extractPIVal bytes) _tmpidP1
-        pi2 = maybe 0 (extractPIVal bytes) _tmpidP2
+    let pi1 = fromMaybe 0 $ maybe 0 (extractPIVal bytes) _tmpidP1
+        pi2 = fromMaybe 0 $ maybe 0 (extractPIVal bytes) _tmpidP2
     in  (pi1, pi2)
 
 
-extractPIVal :: ByteString -> TMPIDef -> Int64
+extractPIVal :: ByteString -> TMPIDef -> Maybe Int64
 extractPIVal bytes TMPIDef {..}
     | _tmpidWidth == 8 = fromIntegral $ getValue @Int8 bytes _tmpidOffset BiE
     | _tmpidWidth == 16 = fromIntegral $ getValue @Int16 bytes _tmpidOffset BiE
@@ -182,9 +182,11 @@ processPacket pktDef (TMPacketKey _apid _t _st pi1 pi2) pkt@(_, pusDU) = do
 
     logDebug $ display ("TimeStamp: " :: Text) <> display timestamp <> display (". Getting parameters..." :: Text)
 
-    params <- getParameters timestamp epoch pktDef pkt
+    params' <- getParameters timestamp epoch pktDef pkt
 
-    logDebug $ display ("Got Parameters: " :: Text) <> displayShow params
+    logDebug $ display ("Got Parameters: " :: Text) <> displayShow params'
+
+    let params = fromMaybe V.empty params'
 
     let tmPacket = TMPacket {
       _tmpSPID = _tmpdSPID pktDef
@@ -288,7 +290,7 @@ getParameters :: (MonadIO m, MonadReader env m, HasPUSState env,
   -> Epoch
   -> TMPacketDef
   -> (ByteString, ExtractedDU PUSPacket)
-  -> m (Vector TMParameter)
+  -> m (Maybe (Vector TMParameter))
 getParameters timestamp epoch def pkt = do
   let ert = snd pkt ^. epERT
   case def ^. tmpdParams of
@@ -303,37 +305,49 @@ getFixedParams :: (MonadIO m, MonadReader env m, HasPUSState env, HasCorrelation
   -> TMPacketDef
   -> (ByteString, ExtractedDU PUSPacket)
   -> Vector TMParamLocation
-  -> m (Vector TMParameter)
+  -> m (Maybe (Vector TMParameter))
 getFixedParams timestamp ert epoch _def (oct', _ep) locs = do
-  VB.build <$> V.foldM (go oct') VB.empty locs
+  vs <- V.foldM (go oct') (Just VB.empty) locs
+  case vs of 
+    Just v -> return . Just . VB.build $ v
+    Nothing -> return Nothing
   where
+    -- go :: ByteString -> Maybe (VB.Builder TMParameter) -> TMParamLocation -> m (Maybe (VB.Builder TMParameter))
     go oct bldr loc = do
       case _tmplSuperComm loc of
         Just sup -> do
           let newLocs = unroll loc sup
               func (l, ts) = do
                 v <- getParamValue epoch ert oct (l ^. tmplOffset) (l ^. tmplParam)
-                return TMParameter {
-                    _pName = _tmplName loc
-                    , _pTime = ts
-                    , _pValue = v
-                    , _pEngValue = Nothing
-                  }
+                case v of 
+                  Just v' -> do 
+                    return $ Just TMParameter {
+                        _pName = _tmplName loc
+                        , _pTime = ts
+                        , _pValue = v'
+                        , _pEngValue = Nothing
+                      }
+                  Nothing -> return Nothing
           vals <- mapM func newLocs
-          return (bldr <> VB.foldable vals)
+          case sequence vals of 
+            Just vals' -> return (bldr <> Just (VB.foldable vals'))
+            Nothing -> return Nothing
         Nothing -> do
           val <- getParamValue epoch ert oct (loc ^. tmplOffset) (loc ^. tmplParam)
 
           let parTime = if tOffset == nullRelTime then timestamp else timestamp <+> tOffset
               tOffset = _tmplTime loc
 
-          let paramValue = TMParameter {
-                _pName = _tmplName loc
-                , _pTime = parTime
-                , _pValue = val
-                , _pEngValue = Nothing
-              }
-          return (bldr <> VB.singleton paramValue)
+          case val of 
+            Just val' -> do 
+              let paramValue = TMParameter {
+                    _pName = _tmplName loc
+                    , _pTime = parTime
+                    , _pValue = val'
+                    , _pEngValue = Nothing
+                  }
+              return $ bldr <> Just (VB.singleton paramValue)
+            Nothing -> return Nothing
 
     unroll :: TMParamLocation -> SuperCommutated -> [(TMParamLocation, SunTime)]
     unroll loc sup =
@@ -375,15 +389,18 @@ getVariableParams :: (MonadIO m, MonadReader env m,
   -> Int
   -> Word8
   -> VarParams 
-  -> m (Vector TMParameter)
+  -> m (Maybe (Vector TMParameter))
 getVariableParams timestamp ert epoch pktDef (oct', ep) _tpsd dfhSize varParams = do 
     let offset = mkOffset (fromIntegral dfhSize) 0
-    params <- go offset varParams 
-    return (VB.build (snd params))
+    a <- go offset varParams
+    case a of 
+      Just (_, pars) -> return (Just (VB.build pars))
+      Nothing -> return Nothing 
     where 
+        go :: Offset -> VarParams -> m (Maybe (Offset, VB.Builder TMParameter))
         go !offset VarParamsEmpty = do
             traceM "VarParamsEmpty"
-            return (offset, VB.empty)
+            return $ Just (offset, VB.empty)
         -- Normal parameter, just extract the value, recurse for the rest 
         go !offset (VarNormal vpdParDef rest) = do 
             traceM $ "VarNormal rest: " <> T.pack (show rest)
@@ -392,16 +409,22 @@ getVariableParams timestamp ert epoch pktDef (oct', ep) _tpsd dfhSize varParams 
                 parDef = vpdParDef ^. tmvpParam
             val <- getParamValue epoch ert oct' extractOffset parDef
             
-            let !param = TMParameter {
-                    _pName = vpdParDef ^. tmvpName
-                    , _pTime = timestamp 
-                    , _pValue = val 
-                    , _pEngValue = Nothing
-                    }
-            traceM $ "Extracted parameter: " <> T.pack (show param)
-            (lastOff, next) <- go newOffset rest 
-
-            return (lastOff, VB.singleton param <> next)
+            case val of 
+              Just val' -> do 
+                let !param = TMParameter {
+                        _pName = vpdParDef ^. tmvpName
+                        , _pTime = timestamp 
+                        , _pValue = val'
+                        , _pEngValue = Nothing
+                        }
+                traceM $ "Extracted parameter: " <> T.pack (show param)
+                
+                x <- go newOffset rest
+                case x of 
+                  Just (lastOff, next) -> 
+                    return . Just $ (lastOff, VB.singleton param <> next)
+                  Nothing -> return Nothing
+              Nothing -> return Nothing
 
         -- Group repeater. 
         go !offset (VarGroup repeater group rest) = do
@@ -419,96 +442,115 @@ getVariableParams timestamp ert epoch pktDef (oct', ep) _tpsd dfhSize varParams 
                 <> " extratOffset: " <> textDisplay extractOffset
 
             -- The value specifies, how often the group is repeated
-            nval <- getParamValue epoch ert oct' extractOffset parDef 
+            nval' <- getParamValue epoch ert oct' extractOffset parDef 
             
-            traceM $ "N: " <> T.pack (ppShow (getInt nval))
-            
-            (lastOff, parVals) <- case nval of 
-                TMValue (TMValInt x) _ -> processGroup x newOffset group 
-                TMValue (TMValUInt x) _ -> processGroup (fromIntegral x) newOffset group 
-                TMValue (TMValDouble x) _ -> processGroup (truncate x) newOffset group 
-                _ -> go newOffset rest 
-            
-            let !param = TMParameter {
-                _pName = repeater ^. tmvpName
-                , _pTime = timestamp 
-                , _pValue = nval 
-                , _pEngValue = Nothing
-                }
-            traceM $ "Repeater parameter: " <> T.pack (ppShow param)
-            -- now take the rest of the packet 
-            (lastOff2, parVals2) <- go lastOff rest 
-            return (lastOff2, VB.singleton param <> parVals <> parVals2)
-
+            case nval' of 
+              Just nval -> do 
+                traceM $ "N: " <> T.pack (ppShow (getInt nval))
+                
+                x <- case nval of 
+                    TMValue (TMValInt x) _ -> processGroup x newOffset group 
+                    TMValue (TMValUInt x) _ -> processGroup (fromIntegral x) newOffset group 
+                    TMValue (TMValDouble x) _ -> processGroup (truncate x) newOffset group 
+                    _ -> go newOffset rest 
+                
+                case x of 
+                  Just (lastOff, parVals) -> do  
+                    let !param = TMParameter {
+                        _pName = repeater ^. tmvpName
+                        , _pTime = timestamp 
+                        , _pValue = nval 
+                        , _pEngValue = Nothing
+                        }
+                    traceM $ "Repeater parameter: " <> T.pack (ppShow param)
+                    -- now take the rest of the packet 
+                    
+                    y <- go lastOff rest
+                    case y of  
+                      Just (lastOff2, parVals2) -> 
+                        return (Just (lastOff2, VB.singleton param <> parVals <> parVals2))
+                      Nothing -> return Nothing 
+                  Nothing -> return Nothing
+              Nothing -> return Nothing
         -- Fixed repeater. 
-        go !offset (VarFixed reps group rest) = do 
-            traceM $ "VarFixed" <> T.pack (show reps)
+        -- go !offset (VarFixed reps group rest) = do 
+        --     traceM $ "VarFixed" <> T.pack (show reps)
 
-            -- reps specifies, how often the group is repeated
-            (lastOff, parVals) <- processGroup (fromIntegral reps) offset group 
+        --     -- reps specifies, how often the group is repeated
+        --     (lastOff, parVals) <- processGroup (fromIntegral reps) offset group 
 
-            -- now take the rest of the packet 
-            (lastOff2, parVals2) <- go lastOff rest 
-            return (lastOff2, parVals <> parVals2)
+        --     -- now take the rest of the packet 
+        --     (lastOff2, parVals2) <- go lastOff rest 
+        --     return (lastOff2, parVals <> parVals2)
 
-        go !offset (VarChoice par) = do 
-            traceM "VarChoice"
-            let !newOffset = offset .+. getPaddedWidth parDef  .+. par ^. tmvpOffset
-                !extractOffset = offset .+. getPadding parDef 
-                parDef = par ^. tmvpParam 
-            -- The value specifies, how often the group is repeated
-            tpsdval <- getParamValue epoch ert oct' extractOffset parDef
-            let !param = TMParameter {
-                _pName = par ^. tmvpName
-                , _pTime = timestamp 
-                , _pValue = tpsdval 
-                , _pEngValue = Nothing
-                }
-            traceM $ "Choice parameter: " <> T.pack (show param)
+        -- go !offset (VarChoice par) = do 
+        --     traceM "VarChoice"
+        --     let !newOffset = offset .+. getPaddedWidth parDef  .+. par ^. tmvpOffset
+        --         !extractOffset = offset .+. getPadding parDef 
+        --         parDef = par ^. tmvpParam 
+        --     -- The value specifies, how often the group is repeated
+        --     tpsdval <- getParamValue epoch ert oct' extractOffset parDef
+        --     let !param = TMParameter {
+        --         _pName = par ^. tmvpName
+        --         , _pTime = timestamp 
+        --         , _pValue = tpsdval 
+        --         , _pEngValue = Nothing
+        --         }
+        --     traceM $ "Choice parameter: " <> T.pack (show param)
 
-            choiceRes <- case tpsdval of 
-                TMValue (TMValInt x) _ -> processChoice x newOffset  
-                TMValue (TMValUInt x) _ -> processChoice (fromIntegral x) newOffset
-                TMValue (TMValDouble x) _ -> processChoice (truncate x) newOffset
-                _ -> return $ Left $ utf8BuilderToText $ 
-                    display @Text "CHOICE parameter " 
-                    <> display (par ^. tmvpName)
-                    <> display @Text ": illegal data type " 
-                    <> displayShow (parDef ^. fpType)
-                    <> display @Text " in packet " 
-                    <> display (pktDef ^. tmpdSPID)
-                    <> display @Text " ("
-                    <> display (pktDef ^. tmpdName)
-                    <> display @Text ") APID: "
-                    <> display (pktDef ^. tmpdApid)
-                    <> display @Text " Type: "
-                    <> display (pktDef ^. tmpdType)
-                    <> display @Text " SubType: "
-                    <> display (pktDef ^. tmpdSubType)
-                    <> display @Text " APID: "
-                    <> display (ep ^. epDU . pusHdr . pusHdrTcSsc)
+        --     choiceRes <- case tpsdval of 
+        --         TMValue (TMValInt x) _ -> processChoice x newOffset  
+        --         TMValue (TMValUInt x) _ -> processChoice (fromIntegral x) newOffset
+        --         TMValue (TMValDouble x) _ -> processChoice (truncate x) newOffset
+        --         _ -> return $ Left $ utf8BuilderToText $ 
+        --             display @Text "CHOICE parameter " 
+        --             <> display (par ^. tmvpName)
+        --             <> display @Text ": illegal data type " 
+        --             <> displayShow (parDef ^. fpType)
+        --             <> display @Text " in packet " 
+        --             <> display (pktDef ^. tmpdSPID)
+        --             <> display @Text " ("
+        --             <> display (pktDef ^. tmpdName)
+        --             <> display @Text ") APID: "
+        --             <> display (pktDef ^. tmpdApid)
+        --             <> display @Text " Type: "
+        --             <> display (pktDef ^. tmpdType)
+        --             <> display @Text " SubType: "
+        --             <> display (pktDef ^. tmpdSubType)
+        --             <> display @Text " APID: "
+        --             <> display (ep ^. epDU . pusHdr . pusHdrTcSsc)
 
-            case choiceRes of 
-                Left err -> do
-                    logWarn $ display err
-                    return (offset, VB.empty) 
-                Right (lastOffset, params) -> do 
-                    return (lastOffset, VB.singleton param <> params)
+        --     case choiceRes of 
+        --         Left err -> do
+        --             logWarn $ display err
+        --             return (offset, VB.empty) 
+        --         Right (lastOffset, params) -> do 
+        --             return (lastOffset, VB.singleton param <> params)
 
         -- TODO
         go !offset (VarPidRef _ _) = do
             traceM "DEDUCED parameters not yet implemented"
-            return (offset, VB.empty)
+            return (Just (offset, VB.empty))
 
 
+        processGroup :: Int64 -> Offset -> VarParams -> m (Maybe (Offset, VB.Builder TMParameter))
         processGroup 0 offset _ = do 
             traceM $ "processGroup 0 " <> textDisplay offset
-            return (offset, VB.empty)
+            return $ Just (offset, VB.empty)
         processGroup !n offset params = do 
             traceM $ "processGroup " <> textDisplay n <> " offset: " <> textDisplay offset
-            (newOff, parVals) <- go offset params 
-            (lastOff, nextVals) <- processGroup (n - 1) newOff params 
-            return (lastOff, parVals <> nextVals)
+            
+            x <- go offset params
+            case x of 
+              Just (newOff, parVals) -> do 
+                
+                y <- processGroup (n - 1) newOff params 
+                case y of 
+                  Just (lastOff, nextVals) -> 
+                    return $ Just (lastOff, parVals <> nextVals)
+                  Nothing -> return Nothing
+              Nothing -> return Nothing 
+            
 
         processChoice !tpsd !offset = do 
             traceM $ "processChoice " <> T.pack (show tpsd)
@@ -521,19 +563,20 @@ getVariableParams timestamp ert epoch pktDef (oct', ep) _tpsd dfhSize varParams 
 
 
 getParamValue :: (MonadIO m, MonadReader env m, HasPUSState env, HasCorrelationState env)
-  => Epoch -> SunTime -> ByteString -> Offset -> TMParameterDef -> m TMValue
+  => Epoch -> SunTime -> ByteString -> Offset -> TMParameterDef -> m (Maybe TMValue)
 getParamValue epoch ert oct off parDef = do
   traceM $ "getParamValue " <> textDisplay off 
-  let (val, corr) = extractParamValue epoch oct off parDef 
-  if corr == CorrelationYes
-    then do
-      case val ^. tmvalValue of
-          TMValTime inTime -> do
-            newTime <- TMValTime <$> correlateTMTime inTime ert
-            return $ val & tmvalValue .~ newTime
-          _ -> return val
-    else return val
-
+  case extractParamValue epoch oct off parDef of 
+    Just (val, corr) -> do 
+      if corr == CorrelationYes
+        then do
+          case val ^. tmvalValue of
+              TMValTime inTime -> do
+                newTime <- TMValTime <$> correlateTMTime inTime ert
+                return $ Just (val & tmvalValue .~ newTime)
+              _ -> return (Just val)
+        else return (Just val)
+    Nothing -> return Nothing
 
 
 extractParamValue :: 
@@ -541,7 +584,7 @@ extractParamValue ::
     -> ByteString 
     -> Offset 
     -> TMParameterDef 
-    -> (TMValue, Correlate)
+    -> Maybe (TMValue, Correlate)
 extractParamValue epoch oct offset par =
   trace ("extractParamValue " <> textDisplay offset) $  
     let endian = par ^. fpEndian
@@ -549,10 +592,10 @@ extractParamValue epoch oct offset par =
         case par ^. fpType of
             ParamInteger w ->
                 let v = readIntParam offset (BitSize w) endian
-                in  (TMValue v clearValidity, CorrelationNo)
+                in fmap (\v' -> (TMValue v' clearValidity, CorrelationNo)) v 
             ParamUInteger w ->
                 let v = readUIntParam offset (BitSize w) endian
-                in  (TMValue v clearValidity, CorrelationNo)
+                in  fmap (\v' -> (TMValue v' clearValidity, CorrelationNo)) v 
             ParamDouble dt ->
                 let v = readDoubleParam offset endian dt
                 in  (TMValue v clearValidity, CorrelationNo)
@@ -576,22 +619,11 @@ extractParamValue epoch oct offset par =
   where
     readIntParam off width endian = if isByteAligned off
         then case width of
-            8 ->
-                TMValInt
-                    (fromIntegral (getValue @Int8 oct (toByteOffset off) endian)
-                    )
-            16 ->
-                TMValInt
-                    (fromIntegral
-                        (getValue @Int16 oct (toByteOffset off) endian)
-                    )
-            32 ->
-                TMValInt
-                    (fromIntegral
-                        (getValue @Int32 oct (toByteOffset off) endian)
-                    )
-            64 -> TMValInt (getValue @Int64 oct (toByteOffset off) endian)
-            w  -> TMValInt (getBitFieldInt64 oct offset w endian)
+            8 -> TMValInt . fromIntegral <$> getValue @Int8 oct (toByteOffset off) endian
+            16 -> TMValInt . fromIntegral <$> getValue @Int16 oct (toByteOffset off) endian
+            32 -> TMValInt . fromIntegral <$> getValue @Int32 oct (toByteOffset off) endian
+            64 -> TMValInt <$> getValue @Int64 oct (toByteOffset off) endian
+            w  -> TMValInt <$> getBitFieldInt64 oct offset w endian
         else
             TMValInt
                 (getBitFieldInt64 oct offset width endian)

@@ -68,22 +68,29 @@ checkString validity x = case T.fromByteString x of
   Nothing -> TMValue (TMValString T.empty) (setStringNotUtf8 validity)
 
 
-extractExtParameters :: ByteString -> [ExtParameter] -> [Parameter]
-extractExtParameters bytes = map (extParamToParam . getExtParameter' bytes)
+extractExtParameters :: ByteString -> [ExtParameter] -> Maybe [Parameter]
+extractExtParameters bytes = mapM proc 
+  where 
+    proc p = extParamToParam <$> getExtParameter' bytes p 
 
 
 
-
-getExtParameter' :: ByteString -> ExtParameter -> ExtParameter
+getExtParameter' :: ByteString -> ExtParameter -> Maybe ExtParameter
 getExtParameter' bytes param =
   let (bo, BitOffset bits) = offsetParts off
       bitOffset            = param ^. extParOff
       off                  = toOffset bitOffset
       value                = param ^. extParValue
   in  if bits == 0 && isSetableAligned value
-        then param & extParValue .~ getAlignedValue bytes bo value
+        then
+          case getAlignedValue bytes bo value of 
+            Just v -> Just $ param & extParValue .~ v 
+            Nothing -> Nothing 
         else if isGettableUnaligned value
-          then param & extParValue .~ getUnalignedValue bytes off value
+          then 
+            case getUnalignedValue bytes off value of 
+              Just v -> Just $ param & extParValue .~ v 
+              Nothing -> Nothing 
           else
                      -- in this case, we go to the next byte offset. According
                      -- to PUS, we cannot set certain values on non-byte boundaries

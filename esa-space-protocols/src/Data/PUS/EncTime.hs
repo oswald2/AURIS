@@ -134,8 +134,8 @@ cucTimeIsDelta :: CUCTime -> Bool
 cucTimeIsDelta (CUCTime _ _ x) = x
 
 {-# INLINABLE cucTimeSetDelta #-}
-cucTimeSetDelta :: CUCTime -> Bool -> CUCTime
-cucTimeSetDelta (CUCTime s m _) = CUCTime s m
+cucTimeSetDelta :: Bool -> CUCTime -> CUCTime
+cucTimeSetDelta delta (CUCTime s m _) = CUCTime s m delta
 
 
 {-# INLINABLE mkCDSTime #-}
@@ -215,11 +215,15 @@ instance GetValue CUCTime where
   getValue byts off BiE =
     let se = getValue byts off BiE
         m  = getValue byts (off + 4) BiE
-    in  cucTimeFromBinary se m False
+    in case (se, m) of 
+      (Just se', Just m') -> Just $ cucTimeFromBinary se' m' False
+      _ -> Nothing 
   getValue byts off LiE =
     let se = getValue byts (off + 2) LiE
         m  = getValue byts off LiE
-    in  cucTimeFromBinary se m False
+    in  case (se, m) of 
+      (Just se', Just m') -> Just $ cucTimeFromBinary se' m' False
+      _ -> Nothing
 
 
 {-# INLINABLE cdsTimeBuilder #-}
