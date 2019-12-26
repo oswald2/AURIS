@@ -66,7 +66,7 @@ runRIOTestAction action = do
     withLogFunc logOptions $ \logFunc -> do
         state <- newGlobalState
             defaultConfig
-            defaultMissionSpecific
+            (defaultMissionSpecific defaultConfig)
             logFunc
             (\ev -> T.putStrLn ("Event: " <> T.pack (show ev)))
 
@@ -85,7 +85,7 @@ pusPacketEncoding _cfg = do
         encPusPkt = encodePUSPacket pusPkt
 
         decodedPusPkt =
-            decodePktMissionSpecific encPusPkt defaultMissionSpecific IF_NCTRS
+            decodePktMissionSpecific encPusPkt (defaultMissionSpecific defaultConfig) IF_NCTRS
 
     -- T.putStrLn $ hexdumpBS encPusPkt
     -- T.putStrLn $ T.pack (show decodedPusPkt)
@@ -107,13 +107,13 @@ pusPacketExtraction cfg = do
         encPusPkt = encodePUSPacket pusPkt
 
         frames    = makeTMFrames cfg
-                                 defaultMissionSpecific
+                                 (defaultMissionSpecific cfg)
                                  tmFrameDefaultHeader
                                  encPusPkt
 
         conduit =
             C.sourceList frames
-                .| tmFrameExtraction defaultMissionSpecific IF_NCTRS
+                .| tmFrameExtraction IF_NCTRS
                 .| C.consume
 
     --T.putStrLn $ T.pack (show frames)
@@ -128,6 +128,7 @@ pusPacketExtraction cfg = do
 
 testFrameExtraction2 :: IO ()
 testFrameExtraction2 = do
+    now <- getCurrentTime
     let frame = TMFrame
             { _tmFrameHdr  = TMFrameHeader
                                  { _tmFrameVersion        = 0
@@ -165,6 +166,8 @@ testFrameExtraction2 = do
                   { _epQuality = toFlag Good True
                   , _epGap     = Nothing
                   , _epSource  = IF_NCTRS
+                  , _epERT = now 
+                  , _epVCID = mkVCID 0 
                   , _epDU      =
                       PUSPacket
                           { _pusHdr  =
@@ -253,6 +256,15 @@ missingFrame cfg = do
 
 
 
+bitGetTest1 :: IO ()
+bitGetTest1 = do 
+  let testData = B.pack [0x01, 0x40]
+      result = getBitField testData (mkOffset (ByteOffset 0) (BitOffset 7)) (BitSize 3) 
+
+  result `shouldBe` Just 5 
+  return ()
+
+
 
 main :: IO ()
 main = hspec $ do
@@ -268,4 +280,6 @@ main = hspec $ do
         it "Missing Frame" $ do
             missingFrame cfg
             
-            
+    describe "BitGet Tests" $ do 
+      it "BitGet test1" $ do 
+        bitGetTest1

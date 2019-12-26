@@ -17,7 +17,7 @@ import qualified Data.SortedList               as SL
 import           General.Types
 import           General.Hexdump
 
-import           Protocol.SizeOf
+import           General.SizeOf
 
 import           System.IO
 

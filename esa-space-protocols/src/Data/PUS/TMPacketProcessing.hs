@@ -286,7 +286,7 @@ correlateTMTime inTime ert = do
 
 
 getParameters :: (MonadIO m, MonadReader env m, HasPUSState env, 
-    HasCorrelationState env, HasDataModel env)
+    HasCorrelationState env, HasDataModel env, HasLogFunc env)
   => SunTime
   -> Epoch
   -> TMPacketDef
@@ -381,7 +381,7 @@ getFixedParams timestamp ert epoch _def (oct', _ep) locs = do
 
 
 getVariableParams :: (MonadIO m, MonadReader env m, 
-    HasPUSState env, HasCorrelationState env, HasDataModel env) => 
+    HasPUSState env, HasCorrelationState env, HasDataModel env, HasLogFunc env) => 
   SunTime
   -> SunTime 
   -> Epoch 
@@ -391,7 +391,7 @@ getVariableParams :: (MonadIO m, MonadReader env m,
   -> Word8
   -> VarParams 
   -> m (Maybe (Vector TMParameter))
-getVariableParams timestamp ert epoch _pktDef (oct', _ep) _tpsd dfhSize varParams = do 
+getVariableParams timestamp ert epoch pktDef (oct', ep) _tpsd dfhSize varParams = do 
     let offset = mkOffset (fromIntegral dfhSize) 0
     a <- go offset varParams
     case a of 
@@ -418,7 +418,7 @@ getVariableParams timestamp ert epoch _pktDef (oct', _ep) _tpsd dfhSize varParam
                         , _pValue = val'
                         , _pEngValue = Nothing
                         }
-                traceM $ "Extracted parameter: " <> T.pack (show param)
+                --traceM $ "Extracted parameter: " <> T.pack (show param)
                 
                 x <- go newOffset rest
                 case x of 
@@ -474,59 +474,65 @@ getVariableParams timestamp ert epoch _pktDef (oct', _ep) _tpsd dfhSize varParam
                   Nothing -> return Nothing
               Nothing -> return Nothing
         -- Fixed repeater. 
-        -- go !offset (VarFixed reps group rest) = do 
-        --     traceM $ "VarFixed" <> T.pack (show reps)
+        go !offset (VarFixed reps group rest) = do 
+            --traceM $ "VarFixed" <> T.pack (show reps)
 
-        --     -- reps specifies, how often the group is repeated
-        --     (lastOff, parVals) <- processGroup (fromIntegral reps) offset group 
+            -- reps specifies, how often the group is repeated
+            x <- processGroup (fromIntegral reps) offset group 
+            case x of 
+              Just (lastOff, parVals) -> do  
+                -- now take the rest of the packet 
+                y <- go lastOff rest
+                case y of 
+                  Just (lastOff2, parVals2) -> return $ Just (lastOff2, parVals <> parVals2)
+                  Nothing -> return Nothing
+              Nothing -> return Nothing
 
-        --     -- now take the rest of the packet 
-        --     (lastOff2, parVals2) <- go lastOff rest 
-        --     return (lastOff2, parVals <> parVals2)
+        go !offset (VarChoice par) = do 
+            -- traceM "VarChoice"
+            let !newOffset = offset .+. getPaddedWidth parDef  .+. par ^. tmvpOffset
+                !extractOffset = offset .+. getPadding parDef 
+                parDef = par ^. tmvpParam 
+            -- The value specifies, how often the group is repeated 
+            x <- getParamValue epoch ert oct' extractOffset parDef
+            case x of 
+              Just tpsdval -> do 
+                let !param = TMParameter {
+                    _pName = par ^. tmvpName
+                    , _pTime = timestamp 
+                    , _pValue = tpsdval 
+                    , _pEngValue = Nothing
+                    }
+                -- traceM $ "Choice parameter: " <> T.pack (show param)
 
-        -- go !offset (VarChoice par) = do 
-        --     traceM "VarChoice"
-        --     let !newOffset = offset .+. getPaddedWidth parDef  .+. par ^. tmvpOffset
-        --         !extractOffset = offset .+. getPadding parDef 
-        --         parDef = par ^. tmvpParam 
-        --     -- The value specifies, how often the group is repeated
-        --     tpsdval <- getParamValue epoch ert oct' extractOffset parDef
-        --     let !param = TMParameter {
-        --         _pName = par ^. tmvpName
-        --         , _pTime = timestamp 
-        --         , _pValue = tpsdval 
-        --         , _pEngValue = Nothing
-        --         }
-        --     traceM $ "Choice parameter: " <> T.pack (show param)
+                choiceRes <- case tpsdval of 
+                    TMValue (TMValInt x) _ -> processChoice x newOffset  
+                    TMValue (TMValUInt x) _ -> processChoice (fromIntegral x) newOffset
+                    TMValue (TMValDouble x) _ -> processChoice (truncate x) newOffset
+                    _ -> return $ Left $ utf8BuilderToText $ 
+                        display @Text "CHOICE parameter " 
+                        <> display (par ^. tmvpName)
+                        <> display @Text ": illegal data type " 
+                        <> displayShow (parDef ^. fpType)
+                        <> display @Text " in packet " 
+                        <> display (pktDef ^. tmpdSPID)
+                        <> display @Text " ("
+                        <> display (pktDef ^. tmpdName)
+                        <> display @Text ") APID: "
+                        <> display (pktDef ^. tmpdApid)
+                        <> display @Text " Type: "
+                        <> display (pktDef ^. tmpdType)
+                        <> display @Text " SubType: "
+                        <> display (pktDef ^. tmpdSubType)
+                        <> display @Text " APID: "
+                        <> display (ep ^. epDU . pusHdr . pusHdrTcSsc)
 
-        --     choiceRes <- case tpsdval of 
-        --         TMValue (TMValInt x) _ -> processChoice x newOffset  
-        --         TMValue (TMValUInt x) _ -> processChoice (fromIntegral x) newOffset
-        --         TMValue (TMValDouble x) _ -> processChoice (truncate x) newOffset
-        --         _ -> return $ Left $ utf8BuilderToText $ 
-        --             display @Text "CHOICE parameter " 
-        --             <> display (par ^. tmvpName)
-        --             <> display @Text ": illegal data type " 
-        --             <> displayShow (parDef ^. fpType)
-        --             <> display @Text " in packet " 
-        --             <> display (pktDef ^. tmpdSPID)
-        --             <> display @Text " ("
-        --             <> display (pktDef ^. tmpdName)
-        --             <> display @Text ") APID: "
-        --             <> display (pktDef ^. tmpdApid)
-        --             <> display @Text " Type: "
-        --             <> display (pktDef ^. tmpdType)
-        --             <> display @Text " SubType: "
-        --             <> display (pktDef ^. tmpdSubType)
-        --             <> display @Text " APID: "
-        --             <> display (ep ^. epDU . pusHdr . pusHdrTcSsc)
-
-        --     case choiceRes of 
-        --         Left err -> do
-        --             logWarn $ display err
-        --             return (offset, VB.empty) 
-        --         Right (lastOffset, params) -> do 
-        --             return (lastOffset, VB.singleton param <> params)
+                case choiceRes of 
+                    Left err -> do
+                        logWarn $ display err
+                        return $ Just (offset, VB.empty) 
+                    Right (lastOffset, params) -> do 
+                        return $ Just (lastOffset, VB.singleton param <> params)
 
         -- TODO
         go !offset (VarPidRef _ _) = do
@@ -560,7 +566,11 @@ getVariableParams timestamp ert epoch _pktDef (oct', _ep) _tpsd dfhSize varParam
             let vpds = dm ^. dmVPDStructs
             case HT.ilookup vpds (fromIntegral tpsd) of 
                 Nothing -> return $ Left ("Choice parameter: could not find TPSD " <> T.pack (show tpsd) <> " in VPD")
-                Just struct -> Right <$> go offset struct 
+                Just struct -> do 
+                  pars <- go offset struct
+                  case pars of 
+                    Just p -> return (Right p)
+                    Nothing -> return $ Left ("Choice parameter: error on extracting data for chosen structure TPSD: " <> T.pack (show tpsd) <> " in VPD") 
 
 
 getParamValue :: (MonadIO m, MonadReader env m, HasPUSState env, HasCorrelationState env)
