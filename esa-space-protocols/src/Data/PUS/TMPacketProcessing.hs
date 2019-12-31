@@ -429,18 +429,18 @@ getVariableParams timestamp ert epoch pktDef (oct', ep) _tpsd dfhSize varParams 
 
         -- Group repeater. 
         go !offset (VarGroup repeater group rest) = do
-            traceM $ "VarGroup \n" <> "Repeater:\n" <> T.pack (ppShow repeater) 
-                <> "\nGroup:\n"<> T.pack (ppShow group) <> "\nRest:\n" 
-                <> T.pack (ppShow rest)
+            -- traceM $ "VarGroup \n" <> "Repeater:\n" <> T.pack (ppShow repeater) 
+            --     <> "\nGroup:\n"<> T.pack (ppShow group) <> "\nRest:\n" 
+            --     <> T.pack (ppShow rest)
             let newOffset = offset .+. getPaddedWidth parDef  .+. repeater ^. tmvpOffset
                 extractOffset = offset .+. getPadding parDef 
                 parDef = repeater ^. tmvpParam 
 
-            traceM $ "Offset: " <> textDisplay offset 
-                <> " PaddedWidth: " <> textDisplay (getPaddedWidth parDef)
-                <> " VPD Offset: " <> textDisplay (repeater ^. tmvpOffset)
-                <> " newOffset: " <> textDisplay newOffset
-                <> " extratOffset: " <> textDisplay extractOffset
+            -- traceM $ "Offset: " <> textDisplay offset 
+            --     <> " PaddedWidth: " <> textDisplay (getPaddedWidth parDef)
+            --     <> " VPD Offset: " <> textDisplay (repeater ^. tmvpOffset)
+            --     <> " newOffset: " <> textDisplay newOffset
+            --     <> " extratOffset: " <> textDisplay extractOffset
 
             -- The value specifies, how often the group is repeated
             nval' <- getParamValue epoch ert oct' extractOffset parDef 
@@ -533,7 +533,7 @@ getVariableParams timestamp ert epoch pktDef (oct', ep) _tpsd dfhSize varParams 
                         return $ Just (offset, VB.empty) 
                     Right (lastOffset, params) -> do 
                         return $ Just (lastOffset, VB.singleton param <> params)
-
+              Nothing -> return Nothing
         -- TODO
         go !offset (VarPidRef _ _) = do
             traceM "DEDUCED parameters not yet implemented"
@@ -576,7 +576,7 @@ getVariableParams timestamp ert epoch pktDef (oct', ep) _tpsd dfhSize varParams 
 getParamValue :: (MonadIO m, MonadReader env m, HasPUSState env, HasCorrelationState env)
   => Epoch -> SunTime -> ByteString -> Offset -> TMParameterDef -> m (Maybe TMValue)
 getParamValue epoch ert oct off parDef = do
-  traceM $ "getParamValue " <> textDisplay off 
+  -- traceM $ "getParamValue " <> textDisplay off 
   case extractParamValue epoch oct off parDef of 
     Just (val, corr) -> do 
       if corr == CorrelationYes
@@ -597,7 +597,7 @@ extractParamValue ::
     -> TMParameterDef 
     -> Maybe (TMValue, Correlate)
 extractParamValue epoch oct offset par =
-  trace ("extractParamValue " <> textDisplay offset) $  
+  --trace ("extractParamValue " <> textDisplay offset) $  
     let endian = par ^. fpEndian
     in
         case par ^. fpType of

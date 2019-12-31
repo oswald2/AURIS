@@ -358,7 +358,8 @@ decodeHashTable = do
   lst <- replicateM len ((,) <$> S.decode <*> S.decode)
   return (HT.fromList lst)
 
-
+-- | A newtype wrapper around 'ByteString' for text-serialising a 'ByteString'
+-- into a hex-coded string value
 newtype HexBytes = HexBytes { unHexBytes :: ByteString }
 
 

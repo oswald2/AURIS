@@ -1,5 +1,5 @@
 # data file for the Fltk User Interface Designer (fluid)
-version 1.0400
+version 1.0304
 header_name {.h}
 code_name {.cxx}
 decl {import GUI.MainWindow} {private local
@@ -14,11 +14,14 @@ decl {import Graphics.UI.FLTK.LowLevel.FLTKHS} {private local
 decl {import GUI.TMFrameTab} {private local
 }
 
+decl {import GUI.TMParamTab} {private local
+}
+
 Function {makeWindow(IO(MainWindowFluid))} {open
 } {
   Fl_Window mainWindow {
     label AURISi open
-    xywh {110 47 1755 1020} type Double color 30 labelcolor 6 hide
+    xywh {0 51 1600 849} type Double color 30 labelcolor 6 visible
   } {
     Fl_Scroll mainScrolled {open
       xywh {0 0 1970 1025}
@@ -79,7 +82,7 @@ Function {makeWindow(IO(MainWindowFluid))} {open
             xywh {10 10 65 60} color 7
           }
         }
-        Fl_Group nctrsConnGroup {selected
+        Fl_Group nctrsConnGroup {
           xywh {250 10 405 65} box FLAT_BOX color 38
         } {
           Fl_Box nctrsTCConn {
@@ -148,8 +151,8 @@ Function {makeWindow(IO(MainWindowFluid))} {open
         xywh {5 70 1965 855}
       } {
         Fl_Group tabTMFrames {
-          label {TM Frames} open
-          xywh {5 90 1965 835}
+          label {TM Frames}
+          xywh {5 90 1965 835} hide
         } {
           Fl_Group tableTMFrames {open
             xywh {5 136 1046 757} box THIN_DOWN_BOX
@@ -346,6 +349,14 @@ Function {makeWindow(IO(MainWindowFluid))} {open
             } {}
           }
         }
+        Fl_Group tabTMParameters {
+          label Parameters open
+          xywh {5 90 1965 835}
+        } {
+          Fl_Group tmGraph {open selected
+            xywh {110 180 1335 585}
+          } {}
+        }
       }
       Fl_Group messagesGroup {
         xywh {5 896 1755 91}
@@ -381,6 +392,12 @@ Function {makeWindow(IO(MainWindowFluid))} {open
     }
 
     };
+      
+let { tmParTab = TMParamTabFluid {
+    _tmParTabGroup = tabTMParameters
+    , _tmParGraph = tmGraph
+    } };
+    
       
 let { clcwDisp = CLCWFluid {
   _clcwfVCID = clcwVCID
@@ -463,6 +480,7 @@ let { window = MainWindowFluid { _mfWindow = mainWindow
     , _mfProgress = mainProgress
     , _mfTabs = mainTab
     , _mfTMPTab = tmpTab
+    , _mfTMParamTab = tmParTab
     , _mfTMPGroup = tabTMPackets
     , _mfTMFGroup = tabTMFrames
     , _mfTMPHeaderGroup = groupTMPHeader
@@ -479,8 +497,7 @@ let { window = MainWindowFluid { _mfWindow = mainWindow
     , _mfEdenConn = edenConn
     , _mfTimeLabel = timeField
     }};
-    return window} {selected
-  }
+    return window} {}
 }
 
 Function {makeAboutWindow(IO(AboutWindowFluid))} {open

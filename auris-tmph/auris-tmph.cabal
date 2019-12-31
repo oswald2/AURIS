@@ -49,6 +49,7 @@ library
     GUI.TMFrameTable
     GUI.TMPacketTab
     GUI.TMFrameTab
+    GUI.TMParamTab
     Model.PUSPacketModel
     Model.TMPacketModel
     Model.TMPParamModel
@@ -67,7 +68,11 @@ library
     esa-base,
     esa-space-protocols,
     gui-base,
-    text-short
+    text-short,
+    Chart,
+    Chart-fltkhs,
+    colour,
+    data-default-class
 
   default-extensions:
         AutoDeriveTypeable

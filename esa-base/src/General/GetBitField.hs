@@ -324,14 +324,14 @@ getBitField bytes off bs@(BitSize nBits) =
     let
         (ByteOffset idx, BitOffset bitNr) = offsetParts off
         value1 :: Word64
-        !value1 = trace ("Idx: " <> T.pack (show idx)) $ fromIntegral $ bytes `B.index` idx .&. (255 `shiftR` bitNr)
+        !value1 = fromIntegral $ bytes `B.index` idx .&. (255 `shiftR` bitNr)
 
         sum1    = bitNr + nBits
 
         loop1 :: Int -> Word64 -> Int -> (Int, Word64, Int)
         loop1 !nb !val !ix
             | nb >= 8
-            = let val2 = trace ("val2: " <> T.pack (show idx)) $ (val `shiftL` 8) .|. fromIntegral (bytes `B.index` ix)
+            = let val2 = (val `shiftL` 8) .|. fromIntegral (bytes `B.index` ix)
               in  loop1 (nb - 8) val2 (ix + 1)
             | otherwise
             = (nb, val, ix)

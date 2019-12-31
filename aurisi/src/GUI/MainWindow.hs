@@ -49,6 +49,7 @@ import qualified Graphics.UI.FLTK.LowLevel.FL  as FL
 
 import           GUI.TMPacketTab
 import           GUI.TMFrameTab
+import           GUI.TMParamTab
 import           GUI.Colors
 --import           GUI.Utils
 import           GUI.Logo
@@ -140,6 +141,7 @@ data MainWindowFluid = MainWindowFluid {
     , _mfProgress :: Ref Progress
     , _mfTabs :: Ref Tabs
     , _mfTMPTab :: TMPacketTabFluid
+    , _mfTMParamTab :: TMParamTabFluid
     , _mfTMPGroup :: Ref Group
     , _mfTMFGroup :: Ref Group
     , _mfTMPHeaderGroup :: Ref Group
@@ -163,6 +165,7 @@ data MainWindow = MainWindow {
     , _mwProgress :: Ref Progress
     , _mwTabs :: Ref Tabs
     , _mwTMPTab :: TMPacketTab
+    , _mwTMParamTab :: TMParamTab
     , _mwTMPGroup :: Ref Group
     , _mwTMPHeaderGroup :: Ref Group
     , _mwTMFGroup :: Ref Group
@@ -206,6 +209,7 @@ createMainWindow :: MainWindowFluid -> AboutWindowFluid -> IO MainWindow
 createMainWindow MainWindowFluid {..} aboutWindow = do
   tmpTab <- createTMPTab _mfTMPTab
   tmfTab <- createTMFTab _mfFrameTab
+  paramTab <- createTMParamTab _mfTMParamTab
   mcsWindowSetColor _mfWindow
 
   -- maximizeWindow _mfWindow
@@ -241,6 +245,7 @@ createMainWindow MainWindowFluid {..} aboutWindow = do
                               , _mwProgress        = _mfProgress
                               , _mwTabs            = _mfTabs
                               , _mwTMPTab          = tmpTab
+                              , _mwTMParamTab      = paramTab
                               , _mwTMPGroup        = _mfTMPGroup
                               , _mwTMFGroup        = _mfTMFGroup
                               , _mwTMPHeaderGroup  = _mfTMPHeaderGroup
