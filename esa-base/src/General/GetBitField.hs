@@ -38,6 +38,7 @@ where
 
 import           RIO
 import qualified RIO.ByteString                as B
+import qualified RIO.Text as T
 
 import           Data.Bits
 import           Data.ReinterpretCast
@@ -323,17 +324,17 @@ getBitField bytes off bs@(BitSize nBits) =
     let
         (ByteOffset idx, BitOffset bitNr) = offsetParts off
         value1 :: Word64
-        !value1 = fromIntegral $ bytes `B.index` idx .&. (255 `shiftR` bitNr)
+        !value1 = trace ("Idx: " <> T.pack (show idx)) $ fromIntegral $ bytes `B.index` idx .&. (255 `shiftR` bitNr)
 
         sum1    = bitNr + nBits
 
         loop1 :: Int -> Word64 -> Int -> (Int, Word64, Int)
         loop1 !nb !val !ix
             | nb >= 8
-            = let val2 = (val `shiftL` 8) .|. fromIntegral (bytes `B.index` ix)
+            = let val2 = trace ("val2: " <> T.pack (show idx)) $ (val `shiftL` 8) .|. fromIntegral (bytes `B.index` ix)
               in  loop1 (nb - 8) val2 (ix + 1)
             | otherwise
-            = (nb, val, ix + 1)
+            = (nb, val, ix)
         !value2 = if sum1 < 8
             then value1 `shiftR` (8 - sum1)
             else
@@ -346,7 +347,7 @@ getBitField bytes off bs@(BitSize nBits) =
                                 ((bytes `B.index` ix) `shiftR` (8 - nb))
                         else val
     in
-    if (unByteOffset . fst . offsetParts . nextByteAligned) (off .+. bs) >= B.length bytes then Nothing else Just value2
+    if (unByteOffset . fst . offsetParts . nextByteAligned) (off .+. bs) > B.length bytes then Nothing else Just value2
 
 
 {-# INLINABLE decMILSingle #-}

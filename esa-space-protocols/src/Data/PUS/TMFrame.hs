@@ -50,6 +50,7 @@ module Data.PUS.TMFrame
   , tmFrameMinLen
   , tmFrameGetPrevAndRest
   , decodeFrame
+  , encodeFrame
   , tmFrameAppendCRC
   , tmFrameCheckOrder
   , tmFrameCheckSync
@@ -348,6 +349,14 @@ unpackDFS i = (dfh, sync, order, seg, fhp)
 {-# INLINABLE decodeFrame #-}
 decodeFrame :: Config -> ByteString -> Either String TMFrame
 decodeFrame cfg = A.parseOnly (tmFrameParser cfg)
+
+
+{-# INLINABLE encodeFrame #-}
+encodeFrame :: Config -> TMFrame -> ByteString 
+encodeFrame cfg frame = 
+  let encFrame' = builderBytes (tmFrameBuilder frame)
+      !encFrame = tmFrameAppendCRC cfg encFrame' 
+  in encFrame
 
 
 {-# INLINABLE tmFrameCheckCRC #-}
