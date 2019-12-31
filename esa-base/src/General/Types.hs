@@ -42,25 +42,34 @@ module General.Types
   , splitBitOffset
   , encodeHashTable
   , decodeHashTable
+  , HexBytes(..)
   )
 where
 
 
 import           RIO
 import           Data.Binary
+import qualified RIO.ByteString                as B
 import           Data.Aeson
 import qualified Data.Aeson.Encoding           as E
+import qualified Data.Aeson.Types              as E
 import           Data.Bits
 import           Data.Text.Short                ( ShortText )
 import qualified Data.Text.Short               as ST
 import           Data.HashTable.ST.Basic        ( IHashTable )
 import           Data.HashTable.ST.Basic       as HT
+import           Data.Attoparsec.Text           ( Parser )
+import qualified Data.Attoparsec.Text          as A
+import           Data.Char                      ( ord, isHexDigit )
 
 import           Codec.Serialise               as S
 import           Codec.Serialise.Encoding      as SE
 import           Codec.Serialise.Decoding      as SE
 
 import           Control.Monad                  ( replicateM )
+
+import           General.Hexdump
+
 
 
 
@@ -87,7 +96,7 @@ instance ToJSON ByteOffset where
   toEncoding = genericToEncoding defaultOptions
 
 
-instance Display ByteOffset where 
+instance Display ByteOffset where
   display (ByteOffset x) = display x
 
 -- | constructs a byte offset
@@ -104,7 +113,7 @@ newtype BitOffset = BitOffset Int
 
 instance Serialise BitOffset
 
-instance Display BitOffset where 
+instance Display BitOffset where
   display (BitOffset x) = display x
 
 -- | constructs a bit offset
@@ -126,11 +135,9 @@ data Offset = Offset ByteOffset BitOffset
 instance NFData Offset
 instance Serialise Offset
 
-instance Display Offset where 
-  display (Offset b bi) = display ("Offset " :: Text)
-    <> display b 
-    <> " "
-    <> display bi
+instance Display Offset where
+  display (Offset b bi) =
+    display ("Offset " :: Text) <> display b <> " " <> display bi
 
 -- | constructs an 'Offset' from a 'ByteOffset' and a 'BitOffset'
 mkOffset :: ByteOffset -> BitOffset -> Offset
@@ -182,7 +189,7 @@ instance ByteAligned BitSize where
 newtype ByteSize = ByteSize Int
     deriving (Eq, Ord, Num, Bits, Show, Read, Generic, NFData)
 
-instance Display ByteSize where 
+instance Display ByteSize where
   display (ByteSize x) = display ("ByteSize " :: Text) <> display x
 
 -- | constructs a byte size
@@ -205,7 +212,7 @@ instance FromJSON BitSize
 instance ToJSON BitSize where
   toEncoding = genericToEncoding defaultOptions
 
-instance Display BitSize where 
+instance Display BitSize where
   display (BitSize x) = display ("BitSize " :: Text) <> display x
 
 -- | constructs a bit size
@@ -332,8 +339,8 @@ instance ToJSON ShortText where
   toEncoding = E.text . ST.toText
   {-# INLINE toEncoding #-}
 
-instance Display ShortText where 
-  display = display . ST.toText 
+instance Display ShortText where
+  display = display . ST.toText
 
 
 
@@ -350,3 +357,44 @@ decodeHashTable = do
   len <- SE.decodeListLen
   lst <- replicateM len ((,) <$> S.decode <*> S.decode)
   return (HT.fromList lst)
+
+
+newtype HexBytes = HexBytes { unHexBytes :: ByteString }
+
+
+parseHexLine :: Parser HexBytes
+parseHexLine = do
+  HexBytes . B.pack <$> many parseByte
+
+parseByte :: Parser Word8
+parseByte = do
+  a <- A.satisfy isHexDigit
+  b <- A.satisfy isHexDigit
+  return $ fromIntegral (ord a `shiftL` 4 .|. ord b)
+
+
+
+instance Serialise HexBytes where
+  encode (HexBytes b) = S.encode b
+  decode = HexBytes <$> S.decode
+
+instance ToJSON HexBytes where
+  toJSON (HexBytes b) = String $ hexdumpLineNoSpace b
+  {-# INLINE toJSON #-}
+
+  toEncoding (HexBytes b) = E.text $ hexdumpLineNoSpace b
+  {-# INLINE toEncoding #-}
+
+instance FromJSON HexBytes where
+  parseJSON (String t) = 
+    case A.parseOnly parseHexLine t of 
+      Left err -> fail err 
+      Right x -> return x 
+  parseJSON invalid =    
+    E.prependFailure "parsing HexBytes failed, "
+      (E.typeMismatch "String" invalid)
+
+
+
+instance Display HexBytes where
+  display (HexBytes str) = display $ hexdumpLineNoSpace str

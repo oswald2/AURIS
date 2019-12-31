@@ -14,6 +14,7 @@ module General.Hexdump
   ( hexdump
   , hexdumpBS
   , hexdumpLineBS
+  , hexdumpLineNoSpace
   )
 where
 
@@ -114,3 +115,13 @@ hexdumpLineBS =
     . chunksIntersperse 4 [(fromLazyText " ")]
     . map (fromLazyText . format (left 2 '0' %. hex))
     . BS.unpack
+
+
+-- | same as 'hexdumpLineBS' but does not insert spaces after 4 bytes
+hexdumpLineNoSpace :: BS.ByteString -> Text 
+hexdumpLineNoSpace =
+  toText
+    . mconcat
+    . map (fromLazyText . format (left 2 '0' %. hex))
+    . BS.unpack
+
