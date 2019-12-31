@@ -25,8 +25,4 @@ instance ToCellText TMParameter where
     displayCell (textDisplay (par ^. pTime)) alignLeft
   toCellText par ColumnDefinition { _columnNumber = 2 } =
     displayCell (textDisplay (par ^. pValue)) alignRight
-  toCellText par ColumnDefinition { _columnNumber = 3 } =
-    case par ^. pEngValue of
-      Nothing -> defDisplayCell
-      Just eng -> displayCell (textDisplay eng) alignRight
   toCellText _ _ = defDisplayCell
