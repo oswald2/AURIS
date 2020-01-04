@@ -72,6 +72,9 @@ addMessageLine' window source level builder = do
       let text = utf8BuilderToText $ display lvl <> display source <> builder
       dispMsg text
 
+  let msgDisplay = window ^. mwMessageDisplay
+  nlines <- size msgDisplay
+  bottomline msgDisplay (nlines - 1)
   where
     dispMsg text = do
       let msgDisplay = window ^. mwMessageDisplay

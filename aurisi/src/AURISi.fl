@@ -1,5 +1,5 @@
 # data file for the Fltk User Interface Designer (fluid)
-version 1.0304
+version 1.0400
 header_name {.h}
 code_name {.cxx}
 decl {import GUI.MainWindow} {private local
@@ -21,12 +21,12 @@ Function {makeWindow(IO(MainWindowFluid))} {open
 } {
   Fl_Window mainWindow {
     label AURISi open
-    xywh {0 51 1600 849} type Double color 30 labelcolor 6 visible
+    xywh {3 51 1600 845} type Double color 30 labelcolor 6 visible
   } {
     Fl_Scroll mainScrolled {open
       xywh {0 0 1970 1025}
     } {
-      Fl_Group deskHeaderGroup {open
+      Fl_Group deskHeaderGroup {
         xywh {5 5 1755 70} box THIN_UP_FRAME
       } {
         Fl_Group rGroup1 {open
@@ -144,18 +144,18 @@ Function {makeWindow(IO(MainWindowFluid))} {open
         }
         Fl_Box timeField {
           label {2010.001.12.00.00.000}
-          xywh {1525 10 225 20} box FLAT_BOX color 38 labelfont 5 labelsize 16
+          xywh {1365 10 225 20} box FLAT_BOX color 38 labelfont 5 labelsize 16
         }
       }
       Fl_Tabs mainTab {open
         xywh {5 70 1965 855}
       } {
         Fl_Group tabTMFrames {
-          label {TM Frames}
+          label {TM Frames} open
           xywh {5 90 1965 835} hide
         } {
           Fl_Group tableTMFrames {open
-            xywh {5 136 1046 757} box THIN_DOWN_BOX
+            xywh {5 133 920 601} box THIN_DOWN_BOX
           } {}
           Fl_Group groupTMFHeader {open
             xywh {5 90 1750 45} box THIN_UP_BOX
@@ -165,121 +165,121 @@ Function {makeWindow(IO(MainWindowFluid))} {open
               xywh {1650 100 90 25}
             }
           }
-          Fl_Group frameDetails {
-            xywh {1055 135 910 762} box THIN_DOWN_BOX
+          Fl_Group frameDetails {open
+            xywh {925 135 910 598} box THIN_DOWN_BOX
           } {
             Fl_Group groupFrameDetails {
-              label {Details:} open
-              xywh {1065 160 900 220} box THIN_UP_FRAME labelfont 1 align 5
+              label {Details:}
+              xywh {935 160 900 220} box THIN_UP_FRAME labelfont 1 align 5
             } {
               Fl_Output frameOutSCID {
                 label {S/C ID:}
-                xywh {1125 170 65 20} box FLAT_BOX
+                xywh {995 170 65 20} box FLAT_BOX
               }
               Fl_Output frameOutVCID {
                 label {VC ID:}
-                xywh {1245 170 45 20} box FLAT_BOX
+                xywh {1115 170 45 20} box FLAT_BOX
               }
               Fl_Output frameOutOCF {
                 label {OCF:}
-                xywh {1335 170 45 20} box FLAT_BOX
+                xywh {1205 170 45 20} box FLAT_BOX
               }
               Fl_Output frameOutVCFC {
                 label {Virtual Channel Frame Count:}
-                xywh {1295 195 60 20} box FLAT_BOX
+                xywh {1165 195 60 20} box FLAT_BOX
               }
               Fl_Output frameOutMCFC {
                 label {Master Channel Frame Count:}
-                xywh {1295 220 60 20} box FLAT_BOX
+                xywh {1165 220 60 20} box FLAT_BOX
               }
               Fl_Output frameOutFHP {
                 label {First Header Pointer:}
-                xywh {1520 220 80 20} box FLAT_BOX
+                xywh {1390 220 80 20} box FLAT_BOX
               }
               Fl_Output frameOutSegmentation {
                 label {Sementation:}
-                xywh {1520 195 205 20} box FLAT_BOX
+                xywh {1390 195 205 20} box FLAT_BOX
               }
               Fl_Output frameOutDFH {
                 label {DFH:}
-                xywh {1425 170 45 20} box FLAT_BOX
+                xywh {1295 170 45 20} box FLAT_BOX
               }
               Fl_Output frameOutOrder {
                 label {Order:}
-                xywh {1645 170 80 20} box FLAT_BOX
+                xywh {1515 170 80 20} box FLAT_BOX
               }
               Fl_Output frameOutSync {
                 label {Sync:}
-                xywh {1520 170 70 20} box FLAT_BOX
+                xywh {1390 170 70 20} box FLAT_BOX
               }
               Fl_Group clcwGroup {
-                label {CLCW:} open
-                xywh {1075 295 660 80} box THIN_DOWN_FRAME labelfont 1 align 5
+                label {CLCW:}
+                xywh {945 295 660 80} box THIN_DOWN_FRAME labelfont 1 align 5
               } {
                 Fl_Output clcwVCID {
                   label {VC ID:}
-                  xywh {1130 340 35 25} box FLAT_BOX
+                  xywh {1000 340 35 25} box FLAT_BOX
                 }
                 Fl_Box clcwBitLock {
                   label {NO BITLOCK}
-                  xywh {1080 310 126 25} box FLAT_BOX color 1 labelcolor 7
+                  xywh {950 310 126 25} box FLAT_BOX color 1 labelcolor 7
                 }
                 Fl_Box clcwNoRF {
                   label {NO RF}
-                  xywh {1211 310 126 25} box FLAT_BOX color 1 labelcolor 7
+                  xywh {1081 310 126 25} box FLAT_BOX color 1 labelcolor 7
                 }
                 Fl_Box clcwLockout {
                   label LOCKOUT
-                  xywh {1342 310 126 25} box FLAT_BOX color 1 labelcolor 7
+                  xywh {1212 310 126 25} box FLAT_BOX color 1 labelcolor 7
                 }
                 Fl_Box clcwWait {
                   label WAIT
-                  xywh {1473 310 126 25} box FLAT_BOX color 1 labelcolor 7
+                  xywh {1343 310 126 25} box FLAT_BOX color 1 labelcolor 7
                 }
                 Fl_Box clcwRetransmit {
                   label {NO RETRANSMIT}
-                  xywh {1605 310 126 25} box FLAT_BOX color 1 labelcolor 7
+                  xywh {1475 310 126 25} box FLAT_BOX color 1 labelcolor 7
                 }
                 Fl_Output clcwReportValue {
                   label {Report Value:}
-                  xywh {1275 340 50 25} box FLAT_BOX
+                  xywh {1145 340 50 25} box FLAT_BOX
                 }
                 Fl_Output clcwFarmB {
                   label {FARM-B Counter:}
-                  xywh {1460 340 50 25} box FLAT_BOX
+                  xywh {1330 340 50 25} box FLAT_BOX
                 }
               }
               Fl_Output frameOutSource {
                 label {Source:}
-                xywh {1130 245 120 20} box FLAT_BOX
+                xywh {1000 245 120 20} box FLAT_BOX
               }
               Fl_Output frameOutGap {
                 label {Gap:}
-                xywh {1295 245 60 20} box FLAT_BOX
+                xywh {1165 245 60 20} box FLAT_BOX
               }
               Fl_Output frameOutQuality {
                 label {Quality:}
-                xywh {1520 245 80 20} box FLAT_BOX
+                xywh {1390 245 80 20} box FLAT_BOX
               }
             }
             Fl_Group groupFrameDump {
               label {Data:} open
-              xywh {1065 410 670 480} box THIN_UP_FRAME labelfont 1 align 5
+              xywh {935 410 670 322} box THIN_UP_FRAME labelfont 1 align 5
             } {
               Fl_Text_Display frameDumpDisplay {
-                xywh {1065 410 670 480} textfont 4
+                xywh {935 410 664 320} textfont 4
               }
             }
           }
         }
         Fl_Group tabTMPackets {
-          label {TM Packets}
+          label {TM Packets} open
           xywh {5 90 1751 804} hide hotspot
         } {
           Fl_Group tableTMPackets {open
-            xywh {5 130 1136 762} box THIN_DOWN_FRAME
+            xywh {5 130 1137 606} box THIN_DOWN_FRAME
           } {}
-          Fl_Group groupTMPHeader {open
+          Fl_Group groupTMPHeader {
             xywh {5 95 1745 35} box THIN_UP_FRAME
           } {
             Fl_Button buttonAdd {
@@ -287,12 +287,12 @@ Function {makeWindow(IO(MainWindowFluid))} {open
               xywh {1645 100 100 25}
             }
           }
-          Fl_Group groupTMPDetails {open
-            xywh {1140 130 615 762} labelfont 1
+          Fl_Group groupTMPDetails {
+            xywh {1140 128 459 608} labelfont 1
           } {
             Fl_Group groupDetailHeader {
               label Details open
-              xywh {1145 150 605 135} box THIN_UP_FRAME labelfont 1 align 5
+              xywh {1145 150 454 182} box THIN_UP_FRAME labelfont 1 align 5
             } {
               Fl_Output spidLabel {
                 label {SPID:}
@@ -300,73 +300,102 @@ Function {makeWindow(IO(MainWindowFluid))} {open
               }
               Fl_Output mnemonicLabel {
                 label {Mnemonic:}
-                xywh {1435 155 190 20} box FLAT_BOX
+                xywh {1240 180 354 20} box FLAT_BOX
               }
               Fl_Output descrLabel {
                 label {Description:}
-                xywh {1240 180 500 20} box FLAT_BOX
+                xywh {1240 205 355 20} box FLAT_BOX
               }
               Fl_Output apidLabel {
                 label {APID:}
-                xywh {1240 205 110 20} box FLAT_BOX
+                xywh {1240 230 110 20} box FLAT_BOX
               }
               Fl_Output typeLabel {
                 label {Type:}
-                xywh {1400 205 45 20} box FLAT_BOX
+                xywh {1240 255 45 20} box FLAT_BOX
               }
               Fl_Output subTypeLabel {
                 label {SubType:}
-                xywh {1525 205 45 20} box FLAT_BOX
+                xywh {1365 255 45 20} box FLAT_BOX
               }
               Fl_Output labelPI1 {
                 label {PI1:}
-                xywh {1610 205 45 20} box FLAT_BOX
+                xywh {1470 255 41 20} box FLAT_BOX
               }
               Fl_Output labelPI2 {
                 label {PI2:}
-                xywh {1695 205 45 20} box FLAT_BOX
+                xywh {1550 255 45 20} box FLAT_BOX
               }
               Fl_Output labelTimeStamp {
                 label {Timestamp:}
-                xywh {1240 230 260 20} box FLAT_BOX
+                xywh {1240 305 215 20} box FLAT_BOX
               }
               Fl_Output labelERT {
                 label {ERT:}
-                xywh {1545 230 195 20} box FLAT_BOX
+                xywh {1240 280 215 20} box FLAT_BOX
               }
               Fl_Output labelVCID {
                 label {VC:}
-                xywh {1400 255 45 20} box FLAT_BOX
+                xywh {1490 280 45 20} box FLAT_BOX
               }
               Fl_Output labelSSC {
                 label {SSC:}
-                xywh {1240 255 110 20} box FLAT_BOX
+                xywh {1400 230 110 20} box FLAT_BOX
               }
             }
             Fl_Group groupParamDetails {
               label Parameters open
-              xywh {1145 320 605 572} box THIN_DOWN_FRAME labelfont 1 align 5
+              xywh {1145 353 452 382} box THIN_DOWN_FRAME labelfont 1 align 5
             } {}
           }
         }
         Fl_Group tabTMParameters {
           label Parameters open
-          xywh {5 90 1965 835}
+          xywh {5 90 1965 835} box FLAT_BOX
         } {
-          Fl_Group tmGraph {open selected
-            xywh {110 180 1335 585}
-          } {}
+          Fl_Box tmGraphBox {
+            xywh {225 100 560 435}
+          }
+          Fl_Tabs tmDisplayBrowser {
+            label Displays open
+            xywh {5 115 215 615}
+          } {
+            Fl_Group tabAND {
+              label AND open
+              xywh {5 135 215 595} hide
+            } {
+              Fl_Check_Browser browserAND {
+                xywh {10 140 210 590}
+              }
+            }
+            Fl_Group tabGRD {
+              label GRD open
+              xywh {5 135 215 595} hide
+            } {
+              Fl_Check_Browser browserGRD {
+                xywh {10 140 210 590}
+              }
+            }
+            Fl_Group tabSCD {
+              label SCD open selected
+              xywh {5 135 215 595}
+            } {
+              Fl_Check_Browser browserSCD {
+                xywh {10 140 210 590}
+              }
+            }
+          }
         }
       }
       Fl_Group messagesGroup {
-        xywh {5 896 1755 91}
+        xywh {5 734 1755 92}
       } {
         Fl_Browser messageDisplay {
-          xywh {5 896 1753 90} color 30 textcolor 61
+          xywh {5 736 1753 90} color 30 textcolor 61
         }
       }
       Fl_Progress mainProgress {
-        xywh {3 986 1751 20}
+        xywh {3 826 1751 20}
       }
     }
   }
@@ -395,7 +424,14 @@ Function {makeWindow(IO(MainWindowFluid))} {open
       
 let { tmParTab = TMParamTabFluid {
     _tmParTabGroup = tabTMParameters
-    , _tmParGraph = tmGraph
+    , _tmParDisplaysTab = tmDisplayBrowser
+    , _tmParGroupAND = tabAND
+    , _tmParGroupGRD = tabGRD
+    , _tmParGroupSCD = tabSCD
+    , _tmParBrowserAND = browserAND
+    , _tmParBrowserGRD = browserGRD
+    , _tmParBrowserSCD = browserSCD
+    , _tmParGraph = tmGraphBox
     } };
     
       
