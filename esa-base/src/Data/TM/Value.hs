@@ -38,6 +38,8 @@ module Data.TM.Value
   , charToRadix
   , nullValue
   , getInt
+  , getDouble
+  , toDouble
   )
 where
 
@@ -94,6 +96,7 @@ instance ToJSON NumType where
 type Parser = Parsec Void Text
 
 -- | Converst from a Char to a 'Radix' according to the SCOS-2000 MIB ICD 6.9
+{-# INLINABLE charToRadix #-}
 charToRadix :: Char -> Radix
 charToRadix 'D' = Decimal
 charToRadix 'H' = Hex
@@ -101,6 +104,7 @@ charToRadix 'O' = Octal
 charToRadix _   = Decimal
 
 -- | Converst from a Char to a 'NumType' according to the SCOS-2000 MIB ICD 6.9
+{-# INLINABLE charToType #-}
 charToType :: Char -> NumType
 charToType 'I' = NumInteger
 charToType 'U' = NumUInteger
@@ -110,6 +114,7 @@ charToType _   = NumInteger
 
 -- | parses a 'ShortText' to a double value. It takes the 'NumType' and 'Radix' to determine
 -- the format the value is and returns a 'Double' value
+{-# INLINABLE parseShortTextToDouble #-}
 parseShortTextToDouble :: NumType -> Radix -> ShortText -> Either Text Double
 parseShortTextToDouble typ radix x =
   -- trace ("parseTextToDouble: " <> T.pack (show typ ++ " " ++ show radix ++ show x)) $
@@ -120,6 +125,7 @@ parseShortTextToDouble typ radix x =
     Right xval -> Right xval
 
 
+{-# INLINABLE doubleParser #-}
 doubleParser :: NumType -> Radix -> Parser Double
 doubleParser NumInteger  _       = fromIntegral <$> signedInteger
 doubleParser NumUInteger Decimal = fromIntegral <$> integer
@@ -188,6 +194,7 @@ data TMValueSimple =
     deriving(Show, Generic)
 
 -- | A simple null value
+{-# INLINABLE nullValueSimple #-}
 nullValueSimple :: TMValueSimple
 nullValueSimple = TMValUInt 0
 
@@ -251,6 +258,7 @@ parseShortTextToValue ptc pfc x =
 
 
 
+{-# INLINABLE tmValueParser #-}
 tmValueParser :: PTC -> PFC -> Parser TMValueSimple
 tmValueParser (PTC ptc) (PFC pfc)
   | ptc == 1 || ptc == 2 || ptc == 3
@@ -284,6 +292,7 @@ tmValueParser (PTC ptc) (PFC pfc)
     <> ")"
 
 
+{-# INLINABLE strToByteString #-}
 strToByteString :: [Char] -> ByteString
 strToByteString ls' =
   let ls = chunks 2 $ if odd (length ls') then '0' : ls' else ls'
@@ -313,6 +322,7 @@ instance ToJSON TMValue where
 
 
 instance ToDouble TMValue where
+  {-# INLINABLE toDouble #-}
   toDouble TMValue { _tmvalValue = (TMValInt x) }    = fromIntegral x
   toDouble TMValue { _tmvalValue = (TMValUInt x) }   = fromIntegral x
   toDouble TMValue { _tmvalValue = (TMValDouble x) } = x
@@ -326,10 +336,12 @@ instance Display TMValue where
 
 
 -- | a null value
+{-# INLINABLE nullValue #-}
 nullValue :: TMValue
 nullValue = TMValue nullValueSimple clearValidity
 
 -- | Returns, if a vlaue is a numeric value
+{-# INLINABLE isNumeric #-}
 isNumeric :: TMValue -> Bool
 isNumeric (TMValue (TMValInt    _) _) = True
 isNumeric (TMValue (TMValUInt   _) _) = True
@@ -337,19 +349,29 @@ isNumeric (TMValue (TMValDouble _) _) = True
 isNumeric _                           = False
 
 
+{-# INLINABLE getInt #-}
 getInt :: TMValue -> Maybe Integer
 getInt (TMValue (TMValInt    x) _) = Just $ fromIntegral x
 getInt (TMValue (TMValUInt   x) _) = Just $ fromIntegral x
 getInt (TMValue (TMValDouble x) _) = Just $ truncate x
 getInt _                           = Nothing
 
+{-# INLINABLE getDouble #-}
+getDouble :: TMValue -> Maybe Double
+getDouble (TMValue (TMValInt    x) _) = Just $ fromIntegral x
+getDouble (TMValue (TMValUInt   x) _) = Just $ fromIntegral x
+getDouble (TMValue (TMValDouble x) _) = Just x
+getDouble _                           = Nothing
+
 
 -- | Returns, if a value is valid
+{-# INLINABLE isValid #-}
 isValid :: TMValue -> Bool
 isValid x = Data.TM.Validity.isValid $ _tmvalValidity x
 
 -- | Set a validity by using one of the setter functions of the
 -- 'Validity' type
+{-# INLINABLE setValidity #-}
 setValidity :: TMValue -> (Validity -> Validity) -> TMValue
 setValidity (TMValue val validity) f = TMValue val (f validity)
 
@@ -375,6 +397,7 @@ setValidity (TMValue val validity) f = TMValue val (f validity)
 -- | Compare two values. Since we also cover non-numeric values,
 -- the function returns a 'Maybe' 'Ordering'. If the values cannot
 -- be compared, Nothing is returned.
+{-# INLINABLE compareVal #-}
 compareVal :: TMValueSimple -> TMValueSimple -> Maybe Ordering
 compareVal (TMValInt    x) (TMValInt    y) = Just $ compare x y
 compareVal (TMValUInt   x) (TMValUInt   y) = Just $ compare x y

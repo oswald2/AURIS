@@ -351,38 +351,58 @@ Function {makeWindow(IO(MainWindowFluid))} {open
         }
         Fl_Group tabTMParameters {
           label Parameters open
-          xywh {5 90 1965 835} box FLAT_BOX
+          xywh {5 89 1965 836} box FLAT_BOX
         } {
-          Fl_Box tmGraphBox {
-            xywh {225 100 560 435}
-          }
           Fl_Tabs tmDisplayBrowser {
             label Displays open
-            xywh {5 115 215 615}
+            xywh {5 115 215 615} box ENGRAVED_BOX
           } {
             Fl_Group tabAND {
               label AND open
               xywh {5 135 215 595} hide
             } {
-              Fl_Check_Browser browserAND {
-                xywh {10 140 210 590}
+              Fl_Browser browserAND {
+                xywh {5 140 215 590}
               }
             }
             Fl_Group tabGRD {
               label GRD open
-              xywh {5 135 215 595} hide
+              xywh {5 135 215 595}
             } {
-              Fl_Check_Browser browserGRD {
-                xywh {10 140 210 590}
+              Fl_Browser browserGRD {
+                xywh {5 140 215 590}
               }
             }
             Fl_Group tabSCD {
-              label SCD open selected
-              xywh {5 135 215 595}
+              label SCD open
+              xywh {5 135 215 595} hide
             } {
-              Fl_Check_Browser browserSCD {
-                xywh {10 140 210 590}
+              Fl_Browser browserSCD {
+                xywh {5 140 215 590}
               }
+            }
+          }
+          Fl_Group tmParDisplayGroup {open
+            xywh {220 109 1380 626} box ENGRAVED_BOX
+          } {}
+          Fl_Group tmParSwitcherGroup {open
+            xywh {220 90 425 40}
+          } {
+            Fl_Light_Button tmParDispSingleBt {
+              label Single
+              xywh {220 90 95 20} box THIN_UP_BOX value 1
+            }
+            Fl_Light_Button tmParDispHorizontalBt {
+              label Horizontal
+              xywh {315 90 95 20} box THIN_UP_BOX
+            }
+            Fl_Light_Button tmParDispVerticalBt {
+              label Vertical
+              xywh {410 90 95 20} box THIN_UP_BOX
+            }
+            Fl_Light_Button tmParDispFourBt {
+              label {4 Displays} selected
+              xywh {505 90 95 20} box THIN_UP_BOX
             }
           }
         }
@@ -422,6 +442,13 @@ Function {makeWindow(IO(MainWindowFluid))} {open
 
     };
       
+let { tmParDispSwitchter = TMParamSwitcher {
+    _tmParSwSingle = tmParDispSingleBt
+    , _tmParSwHorzontal = tmParDispHorizontalBt
+    , _tmParSwVertical = tmParDispVerticalBt
+    , _tmParSwFour = tmParDispFourBt
+    } };
+      
 let { tmParTab = TMParamTabFluid {
     _tmParTabGroup = tabTMParameters
     , _tmParDisplaysTab = tmDisplayBrowser
@@ -431,7 +458,8 @@ let { tmParTab = TMParamTabFluid {
     , _tmParBrowserAND = browserAND
     , _tmParBrowserGRD = browserGRD
     , _tmParBrowserSCD = browserSCD
-    , _tmParGraph = tmGraphBox
+    , _tmParDisplayGroup = tmParDisplayGroup
+    , _tmParDispSwitcher = tmParDispSwitchter
     } };
     
       

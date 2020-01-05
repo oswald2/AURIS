@@ -9,6 +9,7 @@ import           RIO
 import qualified RIO.Text                      as T
 import           Graphics.UI.FLTK.LowLevel.FLTKHS
                                          hiding ( display )
+import qualified Graphics.UI.FLTK.LowLevel.FL  as FL
 
 import           GUI.MainWindow
 import           GUI.Utils
@@ -73,8 +74,8 @@ addMessageLine' window source level builder = do
       dispMsg text
 
   let msgDisplay = window ^. mwMessageDisplay
-  nlines <- size msgDisplay
-  bottomline msgDisplay (nlines - 1)
+  nlines <- getSize msgDisplay
+  setBottomline msgDisplay (LineNumber (nlines - 1))
   where
     dispMsg text = do
       let msgDisplay = window ^. mwMessageDisplay
