@@ -6,8 +6,9 @@ where
 
 
 import           RIO
-import qualified RIO.HashMap                   as HM
-
+import qualified RIO.Map                       as M
+import           Data.Text.Short                ( ShortText )
+import qualified Data.Text.Short               as ST
 import           Control.Lens                   ( makeLenses )
 
 
@@ -44,33 +45,64 @@ instance Ord GraphVal where
   compare g1 g2 = compare (_graphValTime g1) (_graphValTime g2)
 
 
+data PlotVal = PlotVal {
+  _plotValName :: !ShortText
+  , _plotValLineType :: !Ch.LineStyle
+  , _plotValPointStyle :: !Ch.PointStyle
+  , _plotValValues :: MultiSet GraphVal
+}
+makeLenses ''PlotVal
 
 data Graph = Graph {
   _graphWidget :: Ref Widget
   , _graphRect :: !FL.Rectangle
-  , _graphData :: HashMap ShortText (MultiSet GraphVal)
+  , _graphName :: !ShortText
+  , _graphData :: Map ShortText PlotVal
   }
 makeLenses ''Graph
 
 graphInsertParamValue :: Graph -> TMParameter -> Graph
 graphInsertParamValue g@Graph {..} param =
-  case HM.lookup (param ^. pName) _graphData of
+  case M.lookup (param ^. pName) _graphData of
     Nothing -> g
-    Just set ->
-      let val    = GraphVal (param ^. pTime) (toDouble (param ^. pValue))
-          newSet = MS.insert val set
-          newHM  = HM.insert (param ^. pName) newSet _graphData
-      in  g & graphData .~ newHM
+    Just plotVal ->
+      let val        = GraphVal (param ^. pTime) (toDouble (param ^. pValue))
+          newSet     = MS.insert val (plotVal ^. plotValValues)
+          newPlotVal = plotVal & plotValValues .~ newSet
+          newMap     = M.insert (param ^. pName) newPlotVal _graphData
+      in  g & graphData .~ newMap
 
-drawChart :: Ref Widget -> IO ()
-drawChart widget = do
+
+plotValToPlot :: PlotVal -> Plot SunTime Double
+plotValToPlot PlotVal {..} =
+  toPlot
+    $  plot_lines_values
+    .~ [values]
+    $  plot_lines_style
+    .~ _plotValLineType
+    -- $  plot_points_style .~ _plotValPointStyle
+    $  plot_lines_title
+    .~ ST.unpack _plotValName
+    $  def
+  where values = map (\(GraphVal t p) -> (t, p)) . MS.toList $ _plotValValues
+
+
+
+-- valuesToPlot :: Graph -> [Plot x y]
+-- valuesToPlot graph = 
+--   let conv (GraphVal t p) = (t, p)
+--       map (conf . MS.toList . snd) $ M.toList (graph ^. graphData)
+
+
+drawChart :: Graph -> Ref Widget -> IO ()
+drawChart graph widget = do
   rectangle' <- getRectangle widget
-  withFlClip rectangle' $ void $ renderToWidget widget chart
+  withFlClip rectangle' $ void $ renderToWidget widget (chart graph)
 
 
 
-chart :: Renderable ()
-chart = toRenderable layout
+chart :: Graph -> Renderable ()
+chart Graph {..} = toRenderable layout
  where
   am :: Double -> Double
   am x = (sin (x * 3.14159 / 45) + 1) / 2 * (sin (x * 3.14159 / 5))
@@ -96,7 +128,7 @@ chart = toRenderable layout
 
   layout =
     layout_title
-      .~ "Amplitude Modulation"
+      .~ ST.unpack _graphName
       $  layout_plots
       .~ [toPlot sinusoid1, toPlot sinusoid2]
       $  def
