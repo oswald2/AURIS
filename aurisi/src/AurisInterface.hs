@@ -60,6 +60,9 @@ eventProcessor g (EventPUS (EVAlarms (EVPacketWarn txt))) = do
 eventProcessor g (EventPUS (EVAlarms (EVPacketAlarm txt))) = do
   withFLLock (mwLogAlarm g txt)
 
+eventProcessor g  (EventPUS (EVTelemetry (EVTMParameters params))) = do
+  withFLLock (mwAddTMParameters g params)
+
 eventProcessor _ _ = pure ()
 
 

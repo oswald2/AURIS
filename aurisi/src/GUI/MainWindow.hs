@@ -29,6 +29,7 @@ module GUI.MainWindow
   , mwAddTMPacket
   , mwAddTMFrame
   , mwSetTMParameters
+  , mwAddTMParameters
   , mwSetMission
   , mwDeskHeaderGroup
   , mwLogoBox
@@ -58,6 +59,8 @@ import           GUI.About
 import           Data.PUS.TMPacket
 import           Data.PUS.ExtractedDU
 import           Data.PUS.TMFrame
+
+import           Data.TM.Parameter
 
 import           General.Time
 
@@ -199,6 +202,10 @@ mwAddTMFrame :: MainWindow -> ExtractedDU TMFrame -> IO ()
 mwAddTMFrame window frame = do
   tmfTabAddRow (window ^. mwFrameTab) frame
 
+mwAddTMParameters :: MainWindow -> Vector TMParameter -> IO ()
+mwAddTMParameters window params = do
+  addParameterValues (window ^. mwTMParamTab) params
+
 
 mwSetMission :: MainWindow -> Text -> IO ()
 mwSetMission window mission = do
@@ -207,8 +214,8 @@ mwSetMission window mission = do
 
 createMainWindow :: MainWindowFluid -> AboutWindowFluid -> IO MainWindow
 createMainWindow MainWindowFluid {..} aboutWindow = do
-  tmpTab <- createTMPTab _mfTMPTab
-  tmfTab <- createTMFTab _mfFrameTab
+  tmpTab   <- createTMPTab _mfTMPTab
+  tmfTab   <- createTMFTab _mfFrameTab
   paramTab <- createTMParamTab _mfTMParamTab
   mcsWindowSetColor _mfWindow
 

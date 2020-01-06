@@ -51,6 +51,7 @@ library
     GUI.TMFrameTab
     GUI.TMParamTab
     GUI.Graph
+    GUI.ParamDisplay
     Model.PUSPacketModel
     Model.TMPacketModel
     Model.TMPParamModel
@@ -75,7 +76,8 @@ library
     colour,
     data-default-class,
     multiset,
-    thyme
+    thyme,
+    time
 
 
   default-extensions:

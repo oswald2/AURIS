@@ -1,14 +1,21 @@
 {-# LANGUAGE TemplateHaskell #-}
 module GUI.Graph
   ( Graph
+  , graphInsertParamValue
+  , emptyGraph
+  , graphAddParameter
+  , drawChart
   )
 where
 
 
 import           RIO
 import qualified RIO.Map                       as M
+import qualified RIO.Vector                    as V
+import qualified RIO.HashSet                   as HS
 import           Data.Text.Short                ( ShortText )
 import qualified Data.Text.Short               as ST
+import qualified Data.Text.IO                  as T
 import           Control.Lens                   ( makeLenses )
 
 
@@ -17,6 +24,7 @@ import qualified Data.MultiSet                 as MS
 import           Data.Text.Short                ( ShortText )
 
 import           Data.Thyme.Clock
+import qualified Data.Time.Clock               as TI
 
 import           Data.TM.Parameter
 import           Data.TM.Value
@@ -32,9 +40,8 @@ import           Graphics.Rendering.Chart.Easy as Ch
                                          hiding ( (^.) )
 
 
-
 data GraphVal = GraphVal {
-  _graphValTime :: !SunTime
+  _graphValTime :: !TI.UTCTime
   , _graphValValue :: !Double
 }
 
@@ -54,26 +61,65 @@ data PlotVal = PlotVal {
 makeLenses ''PlotVal
 
 data Graph = Graph {
-  _graphWidget :: Ref Widget
-  , _graphRect :: !FL.Rectangle
-  , _graphName :: !ShortText
+  _graphName :: !ShortText
+  , _graphParameters :: HashSet ShortText
   , _graphData :: Map ShortText PlotVal
   }
 makeLenses ''Graph
 
-graphInsertParamValue :: Graph -> TMParameter -> Graph
-graphInsertParamValue g@Graph {..} param =
-  case M.lookup (param ^. pName) _graphData of
-    Nothing -> g
-    Just plotVal ->
-      let val        = GraphVal (param ^. pTime) (toDouble (param ^. pValue))
+
+
+emptyGraph :: ShortText -> Graph
+emptyGraph name = Graph name HS.empty M.empty
+
+
+
+graphInsertParamValue :: TVar Graph -> RIO.Vector TMParameter -> IO ()
+graphInsertParamValue var params = do
+  atomically $ do
+    graph <- readTVar var
+    let newGraph = V.foldl insertParamValue graph params
+    writeTVar var newGraph
+
+-- | Add a parameter to the chart. The chart then accepts parameter values 
+-- for the parameters within it's '_graphParameters' field.
+graphAddParameter
+  :: TVar Graph
+  -> ShortText
+  -> Ch.LineStyle
+  -> Ch.PointStyle
+  -> IO (HashSet ShortText)
+graphAddParameter var name lineStyle pointStyle = do
+  atomically $ do
+    graph <- readTVar var
+    let newSet   = HS.insert name (graph ^. graphParameters)
+        newGraph = graph & graphParameters .~ newSet & graphData .~ newData
+        newData  = M.insert name
+                            (PlotVal name lineStyle pointStyle MS.empty)
+                            (graph ^. graphData)
+    writeTVar var newGraph
+    return newSet
+
+
+
+insertParamValue :: Graph -> TMParameter -> Graph
+insertParamValue g@Graph {..} param =
+  let paramName = param ^. pName
+  in
+    case M.lookup paramName _graphData of
+      Nothing -> g
+      Just plotVal ->
+        let
+          val =
+            GraphVal (toUTCTime (param ^. pTime)) (toDouble (param ^. pValue))
           newSet     = MS.insert val (plotVal ^. plotValValues)
           newPlotVal = plotVal & plotValValues .~ newSet
-          newMap     = M.insert (param ^. pName) newPlotVal _graphData
-      in  g & graphData .~ newMap
+          newMap     = M.insert paramName newPlotVal _graphData
+        in
+          g & graphData .~ newMap
 
 
-plotValToPlot :: PlotVal -> Plot SunTime Double
+plotValToPlot :: PlotVal -> Plot TI.UTCTime Double
 plotValToPlot PlotVal {..} =
   toPlot
     $  plot_lines_values
@@ -87,49 +133,53 @@ plotValToPlot PlotVal {..} =
   where values = map (\(GraphVal t p) -> (t, p)) . MS.toList $ _plotValValues
 
 
+titleStyle :: FontStyle
+titleStyle = def 
+  & font_size .~ 20 
+  & font_weight .~ FontWeightBold 
+  & font_color .~ opaque white
 
--- valuesToPlot :: Graph -> [Plot x y]
--- valuesToPlot graph = 
---   let conv (GraphVal t p) = (t, p)
---       map (conf . MS.toList . snd) $ M.toList (graph ^. graphData)
+legendStyle :: LegendStyle 
+legendStyle = def & legend_label_style . font_color .~ opaque white
+
+axisStyle :: AxisStyle 
+axisStyle = def 
+  & axis_line_style . line_color .~ opaque white
+  & axis_grid_style . line_color .~ opaque darkslategray 
+  & axis_label_style . font_color .~ opaque white
+
+layoutAxis :: PlotValue a => LayoutAxis a 
+layoutAxis = def 
+  & laxis_style .~ axisStyle 
+  & laxis_title_style . font_color .~ opaque white
 
 
-drawChart :: Graph -> Ref Widget -> IO ()
-drawChart graph widget = do
-  rectangle' <- getRectangle widget
-  withFlClip rectangle' $ void $ renderToWidget widget (chart graph)
-
-
+graphLayout :: Layout TI.UTCTime Double 
+graphLayout = 
+    layout_background
+      .~ FillStyleSolid (opaque black)
+      $  layout_plot_background
+      ?~ FillStyleSolid (opaque black)
+      $ layout_title_style .~ titleStyle
+      $ layout_legend ?~ legendStyle 
+      $ layout_x_axis .~ layoutAxis 
+      $ layout_y_axis .~ layoutAxis 
+      $  def
 
 chart :: Graph -> Renderable ()
 chart Graph {..} = toRenderable layout
  where
-  am :: Double -> Double
-  am x = (sin (x * 3.14159 / 45) + 1) / 2 * (sin (x * 3.14159 / 5))
+  plots = map (plotValToPlot . snd) $ M.toList _graphData
+  layout = graphLayout 
+    & layout_title .~ ST.unpack _graphName
+    & layout_plots .~ plots 
 
-  sinusoid1 =
-    plot_lines_values
-      .~ [[ (x, (am x)) | x <- [0, (0.5) .. 400] ]]
-      $  plot_lines_style
-      .  line_color
-      .~ opaque blue
-      $  plot_lines_title
-      .~ "am"
-      $  def
 
-  sinusoid2 =
-    plot_points_style
-      .~ filledCircles 2 (opaque red)
-      $  plot_points_values
-      .~ [ (x, (am x)) | x <- [0, 7 .. 400] ]
-      $  plot_points_title
-      .~ "am points"
-      $  def
+drawChart :: TVar Graph -> Ref Widget -> IO ()
+drawChart var widget = do
+  rectangle' <- getRectangle widget
+  graph      <- readTVarIO var
+  withFlClip rectangle' $ void $ renderToWidget widget (chart graph)
 
-  layout =
-    layout_title
-      .~ ST.unpack _graphName
-      $  layout_plots
-      .~ [toPlot sinusoid1, toPlot sinusoid2]
-      $  def
+
 

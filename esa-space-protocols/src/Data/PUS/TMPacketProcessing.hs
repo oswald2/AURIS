@@ -2,6 +2,7 @@
 module Data.PUS.TMPacketProcessing
     ( packetProcessorC
     , raiseTMPacketC
+    , raiseTMParameterC
     , getPackeDefinition
     )
 where
@@ -56,6 +57,13 @@ raiseTMPacketC = awaitForever $ \pkt -> do
   env <- ask
   liftIO $ raiseEvent env (EVTelemetry (EVTMPacketDecoded pkt))
   yield pkt
+
+
+raiseTMParameterC :: (MonadIO m, MonadReader env m, HasGlobalState env)
+  => ConduitT TMPacket TMPacket m () 
+raiseTMParameterC = awaitForever $ \pkt -> do 
+  env <- ask
+  liftIO $ raiseEvent env (EVTelemetry (EVTMParameters (pkt ^. tmpParams)))
 
 
 packetProcessorC

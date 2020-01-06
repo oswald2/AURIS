@@ -98,7 +98,7 @@ runTMChain cfg = do
           .| tmFrameExtraction IF_NCTRS
           .| packetProcessorC
           .| raiseTMPacketC
-
+          .| raiseTMParameterC
 
   runGeneralTCPReconnectClient
     (clientSettings (aurisNctrsTMPort cfg) (encodeUtf8 (aurisNctrsHost cfg)))

@@ -41,6 +41,7 @@ module General.Time
   , nullTime
   , nullRelTime
   , oneMicroSecond
+  , oneSecond
   , tdsNull
   , secsInDay
   , secsInYear
@@ -93,6 +94,7 @@ module General.Time
   , EpochType(..)
   , EpochTime(..)
   , displayTimeMilli
+  , toUTCTime
   )
 where
 
@@ -108,6 +110,10 @@ import           Data.Thyme.Clock
 import           Data.Thyme.Time.Core
 import           Data.Thyme.Clock.POSIX
 import           Data.Thyme.Calendar.OrdinalDate
+import qualified Data.Time.Clock               as TI
+import           Data.Time.Clock.System         ( systemEpochDay )
+import qualified Data.Time.Calendar            as TI
+                                                
 import           Data.Aeson
 
 import           Formatting
@@ -249,10 +255,16 @@ nullRelTime :: SunTime
 nullRelTime = SunTime 0 True
 
 
--- | one micro second in unix time
+-- | one micro second 
 {-# INLINABLE oneMicroSecond #-}
 oneMicroSecond :: SunTime
 oneMicroSecond = SunTime 1 True
+
+-- | one second 
+{-# INLINABLE oneSecond #-}
+oneSecond :: SunTime
+oneSecond = SunTime 1_000_000 True
+
 
 
 -- | check if a time is a null time
@@ -303,6 +315,19 @@ getCurrentTime = do
 displayRaw :: SunTime -> Text
 displayRaw (SunTime mic delta) =
   utf8BuilderToText ("SunTime " <> displayShow mic <> " " <> displayShow delta)
+
+
+toUTCTime :: SunTime -> TI.UTCTime
+toUTCTime (SunTime t _) =
+  let (seconds, micro      ) = t `quotRem` 1_000_000
+      (days   , timeSeconds) = seconds `quotRem` 86400
+      day :: TI.Day
+      day    = TI.addDays (fromIntegral days) systemEpochDay
+      micro' = timeSeconds * 1_000_000 + micro
+      pico   = micro' * 1_000_000
+      time :: TI.DiffTime
+      time = TI.picosecondsToDiffTime (fromIntegral pico)
+  in  TI.UTCTime day time
 
 -- | Display a 'SunTime' in ISO format
 {-# INLINABLE displayISO #-}
@@ -371,30 +396,30 @@ displayISO (SunTime t True) =
 displayTimeMilli :: SunTime -> Text
 displayTimeMilli (SunTime t False) =
   let t1 :: LocalTime
-      t1 = t ^. from microseconds . from posixTime . utcLocalTime utc
+      t1            = t ^. from microseconds . from posixTime . utcLocalTime utc
       date          = localDay t1 ^. gregorian
       time          = localTimeOfDay t1
       dayOfYear     = odDay $ localDay t1 ^. ordinalDate
       (secs, micro) = fromEnum (todSec time) `quotRem` 1_000_000
   in  sformat
-    ( (left 4 '0' %. int)
-    % "."
-    % (left 3 '0' %. int)
-    % "."
-    % (left 2 '0' %. int)
-    % "."
-    % (left 2 '0' %. int)
-    % "."
-    % (left 2 '0' %. int)
-    % "."
-    % (left 3 '0' %. int)
-    )
-    (ymdYear date)
-    dayOfYear
-    (todHour time)
-    (todMin time)
-    secs
-    (micro `quot` 1000)
+        ( (left 4 '0' %. int)
+        % "."
+        % (left 3 '0' %. int)
+        % "."
+        % (left 2 '0' %. int)
+        % "."
+        % (left 2 '0' %. int)
+        % "."
+        % (left 2 '0' %. int)
+        % "."
+        % (left 3 '0' %. int)
+        )
+        (ymdYear date)
+        dayOfYear
+        (todHour time)
+        (todMin time)
+        secs
+        (micro `quot` 1000)
 displayTimeMilli tt =
   let secs  = sec `rem` 60
       mins  = sec `quot` 60 `rem` 60

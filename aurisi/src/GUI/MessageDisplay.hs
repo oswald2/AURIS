@@ -9,7 +9,7 @@ import           RIO
 import qualified RIO.Text                      as T
 import           Graphics.UI.FLTK.LowLevel.FLTKHS
                                          hiding ( display )
-import qualified Graphics.UI.FLTK.LowLevel.FL  as FL
+--import qualified Graphics.UI.FLTK.LowLevel.FL  as FL
 
 import           GUI.MainWindow
 import           GUI.Utils
