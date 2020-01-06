@@ -87,6 +87,7 @@ import           Data.PUS.MissionSpecific.Definitions
 import           Data.PUS.TMFrameDfh
 
 import           General.SizeOf
+import           General.Hexdump
 
 
 
@@ -169,7 +170,16 @@ data TMFrame = TMFrame {
 makeLenses ''TMFrame
 
 instance GetPayload TMFrame where
-    getPayload = _tmFrameData
+  getPayload = _tmFrameData
+
+instance Display TMFrame where
+  display TMFrame {..} =
+    displayShow _tmFrameHdr
+      <> display ("\nData:\n" :: Text)
+      <> display (hexdumpBS _tmFrameData)
+      <> display ("\n" :: Text)
+      <> displayShow _tmFrameOCF
+      <> displayShow _tmFrameFECW
 
 
 instance Serialise TMFrame
@@ -218,10 +228,10 @@ tmFrameFHType frame =
 displayFHP :: TMFrame -> Text
 displayFHP frame =
   let fhp = frame ^. tmFrameHdr . tmFrameFirstHeaderPtr
-  in
-  if | fhp == tmFrameIdlePtr -> "IDLE"
-      | fhp == tmFrameNoFirstHeader -> "NO FHP"
-      | otherwise -> textDisplay fhp
+  in  if
+        | fhp == tmFrameIdlePtr       -> "IDLE"
+        | fhp == tmFrameNoFirstHeader -> "NO FHP"
+        | otherwise                   -> textDisplay fhp
 
 
 {-# INLINABLE tmFrameCheckOrder #-}
@@ -352,11 +362,11 @@ decodeFrame cfg = A.parseOnly (tmFrameParser cfg)
 
 
 {-# INLINABLE encodeFrame #-}
-encodeFrame :: Config -> TMFrame -> ByteString 
-encodeFrame cfg frame = 
+encodeFrame :: Config -> TMFrame -> ByteString
+encodeFrame cfg frame =
   let encFrame' = builderBytes (tmFrameBuilder frame)
-      !encFrame = tmFrameAppendCRC cfg encFrame' 
-  in encFrame
+      !encFrame = tmFrameAppendCRC cfg encFrame'
+  in  encFrame
 
 
 {-# INLINABLE tmFrameCheckCRC #-}

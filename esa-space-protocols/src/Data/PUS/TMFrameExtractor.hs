@@ -193,7 +193,7 @@ raiseFrameC
   => ConduitT (ExtractedDU TMFrame) (ExtractedDU TMFrame) m ()
 raiseFrameC = awaitForever $ \frame -> do
   env <- ask
-  logDebug $ "Raising frame: " <> displayShow frame
+  logDebug $ "Raising frame: " <> display frame
   liftIO $ raiseEvent env (EVTelemetry (EVTMFrameReceived frame))
   yield frame
 

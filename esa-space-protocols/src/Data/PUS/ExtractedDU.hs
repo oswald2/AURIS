@@ -51,3 +51,8 @@ instance ToJSON a => ToJSON (ExtractedDU a) where
 
 instance GetPayload a => GetPayload (ExtractedDU a) where
   getPayload edu = getPayload (edu ^. epDU)
+
+instance Display a => Display (ExtractedDU a) where 
+  -- TODO
+  display ExtractedDU {..} = 
+    display _epDU
