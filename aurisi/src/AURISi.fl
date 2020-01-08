@@ -380,8 +380,8 @@ Function {makeWindow(IO(MainWindowFluid))} {open
             xywh {5 90 215 645}
           } {
             Fl_Group tmParSelectionDisplays {
-              label Displays open
-              xywh {5 115 215 620} hide
+              label Displays open selected
+              xywh {5 115 215 620}
             } {
               Fl_Tabs tmDisplayBrowser {open
                 xywh {10 120 210 615} box ENGRAVED_BOX
@@ -414,12 +414,8 @@ Function {makeWindow(IO(MainWindowFluid))} {open
             }
             Fl_Group tmParSelectionParameters {
               label Parameters open
-              xywh {5 115 215 620}
-            } {
-              Fl_Browser tmParSelectBrowser {selected
-                xywh {5 115 215 620}
-              }
-            }
+              xywh {5 115 215 620} hide
+            } {}
           }
         }
       }
@@ -467,6 +463,7 @@ let { tmParDispSwitchter = TMParamSwitcher {
       
 let { tmParTab = TMParamTabFluid {
     _tmParTabGroup = tabTMParameters
+    , _tmParSelectionTab = tmParSelection
     , _tmParDisplaysTab = tmDisplayBrowser
     , _tmParGroupAND = tabAND
     , _tmParGroupGRD = tabGRD
@@ -474,6 +471,8 @@ let { tmParTab = TMParamTabFluid {
     , _tmParBrowserAND = browserAND
     , _tmParBrowserGRD = browserGRD
     , _tmParBrowserSCD = browserSCD
+    , _tmParSelectionDispGroup = tmParSelectionDisplays
+    , _tmParSelectionParamsGroup = tmParSelectionParameters
     , _tmParDisplayGroup = tmParDisplayGroup
     , _tmParDispSwitcher = tmParDispSwitchter
     } };

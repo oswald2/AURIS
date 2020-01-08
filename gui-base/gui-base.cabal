@@ -65,6 +65,7 @@ library
     GUI.Colors
     GUI.Utils
     GUI.ScrollingTable
+    GUI.NameDescrTable
     Model.ScrollingTableModel
 
   -- Modules included in this library but not exported.

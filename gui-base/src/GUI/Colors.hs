@@ -119,6 +119,7 @@ mcsBrowserSetColor :: Ref Browser -> IO ()
 mcsBrowserSetColor w = do
   setColor w mcsWidgetBG
   setColorWithBgSel w mcsWidgetBG mcsWidgetFG
+  setTextcolor w mcsFontColor
 
 
 mcsTableSetColor :: Ref TableRow -> IO ()

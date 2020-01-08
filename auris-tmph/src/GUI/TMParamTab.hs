@@ -6,6 +6,7 @@ module GUI.TMParamTab
   , TMParamTab
   , createTMParamTab
   , addParameterValues
+  , addParameterDefinitions
   )
 where
 
@@ -14,23 +15,29 @@ import qualified RIO.Text                      as T
 import qualified RIO.Vector                    as V
 import qualified RIO.Vector.Partial            as V
 import qualified Data.Text.IO                  as T
+import qualified Data.Text.Short               as ST
 import           Data.Colour
 import           Data.Default.Class
 
 import           Control.Lens
 import           Graphics.UI.FLTK.LowLevel.FLTKHS
 import           Graphics.Rendering.Chart.Backend.Types
-import           Graphics.Rendering.Chart hiding (Vector, Rectangle)
+import           Graphics.Rendering.Chart
+                                         hiding ( Vector
+                                                , Rectangle
+                                                )
 import qualified Graphics.Rendering.Chart.Easy as Ch
 
 import           General.Time
 import           Data.TM.Parameter
 import           Data.TM.Value
 import           Data.TM.Validity
+import           Data.TM.TMParameterDef
 
 import           GUI.Colors
 import           GUI.Graph
 import           GUI.ParamDisplay
+import           GUI.NameDescrTable
 
 
 data TMParamSwitcher = TMParamSwitcher {
@@ -74,6 +81,9 @@ data TMParamTabFluid = TMParamTabFluid {
   , _tmParBrowserAND :: Ref Browser
   , _tmParBrowserGRD :: Ref Browser
   , _tmParBrowserSCD :: Ref Browser
+  , _tmParSelectionTab :: Ref Tabs
+  , _tmParSelectionDispGroup :: Ref Group
+  , _tmParSelectionParamsGroup :: Ref Group
   , _tmParDisplayGroup :: Ref Group
   , _tmParDispSwitcher :: TMParamSwitcher
 }
@@ -98,26 +108,28 @@ data TMParamTab = TMParamTab {
   , _tmParamBrowserAND :: Ref Browser
   , _tmParamBrowserGRD :: Ref Browser
   , _tmParamBrowserSCD :: Ref Browser
+  , _tmParamSelectionTab :: Ref Tabs
+  , _tmParamSelectionDispGroup :: Ref Group
+  , _tmParamSelectionParamsGroup :: Ref Group
   , _tmParamDisplayGroup :: Ref Group
   , _tmParamDispSwitcher :: TMParamSwitcher
   , _tmParamDisplays :: TVar ParDisplays
+  , _tmParamSelector :: NameDescrTable
 }
 makeLenses ''TMParamTab
 
 
 createTMParamTab :: TMParamTabFluid -> IO TMParamTab
 createTMParamTab TMParamTabFluid {..} = do
-  -- rect <- getRectangle _tmParGraph
-  -- begin _tmParTabGroup
-  -- widget' <- widgetCustom rect Nothing drawChart defaultCustomWidgetFuncs
-  -- end _tmParTabGroup
-
   mcsGroupSetColor _tmParTabGroup
   mcsTabsSetColor _tmParDisplaysTab
+  mcsTabsSetColor _tmParSelectionTab
 
   mcsGroupSetColor _tmParGroupAND
   mcsGroupSetColor _tmParGroupGRD
   mcsGroupSetColor _tmParGroupSCD
+  mcsGroupSetColor _tmParSelectionDispGroup
+  mcsGroupSetColor _tmParSelectionParamsGroup
 
   mcsGroupSetColor _tmParDisplayGroup
 
@@ -127,20 +139,27 @@ createTMParamTab TMParamTabFluid {..} = do
 
   initSwitcher _tmParDispSwitcher
 
-  ref <- newTVarIO (Nothing, Nothing, Nothing, Nothing)
+  table <- setupTable _tmParSelectionParamsGroup
 
-  let gui = TMParamTab { _tmParamTab          = _tmParTabGroup
-                       , _tmParamDisplaysTab  = _tmParDisplaysTab
-                       , _tmParamGroupAND     = _tmParGroupAND
-                       , _tmParamGroupGRD     = _tmParGroupGRD
-                       , _tmParamGroupSCD     = _tmParGroupSCD
-                       , _tmParamBrowserAND   = _tmParBrowserAND
-                       , _tmParamBrowserGRD   = _tmParBrowserGRD
-                       , _tmParamBrowserSCD   = _tmParBrowserSCD
-                       , _tmParamDispSwitcher = _tmParDispSwitcher
-                       , _tmParamDisplayGroup = _tmParDisplayGroup
-                       , _tmParamDisplays     = ref
-                       }
+  ref   <- newTVarIO (Nothing, Nothing, Nothing, Nothing)
+
+  let gui = TMParamTab
+        { _tmParamTab                  = _tmParTabGroup
+        , _tmParamDisplaysTab          = _tmParDisplaysTab
+        , _tmParamGroupAND             = _tmParGroupAND
+        , _tmParamGroupGRD             = _tmParGroupGRD
+        , _tmParamGroupSCD             = _tmParGroupSCD
+        , _tmParamBrowserAND           = _tmParBrowserAND
+        , _tmParamBrowserGRD           = _tmParBrowserGRD
+        , _tmParamBrowserSCD           = _tmParBrowserSCD
+        , _tmParamSelectionTab         = _tmParSelectionTab
+        , _tmParamSelectionDispGroup   = _tmParSelectionDispGroup
+        , _tmParamSelectionParamsGroup = _tmParSelectionParamsGroup
+        , _tmParamDispSwitcher         = _tmParDispSwitcher
+        , _tmParamDisplayGroup         = _tmParDisplayGroup
+        , _tmParamDisplays             = ref
+        , _tmParamSelector             = table
+        }
 
   -- TODO to be changed, to test only a single, fixed chart
   rects <- determineSize gui GSSingle
@@ -167,39 +186,50 @@ createTMParamTab TMParamTabFluid {..} = do
 
   void $ graphAddParameter var "S2KTEST" lineStyle def
 
-  let
-    setValues var widget = do
-      now <- getCurrentTime
-      let
-        values = V.fromList
-          [ TMParameter "S2KTEST"
-                        now
-                        (TMValue (TMValDouble 3.14) clearValidity)
-                        Nothing
-          , TMParameter "S2KTEST"
-                        (now <+> oneSecond)
-                        (TMValue (TMValDouble 2.7) clearValidity)
-                        Nothing
-          , TMParameter "S2KTEST"
-                        (now <+> fromDouble 2 True)
-                        (TMValue (TMValDouble 1.6) clearValidity)
-                        Nothing
-          , TMParameter "S2KTEST"
-                        (now <+> fromDouble 3 True)
-                        (TMValue (TMValDouble 5.1) clearValidity)
-                        Nothing
-          , TMParameter "S2KTEST"
-                        (now <+> fromDouble 4 True)
-                        (TMValue (TMValDouble 4.0) clearValidity)
-                        Nothing
-          ]
+  let setValues var widget = do
+        now <- getCurrentTime
+        let values = V.fromList
+              [ TMParameter "S2KTEST"
+                            now
+                            (TMValue (TMValDouble 3.14) clearValidity)
+                            Nothing
+              , TMParameter "S2KTEST"
+                            (now <+> oneSecond)
+                            (TMValue (TMValDouble 2.7) clearValidity)
+                            Nothing
+              , TMParameter "S2KTEST"
+                            (now <+> fromDouble 2 True)
+                            (TMValue (TMValDouble 1.6) clearValidity)
+                            Nothing
+              , TMParameter "S2KTEST"
+                            (now <+> fromDouble 3 True)
+                            (TMValue (TMValDouble 5.1) clearValidity)
+                            Nothing
+              , TMParameter "S2KTEST"
+                            (now <+> fromDouble 4 True)
+                            (TMValue (TMValDouble 4.0) clearValidity)
+                            Nothing
+              ]
 
-      graphInsertParamValue var values
-      redraw _tmParDisplayGroup
+        graphInsertParamValue var values
+        redraw _tmParDisplayGroup
 
   setCallback (gui ^. tmParamDispSwitcher . tmParSwSingle) (setValues var)
 
   return gui
+
+
+
+
+addParameterDefinitions :: TMParamTab -> Vector TMParameterDef -> IO ()
+addParameterDefinitions gui params = do
+  let browser = gui ^. tmParamSelector
+
+  -- now set the parameter names 
+  let ins x = TableValue { _tableValName  = ST.toText (x ^. fpName)
+                         , _tableValDescr = ST.toText (x ^. fpDescription)
+                         }
+  setTableFromModel browser (V.map ins params)
 
 
 addParameterValues :: TMParamTab -> Vector TMParameter -> IO ()

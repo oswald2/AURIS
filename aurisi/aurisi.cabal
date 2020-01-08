@@ -78,7 +78,8 @@ Executable AURISi
     directory,
     filepath,
     text-short,
-    file-embed
+    file-embed,
+    hashtables
 
   Other-Modules: AURISi
 

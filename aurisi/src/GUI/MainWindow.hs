@@ -30,6 +30,7 @@ module GUI.MainWindow
   , mwAddTMFrame
   , mwSetTMParameters
   , mwAddTMParameters
+  , mwAddTMParameterDefinitions
   , mwSetMission
   , mwDeskHeaderGroup
   , mwLogoBox
@@ -37,13 +38,18 @@ module GUI.MainWindow
   , mwAboutWindow
   , mwFrameTab
   , mwNCTRSConnection
+  , mwInitialiseDataModel
   )
 where
 
 import           RIO
 --import qualified RIO.Text                      as T
 -- import qualified Data.Text.IO                  as T
+import qualified RIO.Vector                    as V
+import           RIO.List                       ( sortBy )
 import           Control.Lens                   ( makeLenses )
+
+import qualified Data.HashTable.ST.Basic       as HT
 
 import           Graphics.UI.FLTK.LowLevel.FLTKHS
 import qualified Graphics.UI.FLTK.LowLevel.FL  as FL
@@ -60,7 +66,10 @@ import           Data.PUS.TMPacket
 import           Data.PUS.ExtractedDU
 import           Data.PUS.TMFrame
 
+import           Data.DataModel
+
 import           Data.TM.Parameter
+import           Data.TM.TMParameterDef
 
 import           General.Time
 
@@ -206,10 +215,24 @@ mwAddTMParameters :: MainWindow -> Vector TMParameter -> IO ()
 mwAddTMParameters window params = do
   addParameterValues (window ^. mwTMParamTab) params
 
+mwAddTMParameterDefinitions :: MainWindow -> Vector TMParameterDef -> IO ()
+mwAddTMParameterDefinitions window paramDefs = do
+  addParameterDefinitions (window ^. mwTMParamTab) paramDefs
+
 
 mwSetMission :: MainWindow -> Text -> IO ()
 mwSetMission window mission = do
   void $ setValue (window ^. mwMission) mission
+
+
+mwInitialiseDataModel :: MainWindow -> DataModel -> IO ()
+mwInitialiseDataModel window model = do
+  let paramDefs =
+        V.fromList . sortBy s . map snd . HT.toList $ model ^. dmParameters
+      s p1 p2 = compare (p1 ^. fpName) (p2 ^. fpName)
+  mwAddTMParameterDefinitions window paramDefs
+  return ()
+
 
 
 createMainWindow :: MainWindowFluid -> AboutWindowFluid -> IO MainWindow

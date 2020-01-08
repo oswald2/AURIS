@@ -75,6 +75,8 @@ runProcessing cfg missionSpecific mibPath interface mainWindow = do
       var   <- view getDataModel
       atomically $ writeTVar var model
 
+      liftIO $ mwInitialiseDataModel mainWindow model
+
       -- logInfo "An info message"
       -- logWarn "A warning message"
       -- logError "Error message. Very important"
