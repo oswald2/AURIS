@@ -24,7 +24,7 @@ Function {makeWindow(IO(MainWindowFluid))} {open
     xywh {3 51 1600 845} type Double color 30 labelcolor 6 visible
   } {
     Fl_Scroll mainScrolled {open
-      xywh {0 0 1970 1025}
+      xywh {0 0 2060 1025}
     } {
       Fl_Group deskHeaderGroup {
         xywh {5 5 1755 70} box THIN_UP_FRAME
@@ -148,7 +148,7 @@ Function {makeWindow(IO(MainWindowFluid))} {open
         }
       }
       Fl_Tabs mainTab {open
-        xywh {5 70 1965 855}
+        xywh {5 70 2055 890}
       } {
         Fl_Group tabTMFrames {
           label {TM Frames} open
@@ -351,37 +351,8 @@ Function {makeWindow(IO(MainWindowFluid))} {open
         }
         Fl_Group tabTMParameters {
           label Parameters open
-          xywh {5 89 1965 836} box FLAT_BOX
+          xywh {5 89 2055 871} box FLAT_BOX
         } {
-          Fl_Tabs tmDisplayBrowser {
-            label Displays open
-            xywh {5 115 215 615} box ENGRAVED_BOX
-          } {
-            Fl_Group tabAND {
-              label AND open
-              xywh {5 135 215 595} hide
-            } {
-              Fl_Browser browserAND {
-                xywh {5 140 215 590}
-              }
-            }
-            Fl_Group tabGRD {
-              label GRD open
-              xywh {5 135 215 595}
-            } {
-              Fl_Browser browserGRD {
-                xywh {5 140 215 590}
-              }
-            }
-            Fl_Group tabSCD {
-              label SCD open
-              xywh {5 135 215 595} hide
-            } {
-              Fl_Browser browserSCD {
-                xywh {5 140 215 590}
-              }
-            }
-          }
           Fl_Group tmParDisplayGroup {open
             xywh {220 109 1380 626} box ENGRAVED_BOX
           } {}
@@ -401,17 +372,62 @@ Function {makeWindow(IO(MainWindowFluid))} {open
               xywh {410 90 95 20} box THIN_UP_BOX
             }
             Fl_Light_Button tmParDispFourBt {
-              label {4 Displays} selected
+              label {4 Displays}
               xywh {505 90 95 20} box THIN_UP_BOX
+            }
+          }
+          Fl_Tabs tmParSelection {open
+            xywh {5 90 215 645}
+          } {
+            Fl_Group tmParSelectionDisplays {
+              label Displays open
+              xywh {5 115 215 620} hide
+            } {
+              Fl_Tabs tmDisplayBrowser {open
+                xywh {10 120 210 615} box ENGRAVED_BOX
+              } {
+                Fl_Group tabAND {
+                  label AND open
+                  xywh {10 140 210 595}
+                } {
+                  Fl_Browser browserAND {
+                    xywh {10 145 210 590}
+                  }
+                }
+                Fl_Group tabGRD {
+                  label GRD open
+                  xywh {10 140 210 595} hide
+                } {
+                  Fl_Browser browserGRD {
+                    xywh {10 145 210 590}
+                  }
+                }
+                Fl_Group tabSCD {
+                  label SCD open
+                  xywh {10 140 210 595} hide
+                } {
+                  Fl_Browser browserSCD {
+                    xywh {10 145 210 590}
+                  }
+                }
+              }
+            }
+            Fl_Group tmParSelectionParameters {
+              label Parameters open
+              xywh {5 115 215 620}
+            } {
+              Fl_Browser tmParSelectBrowser {selected
+                xywh {5 115 215 620}
+              }
             }
           }
         }
       }
-      Fl_Group messagesGroup {
+      Fl_Group messagesGroup {open
         xywh {5 734 1755 92}
       } {
         Fl_Browser messageDisplay {
-          xywh {5 736 1753 90} color 30 textcolor 61
+          xywh {5 736 1594 90} color 30 textcolor 61
         }
       }
       Fl_Progress mainProgress {

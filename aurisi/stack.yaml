@@ -1,5 +1,5 @@
 flags: {}
-resolver: lts-14.15
+resolver: lts-14.20
 extra-deps:
 - fltkhs-0.8.0.2
 - attoparsec-data-1.0.4.1
