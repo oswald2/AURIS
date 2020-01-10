@@ -80,6 +80,7 @@ library
     , fltkhs
     , containers
     , lens
+    , text
 
 
   default-extensions:

@@ -89,13 +89,9 @@ data TMParamTabFluid = TMParamTabFluid {
 }
 
 
-type ParDisplays
-  = ( Maybe ParamDisplay
-    , Maybe ParamDisplay
-    , Maybe ParamDisplay
-    , Maybe ParamDisplay
-    )
-
+data ParDisplays = 
+  ParDispSingle (Maybe ParamDisplay)
+  | ParDispHorizontal (Maybe ParamDisplay) (Maybe ParamDisplay)
 
 
 
@@ -141,7 +137,7 @@ createTMParamTab TMParamTabFluid {..} = do
 
   table <- setupTable _tmParSelectionParamsGroup
 
-  ref   <- newTVarIO (Nothing, Nothing, Nothing, Nothing)
+  ref   <- newTVarIO (ParDispSingle Nothing)
 
   let gui = TMParamTab
         { _tmParamTab                  = _tmParTabGroup
@@ -162,29 +158,17 @@ createTMParamTab TMParamTabFluid {..} = do
         }
 
   -- TODO to be changed, to test only a single, fixed chart
-  rects <- determineSize gui GSSingle
+  --rects <- determineSize gui GSSingle
 
-  begin _tmParDisplayGroup
-
-  let graph = emptyGraph "TestGraph"
-
-  var <- newTVarIO graph
+  graphWidget <- setupGraphWidget _tmParDisplayGroup "TestGraph" table
 
   atomically $ do
-    val <- readTVar ref
-    writeTVar ref (val & _1 ?~ GraphDisplay var)
-
-  widget' <- widgetCustom (rects V.! 0)
-                          Nothing
-                          (drawChart var)
-                          defaultCustomWidgetFuncs
-  end _tmParDisplayGroup
-  showWidget widget'
+    writeTVar ref (ParDispSingle (Just (GraphDisplay graphWidget)))
 
   -- now add a parameter to watch 
   let lineStyle = def & line_color .~ opaque Ch.blue & line_width .~ 1.0
 
-  void $ graphAddParameter var "S2KTEST" lineStyle def
+  void $ graphAddParameter graphWidget "S2KTEST" lineStyle def
 
   let setValues var widget = do
         now <- getCurrentTime
@@ -214,7 +198,7 @@ createTMParamTab TMParamTabFluid {..} = do
         graphInsertParamValue var values
         redraw _tmParDisplayGroup
 
-  setCallback (gui ^. tmParamDispSwitcher . tmParSwSingle) (setValues var)
+  setCallback (gui ^. tmParamDispSwitcher . tmParSwSingle) (setValues graphWidget)
 
   return gui
 
@@ -235,14 +219,9 @@ addParameterDefinitions gui params = do
 addParameterValues :: TMParamTab -> Vector TMParameter -> IO ()
 addParameterValues gui values = do
   displays <- readTVarIO (gui ^. tmParamDisplays)
-  case displays ^. _1 of
-    Nothing   -> return ()
-    Just disp -> addParameterToDisplay disp values
-
-addParameterToDisplay :: ParamDisplay -> Vector TMParameter -> IO ()
-addParameterToDisplay (GraphDisplay var) values =
-  graphInsertParamValue var values
-addParameterToDisplay _ _ = return ()
+  case displays of
+    ParDispSingle (Just disp) -> paramDispInsertValues disp values
+    _   -> return ()
 
 
 determineSize :: TMParamTab -> GraphSelector -> IO (Vector Rectangle)

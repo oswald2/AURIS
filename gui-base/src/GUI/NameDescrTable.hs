@@ -13,7 +13,7 @@ import           RIO
 
 import qualified RIO.Text                      as T
 import qualified RIO.Vector                    as V
-
+import qualified Data.Text.IO                  as T
 import           Graphics.UI.FLTK.LowLevel.FLTKHS
 import           Graphics.UI.FLTK.LowLevel.Fl_Enumerations
 import qualified Graphics.UI.FLTK.LowLevel.FL  as FL
@@ -46,18 +46,20 @@ setupTable group = do
   model <- newTVarIO V.empty
 
   rect  <- getRectangle group
-  table <- tableRowNew rect
-                       Nothing
-                       Nothing
-                       (drawCell model)
-                       defaultCustomWidgetFuncs
-                       defaultCustomTableFuncs
+  table <- tableRowNew
+    rect
+    Nothing
+    Nothing
+    (drawCell model)
+    defaultCustomWidgetFuncs
+    defaultCustomTableFuncs
   let table' = NameDescrTable table model
 
   initializeTable table'
   add group table
   mcsGroupSetColor group
   pure table'
+
 
 
 initializeTable :: NameDescrTable -> IO ()

@@ -1,6 +1,8 @@
 {-# LANGUAGE TemplateHaskell #-}
 module GUI.Graph
   ( Graph
+  , GraphWidget
+  , setupGraphWidget
   , graphInsertParamValue
   , emptyGraph
   , graphAddParameter
@@ -13,7 +15,7 @@ import           RIO
 import qualified RIO.Map                       as M
 import qualified RIO.Vector                    as V
 import qualified RIO.HashSet                   as HS
-import           Data.Text.Short                ( ShortText )
+--import           Data.Text.Short                ( ShortText )
 import qualified Data.Text.Short               as ST
 import qualified Data.Text.IO                  as T
 import           Control.Lens                   ( makeLenses )
@@ -38,6 +40,9 @@ import           Graphics.Rendering.Chart.Backend.FLTKHS
 import           Graphics.Rendering.Chart
 import           Graphics.Rendering.Chart.Easy as Ch
                                          hiding ( (^.) )
+
+
+import           GUI.NameDescrTable
 
 
 data GraphVal = GraphVal {
@@ -68,36 +73,81 @@ data Graph = Graph {
 makeLenses ''Graph
 
 
-
 emptyGraph :: ShortText -> Graph
 emptyGraph name = Graph name HS.empty M.empty
 
 
+data GraphWidget = GraphWidget {
+  _gwParent :: Ref Group
+  , _gwDrawingArea :: Ref Widget
+  , _gwMenu :: Ref MenuButton
+  , _gwParamSelection :: NameDescrTable
+  , _gwGraph :: TVar Graph
+}
+makeLenses ''GraphWidget
 
-graphInsertParamValue :: TVar Graph -> RIO.Vector TMParameter -> IO ()
-graphInsertParamValue var params = do
+
+setupGraphWidget :: Ref Group -> Text -> NameDescrTable -> IO GraphWidget
+setupGraphWidget parent title paramSelector = do
+  begin parent
+
+  let graph = emptyGraph (ST.fromText title)
+
+  var  <- newTVarIO graph
+
+  rect <- getRectangle parent
+  
+  menu <- menuButtonNew rect Nothing
+  -- setType menu Popup3MenuButton
+  
+  void $ add menu
+      "Add Parameter from Selection"
+      (Just (KeyFormat "^p"))
+      (Just (addParamFromSelection paramSelector))
+      (MenuItemFlags [MenuItemNormal])
+
+
+  widget' <- widgetCustom rect Nothing (drawChart var) defaultCustomWidgetFuncs
+
+  end parent
+  showWidget widget'
+
+  let g = GraphWidget { _gwParent         = parent
+                      , _gwDrawingArea    = widget'
+                      , _gwMenu           = menu
+                      , _gwParamSelection = paramSelector
+                      , _gwGraph          = var
+                      }
+  return g
+
+addParamFromSelection :: NameDescrTable -> Ref MenuItem -> IO ()
+addParamFromSelection paramSelector item = return ()
+
+
+graphInsertParamValue :: GraphWidget -> RIO.Vector TMParameter -> IO ()
+graphInsertParamValue gw params = do
   atomically $ do
-    graph <- readTVar var
+    graph <- readTVar (gw ^. gwGraph)
     let newGraph = V.foldl insertParamValue graph params
-    writeTVar var newGraph
+    writeTVar (gw ^. gwGraph) newGraph
 
 -- | Add a parameter to the chart. The chart then accepts parameter values 
 -- for the parameters within it's '_graphParameters' field.
 graphAddParameter
-  :: TVar Graph
+  :: GraphWidget
   -> ShortText
   -> Ch.LineStyle
   -> Ch.PointStyle
   -> IO (HashSet ShortText)
-graphAddParameter var name lineStyle pointStyle = do
+graphAddParameter gw name lineStyle pointStyle = do
   atomically $ do
-    graph <- readTVar var
+    graph <- readTVar (gw ^. gwGraph)
     let newSet   = HS.insert name (graph ^. graphParameters)
         newGraph = graph & graphParameters .~ newSet & graphData .~ newData
         newData  = M.insert name
                             (PlotVal name lineStyle pointStyle MS.empty)
                             (graph ^. graphData)
-    writeTVar var newGraph
+    writeTVar (gw ^. gwGraph) newGraph
     return newSet
 
 
@@ -134,45 +184,63 @@ plotValToPlot PlotVal {..} =
 
 
 titleStyle :: FontStyle
-titleStyle = def 
-  & font_size .~ 20 
-  & font_weight .~ FontWeightBold 
-  & font_color .~ opaque white
+titleStyle =
+  def
+    &  font_size
+    .~ 20
+    &  font_weight
+    .~ FontWeightBold
+    &  font_color
+    .~ opaque white
 
-legendStyle :: LegendStyle 
+legendStyle :: LegendStyle
 legendStyle = def & legend_label_style . font_color .~ opaque white
 
-axisStyle :: AxisStyle 
-axisStyle = def 
-  & axis_line_style . line_color .~ opaque white
-  & axis_grid_style . line_color .~ opaque darkslategray 
-  & axis_label_style . font_color .~ opaque white
+axisStyle :: AxisStyle
+axisStyle =
+  def
+    &  axis_line_style
+    .  line_color
+    .~ opaque white
+    &  axis_grid_style
+    .  line_color
+    .~ opaque darkslategray
+    &  axis_label_style
+    .  font_color
+    .~ opaque white
 
-layoutAxis :: PlotValue a => LayoutAxis a 
-layoutAxis = def 
-  & laxis_style .~ axisStyle 
-  & laxis_title_style . font_color .~ opaque white
+layoutAxis :: PlotValue a => LayoutAxis a
+layoutAxis =
+  def
+    &  laxis_style
+    .~ axisStyle
+    &  laxis_title_style
+    .  font_color
+    .~ opaque white
 
 
-graphLayout :: Layout TI.UTCTime Double 
-graphLayout = 
-    layout_background
-      .~ FillStyleSolid (opaque black)
-      $  layout_plot_background
-      ?~ FillStyleSolid (opaque black)
-      $ layout_title_style .~ titleStyle
-      $ layout_legend ?~ legendStyle 
-      $ layout_x_axis .~ layoutAxis 
-      $ layout_y_axis .~ layoutAxis 
-      $  def
+graphLayout :: Layout TI.UTCTime Double
+graphLayout =
+  layout_background
+    .~ FillStyleSolid (opaque black)
+    $  layout_plot_background
+    ?~ FillStyleSolid (opaque black)
+    $  layout_title_style
+    .~ titleStyle
+    $  layout_legend
+    ?~ legendStyle
+    $  layout_x_axis
+    .~ layoutAxis
+    $  layout_y_axis
+    .~ layoutAxis
+    $  def
 
 chart :: Graph -> Renderable ()
 chart Graph {..} = toRenderable layout
  where
   plots = map (plotValToPlot . snd) $ M.toList _graphData
-  layout = graphLayout 
-    & layout_title .~ ST.unpack _graphName
-    & layout_plots .~ plots 
+  layout =
+    graphLayout & layout_title .~ ST.unpack _graphName & layout_plots .~ plots
 
 
 drawChart :: TVar Graph -> Ref Widget -> IO ()

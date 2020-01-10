@@ -1,16 +1,23 @@
-module GUI.ParamDisplay 
-(
-  ParamDisplay(..)  
-)
+module GUI.ParamDisplay
+  ( ParamDisplay(..)
+  , paramDispInsertValues
+  )
 where
 
 
-import RIO 
+import           RIO
 
-import GUI.Graph
+import           Data.TM.Parameter
+
+import           GUI.Graph
 
 
 data ParamDisplay =
-  GraphDisplay (TVar Graph)
-  | ANDDisplay 
+  GraphDisplay GraphWidget
+  | ANDDisplay
 
+
+paramDispInsertValues :: ParamDisplay -> Vector TMParameter -> IO ()
+paramDispInsertValues (GraphDisplay gw) values =
+  graphInsertParamValue gw values
+paramDispInsertValues ANDDisplay values = return ()
