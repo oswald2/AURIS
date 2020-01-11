@@ -10,8 +10,8 @@ module AurisInterface
 where
 
 import           RIO
-import qualified RIO.Text                      as T
-import qualified Data.Text.IO                  as T
+--import qualified RIO.Text                      as T
+--import qualified Data.Text.IO                  as T
 import           Interface.Interface
 import           Interface.Events
 
@@ -24,9 +24,6 @@ import           GUI.Utils
 --import qualified Graphics.UI.FLTK.LowLevel.FL  as FL
 
 
-actionTable :: ActionTable
-actionTable =
-  ActionTable { actionQuit = pure (), actionSendTCRequest = \_tc -> pure () }
 
 
 aurisEventHandler :: TBQueue IfEvent -> IfEvent -> IO ()
@@ -69,6 +66,6 @@ eventProcessor _ _ = pure ()
 initialiseInterface :: MainWindow -> IO (Interface, Async ())
 initialiseInterface mainWindow = do
   queue       <- newTBQueueIO 1000
-  interface   <- createInterface actionTable (aurisEventHandler queue)
+  interface   <- createInterface (aurisEventHandler queue)
   eventThread <- async (eventProcessorThread mainWindow queue)
   pure (interface, eventThread)

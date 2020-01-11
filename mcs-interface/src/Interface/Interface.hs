@@ -68,9 +68,15 @@ data Interface = Interface {
     }
 
 
--- | creates the 'Interface' from the given 'ActionTable' and 'EventHandler'.
-createInterface :: ActionTable -> EventHandler -> IO Interface 
-createInterface actions handler = pure (Interface actions (V.singleton handler))
+
+actionTable :: ActionTable
+actionTable =
+  ActionTable { actionQuit = pure (), actionSendTCRequest = \_tc -> pure () }
+
+
+-- | creates the 'Interface' from the given 'EventHandler'.
+createInterface :: EventHandler -> IO Interface 
+createInterface handler = pure (Interface actionTable (V.singleton handler))
 
 -- | Adds a new event handler to the given 'Interface'. Only an event handler
 -- is added, the 'ActionTable' stays the same
