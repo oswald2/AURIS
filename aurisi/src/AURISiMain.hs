@@ -104,7 +104,7 @@ main = do
               Right c -> pure c
 
         -- need to call it once in main before the GUI is started
-        void $ FL.lock
+        void FL.lock
 
         -- create the main window
         mainWindow <- ui
@@ -122,12 +122,6 @@ main = do
                                                            interface
                                                            mainWindow
         -- run the FLTK GUI
-
         FL.run >> FL.flush
-
-
-
-replMain :: IO ()
-replMain = ui >> FL.replRun
 
 

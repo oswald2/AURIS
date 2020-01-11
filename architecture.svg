@@ -15,8 +15,8 @@
    viewBox="0 0 756.60944 427.33197"
    version="1.1"
    id="svg8"
-   inkscape:version="0.92.4 5da689c313, 2019-01-14"
-   sodipodi:docname="Mission_Control_Architecture.svg">
+   inkscape:version="0.92.3 (2405546, 2018-03-11)"
+   sodipodi:docname="architecture.svg">
   <defs
      id="defs2">
     <marker
@@ -1233,17 +1233,17 @@
      borderopacity="1.0"
      inkscape:pageopacity="1"
      inkscape:pageshadow="2"
-     inkscape:zoom="0.80176767"
-     inkscape:cx="1869.5932"
-     inkscape:cy="674.08017"
+     inkscape:zoom="0.40088384"
+     inkscape:cx="1713.7908"
+     inkscape:cy="860.10706"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
      showborder="true"
-     inkscape:window-width="2048"
-     inkscape:window-height="1088"
+     inkscape:window-width="1920"
+     inkscape:window-height="1033"
      inkscape:window-x="0"
-     inkscape:window-y="27"
+     inkscape:window-y="25"
      inkscape:window-maximized="1"
      fit-margin-top="10"
      fit-margin-left="10"
@@ -1257,7 +1257,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -2912,61 +2912,66 @@
          y="171.06427"
          style="stroke-width:0.26458332">PusPacket</tspan></text>
     <g
-       transform="translate(350.28441,-49.957881)"
-       id="g14433-8-9-8-4-4">
-      <rect
-         y="248.8512"
-         x="-375.79092"
-         height="22.654928"
-         width="74.126709"
-         id="rect13495-0-1-7-2-9"
-         style="fill:#588dde;fill-opacity:0.97506235;fill-rule:nonzero;stroke:none;stroke-width:1.80713928;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:1.80713929, 3.61427856;stroke-dashoffset:0;stroke-opacity:1" />
-    </g>
-    <text
-       xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:6.46535826px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.07576768"
-       x="-20.102476"
-       y="209.08716"
-       id="text13499-5-0-0-0"><tspan
-         style="stroke-width:0.07576768"
-         sodipodi:role="line"
-         x="-20.102476"
+       id="g1760"
+       transform="translate(-137.28,5.9400002)">
+      <g
+         id="g14433-8-9-8-4-4"
+         transform="translate(350.28441,-49.957881)">
+        <rect
+           style="fill:#588dde;fill-opacity:0.97506235;fill-rule:nonzero;stroke:none;stroke-width:1.80713928;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:1.80713929, 3.61427856;stroke-dashoffset:0;stroke-opacity:1"
+           id="rect13495-0-1-7-2-9"
+           width="74.126717"
+           height="22.654934"
+           x="-375.79092"
+           y="248.8512" />
+      </g>
+      <text
+         id="text13499-5-0-0-0"
          y="209.08716"
-         id="tspan31679-5-4-9">Encode PusPacket</tspan><tspan
-         style="stroke-width:0.07576768"
-         sodipodi:role="line"
          x="-20.102476"
-         y="217.16885"
-         id="tspan39432-8-1">as TCFrame</tspan></text>
-    <text
-       xml:space="preserve"
-       style="font-style:normal;font-weight:normal;font-size:5.64444494px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458335"
-       x="-23.753172"
-       y="182.17078"
-       id="text3006"><tspan
-         sodipodi:role="line"
-         id="tspan3004"
-         x="-23.753172"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:6.46535826px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.07576768"
+         xml:space="preserve"><tspan
+           id="tspan31679-5-4-9"
+           y="209.08716"
+           x="-20.102476"
+           sodipodi:role="line"
+           style="stroke-width:0.07576768">Encode PusPacket</tspan><tspan
+           id="tspan39432-8-1"
+           y="217.16885"
+           x="-20.102476"
+           sodipodi:role="line"
+           style="stroke-width:0.07576768">as TCFrame</tspan></text>
+      <text
+         id="text3006"
          y="182.17078"
-         style="stroke-width:0.26458335">BD-Mode:</tspan><tspan
-         sodipodi:role="line"
          x="-23.753172"
-         y="189.22633"
-         style="stroke-width:0.26458335"
-         id="tspan3008">For satellite startup</tspan><tspan
-         sodipodi:role="line"
-         x="-23.753172"
-         y="196.28189"
-         style="stroke-width:0.26458335"
-         id="tspan3010">and emergencies</tspan></text>
+         style="font-style:normal;font-weight:normal;font-size:5.64444494px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458335"
+         xml:space="preserve"><tspan
+           style="stroke-width:0.26458335"
+           y="182.17078"
+           x="-23.753172"
+           id="tspan3004"
+           sodipodi:role="line">BD-Mode:</tspan><tspan
+           id="tspan3008"
+           style="stroke-width:0.26458335"
+           y="189.22633"
+           x="-23.753172"
+           sodipodi:role="line">For satellite startup</tspan><tspan
+           id="tspan3010"
+           style="stroke-width:0.26458335"
+           y="196.28189"
+           x="-23.753172"
+           sodipodi:role="line">and emergencies</tspan></text>
+    </g>
     <path
-       style="fill:none;stroke:#000000;stroke-width:1.32291669;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;stroke-miterlimit:4;stroke-dasharray:none;marker-end:url(#marker3277)"
-       d="m 183.81684,225.40078 -132.329982,-15.51"
+       style="fill:none;stroke:#000000;stroke-width:1.32291675;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#marker3277)"
+       d="M -6.6858708,92.07 -88.659805,204.83332"
        id="path3012"
-       inkscape:connector-curvature="0" />
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc" />
     <path
        style="fill:none;stroke:#000000;stroke-width:1.32291675;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#marker3733)"
-       d="M -26.496497,210.32825 -358.79044,112.46486"
+       d="m -162.78651,204.83332 -96.73193,-90.41575"
        id="path3729"
        inkscape:connector-curvature="0"
        sodipodi:nodetypes="cc" />
@@ -2980,17 +2985,6 @@
          id="tspan39381-7"
          x="-347.98834"
          y="124.16544"
-         style="stroke-width:0.26458332">CTLU</tspan></text>
-    <text
-       xml:space="preserve"
-       style="font-style:normal;font-weight:normal;font-size:5.64444447px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
-       x="-57.258327"
-       y="211.28543"
-       id="text39383-11"><tspan
-         sodipodi:role="line"
-         id="tspan39381-5"
-         x="-57.258327"
-         y="211.28543"
          style="stroke-width:0.26458332">CTLU</tspan></text>
   </g>
 </svg>
