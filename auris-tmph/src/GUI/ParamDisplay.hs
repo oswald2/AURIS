@@ -20,4 +20,4 @@ data ParamDisplay =
 paramDispInsertValues :: ParamDisplay -> Vector TMParameter -> IO ()
 paramDispInsertValues (GraphDisplay gw) values =
   graphInsertParamValue gw values
-paramDispInsertValues ANDDisplay values = return ()
+paramDispInsertValues ANDDisplay _values = return ()

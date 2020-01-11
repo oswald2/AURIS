@@ -5,6 +5,7 @@ module GUI.NameDescrTable
   , setupTable
   , setTableFromModel
   , setupCallback
+  , getSelectedItems
   )
 where
 
@@ -13,6 +14,8 @@ import           RIO
 
 import qualified RIO.Text                      as T
 import qualified RIO.Vector                    as V
+import qualified RIO.Vector.Partial            as V
+                                                ( (!) )
 import qualified Data.Text.IO                  as T
 import           Graphics.UI.FLTK.LowLevel.FLTKHS
 import           Graphics.UI.FLTK.LowLevel.Fl_Enumerations
@@ -26,7 +29,7 @@ import           GUI.Colors
 data TableValue = TableValue {
   _tableValName :: !Text
   , _tableValDescr :: !Text
-}
+  } deriving (Show)
 
 
 
@@ -36,7 +39,26 @@ type TableNameDescrModel = TVar (Vector TableValue)
 data NameDescrTable = NameDescrTable {
   _nmDescTbl :: Ref TableRow
   , _nmDescTblModel :: TableNameDescrModel
+  , _nmDecTclInput :: Ref Input
 }
+
+-- | gets the currently selected items in the table and returns a list of 
+-- the selected values
+getSelectedItems :: NameDescrTable -> IO [TableValue]
+getSelectedItems tbl = do
+  let table = _nmDescTbl tbl
+      filt x = do 
+              either  
+                (const True)
+                id 
+                <$> getRowSelected table (Row x)
+
+  join $ atomically $ do 
+    vec <- readTVar (_nmDescTblModel tbl)
+    return $ do 
+      Rows rs <- getRows table
+      map (vec V.!) <$> filterM filt [0 .. (rs - 1)]
+
 
 -- | Setup a FLTKHS table for a given 'TableModel' with the given
 -- 'ColumnDefinition's.
@@ -45,19 +67,31 @@ setupTable group = do
 
   model <- newTVarIO V.empty
 
-  rect  <- getRectangle group
-  table <- tableRowNew
-    rect
-    Nothing
-    Nothing
-    (drawCell model)
-    defaultCustomWidgetFuncs
-    defaultCustomTableFuncs
-  let table' = NameDescrTable table model
+  Rectangle (Position (X x) (Y y)) (Size (Width w) (Height h))  <- getRectangle group
+
+  let tableRect = Rectangle (Position (X x) (Y y)) (Size (Width w) (Height (h - 20)))
+      inputRect = Rectangle (Position (X x) (Y (y + h - 40))) (Size (Width w) (Height 20))
+
+  table <- tableRowNew tableRect
+                       Nothing
+                       Nothing
+                       (drawCell model)
+                       defaultCustomWidgetFuncs
+                       defaultCustomTableFuncs
+
+  input <- inputNew inputRect Nothing (Just FlNormalInput)
+  mcsInputSetColor input
+
+  let table' = NameDescrTable table model input
 
   initializeTable table'
-  add group table
   mcsGroupSetColor group
+
+  add group table 
+  add group input 
+
+  setCallback input (handleFilter table')
+
   pure table'
 
 
@@ -65,7 +99,7 @@ setupTable group = do
 initializeTable :: NameDescrTable -> IO ()
 initializeTable table' = do
   let table = _nmDescTbl table'
-  begin table
+  --begin table
 
   -- set colors
   setColor table mcsBackground
@@ -91,7 +125,13 @@ initializeTable table' = do
   setColWidth table (Column 1) 200
   setColResize table True
 
-  end table
+  --end table
+
+
+-- TODO
+handleFilter :: NameDescrTable -> Ref Input -> IO () 
+handleFilter table _ = do
+  return ()
 
 
 -- | refresh a table from a model. There is no maxRow check, so

@@ -77,7 +77,8 @@ library
     data-default-class,
     multiset,
     thyme,
-    time
+    time,
+    pretty-show
 
 
   default-extensions:

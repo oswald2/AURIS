@@ -11,9 +11,9 @@ module GUI.TMParamTab
 where
 
 import           RIO                     hiding ( (^.) )
-import qualified RIO.Text                      as T
+--import qualified RIO.Text                      as T
 import qualified RIO.Vector                    as V
-import qualified RIO.Vector.Partial            as V
+--import qualified RIO.Vector.Partial            as V
 import qualified Data.Text.IO                  as T
 import qualified Data.Text.Short               as ST
 import           Data.Colour
@@ -22,10 +22,10 @@ import           Data.Default.Class
 import           Control.Lens
 import           Graphics.UI.FLTK.LowLevel.FLTKHS
 import           Graphics.Rendering.Chart.Backend.Types
-import           Graphics.Rendering.Chart
-                                         hiding ( Vector
-                                                , Rectangle
-                                                )
+-- import           Graphics.Rendering.Chart
+--                                          hiding ( Vector
+--                                                 , Rectangle
+--                                                 )
 import qualified Graphics.Rendering.Chart.Easy as Ch
 
 import           General.Time
@@ -166,39 +166,39 @@ createTMParamTab TMParamTabFluid {..} = do
     writeTVar ref (ParDispSingle (Just (GraphDisplay graphWidget)))
 
   -- now add a parameter to watch 
-  let lineStyle = def & line_color .~ opaque Ch.blue & line_width .~ 1.0
+  -- let lineStyle = def & line_color .~ opaque Ch.blue & line_width .~ 1.0
 
-  void $ graphAddParameter graphWidget "S2KTEST" lineStyle def
+  -- void $ graphAddParameter graphWidget "S2KTEST" lineStyle def
 
-  let setValues var widget = do
-        now <- getCurrentTime
-        let values = V.fromList
-              [ TMParameter "S2KTEST"
-                            now
-                            (TMValue (TMValDouble 3.14) clearValidity)
-                            Nothing
-              , TMParameter "S2KTEST"
-                            (now <+> oneSecond)
-                            (TMValue (TMValDouble 2.7) clearValidity)
-                            Nothing
-              , TMParameter "S2KTEST"
-                            (now <+> fromDouble 2 True)
-                            (TMValue (TMValDouble 1.6) clearValidity)
-                            Nothing
-              , TMParameter "S2KTEST"
-                            (now <+> fromDouble 3 True)
-                            (TMValue (TMValDouble 5.1) clearValidity)
-                            Nothing
-              , TMParameter "S2KTEST"
-                            (now <+> fromDouble 4 True)
-                            (TMValue (TMValDouble 4.0) clearValidity)
-                            Nothing
-              ]
+  -- let setValues var widget = do
+  --       now <- getCurrentTime
+  --       let values = V.fromList
+  --             [ TMParameter "S2KTEST"
+  --                           now
+  --                           (TMValue (TMValDouble 3.14) clearValidity)
+  --                           Nothing
+  --             , TMParameter "S2KTEST"
+  --                           (now <+> oneSecond)
+  --                           (TMValue (TMValDouble 2.7) clearValidity)
+  --                           Nothing
+  --             , TMParameter "S2KTEST"
+  --                           (now <+> fromDouble 2 True)
+  --                           (TMValue (TMValDouble 1.6) clearValidity)
+  --                           Nothing
+  --             , TMParameter "S2KTEST"
+  --                           (now <+> fromDouble 3 True)
+  --                           (TMValue (TMValDouble 5.1) clearValidity)
+  --                           Nothing
+  --             , TMParameter "S2KTEST"
+  --                           (now <+> fromDouble 4 True)
+  --                           (TMValue (TMValDouble 4.0) clearValidity)
+  --                           Nothing
+  --             ]
 
-        graphInsertParamValue var values
-        redraw _tmParDisplayGroup
+  --       graphInsertParamValue var values
+  --       redraw _tmParDisplayGroup
 
-  setCallback (gui ^. tmParamDispSwitcher . tmParSwSingle) (setValues graphWidget)
+  -- setCallback (gui ^. tmParamDispSwitcher . tmParSwSingle) (setValues graphWidget)
 
   return gui
 

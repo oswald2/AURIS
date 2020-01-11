@@ -1,4 +1,7 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE 
+  TemplateHaskell 
+  , TypeApplications
+#-}
 module GUI.Graph
   ( Graph
   , GraphWidget
@@ -6,7 +9,18 @@ module GUI.Graph
   , graphInsertParamValue
   , emptyGraph
   , graphAddParameter
+  , graphAddParameters
   , drawChart
+  , plotValName
+  , plotValLineType
+  , plotValPointStyle
+  , plotValValues
+  , graphName
+  , graphParameters
+  , graphData
+  , gwParent
+  , gwParamSelection
+  , gwGraph
   )
 where
 
@@ -15,9 +29,10 @@ import           RIO
 import qualified RIO.Map                       as M
 import qualified RIO.Vector                    as V
 import qualified RIO.HashSet                   as HS
+import           RIO.List                       ( cycle )
 --import           Data.Text.Short                ( ShortText )
 import qualified Data.Text.Short               as ST
-import qualified Data.Text.IO                  as T
+--import qualified Data.Text.IO                  as T
 import           Control.Lens                   ( makeLenses )
 
 
@@ -25,7 +40,7 @@ import           Data.MultiSet                  ( MultiSet )
 import qualified Data.MultiSet                 as MS
 import           Data.Text.Short                ( ShortText )
 
-import           Data.Thyme.Clock
+--import           Data.Thyme.Clock
 import qualified Data.Time.Clock               as TI
 
 import           Data.TM.Parameter
@@ -35,14 +50,22 @@ import           General.Time
 
 import           Graphics.UI.FLTK.LowLevel.FLTKHS
                                                as FL
+import           Graphics.UI.FLTK.LowLevel.Fl_Enumerations
+--import           Graphics.UI.FLTK.LowLevel.Fl_Types
+import qualified Graphics.UI.FLTK.LowLevel.FL  as FL
 
 import           Graphics.Rendering.Chart.Backend.FLTKHS
 import           Graphics.Rendering.Chart
 import           Graphics.Rendering.Chart.Easy as Ch
                                          hiding ( (^.) )
 
+--import           Text.Show.Pretty
+
 
 import           GUI.NameDescrTable
+import           GUI.PopupMenu
+
+
 
 
 data GraphVal = GraphVal {
@@ -79,8 +102,7 @@ emptyGraph name = Graph name HS.empty M.empty
 
 data GraphWidget = GraphWidget {
   _gwParent :: Ref Group
-  , _gwDrawingArea :: Ref Widget
-  , _gwMenu :: Ref MenuButton
+  , _gwDrawingArea :: Maybe (Ref Widget)
   , _gwParamSelection :: NameDescrTable
   , _gwGraph :: TVar Graph
 }
@@ -96,40 +118,106 @@ setupGraphWidget parent title paramSelector = do
   var  <- newTVarIO graph
 
   rect <- getRectangle parent
-  
-  menu <- menuButtonNew rect Nothing
-  -- setType menu Popup3MenuButton
-  
-  void $ add menu
-      "Add Parameter from Selection"
-      (Just (KeyFormat "^p"))
-      (Just (addParamFromSelection paramSelector))
-      (MenuItemFlags [MenuItemNormal])
 
+  let g = GraphWidget { _gwParent         = parent
+                      , _gwDrawingArea    = Nothing
+                      , _gwParamSelection = paramSelector
+                      , _gwGraph          = var
+                      }
 
-  widget' <- widgetCustom rect Nothing (drawChart var) defaultCustomWidgetFuncs
+  widget' <- widgetCustom
+    rect
+    Nothing
+    (drawChart var)
+    defaultCustomWidgetFuncs { handleCustom = Just (handleMouse g paramSelector)
+                             }
 
   end parent
   showWidget widget'
 
-  let g = GraphWidget { _gwParent         = parent
-                      , _gwDrawingArea    = widget'
-                      , _gwMenu           = menu
-                      , _gwParamSelection = paramSelector
-                      , _gwGraph          = var
-                      }
-  return g
+  let newG = g & gwDrawingArea ?~ widget'
 
-addParamFromSelection :: NameDescrTable -> Ref MenuItem -> IO ()
-addParamFromSelection paramSelector item = return ()
+  return newG
 
 
+
+handleMouse
+  :: GraphWidget
+  -> NameDescrTable
+  -> Ref Widget
+  -> Event
+  -> IO (Either UnknownEvent ())
+handleMouse graph paramSelector widget Push = do
+  res <- FL.eventButton3
+  if res
+    then do
+      void $ popupMenu
+        [ MenuEntry "Add Parameter..."
+                    (Just (KeyFormat "^p"))
+                    (Just (addParamFromSelection graph paramSelector widget))
+                    (MenuItemFlags [MenuItemNormal])
+        ]
+      return (Right ())
+    else handleWidgetBase (safeCast widget) Push
+handleMouse _ _ widget Release = do
+  res <- FL.eventButton3
+  if res then return (Right ()) else handleWidgetBase (safeCast widget) Release
+handleMouse _ _ widget event = handleWidgetBase (safeCast widget) event
+
+
+chartColors :: [AlphaColour Double]
+chartColors = cycle
+  [ opaque blue
+  , opaque crimson
+  , opaque forestgreen
+  , opaque firebrick
+  , opaque azure
+  , opaque forestgreen
+  , opaque fuchsia
+  , opaque gold
+  , opaque blanchedalmond
+  , opaque blue
+  , opaque hotpink
+  ]
+
+
+styles :: [(Ch.LineStyle, Ch.PointStyle)]
+styles = map (\x -> (def & line_color .~ x, def)) chartColors
+
+
+numParameters :: GraphWidget -> IO Int
+numParameters gw = do
+  graph <- readTVarIO (gw ^. gwGraph)
+  return (HS.size (graph ^. graphParameters))
+
+
+addParamFromSelection
+  :: GraphWidget -> NameDescrTable -> Ref Widget -> Ref MenuItem -> IO ()
+addParamFromSelection graphWidget paramSelector widget _item = do
+  selItems <- getSelectedItems paramSelector
+  num      <- numParameters graphWidget
+
+  let vec    = drop (num - 1) styles
+      values = zipWith (\x (l, p) -> (ST.fromText (_tableValName x), l, p))
+                       selItems
+                       vec
+
+  void $ graphAddParameters graphWidget values
+  redraw widget
+
+redrawGraph :: GraphWidget -> IO ()
+redrawGraph gw = maybe (return ()) redraw (gw ^. gwDrawingArea)
+
+
+-- | This function finally insert actual values to draw into the graph. Currently 
+-- this function is a bit slow and could be optimized.
 graphInsertParamValue :: GraphWidget -> RIO.Vector TMParameter -> IO ()
 graphInsertParamValue gw params = do
   atomically $ do
     graph <- readTVar (gw ^. gwGraph)
     let newGraph = V.foldl insertParamValue graph params
     writeTVar (gw ^. gwGraph) newGraph
+  redrawGraph gw
 
 -- | Add a parameter to the chart. The chart then accepts parameter values 
 -- for the parameters within it's '_graphParameters' field.
@@ -140,15 +228,37 @@ graphAddParameter
   -> Ch.PointStyle
   -> IO (HashSet ShortText)
 graphAddParameter gw name lineStyle pointStyle = do
+  hs <- graphAddParameters gw [(name, lineStyle, pointStyle)]
+  redrawGraph gw
+  return hs
+
+
+-- | Add multiple parameters to the chart. The chart then accepts parameter values 
+-- for the parameters within it's '_graphParameters' field.
+graphAddParameters
+  :: GraphWidget
+  -> [(ShortText, Ch.LineStyle, Ch.PointStyle)]
+  -> IO (HashSet ShortText)
+graphAddParameters gw ls = do
   atomically $ do
     graph <- readTVar (gw ^. gwGraph)
-    let newSet   = HS.insert name (graph ^. graphParameters)
-        newGraph = graph & graphParameters .~ newSet & graphData .~ newData
-        newData  = M.insert name
-                            (PlotVal name lineStyle pointStyle MS.empty)
-                            (graph ^. graphData)
+
+    let newGraph = foldl' insertInGraph graph ls
+
     writeTVar (gw ^. gwGraph) newGraph
-    return newSet
+    return (newGraph ^. graphParameters)
+
+insertInGraph :: Graph -> (ShortText, Ch.LineStyle, Ch.PointStyle) -> Graph
+insertInGraph graph (name, lineStyle, pointStyle) =
+  let newSet   = HS.insert name (graph ^. graphParameters)
+      newGraph = graph & graphParameters .~ newSet & graphData .~ newData
+      -- if we already have the parameter inserted, use the old values
+      newData  = M.insertWith combine
+                              name
+                              (PlotVal name lineStyle pointStyle MS.empty)
+                              (graph ^. graphData)
+      combine _ old = old
+  in  newGraph
 
 
 

@@ -127,6 +127,11 @@ mcsTableSetColor w = do
   setColor w mcsTableBG
   setSelectionColor w mcsTableSelectionColor
 
+mcsInputSetColor :: Ref Input -> IO () 
+mcsInputSetColor w = do 
+  setColor w mcsTableBG
+  setSelectionColor w mcsTableSelectionColor
+  setTextcolor w mcsTableFG
 
 mcsOutputSetColor :: Ref Output -> IO ()
 mcsOutputSetColor w = do
