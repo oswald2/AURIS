@@ -19,11 +19,12 @@ access control to IO functions. Used within the encoding conduits.
 module Control.PUS.Classes
     ( HasConfig(..)
     , HasPUSState(..)
-    , HasGlobalState(..)
+    , HasGlobalState
     , HasFOPState(..)
     , HasCorrelationState(..)
     , HasMissionSpecific(..)
     , HasDataModel(..)
+    , HasRaiseEvent(..)
     )
 where
 
@@ -57,11 +58,18 @@ class HasFOPState env where
     copStateG :: Getter env COP1State
     fopStateG :: VCID -> env -> FOP1State
 
+
+-- | class for getting the time correlation coefficients
 class HasCorrelationState env where
     corrStateG :: Getter env CorrelationVar
 
+-- | class for accessing the data model 
 class HasDataModel env where
     getDataModel :: Getter env (TVar DataModel)
+
+-- | class for raising an event to the user interfaces
+class HasRaiseEvent env where 
+    raiseEvent :: env -> Event -> IO ()
 
 
 -- | Class for accessing the global state
@@ -71,8 +79,8 @@ class (HasConfig env,
     HasMissionSpecific env,
     HasCorrelationState env,
     HasLogFunc env, 
-    HasDataModel env) => HasGlobalState env where
-    raiseEvent :: env -> Event -> IO ()
+    HasDataModel env,
+    HasRaiseEvent env) => HasGlobalState env 
 
 
 
@@ -95,7 +103,8 @@ instance HasCorrelationState GlobalState where
 instance HasDataModel GlobalState where
     getDataModel = to glsDataModel
 
-instance HasGlobalState GlobalState where
+instance HasRaiseEvent GlobalState where
     raiseEvent = glsRaiseEvent
 
+instance HasGlobalState GlobalState 
 
