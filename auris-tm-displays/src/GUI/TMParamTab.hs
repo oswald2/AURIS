@@ -52,13 +52,6 @@ data TMParamSwitcher = TMParamSwitcher {
 makeLenses ''TMParamSwitcher
 
 
-data GraphSelector =
-  GSSingle
-  | GSHorizontal
-  | GSVertical
-  | GSFour
-  deriving (Eq, Ord, Enum, Show)
-
 initSwitcher :: TMParamSwitcher -> IO ()
 initSwitcher TMParamSwitcher {..} = do
   -- set them to the radio button type
@@ -91,10 +84,25 @@ data TMParamTabFluid = TMParamTabFluid {
   , _tmParDispSwitcher :: TMParamSwitcher
 }
 
+data GraphSelector =
+  GSSingle
+  | GSHorizontal
+  | GSVertical
+  | GSFour
+  deriving (Eq, Ord, Enum, Show)
 
-data ParDisplays =
-  ParDispSingle (Maybe ParamDisplay)
-  | ParDispHorizontal (Maybe ParamDisplay) (Maybe ParamDisplay)
+
+data ParDisplays = ParDisplays {
+  _parDispType :: !GraphSelector
+  , _parDisp1 :: Maybe ParamDisplay
+  , _parDisp2 :: Maybe ParamDisplay
+  , _parDisp3 :: Maybe ParamDisplay
+  , _parDisp4 :: Maybe ParamDisplay
+  }
+makeLenses ''ParDisplays
+
+emptyParDisplays :: ParDisplays 
+emptyParDisplays = ParDisplays GSSingle Nothing Nothing Nothing Nothing
 
 data DisplaySel =
   Display1
@@ -105,14 +113,10 @@ data DisplaySel =
 
 callOnDisplay
   :: ParDisplays -> DisplaySel -> (ParamDisplay -> t -> IO ()) -> t -> IO ()
-callOnDisplay (ParDispSingle (Just disp)) Display1 cb t = cb disp t
-callOnDisplay (ParDispSingle _          ) _        _  _ = return ()
-callOnDisplay (ParDispHorizontal disp1 _) Display1 cb t =
-  maybe (return ()) (`cb` t) disp1
-callOnDisplay (ParDispHorizontal _ disp2) Display2 cb t =
-  maybe (return ()) (`cb` t) disp2
-callOnDisplay (ParDispHorizontal _ _) _ _ _ = return ()
-
+callOnDisplay parDisp Display1 cb t = maybe (return ()) (`cb` t) (parDisp ^. parDisp1)
+callOnDisplay parDisp Display2 cb t = maybe (return ()) (`cb` t) (parDisp ^. parDisp2)
+callOnDisplay parDisp Display3 cb t = maybe (return ()) (`cb` t) (parDisp ^. parDisp3)
+callOnDisplay parDisp Display4 cb t = maybe (return ()) (`cb` t) (parDisp ^. parDisp4)
 
 
 
@@ -156,7 +160,7 @@ createTMParamTab TMParamTabFluid {..} = do
 
   initSwitcher _tmParDispSwitcher
 
-  ref     <- newTVarIO (ParDispSingle Nothing)
+  ref     <- newTVarIO emptyParDisplays
 
   menuVar <- newTVarIO []
 
@@ -212,7 +216,7 @@ createTMParamTab TMParamTabFluid {..} = do
   graphWidget <- setupGraphWidget _tmParDisplayGroup "TestGraph" table
 
   atomically $ do
-    writeTVar ref (ParDispSingle (Just (GraphDisplay graphWidget)))
+    writeTVar ref (ParDisplays GSSingle (Just (GraphDisplay graphWidget)) Nothing Nothing Nothing)
 
   -- now add a parameter to watch 
   -- let lineStyle = def & line_color .~ opaque Ch.blue & line_width .~ 1.0
@@ -253,7 +257,8 @@ createTMParamTab TMParamTabFluid {..} = do
 
 
 
-
+-- | Used to initialise the parameter browser. The parameter definitions 
+-- ('TMParameterDef') are added to the table
 addParameterDefinitions :: TMParamTab -> Vector TMParameterDef -> IO ()
 addParameterDefinitions gui params = do
   let browser = gui ^. tmParamSelector
@@ -264,13 +269,17 @@ addParameterDefinitions gui params = do
                          }
   setTableFromModel browser (V.map ins params)
 
-
+-- | New parameter values have arrived, add them to the available displays
 addParameterValues :: TMParamTab -> Vector TMParameter -> IO ()
 addParameterValues gui values = do
   displays <- readTVarIO (gui ^. tmParamDisplays)
-  case displays of
-    ParDispSingle (Just disp) -> paramDispInsertValues disp values
-    _                         -> return ()
+  
+  maybe (return ()) (`paramDispInsertValues` values) (displays ^. parDisp1)
+  maybe (return ()) (`paramDispInsertValues` values) (displays ^. parDisp2)
+  maybe (return ()) (`paramDispInsertValues` values) (displays ^. parDisp3)
+  maybe (return ()) (`paramDispInsertValues` values) (displays ^. parDisp4)
+
+
 
 
 determineSize :: TMParamTab -> GraphSelector -> IO (Vector Rectangle)

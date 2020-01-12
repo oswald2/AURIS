@@ -63,8 +63,8 @@ extra-deps:
 flags:
     fltkhs:
       bundled: true
-    fltkhs:
-      opengl: true
+    # fltkhs:
+    #   opengl: true
     esa-base:
       optimize: true
     esa-mib:

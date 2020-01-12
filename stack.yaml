@@ -62,8 +62,8 @@ extra-deps:
 flags:
    fltkhs:
      bundled: true
-   fltkhs:
-     opengl: true
+  #  fltkhs:
+  #    opengl: true
 
 # Extra package databases containing global packages
 # extra-package-dbs: []
