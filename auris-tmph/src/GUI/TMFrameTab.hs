@@ -12,6 +12,7 @@ module GUI.TMFrameTab
 where
 
 import           RIO
+import qualified RIO.Vector                    as V
 import qualified RIO.Text                      as T
 -- import qualified Data.Text.Short               as ST
 import qualified Data.Sequence                 as S
@@ -106,12 +107,12 @@ tmfTabAddRow :: TMFrameTab -> ExtractedDU TMFrame -> IO ()
 tmfTabAddRow tab frame = do
   addRow (tab ^. tmfFrameTable) (tab ^. tmfFrameModel) frame
   (TableCoordinate (Row row') _, _) <- getSelection (tab ^. tmfFrameTable)
-  when (row' /= -1 ) $ do
+  when (row' /= -1) $ do
     sel' <- getRowSelected (tab ^. tmfFrameTable) (Row row')
     case sel' of
-      Left _ -> return ()
+      Left  _  -> return ()
       Right is -> when is $ do
-        f' <- queryTableModel (tab ^. tmfFrameModel) (S.!? row')
+        f' <- queryTableModel (tab ^. tmfFrameModel) (V.!? row')
         forM_ f' (tmfTabDetailsSetValues tab)
 
 
@@ -302,5 +303,5 @@ setupCallbacks window = do
 
 doubleClickTMF :: TMFrameTab -> Row -> IO ()
 doubleClickTMF window (Row row') = do
-  res <- queryTableModel (window ^. tmfFrameModel) $ \s -> S.lookup row' s
+  res <- queryTableModel (window ^. tmfFrameModel) $ \s -> s V.!? row'
   forM_ res (tmfTabDetailsSetValues window)

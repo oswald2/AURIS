@@ -21,6 +21,7 @@ where
 
 
 import           RIO
+import qualified RIO.Vector                    as V
 import qualified Data.Text.Short               as ST
 import           Control.Lens                   ( makeLenses )
 import qualified Data.Sequence                 as S
@@ -95,7 +96,7 @@ tmpTabAddRow tab pkt = do
     case sel' of
       Left  _  -> return ()
       Right is -> when is $ do
-        f' <- queryTableModel (tab ^. tmpModel) (S.!? row')
+        f' <- queryTableModel (tab ^. tmpModel) (V.!? row')
         forM_ f' (tmpTabDetailSetValues tab)
 
 

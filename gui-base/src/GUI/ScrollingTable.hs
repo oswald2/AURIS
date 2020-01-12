@@ -178,7 +178,7 @@ drawData table model (TableCoordinate (Row row) (Column _col)) colDef rectangle
 
         cell <- queryTableModelUnlocked
             model
-            (\s -> maybe defDisplayCell (`toCellText` colDef) (s S.!? row))
+            (\s -> maybe defDisplayCell (`toCellText` colDef) (s V.!? row))
 
         (bgColor, fgColor) <- do
             isSelected' <- getRowSelected table (Row row)

@@ -116,21 +116,30 @@ class ToCellText a where
 -- | A table model. Determines, how the data behind the table are stored.
 -- Currently, this is basically a 'Seq' protected by an 'MVar' since we
 -- are multithreaded
+-- data TableModel a = TableModel {
+--   _tabMLock :: MVar ()
+--   , _tabMData :: IORef (Seq a)
+--   }
 data TableModel a = TableModel {
   _tabMLock :: MVar ()
-  , _tabMData :: IORef (Seq a)
+  , _tabMData :: IORef (Vector a)
   }
+
+
 
 -- | Creates a new 'TableModel'
 tableModelNew :: IO (TableModel a)
-tableModelNew = TableModel <$> newMVar () <*> newIORef S.empty
+--tableModelNew = TableModel <$> newMVar () <*> newIORef S.empty
+tableModelNew = TableModel <$> newMVar () <*> newIORef V.empty
 
 
 -- | Creates a new 'TableModel' from an existing 'Foldable'.
 tableModelNewFromFoldable :: (Foldable t) => t a -> IO (TableModel a)
 tableModelNewFromFoldable t = do
-  let s = S.fromList (toList t)
-  TableModel <$> newMVar () <*> newIORef s
+  -- let s = S.fromList (toList t)
+  -- TableModel <$> newMVar () <*> newIORef s
+  let v = V.fromList (toList t)
+  TableModel <$> newMVar () <*> newIORef v
 
 
 -- | Locks the 'MVar' of the table model. This is necessary in the
@@ -160,7 +169,11 @@ withLockedTableModel model action =
 
 -- | Lock the table and apply a querying function to the internal
 -- 'Seq' of the model. Returns the result
-queryTableModel :: TableModel a -> (Seq a -> b) -> IO b
+-- queryTableModel :: TableModel a -> (Seq a -> b) -> IO b
+-- queryTableModel model f = do
+--   withLockedTableModel model
+--     (\_ -> queryTableModelUnlocked model f)
+queryTableModel :: TableModel a -> (Vector a -> b) -> IO b
 queryTableModel model f = do
   withLockedTableModel model
     (\_ -> queryTableModelUnlocked model f)
@@ -169,28 +182,39 @@ queryTableModel model f = do
 -- | A unlocked version of the 'queryTableModel' function. Used inside
 -- the table drawing, when the 'MVar' is held in the StartPage context
 -- and released in the EndPage context
-queryTableModelUnlocked :: TableModel a -> (Seq a -> b) -> IO b
+-- queryTableModelUnlocked :: TableModel a -> (Seq a -> b) -> IO b
+-- queryTableModelUnlocked model f = f <$> readIORef (_tabMData model)
+queryTableModelUnlocked :: TableModel a -> (Vector a -> b) -> IO b
 queryTableModelUnlocked model f = f <$> readIORef (_tabMData model)
 
 
 -- | returns the size of the model
 tableModelSize :: TableModel a -> IO Int
-tableModelSize model = queryTableModel model S.length
+tableModelSize model = queryTableModel model V.length
 
 -- | Adds a value to the model. It also takes a @modelMaxRows@
 -- Int, which specifies how many rows are kept maximally. For
 -- display purposes a few hundred is normally more than enough.
 tableModelAddValue :: TableModel a -> Int -> a -> IO ()
 tableModelAddValue model !modelMaxRows !x = do
+  -- withLockedTableModel model $ \_ -> do
+  --   dat <- readIORef (_tabMData model)
+
+  --   let len = S.length dat
+  --       !newDat = if len < modelMaxRows
+  --         then x S.<| dat
+  --         else case dat of
+  --           dropped S.:|> _x -> x S.<| dropped
+  --           S.Empty          -> S.singleton x
+  --   writeIORef (_tabMData model) newDat
   withLockedTableModel model $ \_ -> do
     dat <- readIORef (_tabMData model)
 
-    let len = S.length dat
-        !newDat = if len < modelMaxRows
-          then x S.<| dat
-          else case dat of
-            dropped S.:|> _x -> x S.<| dropped
-            S.Empty          -> S.singleton x
+    let len = V.length dat
+        !newDat 
+          | V.null dat = V.singleton x 
+          | len < modelMaxRows = V.cons x dat
+          | otherwise = x `V.cons` V.slice 0 (len - 1) dat 
     writeIORef (_tabMData model) newDat
 
 
@@ -198,6 +222,9 @@ tableModelAddValue model !modelMaxRows !x = do
 -- are discarded
 tableModelSetValues :: (Foldable t) => TableModel a -> t a -> IO ()
 tableModelSetValues model t = do
-  let !s = S.fromList (toList t)
+  -- let !s = S.fromList (toList t)
+  -- withLockedTableModel model $ \_ -> do
+  --   writeIORef (_tabMData model) s
+  let !v = V.fromList (toList t)
   withLockedTableModel model $ \_ -> do
-    writeIORef (_tabMData model) s
+    writeIORef (_tabMData model) v
