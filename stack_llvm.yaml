@@ -56,11 +56,15 @@ extra-deps:
 - bytestring-to-vector-0.3.0.1
 - fltkhs-0.8.0.2
 - hw-prim-bits-0.1.0.4
+- github: oswald2/Chart-fltkhs
+  commit: f8d432ec301e024d2ed91feb7e36120fc74166b2
 
 # Override default flag values for local packages and extra-deps
 flags:
     fltkhs:
       bundled: true
+    fltkhs:
+      opengl: true
     esa-base:
       llvm: true
     esa-mib:
