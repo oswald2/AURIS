@@ -1,3 +1,6 @@
+{-# LANGUAGE 
+  TemplateHaskell
+#-}
 module GUI.NameDescrTable
   ( TableValue(..)
   , NameDescrTable
@@ -11,7 +14,9 @@ where
 
 import           RIO
 
-
+import           Control.Lens                   ( makeLenses
+                                                , (.~)
+                                                )
 import qualified RIO.Text                      as T
 import qualified RIO.Vector                    as V
 import qualified RIO.Vector.Partial            as V
@@ -20,7 +25,6 @@ import qualified Data.Text.IO                  as T
 import           Graphics.UI.FLTK.LowLevel.FLTKHS
 import           Graphics.UI.FLTK.LowLevel.Fl_Enumerations
 import qualified Graphics.UI.FLTK.LowLevel.FL  as FL
-
 
 import           GUI.Colors
 
@@ -33,7 +37,27 @@ data TableValue = TableValue {
 
 
 
-type TableNameDescrModel = TVar (Vector TableValue)
+data ModelValue = ModelValue {
+  _modelContent :: Vector TableValue
+  , _modelFiltered :: Maybe (Text, Vector TableValue)
+}
+makeLenses ''ModelValue
+
+emptyModel :: ModelValue
+emptyModel = ModelValue V.empty Nothing
+
+
+data TableNameDescrModel = TableNameDescrModel {
+    _lock :: TMVar ()
+    , _content :: TVar ModelValue
+  }
+makeLenses ''TableNameDescrModel
+
+newModel :: IO TableNameDescrModel
+newModel = do
+  co  <- newTVarIO emptyModel
+  lck <- newTMVarIO ()
+  return (TableNameDescrModel lck co)
 
 
 data NameDescrTable = NameDescrTable {
@@ -41,21 +65,20 @@ data NameDescrTable = NameDescrTable {
   , _nmDescTblModel :: TableNameDescrModel
   , _nmDecTclInput :: Ref Input
 }
+makeLenses ''NameDescrTable
 
 -- | gets the currently selected items in the table and returns a list of 
 -- the selected values
 getSelectedItems :: NameDescrTable -> IO [TableValue]
 getSelectedItems tbl = do
-  let table = _nmDescTbl tbl
-      filt x = do 
-              either  
-                (const True)
-                id 
-                <$> getRowSelected table (Row x)
+  let table = tbl ^. nmDescTbl
+      filt x = either (const True) id <$> getRowSelected table (Row x)
 
-  join $ atomically $ do 
-    vec <- readTVar (_nmDescTblModel tbl)
-    return $ do 
+  join $ atomically $ do
+    vals <- readTVar (tbl ^. nmDescTblModel . content)
+    let vec = maybe (vals ^. modelContent) snd (vals ^. modelFiltered)
+    writeTVar (tbl ^. nmDescTblModel . content) vals
+    return $ do
       Rows rs <- getRows table
       map (vec V.!) <$> filterM filt [0 .. (rs - 1)]
 
@@ -65,12 +88,15 @@ getSelectedItems tbl = do
 setupTable :: Ref Group -> IO NameDescrTable
 setupTable group = do
 
-  model <- newTVarIO V.empty
+  model <- newModel
 
-  Rectangle (Position (X x) (Y y)) (Size (Width w) (Height h))  <- getRectangle group
+  Rectangle (Position (X x) (Y y)) (Size (Width w) (Height h)) <- getRectangle
+    group
 
-  let tableRect = Rectangle (Position (X x) (Y y)) (Size (Width w) (Height (h - 20)))
-      inputRect = Rectangle (Position (X x) (Y (y + h - 40))) (Size (Width w) (Height 20))
+  let tableRect =
+        Rectangle (Position (X x) (Y y)) (Size (Width w) (Height (h - 20)))
+      inputRect =
+        Rectangle (Position (X x) (Y (y + h - 40))) (Size (Width w) (Height 20))
 
   table <- tableRowNew tableRect
                        Nothing
@@ -81,14 +107,15 @@ setupTable group = do
 
   input <- inputNew inputRect Nothing (Just FlNormalInput)
   mcsInputSetColor input
+  setWhen input [WhenChanged, WhenEnterKey, WhenRelease]
 
   let table' = NameDescrTable table model input
 
   initializeTable table'
   mcsGroupSetColor group
 
-  add group table 
-  add group input 
+  add group table
+  add group input
 
   setCallback input (handleFilter table')
 
@@ -110,7 +137,7 @@ initializeTable table' = do
   setRowHeaderColor table mcsWidgetBG
 
   -- set properties
-  nRows <- V.length <$> readTVarIO (_nmDescTblModel table')
+  nRows <- getNRows <$> readTVarIO (table' ^. nmDescTblModel . content)
   setRows table (Rows nRows)
   setRowHeader table False
   setRowHeightAll table 20
@@ -128,22 +155,63 @@ initializeTable table' = do
   --end table
 
 
--- TODO
-handleFilter :: NameDescrTable -> Ref Input -> IO () 
-handleFilter table _ = do
-  return ()
+handleFilter
+  :: NameDescrTable
+  -> Ref Input
+  -> IO ()
+handleFilter table inp = do
+  filt <- getValue inp
+  n <- atomically $ do
+    vals <- readTVar (table ^. nmDescTblModel . content) 
+    let newVals = filterTable filt vals 
+        n = getNRows newVals
+    writeTVar (table ^. nmDescTblModel . content) newVals
+    return n 
+  setRows (table ^. nmDescTbl) (Rows n) 
+  redraw (table ^. nmDescTbl)
+
+
+
+
+filterTable :: Text -> ModelValue -> ModelValue
+filterTable filt model =
+  let filtered (TableValue nm desc) =
+          filt' `T.isInfixOf` T.toUpper nm || filt' `T.isInfixOf` T.toUpper desc
+      filt'  = T.toUpper filt
+      result = if T.null filt
+        then Nothing
+        else Just (filt, V.filter filtered (model ^. modelContent))
+  in  model & modelFiltered .~ result
+
+
+
+getNRows :: ModelValue -> Int
+getNRows model = V.length $ getData model
+
+
+getData :: ModelValue -> Vector TableValue
+getData (ModelValue cont filt) = case filt of
+  Just (_, vec) -> vec
+  Nothing       -> cont
 
 
 -- | refresh a table from a model. There is no maxRow check, so
 -- the model is displayed as-is
 setTableFromModel :: NameDescrTable -> Vector TableValue -> IO ()
 setTableFromModel table model = do
-  let nRows    = V.length model
 
   let tableRef = _nmDescTbl table
-  atomically $ writeTVar (_nmDescTblModel table) model
-  setRows tableRef (Rows nRows)
-  redraw tableRef
+  join $ atomically $ do
+    vals <- readTVar (table ^. nmDescTblModel . content)
+    let newModel' =
+          let newVals = vals & modelContent .~ model
+          in  case vals ^. modelFiltered of
+                Nothing        -> newVals
+                Just (filt, _) -> filterTable filt newVals
+    writeTVar (table ^. nmDescTblModel . content) newModel'
+    return $ do
+      setRows tableRef (Rows (getNRows newModel'))
+      redraw tableRef
 
 
 
@@ -156,10 +224,13 @@ drawCell
   -> IO ()
 drawCell model table context tc@(TableCoordinate (Row row) (Column col)) rectangle
   = do
-    values <- readTVarIO model
+    values <- readTVarIO (_content model)
     case context of
       ContextStartPage -> do
         flcSetFont helvetica (FontSize 14)
+        void $ atomically $ takeTMVar (model ^. lock)
+      ContextEndPage -> do
+        atomically $ putTMVar (_lock model) ()
       ContextColHeader -> drawHeader
         table
         (case col of
@@ -172,10 +243,10 @@ drawCell model table context tc@(TableCoordinate (Row row) (Column col)) rectang
       ContextCell      -> case col of
         0 -> maybe (return ())
                    (\x -> drawData table (_tableValName x) tc rectangle)
-                   (values V.!? row)
+                   (getData values V.!? row)
         1 -> maybe (return ())
                    (\x -> drawData table (_tableValDescr x) tc rectangle)
-                   (values V.!? row)
+                   (getData values V.!? row)
         _ -> return ()
       _ -> pure ()
 
