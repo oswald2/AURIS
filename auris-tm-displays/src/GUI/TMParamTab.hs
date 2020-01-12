@@ -13,9 +13,7 @@ module GUI.TMParamTab
 where
 
 import           RIO                     hiding ( (^.) )
---import qualified RIO.Text                      as T
 import qualified RIO.Vector                    as V
---import qualified RIO.Vector.Partial            as V
 import qualified Data.Text.IO                  as T
 import qualified Data.Text.Short               as ST
 import           Data.Colour
@@ -24,10 +22,6 @@ import           Data.Default.Class
 import           Control.Lens
 import           Graphics.UI.FLTK.LowLevel.FLTKHS
 import           Graphics.Rendering.Chart.Backend.Types
--- import           Graphics.Rendering.Chart
---                                          hiding ( Vector
---                                                 , Rectangle
---                                                 )
 import qualified Graphics.Rendering.Chart.Easy as Ch
 
 import           General.Time

@@ -36,7 +36,7 @@ packages:
 - esa-tm-model
 - mcs-interface
 - gui-base
-- auris-tmph
+- auris-tm-displays
 - aurisi
 - hashtables
 

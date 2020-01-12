@@ -68,7 +68,7 @@ Executable AURISi
     esa-space-protocols,
     esa-mib,
     gui-base,
-    auris-tmph,
+    auris-tm-displays,
     mcs-interface,
     optparse-generic,
     gitrev,

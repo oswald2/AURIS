@@ -36,7 +36,7 @@ packages:
 - esa-tm-model
 - mcs-interface
 - gui-base
-- auris-tmph
+- auris-tm-displays
 - aurisi
 - hashtables
 
@@ -73,7 +73,7 @@ flags:
       optimize: true
     esa-space-protocols:
       optimize: true
-    auris-tmph:
+    auris-tm-displays:
       optimize: true
     aurisi:
       optimize: true
