@@ -10,6 +10,7 @@ module GUI.Graph
   , emptyGraph
   , graphAddParameter
   , graphAddParameters
+  , addParamFromSelector
   , drawChart
   , plotValName
   , plotValLineType
@@ -67,7 +68,8 @@ import           GUI.PopupMenu
 
 
 
-
+-- | The internal value of a graph. Used to get a 'Eq' and 'Ord' instance
+-- across the time value (first field)
 data GraphVal = GraphVal {
   _graphValTime :: !TI.UTCTime
   , _graphValValue :: !Double
@@ -80,6 +82,9 @@ instance Ord GraphVal where
   compare g1 g2 = compare (_graphValTime g1) (_graphValTime g2)
 
 
+-- | Defines a plot. For the parameter with the given 
+-- name, the 'LineStyle' and 'PointStyle' are assigned, as well as the individual
+-- plot values contained in a 'MultiSet', so that they are time-ordered
 data PlotVal = PlotVal {
   _plotValName :: !ShortText
   , _plotValLineType :: !Ch.LineStyle
@@ -204,6 +209,20 @@ addParamFromSelection graphWidget paramSelector widget _item = do
 
   void $ graphAddParameters graphWidget values
   redraw widget
+
+
+addParamFromSelector :: GraphWidget -> RIO.Vector TableValue -> IO () 
+addParamFromSelector graphWidget table = do 
+  let selItems = V.toList table 
+  num <- numParameters graphWidget 
+
+  let vec    = drop (num - 1) styles
+      values = zipWith (\x (l, p) -> (ST.fromText (_tableValName x), l, p))
+                       selItems
+                       vec
+  void $ graphAddParameters graphWidget values 
+  redrawGraph graphWidget
+
 
 redrawGraph :: GraphWidget -> IO ()
 redrawGraph gw = maybe (return ()) redraw (gw ^. gwDrawingArea)

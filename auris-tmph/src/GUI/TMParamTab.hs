@@ -4,9 +4,11 @@ module GUI.TMParamTab
   ( TMParamTabFluid(..)
   , TMParamSwitcher(..)
   , TMParamTab
+  , DisplaySel(..)
   , createTMParamTab
   , addParameterValues
   , addParameterDefinitions
+  , callOnDisplay
   )
 where
 
@@ -38,6 +40,7 @@ import           GUI.Colors
 import           GUI.Graph
 import           GUI.ParamDisplay
 import           GUI.NameDescrTable
+import           GUI.PopupMenu
 
 
 data TMParamSwitcher = TMParamSwitcher {
@@ -89,9 +92,27 @@ data TMParamTabFluid = TMParamTabFluid {
 }
 
 
-data ParDisplays = 
+data ParDisplays =
   ParDispSingle (Maybe ParamDisplay)
   | ParDispHorizontal (Maybe ParamDisplay) (Maybe ParamDisplay)
+
+data DisplaySel =
+  Display1
+  | Display2
+  | Display3
+  | Display4
+  deriving (Eq, Ord, Enum, Show)
+
+callOnDisplay
+  :: ParDisplays -> DisplaySel -> (ParamDisplay -> t -> IO ()) -> t -> IO ()
+callOnDisplay (ParDispSingle (Just disp)) Display1 cb t = cb disp t
+callOnDisplay (ParDispSingle _          ) _        _  _ = return ()
+callOnDisplay (ParDispHorizontal disp1 _) Display1 cb t =
+  maybe (return ()) (`cb` t) disp1
+callOnDisplay (ParDispHorizontal _ disp2) Display2 cb t =
+  maybe (return ()) (`cb` t) disp2
+callOnDisplay (ParDispHorizontal _ _) _ _ _ = return ()
+
 
 
 
@@ -135,9 +156,37 @@ createTMParamTab TMParamTabFluid {..} = do
 
   initSwitcher _tmParDispSwitcher
 
-  table <- setupTable _tmParSelectionParamsGroup
+  ref     <- newTVarIO (ParDispSingle Nothing)
 
-  ref   <- newTVarIO (ParDispSingle Nothing)
+  menuVar <- newTVarIO []
+
+  table   <- setupTable _tmParSelectionParamsGroup (Just menuVar)
+
+
+  let callback dn x = do
+        displays <- readTVarIO ref
+        callOnDisplay displays dn paramDispAddParameterDef x
+
+      menuEntries =
+        [ MenuEntry "Add Parameters to:/Display 1"
+                    (Just (KeyFormat "#1"))
+                    (Just (nmDescrForwardParameter table (callback Display1)))
+                    (MenuItemFlags [])
+        , MenuEntry "Add Parameters to:/Display 2"
+                    (Just (KeyFormat "#2"))
+                    (Just (nmDescrForwardParameter table (callback Display2)))
+                    (MenuItemFlags [])
+        , MenuEntry "Add Parameters to:/Display 3"
+                    (Just (KeyFormat "#3"))
+                    (Just (nmDescrForwardParameter table (callback Display3)))
+                    (MenuItemFlags [])
+        , MenuEntry "Add Parameters to:/Display 4"
+                    (Just (KeyFormat "#4"))
+                    (Just (nmDescrForwardParameter table (callback Display4)))
+                    (MenuItemFlags [])
+        ]
+
+  atomically $ writeTVar menuVar menuEntries
 
   let gui = TMParamTab
         { _tmParamTab                  = _tmParTabGroup
@@ -221,7 +270,7 @@ addParameterValues gui values = do
   displays <- readTVarIO (gui ^. tmParamDisplays)
   case displays of
     ParDispSingle (Just disp) -> paramDispInsertValues disp values
-    _   -> return ()
+    _                         -> return ()
 
 
 determineSize :: TMParamTab -> GraphSelector -> IO (Vector Rectangle)

@@ -9,6 +9,7 @@ module GUI.NameDescrTable
   , setTableFromModel
   , setupCallback
   , getSelectedItems
+  , nmDescrForwardParameter
   )
 where
 
@@ -21,12 +22,13 @@ import qualified RIO.Text                      as T
 import qualified RIO.Vector                    as V
 import qualified RIO.Vector.Partial            as V
                                                 ( (!) )
-import qualified Data.Text.IO                  as T
+--import qualified Data.Text.IO                  as T
 import           Graphics.UI.FLTK.LowLevel.FLTKHS
 import           Graphics.UI.FLTK.LowLevel.Fl_Enumerations
 import qualified Graphics.UI.FLTK.LowLevel.FL  as FL
 
 import           GUI.Colors
+import           GUI.PopupMenu
 
 
 
@@ -47,17 +49,13 @@ emptyModel :: ModelValue
 emptyModel = ModelValue V.empty Nothing
 
 
-data TableNameDescrModel = TableNameDescrModel {
-    _lock :: TMVar ()
-    , _content :: TVar ModelValue
+newtype TableNameDescrModel = TableNameDescrModel {
+    _content :: TVar ModelValue
   }
 makeLenses ''TableNameDescrModel
 
 newModel :: IO TableNameDescrModel
-newModel = do
-  co  <- newTVarIO emptyModel
-  lck <- newTMVarIO ()
-  return (TableNameDescrModel lck co)
+newModel = TableNameDescrModel <$> newTVarIO emptyModel
 
 
 data NameDescrTable = NameDescrTable {
@@ -85,8 +83,8 @@ getSelectedItems tbl = do
 
 -- | Setup a FLTKHS table for a given 'TableModel' with the given
 -- 'ColumnDefinition's.
-setupTable :: Ref Group -> IO NameDescrTable
-setupTable group = do
+setupTable :: Ref Group -> Maybe (TVar [MenuEntry]) -> IO NameDescrTable
+setupTable group menuEntries = do
 
   model <- newModel
 
@@ -98,11 +96,17 @@ setupTable group = do
       inputRect =
         Rectangle (Position (X x) (Y (y + h - 40))) (Size (Width w) (Height 20))
 
+      funcs = case menuEntries of
+        Just entries -> defaultCustomWidgetFuncs
+          { handleCustom = Just (handleMouse model entries)
+          }
+        Nothing -> defaultCustomWidgetFuncs
+
   table <- tableRowNew tableRect
                        Nothing
                        Nothing
                        (drawCell model)
-                       defaultCustomWidgetFuncs
+                       funcs
                        defaultCustomTableFuncs
 
   input <- inputNew inputRect Nothing (Just FlNormalInput)
@@ -155,19 +159,43 @@ initializeTable table' = do
   --end table
 
 
-handleFilter
-  :: NameDescrTable
-  -> Ref Input
-  -> IO ()
+handleMouse
+  :: TableNameDescrModel
+  -> TVar [MenuEntry]
+  -> Ref TableRow
+  -> Event
+  -> IO (Either UnknownEvent ())
+handleMouse _model menuEntriesVar table Push = do
+  res <- FL.eventButton3
+  if res
+    then do
+      menuEntries <- readTVarIO menuEntriesVar
+      void $ popupMenu menuEntries
+      return (Right ())
+    else handleTableRowBase (safeCast table) Push
+handleMouse _ _ table Release = do
+  res <- FL.eventButton3
+  if res then return (Right ()) else handleTableRowBase (safeCast table) Release
+handleMouse _ _ table event = handleTableRowBase (safeCast table) event
+
+
+nmDescrForwardParameter
+  :: NameDescrTable -> (Vector TableValue -> IO ()) -> Ref MenuItem -> IO ()
+nmDescrForwardParameter table cb _ = do
+  items <- V.fromList <$> getSelectedItems table
+  cb items
+
+
+handleFilter :: NameDescrTable -> Ref Input -> IO ()
 handleFilter table inp = do
   filt <- getValue inp
-  n <- atomically $ do
-    vals <- readTVar (table ^. nmDescTblModel . content) 
-    let newVals = filterTable filt vals 
-        n = getNRows newVals
+  n    <- atomically $ do
+    vals <- readTVar (table ^. nmDescTblModel . content)
+    let newVals = filterTable filt vals
+        n       = getNRows newVals
     writeTVar (table ^. nmDescTblModel . content) newVals
-    return n 
-  setRows (table ^. nmDescTbl) (Rows n) 
+    return n
+  setRows (table ^. nmDescTbl) (Rows n)
   redraw (table ^. nmDescTbl)
 
 
@@ -199,7 +227,6 @@ getData (ModelValue cont filt) = case filt of
 -- the model is displayed as-is
 setTableFromModel :: NameDescrTable -> Vector TableValue -> IO ()
 setTableFromModel table model = do
-
   let tableRef = _nmDescTbl table
   join $ atomically $ do
     vals <- readTVar (table ^. nmDescTblModel . content)
@@ -228,9 +255,6 @@ drawCell model table context tc@(TableCoordinate (Row row) (Column col)) rectang
     case context of
       ContextStartPage -> do
         flcSetFont helvetica (FontSize 14)
-        void $ atomically $ takeTMVar (model ^. lock)
-      ContextEndPage -> do
-        atomically $ putTMVar (_lock model) ()
       ContextColHeader -> drawHeader
         table
         (case col of
