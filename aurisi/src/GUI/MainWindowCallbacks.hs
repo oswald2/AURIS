@@ -55,7 +55,7 @@ setupCallbacks window = do
 
 doubleClickTMP :: MainWindow -> Row -> IO ()
 doubleClickTMP window (Row row') = do
-  res <- queryTableModel (window ^. mwTMPTab . tmpModel) $ \s -> S.lookup row' s
+  res <- queryTableModel (window ^. mwTMPTab . tmpModel) $ \s -> s V.!? row'
   forM_ res (mwSetTMParameters window)
 
 
