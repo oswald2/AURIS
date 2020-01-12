@@ -100,6 +100,9 @@ data Graph = Graph {
   }
 makeLenses ''Graph
 
+getParameterNames :: Graph -> [ShortText]
+getParameterNames g = toList (g ^. graphParameters )
+
 
 emptyGraph :: ShortText -> Graph
 emptyGraph name = Graph name HS.empty M.empty
@@ -112,6 +115,10 @@ data GraphWidget = GraphWidget {
   , _gwGraph :: TVar Graph
 }
 makeLenses ''GraphWidget
+
+
+graphWidgetGetParamNames :: GraphWidget -> IO [ShortText]
+graphWidgetGetParamNames gw = getParameterNames <$> readTVarIO (gw ^. gwGraph)
 
 
 setupGraphWidget :: Ref Group -> Text -> NameDescrTable -> IO GraphWidget
@@ -156,12 +163,18 @@ handleMouse graph paramSelector widget Push = do
   res <- FL.eventButton3
   if res
     then do
-      void $ popupMenu
-        [ MenuEntry "Add Parameter..."
-                    (Just (KeyFormat "^p"))
-                    (Just (addParamFromSelection graph paramSelector widget))
-                    (MenuItemFlags [MenuItemNormal])
-        ]
+      paramNames <- graphWidgetGetParamNames graph
+      let menuEntries = 
+            [ MenuEntry "Add Parameter..."
+                        (Just (KeyFormat "^p"))
+                        (Just (addParamFromSelection graph paramSelector widget))
+                        (MenuItemFlags [MenuItemNormal])
+            , MenuEntry "Set Graph Title" Nothing Nothing (MenuItemFlags [MenuItemNormal])
+            ] ++ map param paramNames
+          param x = MenuEntry ("Remove Parameter/" <> ST.toText x) Nothing Nothing (MenuItemFlags [MenuItemNormal])
+          
+
+      void $ popupMenu menuEntries
       return (Right ())
     else handleWidgetBase (safeCast widget) Push
 handleMouse _ _ widget Release = do

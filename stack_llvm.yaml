@@ -57,7 +57,7 @@ extra-deps:
 - fltkhs-0.8.0.2
 - hw-prim-bits-0.1.0.4
 - github: oswald2/Chart-fltkhs
-  commit: f8d432ec301e024d2ed91feb7e36120fc74166b2
+  commit: 15bad77c770de1e17b70a2a73344cdef7d051659
 
 # Override default flag values for local packages and extra-deps
 flags:

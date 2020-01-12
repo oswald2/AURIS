@@ -47,19 +47,19 @@ packages:
   original:
     hackage: hw-prim-bits-0.1.0.4
 - completed:
-    size: 15917
-    url: https://github.com/oswald2/Chart-fltkhs/archive/f8d432ec301e024d2ed91feb7e36120fc74166b2.tar.gz
+    size: 15914
+    url: https://github.com/oswald2/Chart-fltkhs/archive/15bad77c770de1e17b70a2a73344cdef7d051659.tar.gz
     cabal-file:
       size: 15818
-      sha256: 53af88d3e35047595953675b916cbf5a27e9761f7f474bfe54e9daf4295d88bb
+      sha256: 675a57b9ccdbb0b92d697137683845e848e4f89e3fe0e4b304878a3be695ca77
     name: Chart-fltkhs
-    version: 0.1.0.1
-    sha256: b1af13910acb9d53fc19cdcf42dfa8a457ce4cd449e3dc279c956e430ead5b28
+    version: 0.1.0.3
+    sha256: 99ec34ef313bd41afafa8594255eb429485a223f90d0c1f795f40429eb3b0758
     pantry-tree:
       size: 1112
-      sha256: f58b99aa6c334371e3a1bb7856d10c43d0c86111b91c7152db18b21b606952af
+      sha256: ab09855f1b6782e708dffa5f1c0e5e757e74e66a00a812352f6cd1d793fc53d2
   original:
-    url: https://github.com/oswald2/Chart-fltkhs/archive/f8d432ec301e024d2ed91feb7e36120fc74166b2.tar.gz
+    url: https://github.com/oswald2/Chart-fltkhs/archive/15bad77c770de1e17b70a2a73344cdef7d051659.tar.gz
 snapshots:
 - completed:
     size: 524786

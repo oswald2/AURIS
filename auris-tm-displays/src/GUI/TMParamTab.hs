@@ -289,9 +289,29 @@ determineSize TMParamTab {..} GSHorizontal = do
       m = h `quot` 2
 
   return $ V.fromList [rect1, rect2]
--- TODO
-determineSize TMParamTab {..} _ =
-  V.singleton <$> getRectangle _tmParamDisplayGroup
+determineSize TMParamTab {..} GSVertical = do
+  Rectangle (Position (X x) (Y y)) (Size (Width w) (Height h)) <- getRectangle _tmParamDisplayGroup
+
+  let rect1 = Rectangle (Position (X x) (Y y)) (Size (Width m) (Height h))
+      rect2 =
+        Rectangle (Position (X (x + m)) (Y y)) (Size (Width (w - m)) (Height h))
+      m = w `quot` 2
+  return $ V.fromList [rect1, rect2]
+
+determineSize TMParamTab {..} GSFour = do
+  Rectangle (Position (X x) (Y y)) (Size (Width w) (Height h)) <- getRectangle
+    _tmParamDisplayGroup
+
+  let rect1 = Rectangle (Position (X x) (Y y)) (Size (Width m) (Height n))
+      rect2 =
+        Rectangle (Position (X (x + m)) (Y y)) (Size (Width (w - m)) (Height n))
+      rect3 = Rectangle (Position (X x) (Y (y + n))) (Size (Width m) (Height (h - n)))
+      rect4 =
+        Rectangle (Position (X (x + m)) (Y (y + n))) (Size (Width (w - m)) (Height (h - n)))
+      
+      m = w `quot` 2
+      n = h `quot` 2
+  return $ V.fromList [rect1, rect2, rect3, rect4]
 
 
 
