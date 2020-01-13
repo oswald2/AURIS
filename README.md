@@ -3,6 +3,22 @@ A new, open source mission control system in Haskell
 
 The repository has been changed to a big monorepo now. It contains the other libraries which were previously separate git repositories.
 
+## First Screenshots
+
+Telemetry Frame Display:
+
+![TM Frame Display](screenshots/TMFrames.png)
+
+Telemetry Packet Display:
+
+![TM Packet Display](screenshots/TMPackets.png)
+
+Graphical Parameter Display:
+
+![TM Parameter Display](screenshots/GRD.png)
+
+
+
 ## Building 
 
 Currently, building via stack is recommended. Cabal new-* commands should also work, but currently there is no cabal.project file available. 
