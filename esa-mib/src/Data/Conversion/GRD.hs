@@ -5,6 +5,7 @@ where
 
 import           RIO
 import qualified RIO.Vector                    as V
+import qualified RIO.Map                       as M
 
 import           Data.Display.Graphical
 import           Data.Text.Short                ( ShortText )
@@ -82,7 +83,7 @@ convertGPF GPFentry {..} params = GRD
   }
 
 
-loadGRDs :: FilePath -> m (Either Text (Map ShortText GRD))
+loadGRDs :: (MonadIO m, MonadReader env m, HasLogFunc env) => FilePath -> m (Either Text (Map ShortText GRD))
 loadGRDs path = do
   gpcs' <- GPC.loadFromFile path
   case gpcs' of
@@ -91,5 +92,5 @@ loadGRDs path = do
       gpfs' <- GPF.loadFromFile path
       case gpfs' of
         Left  err  -> return (Left err)
-        Right gpfs -> do
-          
+        Right gpfs -> return (Right M.empty)
+
