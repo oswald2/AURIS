@@ -73,6 +73,7 @@ library
     text-short,
     Chart,
     Chart-fltkhs,
+    Chart-diagrams,
     colour,
     data-default-class,
     multiset,

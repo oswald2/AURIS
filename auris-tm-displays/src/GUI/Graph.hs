@@ -60,7 +60,7 @@ import           Graphics.Rendering.Chart.Backend.FLTKHS
 import           Graphics.Rendering.Chart
 import           Graphics.Rendering.Chart.Easy as Ch
                                          hiding ( (^.) )
-
+import           Graphics.Rendering.Chart.Backend.Diagrams
 --import           Text.Show.Pretty
 
 
@@ -180,12 +180,17 @@ handleMouse graph paramSelector widget Push = do
                           Nothing
                           (Just (handleSetTitle graph widget))
                           (MenuItemFlags [MenuItemNormal])
+              , MenuEntry "Print to File"
+                          Nothing
+                          (Just (handlePrintToFile graph))
+                          (MenuItemFlags [MenuItemNormal])
               ]
               ++ map param paramNames
-          param x = MenuEntry ("Remove Parameter/" <> ST.toText x)
-                              Nothing
-                              (Just (handleRemoveParam graph widget (ST.toText x)))
-                              (MenuItemFlags [MenuItemNormal])
+          param x = MenuEntry
+            ("Remove Parameter/" <> ST.toText x)
+            Nothing
+            (Just (handleRemoveParam graph widget (ST.toText x)))
+            (MenuItemFlags [MenuItemNormal])
 
 
       void $ popupMenu menuEntries
@@ -207,9 +212,31 @@ handleSetTitle gw widget _ = do
 
 
 handleRemoveParam :: GraphWidget -> Ref Widget -> Text -> Ref MenuItem -> IO ()
-handleRemoveParam gw widget param _ = do 
+handleRemoveParam gw widget param _ = do
   void $ graphRemoveParameter gw (ST.fromText param)
-  redraw widget 
+  redraw widget
+
+
+handlePrintToFile :: GraphWidget -> Ref MenuItem -> IO ()
+handlePrintToFile gw _ = do
+  graph <- readTVarIO (gw ^. gwGraph)
+  chooser <- nativeFileChooserNew (Just BrowseSaveFile)
+  setTitle chooser "Save Chart..."
+  setFilter chooser "SVG\t*.svg"
+  setOptions chooser [SaveasConfirm, NewFolder, Preview, UseFilterExt]
+  setPresetFile chooser $ graph ^. graphName <> ".svg"
+  res <- showWidget chooser
+  case res of
+    NativeFileChooserPicked -> do
+      name'  <- getFilename chooser
+      case name' of 
+        Just name -> do 
+
+          let options = def & fo_format .~ SVG
+
+          void $ renderableToFile options (T.unpack name) (chart graph)
+        _ -> return ()
+    _ -> return ()
 
 
 chartColors :: [AlphaColour Double]
@@ -295,15 +322,15 @@ graphAddParameter gw name lineStyle pointStyle = do
 
 
 graphRemoveParameter :: GraphWidget -> ShortText -> IO (HashSet ShortText)
-graphRemoveParameter gw name = do 
-  atomically $ do 
+graphRemoveParameter gw name = do
+  atomically $ do
     graph <- readTVar (gw ^. gwGraph)
 
-    let newSet = HS.delete name (graph ^. graphParameters) 
-        newData = M.delete name (graph ^. graphData)
+    let newSet   = HS.delete name (graph ^. graphParameters)
+        newData  = M.delete name (graph ^. graphData)
         newGraph = graph & graphParameters .~ newSet & graphData .~ newData
-    
-    writeTVar (gw ^. gwGraph) newGraph 
+
+    writeTVar (gw ^. gwGraph) newGraph
     return newSet
 
 
