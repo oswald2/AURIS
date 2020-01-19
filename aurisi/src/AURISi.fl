@@ -380,7 +380,7 @@ Function {makeWindow(IO(MainWindowFluid))} {open
             xywh {5 90 215 645}
           } {
             Fl_Group tmParSelectionDisplays {
-              label Displays open selected
+              label Displays open
               xywh {5 115 215 620}
             } {
               Fl_Tabs tmDisplayBrowser {open
@@ -388,7 +388,7 @@ Function {makeWindow(IO(MainWindowFluid))} {open
               } {
                 Fl_Group tabAND {
                   label AND open
-                  xywh {10 140 210 595}
+                  xywh {10 140 210 595} hide
                 } {
                   Fl_Browser browserAND {
                     xywh {10 145 210 590}
@@ -404,7 +404,7 @@ Function {makeWindow(IO(MainWindowFluid))} {open
                 }
                 Fl_Group tabSCD {
                   label SCD open
-                  xywh {10 140 210 595} hide
+                  xywh {10 140 210 595}
                 } {
                   Fl_Browser browserSCD {
                     xywh {10 145 210 590}
@@ -554,6 +554,7 @@ let { edenConn = EdenConnGroup {
   , _mwEdenLabelConn = labelEDENConn
   }};
 
+
         
 let { window = MainWindowFluid { _mfWindow = mainWindow
     , _mfProgress = mainProgress
@@ -576,7 +577,8 @@ let { window = MainWindowFluid { _mfWindow = mainWindow
     , _mfEdenConn = edenConn
     , _mfTimeLabel = timeField
     }};
-    return window} {}
+    return window} {selected
+  }
 }
 
 Function {makeAboutWindow(IO(AboutWindowFluid))} {open

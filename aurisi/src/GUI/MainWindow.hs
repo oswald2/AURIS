@@ -57,6 +57,7 @@ import qualified Graphics.UI.FLTK.LowLevel.FL  as FL
 import           GUI.TMPacketTab
 import           GUI.TMFrameTab
 import           GUI.TMParamTab
+import           GUI.Graph
 import           GUI.Colors
 --import           GUI.Utils
 import           GUI.Logo

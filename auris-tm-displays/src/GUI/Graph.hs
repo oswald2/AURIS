@@ -31,6 +31,7 @@ import qualified RIO.Map                       as M
 import qualified RIO.Vector                    as V
 import qualified RIO.HashSet                   as HS
 import           RIO.List                       ( cycle )
+import qualified RIO.Text                      as T
 --import           Data.Text.Short                ( ShortText )
 import qualified Data.Text.Short               as ST
 --import qualified Data.Text.IO                  as T
@@ -94,17 +95,17 @@ data PlotVal = PlotVal {
 makeLenses ''PlotVal
 
 data Graph = Graph {
-  _graphName :: !ShortText
+  _graphName :: !Text
   , _graphParameters :: HashSet ShortText
   , _graphData :: Map ShortText PlotVal
   }
 makeLenses ''Graph
 
 getParameterNames :: Graph -> [ShortText]
-getParameterNames g = toList (g ^. graphParameters )
+getParameterNames g = toList (g ^. graphParameters)
 
 
-emptyGraph :: ShortText -> Graph
+emptyGraph :: Text -> Graph
 emptyGraph name = Graph name HS.empty M.empty
 
 
@@ -120,12 +121,17 @@ makeLenses ''GraphWidget
 graphWidgetGetParamNames :: GraphWidget -> IO [ShortText]
 graphWidgetGetParamNames gw = getParameterNames <$> readTVarIO (gw ^. gwGraph)
 
+graphWidgetSetChartName :: GraphWidget -> Text -> IO ()
+graphWidgetSetChartName gw name = do
+  let f x = x & graphName .~ name
+  atomically $ modifyTVar (gw ^. gwGraph) f
+
 
 setupGraphWidget :: Ref Group -> Text -> NameDescrTable -> IO GraphWidget
 setupGraphWidget parent title paramSelector = do
   begin parent
 
-  let graph = emptyGraph (ST.fromText title)
+  let graph = emptyGraph title
 
   var  <- newTVarIO graph
 
@@ -164,15 +170,23 @@ handleMouse graph paramSelector widget Push = do
   if res
     then do
       paramNames <- graphWidgetGetParamNames graph
-      let menuEntries = 
-            [ MenuEntry "Add Parameter..."
-                        (Just (KeyFormat "^p"))
-                        (Just (addParamFromSelection graph paramSelector widget))
-                        (MenuItemFlags [MenuItemNormal])
-            , MenuEntry "Set Graph Title" Nothing Nothing (MenuItemFlags [MenuItemNormal])
-            ] ++ map param paramNames
-          param x = MenuEntry ("Remove Parameter/" <> ST.toText x) Nothing Nothing (MenuItemFlags [MenuItemNormal])
-          
+      let menuEntries =
+            [ MenuEntry
+                "Add Parameter..."
+                (Just (KeyFormat "^p"))
+                (Just (addParamFromSelection graph paramSelector widget))
+                (MenuItemFlags [MenuItemNormal])
+              , MenuEntry "Set Graph Title"
+                          Nothing
+                          (Just (handleSetTitle graph widget))
+                          (MenuItemFlags [MenuItemNormal])
+              ]
+              ++ map param paramNames
+          param x = MenuEntry ("Remove Parameter/" <> ST.toText x)
+                              Nothing
+                              (Just (handleRemoveParam graph widget (ST.toText x)))
+                              (MenuItemFlags [MenuItemNormal])
+
 
       void $ popupMenu menuEntries
       return (Right ())
@@ -181,6 +195,21 @@ handleMouse _ _ widget Release = do
   res <- FL.eventButton3
   if res then return (Right ()) else handleWidgetBase (safeCast widget) Release
 handleMouse _ _ widget event = handleWidgetBase (safeCast widget) event
+
+
+
+
+handleSetTitle :: GraphWidget -> Ref Widget -> Ref MenuItem -> IO ()
+handleSetTitle gw widget _ = do
+  res <- flInput "Set Chart Name: "
+  forM_ res (graphWidgetSetChartName gw)
+  redraw widget
+
+
+handleRemoveParam :: GraphWidget -> Ref Widget -> Text -> Ref MenuItem -> IO ()
+handleRemoveParam gw widget param _ = do 
+  void $ graphRemoveParameter gw (ST.fromText param)
+  redraw widget 
 
 
 chartColors :: [AlphaColour Double]
@@ -224,16 +253,16 @@ addParamFromSelection graphWidget paramSelector widget _item = do
   redraw widget
 
 
-addParamFromSelector :: GraphWidget -> RIO.Vector TableValue -> IO () 
-addParamFromSelector graphWidget table = do 
-  let selItems = V.toList table 
-  num <- numParameters graphWidget 
+addParamFromSelector :: GraphWidget -> RIO.Vector TableValue -> IO ()
+addParamFromSelector graphWidget table = do
+  let selItems = V.toList table
+  num <- numParameters graphWidget
 
   let vec    = drop (num - 1) styles
       values = zipWith (\x (l, p) -> (ST.fromText (_tableValName x), l, p))
                        selItems
                        vec
-  void $ graphAddParameters graphWidget values 
+  void $ graphAddParameters graphWidget values
   redrawGraph graphWidget
 
 
@@ -263,6 +292,19 @@ graphAddParameter gw name lineStyle pointStyle = do
   hs <- graphAddParameters gw [(name, lineStyle, pointStyle)]
   redrawGraph gw
   return hs
+
+
+graphRemoveParameter :: GraphWidget -> ShortText -> IO (HashSet ShortText)
+graphRemoveParameter gw name = do 
+  atomically $ do 
+    graph <- readTVar (gw ^. gwGraph)
+
+    let newSet = HS.delete name (graph ^. graphParameters) 
+        newData = M.delete name (graph ^. graphData)
+        newGraph = graph & graphParameters .~ newSet & graphData .~ newData
+    
+    writeTVar (gw ^. gwGraph) newGraph 
+    return newSet
 
 
 -- | Add multiple parameters to the chart. The chart then accepts parameter values 
@@ -382,7 +424,7 @@ chart Graph {..} = toRenderable layout
  where
   plots = map (plotValToPlot . snd) $ M.toList _graphData
   layout =
-    graphLayout & layout_title .~ ST.unpack _graphName & layout_plots .~ plots
+    graphLayout & layout_title .~ T.unpack _graphName & layout_plots .~ plots
 
 
 drawChart :: TVar Graph -> Ref Widget -> IO ()
