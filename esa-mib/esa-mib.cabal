@@ -79,12 +79,15 @@ library
     Data.MIB.TXP
     Data.MIB.MCF
     Data.MIB.LGF
+    Data.MIB.GPF
+    Data.MIB.GPC
     Data.MIB.LoadMIB
     Data.Conversion.Types
     Data.Conversion.Calibration
     Data.Conversion.Parameter
     Data.Conversion.Criteria
     Data.Conversion.TMPacket
+    Data.Conversion.GRD
 
   -- Modules included in this library but not exported.
   -- other-modules:
@@ -153,6 +156,7 @@ library
     , text-short
     , mtl
     , hashtables
+    , colour
 
   -- Directories containing source files.
   hs-source-dirs:      src
