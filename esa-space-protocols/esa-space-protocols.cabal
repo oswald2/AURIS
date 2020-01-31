@@ -75,6 +75,7 @@ library
         Data.PUS.TMPacket
         Data.PUS.TMPacketProcessing
         Data.PUS.ExtractedDU
+        Data.PUS.ExtractedPUSPacket
         Data.PUS.MissionSpecific.Definitions
         Data.PUS.Value
         Data.PUS.NcduToTMFrame
@@ -126,6 +127,7 @@ library
         TupleSections
         TypeFamilies
         TypeSynonymInstances
+        TypeApplications
         ViewPatterns
 
     build-depends:

@@ -33,7 +33,10 @@ import           Protocol.ProtocolInterfaces
 
 
 
-
+-- | General type for an extracted data unit (DU). Contains metadata
+-- about the extracted packet, as the earth reception time (ERT), if
+-- there are gaps and so on. The '_epDU' field is the contained packet 
+-- itself
 data ExtractedDU a = ExtractedDU {
     _epQuality :: Flag Good
     , _epERT :: !SunTime
@@ -56,3 +59,5 @@ instance Display a => Display (ExtractedDU a) where
   -- TODO
   display ExtractedDU {..} = 
     display _epDU
+
+

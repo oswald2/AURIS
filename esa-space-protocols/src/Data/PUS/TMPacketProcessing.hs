@@ -32,6 +32,7 @@ import           Data.TM.Validity
 
 import           Data.PUS.Config
 import           Data.PUS.ExtractedDU
+import Data.PUS.ExtractedPUSPacket
 import           Data.PUS.PUSPacket
 import           Data.PUS.PUSDfh
 import           Data.PUS.TMPacket
@@ -45,7 +46,7 @@ import           General.GetBitField
 import           General.Types
 import           General.Time
 
-import Text.Show.Pretty
+--import Text.Show.Pretty
 
 --import           General.Hexdump
 
@@ -71,8 +72,8 @@ packetProcessorC
        , MonadReader env m
        , HasGlobalState env
        )
-    => ConduitT (ByteString, ExtractedDU PUSPacket) TMPacket m ()
-packetProcessorC = awaitForever $ \pkt@(oct, pusPkt) -> do
+    => ConduitT ExtractedPacket TMPacket m ()
+packetProcessorC = awaitForever $ \pkt@(ExtractedPacket oct pusPkt) -> do
 
     logDebug $ display ("packetProcessorC: got packet: " :: Text) <> displayShow pkt
 
@@ -89,7 +90,7 @@ packetProcessorC = awaitForever $ \pkt@(oct, pusPkt) -> do
                       <> display err <> ". Packet ignored."
                 Right (chk, payload, crcReceived, crcCalcd) -> do
                   if chk
-                    then yieldM $ processPacket def key (payload, pusPkt)
+                    then yieldM $ processPacket def key (ExtractedPacket payload pusPkt)
                     else logError $ "CRC Check on TM packet failed: received: "
                             <> display crcReceived
                             <> ", calculated: "
@@ -107,7 +108,7 @@ packetProcessorC = awaitForever $ \pkt@(oct, pusPkt) -> do
                 <> display (pusType (pusPkt ^. epDU . pusDfh))
                 <> " SubType:"
                 <> display (pusSubType (pusPkt ^. epDU . pusDfh))
-            (timeStamp, _epoch) <- getTimeStamp pkt
+            (timeStamp, _epoch) <- getTimeStamp (pkt ^. extrPacket)
 
             let param = TMParameter {
                   _pName = "Content"
@@ -140,8 +141,8 @@ packetProcessorC = awaitForever $ \pkt@(oct, pusPkt) -> do
 -- | Main function to detect the packet identification of a newly received
 -- TM PUS Packet.
 getPackeDefinition
-    :: DataModel -> (ByteString, ExtractedDU PUSPacket) -> Maybe (TMPacketKey, TMPacketDef)
-getPackeDefinition model (bytes, pkt) =
+    :: DataModel -> ExtractedPacket -> Maybe (TMPacketKey, TMPacketDef)
+getPackeDefinition model (ExtractedPacket bytes pkt) =
     let pusPkt     = pkt ^. epDU
         hdr        = pusPkt ^. pusHdr
         apid       = hdr ^. pusHdrTcApid
@@ -184,10 +185,10 @@ processPacket
     :: (MonadIO m, MonadReader env m, HasGlobalState env)
     => TMPacketDef
     -> TMPacketKey
-    -> (ByteString, ExtractedDU PUSPacket)
+    -> ExtractedPacket
     -> m TMPacket
-processPacket pktDef (TMPacketKey _apid _t _st pi1 pi2) pkt@(_, pusDU) = do
-    (timestamp, epoch) <- getTimeStamp pkt
+processPacket pktDef (TMPacketKey _apid _t _st pi1 pi2) pkt@(ExtractedPacket _ pusDU) = do
+    (timestamp, epoch) <- getTimeStamp (pkt ^. extrPacket)
 
     logDebug $ display ("TimeStamp: " :: Text) <> display timestamp <> display (". Getting parameters..." :: Text)
 
@@ -252,9 +253,9 @@ processPacket pktDef (TMPacketKey _apid _t _st pi1 pi2) pkt@(_, pusDU) = do
 
 getTimeStamp
     :: (MonadIO m, MonadReader env m, HasPUSState env, HasCorrelationState env)
-    => (ByteString, ExtractedDU PUSPacket)
+    => ExtractedDU PUSPacket
     -> m (SunTime, Epoch)
-getTimeStamp (_, epu) = do
+getTimeStamp epu = do
     appState <- view appStateG
     state    <- readTVarIO appState
 
@@ -298,10 +299,10 @@ getParameters :: (MonadIO m, MonadReader env m, HasPUSState env,
   => SunTime
   -> Epoch
   -> TMPacketDef
-  -> (ByteString, ExtractedDU PUSPacket)
+  -> ExtractedPacket
   -> m (Maybe (Vector TMParameter))
 getParameters timestamp epoch def pkt = do
-  let ert = snd pkt ^. epERT
+  let ert = pkt ^. extrPacket . epERT
   case def ^. tmpdParams of
     TMFixedParams paramLocations -> getFixedParams timestamp ert epoch def pkt paramLocations
     TMVariableParams tpsd dfhSize varParams -> getVariableParams timestamp ert epoch def pkt tpsd dfhSize varParams
@@ -312,10 +313,10 @@ getFixedParams :: (MonadIO m, MonadReader env m, HasPUSState env, HasCorrelation
   -> SunTime
   -> Epoch
   -> TMPacketDef
-  -> (ByteString, ExtractedDU PUSPacket)
+  -> ExtractedPacket
   -> Vector TMParamLocation
   -> m (Maybe (Vector TMParameter))
-getFixedParams timestamp ert epoch _def (oct', _ep) locs = do
+getFixedParams timestamp ert epoch _def (ExtractedPacket oct' _ep) locs = do
   vs <- V.foldM (go oct') (Just VB.empty) locs
   case vs of 
     Just v -> return . Just . VB.build $ v
@@ -394,12 +395,12 @@ getVariableParams :: (MonadIO m, MonadReader env m,
   -> SunTime 
   -> Epoch 
   -> TMPacketDef
-  -> (ByteString, ExtractedDU PUSPacket)
+  -> ExtractedPacket
   -> Int
   -> Word8
   -> VarParams 
   -> m (Maybe (Vector TMParameter))
-getVariableParams timestamp ert epoch pktDef (oct', ep) _tpsd dfhSize varParams = do 
+getVariableParams timestamp ert epoch pktDef (ExtractedPacket oct' ep) _tpsd dfhSize varParams = do 
     let offset = mkOffset (fromIntegral dfhSize) 0
     a <- go offset varParams
     case a of 
@@ -502,8 +503,8 @@ getVariableParams timestamp ert epoch pktDef (oct', ep) _tpsd dfhSize varParams 
                 !extractOffset = offset .+. getPadding parDef 
                 parDef = par ^. tmvpParam 
             -- The value specifies, how often the group is repeated 
-            x <- getParamValue epoch ert oct' extractOffset parDef
-            case x of 
+            x' <- getParamValue epoch ert oct' extractOffset parDef
+            case x' of 
               Just tpsdval -> do 
                 let !param = TMParameter {
                     _pName = par ^. tmvpName

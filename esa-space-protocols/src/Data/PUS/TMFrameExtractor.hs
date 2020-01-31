@@ -12,14 +12,7 @@ extraction is done per virtual channel (taken from the 'Config') and because
 of the used 'Conduit' library automatically handles spillover-packets.
 |-}
 {-# LANGUAGE
-    OverloadedStrings
-    , BangPatterns
-    , NoImplicitPrelude
-    , LambdaCase
-    , TypeApplications
-    , DeriveGeneric
-    , DeriveAnyClass
-    , FlexibleInstances
+  TemplateHaskell
 #-}
 module Data.PUS.TMFrameExtractor
   ( extractPktFromTMFramesC
@@ -32,14 +25,19 @@ module Data.PUS.TMFrameExtractor
   , storeFrameC
   , raisePUSPacketC
   , raiseFrameC
+  , extrBytes
+  , extrPacket
   )
 where
 
-import           RIO
+import           RIO hiding (view, (^.))
 import qualified RIO.ByteString                as B
 import qualified Data.IntMap.Strict            as M
 import qualified RIO.Text                      as T
 import qualified RIO.HashMap                   as HM
+
+import Control.Lens
+
 import           ByteString.StrictBuilder
 
 import           Conduit
@@ -59,6 +57,7 @@ import           Data.PUS.Events
 import           Data.PUS.MissionSpecific.Definitions
 import           Data.PUS.SegmentationFlags
 import           Data.PUS.ExtractedDU
+import           Data.PUS.ExtractedPUSPacket
 import           Data.PUS.TMStoreFrame
 import           Data.PUS.EncTime
 
@@ -142,7 +141,7 @@ storeFrameC = awaitForever $ \sf -> do
 tmFrameSwitchVC
   :: (MonadUnliftIO m, MonadThrow m, MonadReader env m, HasGlobalState env)
   => ProtocolInterface
-  -> TBQueue (ByteString, ExtractedDU PUSPacket)
+  -> TBQueue ExtractedPacket
   -> ConduitT TMStoreFrame Void m ()
 tmFrameSwitchVC interf outQueue = do
   st <- ask
@@ -418,7 +417,7 @@ pktReconstructorC
   -> PktStore
   -> ConduitT
        (ExtDuTMFrame, PacketPart)
-       (ByteString, ExtractedDU PUSPacket)
+       ExtractedPacket
        m
        ()
 pktReconstructorC missionSpecific pIf segLen pktStore = do
@@ -478,7 +477,7 @@ processFinishedPacket
   -> ByteString
   -> VCID
   -> ByteString
-  -> ConduitT w (ByteString, ExtractedDU PUSPacket) m ()
+  -> ConduitT w ExtractedPacket m ()
 processFinishedPacket missionSpecific pIf ert hdr hdrBin vcid body = do
   case A.parseOnly (pusPktParserPayload missionSpecific pIf hdr) body of
     Left err -> do
@@ -494,7 +493,7 @@ processFinishedPacket missionSpecific pIf ert hdr hdrBin vcid body = do
                            }
           extrPkt = pusPkt ^. protContent
       -- only pass on the packet if it is not an Idle Pkt
-      unless (pusPktIsIdle extrPkt) $ yield (hdrBin <> body, ep)
+      unless (pusPktIsIdle extrPkt) $ yield (ExtractedPacket (hdrBin <> body) ep)
 
 processFirstSegment :: PUSHeader -> PacketPart -> PktStore -> PktStore
 processFirstSegment hdr part pktStore =
@@ -574,7 +573,7 @@ processLastSegment
   -> PacketPart
   -> ConduitT
        w
-       (ByteString, ExtractedDU PUSPacket)
+       ExtractedPacket
        m
        PktStore
 processLastSegment missionSpecific pIf segLen ert vcid pktStore pktKey part =
@@ -623,7 +622,7 @@ instance GetPayload ExtDuTMFrame where
 pusPacketDecodeC
   :: (MonadIO m, MonadThrow m, MonadReader env m, HasGlobalState env)
   => ProtocolInterface
-  -> ConduitT ExtDuTMFrame (ByteString, ExtractedDU PUSPacket) m ()
+  -> ConduitT ExtDuTMFrame ExtractedPacket m ()
 pusPacketDecodeC pIf = do
   st <- ask
   let missionSpecific = st ^. getMissionSpecific
@@ -649,7 +648,7 @@ pusPacketDecodeC pIf = do
 tmFrameExtractionChain
   :: (MonadIO m, MonadThrow m, MonadReader env m, HasGlobalState env)
   => TBQueue TMStoreFrame
-  -> TBQueue (ByteString, ExtractedDU PUSPacket)
+  -> TBQueue ExtractedPacket
   -> ProtocolInterface
   -> ConduitT () Void m ()
 tmFrameExtractionChain queue outQueue interf =
@@ -662,7 +661,7 @@ tmFrameExtractionChain queue outQueue interf =
 tmFrameExtraction
   :: (MonadIO m, MonadThrow m, MonadReader env m, HasGlobalState env)
   => ProtocolInterface
-  -> ConduitT TMStoreFrame (ByteString, ExtractedDU PUSPacket) m ()
+  -> ConduitT TMStoreFrame ExtractedPacket m ()
 tmFrameExtraction interf = do
   st <- ask
   let missionSpecific = st ^. getMissionSpecific
@@ -696,12 +695,12 @@ packetBody hdr segLen = do
 raisePUSPacketC
   :: (MonadIO m, MonadReader env m, HasGlobalState env)
   => ConduitT
-       (ByteString, ExtractedDU PUSPacket)
-       (ByteString, ExtractedDU PUSPacket)
+       ExtractedPacket
+       ExtractedPacket
        m
        ()
 raisePUSPacketC = do
   env <- ask
-  awaitForever $ \p@(_, pkt) -> do
+  awaitForever $ \p@(ExtractedPacket _ pkt) -> do
     liftIO $ raiseEvent env (EVTelemetry (EVTMPUSPacketReceived pkt))
     yield p
