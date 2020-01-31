@@ -351,9 +351,7 @@ extractPktFromTMFramesC missionSpecific pIf = loop True B.empty
               (B.unpack sp)
           Right pktLen -> do
             let
-              len =
-                fromIntegral (pktLen + 1)
-                  - (B.length sp - fixedSizeOf @PUSHeader)
+              len = fromIntegral (pktLen + 1) - (B.length sp - fixedSizeOf @PUSHeader)
               newSp = sp <> B.replicate len 0
             case A.parseOnly (pusPktParser missionSpecific pIf) newSp of
               Left _err ->
