@@ -11,6 +11,7 @@ import qualified RIO.Text                      as T
 
 import           Conduit
 import           Data.Conduit.Network
+import           Data.Conduit.TQueue
 import           Conduit.SocketConnector
 
 import           Data.PUS.GlobalState
@@ -19,6 +20,7 @@ import           Data.PUS.TMFrameExtractor
 import           Data.PUS.TMPacketProcessing
 import           Data.PUS.NcduToTMFrame
 import           Data.PUS.Events
+import           Data.PUS.ExtractedPUSPacket
 
 import           Protocol.NCTRS
 import           Protocol.ProtocolInterfaces
@@ -91,36 +93,58 @@ ignoreConduit :: ConduitT i o (ResourceT (RIO GlobalState)) ()
 ignoreConduit = awaitForever $ \_ -> pure ()
 
 
-runTMChain :: AurisConfig -> RIO GlobalState ()
-runTMChain cfg = do
+runTMNctrsChain :: AurisConfig -> TBQueue ExtractedPacket -> RIO GlobalState ()
+runTMNctrsChain cfg pktQueue = do
+  logDebug "runTMNctrsChain entering"
+
+  (_thread, vcMap) <- setupFrameSwitcher IF_NCTRS pktQueue
+
   let chain =
         receiveTmNcduC
           .| ncduToTMFrameC
           .| storeFrameC
-          .| tmFrameExtraction IF_NCTRS
-          .| packetProcessorC
-          .| raiseTMPacketC
-          .| raiseTMParameterC
+          .| tmFrameSwitchVC vcMap
 
   runGeneralTCPReconnectClient
     (clientSettings (aurisNctrsTMPort cfg) (encodeUtf8 (aurisNctrsHost cfg)))
     200000
     (tmClient chain)
 
+  logDebug "runTMNctrsChain leaving"
  where
   tmClient chain app = do
     env <- ask
     liftIO $ raiseEvent env (EVAlarms EVNctrsTmConnected)
-    res <- try $ 
-      void $ runConduitRes (appSource app .| chain .| ignoreConduit)
-     
+    res <- try $ void $ runConduitRes (appSource app .| chain)
+
     liftIO (raiseEvent env (EVAlarms EVNctrsTmDisconnected))
-    case res of 
-      Left (e :: SomeException) -> do 
+    case res of
+      Left (e :: SomeException) -> do
         logError $ display @Text "Exception: " <> displayShow e
-        throwM e 
+        throwM e
       Right _ -> return ()
 
+
+runTMChain :: AurisConfig -> RIO GlobalState ()
+runTMChain cfg = do
+  logDebug "runTMCain entering"
+  pktQueue <- newTBQueueIO 5000
+
+  let chain =
+        sourceTBQueue pktQueue
+          .| packetProcessorC
+          .| raiseTMPacketC
+          .| raiseTMParameterC
+
+
+  let processingThread = Concurrently $ runConduitRes (chain .| ignoreConduit)
+      nctrsTMThread    = Concurrently $ runTMNctrsChain cfg pktQueue
+
+  void $ runConcurrently $ (,)
+    <$> processingThread
+    <*> nctrsTMThread
+
+  logDebug "runTMCain leaving"
 
 
 
@@ -130,7 +154,7 @@ loadDataModel
   => Maybe FilePath
   -> m DataModel
 loadDataModel opts = do
-  home <- liftIO $ getHomeDirectory
+  home <- liftIO getHomeDirectory
   case opts of
     Just str -> do
       res <- loadMIB str

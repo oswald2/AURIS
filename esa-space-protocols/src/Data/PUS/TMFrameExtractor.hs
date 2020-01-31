@@ -18,6 +18,7 @@ module Data.PUS.TMFrameExtractor
   ( extractPktFromTMFramesC
   , tmFrameExtraction
   , tmFrameExtractionChain
+  , setupFrameSwitcher
   , tmFrameSwitchVC
   , pusPacketDecodeC
   , tmFrameEncodeC
@@ -128,24 +129,16 @@ storeFrameC = awaitForever $ \sf -> do
   yield sf
 
 
--- | Conduit for switching between multiple channels. It queries the 'Config'
--- for a list of configured virtual channels, sets up queues for these channels
--- and a map to switch between these. Per virtual channel a 'tmFrameExtractionChain'
--- is run (each in its own thread).
---
--- When a 'TMFrame' is received, it determines it's virtual channel ID and
--- sends the frame to the right extraction channel for this virtual channel
-
--- @outQueue is the final 'TBQueue', where extracted PUS Packets are sent
--- for parameter processing
-tmFrameSwitchVC
+setupFrameSwitcher 
   :: (MonadUnliftIO m, MonadThrow m, MonadReader env m, HasGlobalState env)
   => ProtocolInterface
   -> TBQueue ExtractedPacket
-  -> ConduitT TMStoreFrame Void m ()
-tmFrameSwitchVC interf outQueue = do
+  -> m (Async (), IntMap (TBQueue TMStoreFrame))
+setupFrameSwitcher interf outQueue = do
   st <- ask
   let vcids = cfgVCIDs (st ^. getConfig)
+
+  logDebug $ "Setting up TM Frame Switch for VC IDs: " <> displayShow vcids
 
   -- generate a TBQueue per virtual channel (input to further processing)
   let proc vcid = do
@@ -160,31 +153,46 @@ tmFrameSwitchVC interf outQueue = do
         case res of
           Left  RestartVCException -> threadFunc a
           Right x                  -> pure x
-  lift $ mapConcurrently_ threadFunc cont
+  thread <- async $ mapConcurrently_ threadFunc cont
 
   -- create the lookup map to send the contents to the right TBQueue
   let vcMap = M.fromList $ map (\(v, q) -> (fromIntegral (getVCID v), q)) cont
+  return (thread, vcMap)
 
-  -- This is the conduit itself, the previous was just setup.
-  let
-    conduit = awaitForever $ \frame -> do
-      let
-        !vcid =
-          fromIntegral $ getVCID (frame ^. tmstFrame . tmFrameHdr . tmFrameVcID)
-      case M.lookup vcid vcMap of
-        Nothing -> do
-          liftIO $ raiseEvent st $ EVAlarms
-            (EVIllegalTMFrame
-              (  "Received Frame with VC ID which was not configured: "
-              <> T.pack (show vcid)
-              <> ". Discarding Frame."
-              )
+  
+  
+  -- | Conduit for switching between multiple channels. It queries the 'Config'
+-- for a list of configured virtual channels, sets up queues for these channels
+-- and a map to switch between these. Per virtual channel a 'tmFrameExtractionChain'
+-- is run (each in its own thread).
+--
+-- When a 'TMFrame' is received, it determines it's virtual channel ID and
+-- sends the frame to the right extraction channel for this virtual channel
+
+-- @outQueue is the final 'TBQueue', where extracted PUS Packets are sent
+-- for parameter processing
+tmFrameSwitchVC
+  :: (MonadUnliftIO m, MonadReader env m, HasGlobalState env)
+  => IntMap (TBQueue TMStoreFrame)
+  -> ConduitT TMStoreFrame Void m ()
+tmFrameSwitchVC vcMap = do
+  awaitForever $ \frame -> do
+    st <- ask
+    let
+      !vcid =
+        fromIntegral $ getVCID (frame ^. tmstFrame . tmFrameHdr . tmFrameVcID)
+    case M.lookup vcid vcMap of
+      Nothing -> do
+        liftIO $ raiseEvent st $ EVAlarms
+          (EVIllegalTMFrame
+            (  "Received Frame with VC ID which was not configured: "
+            <> T.pack (show vcid)
+            <> ". Discarding Frame."
             )
-          conduit
-        Just q -> do
-          atomically $ writeTBQueue q frame
-          conduit
-  conduit
+          )
+      Just q -> do
+        atomically $ writeTBQueue q frame
+  
 
 
 raiseFrameC
