@@ -323,7 +323,7 @@ instance ToJSON PUSSubType where
 
 -- | Type for the source sequence count
 newtype SSC = SSC { getSSC :: Word16 }
-    deriving (Eq, Ord, Num, Show, Read, Generic)
+    deriving (Eq, Ord, Enum, Num, Real, Integral, Show, Read, Generic)
 
 -- | Smart constructor for a 'SSC'
 mkSSC :: Word16 -> SSC

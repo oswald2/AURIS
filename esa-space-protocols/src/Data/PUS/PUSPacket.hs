@@ -24,9 +24,9 @@ module Data.PUS.PUSPacket
   , pusHdrTcVersion
   , pusHdrType
   , pusHdrDfhFlag
-  , pusHdrTcApid
+  , pusHdrAPID
   , pusHdrSeqFlags
-  , pusHdrTcSsc
+  , pusHdrSSC
   , pusHdrSeqCtrl
   , pusHdrTcLength
   , pusPktHdrBuilder
@@ -101,9 +101,9 @@ data PUSHeader = PUSHeader {
     _pusHdrTcVersion :: !Word8,
     _pusHdrType ::  !PUSPacketType,
     _pusHdrDfhFlag :: !Bool,
-    _pusHdrTcApid :: !APID,
+    _pusHdrAPID :: !APID,
     _pusHdrSeqFlags :: !SegmentationFlags,
-    _pusHdrTcSsc :: !SSC,
+    _pusHdrSSC :: !SSC,
     _pusHdrSeqCtrl :: !Word16,
     _pusHdrTcLength :: !Word16
     } deriving(Show, Read, Generic)
@@ -124,12 +124,12 @@ instance Eq PUSHeader where
       == _pusHdrType p2
       && _pusHdrDfhFlag p1
       == _pusHdrDfhFlag p2
-      && _pusHdrTcApid p1
-      == _pusHdrTcApid p2
+      && _pusHdrAPID p1
+      == _pusHdrAPID p2
       && _pusHdrSeqFlags p1
       == _pusHdrSeqFlags p2
-      && _pusHdrTcSsc p1
-      == _pusHdrTcSsc p2
+      && _pusHdrSSC p1
+      == _pusHdrSSC p2
 
 
 instance Binary PUSHeader
@@ -196,7 +196,7 @@ pusPktTimePktAPID :: APID
 pusPktTimePktAPID = APID 0
 
 pusPktIsIdle :: PUSPacket -> Bool
-pusPktIsIdle pkt = pkt ^. pusHdr . pusHdrTcApid == pusPktIdleAPID
+pusPktIsIdle pkt = pkt ^. pusHdr . pusHdrAPID == pusPktIdleAPID
 
 -- | encodes a packet and sets the PI1/2 values for correct identification
 {-# INLINABLE encodePUSPacket #-}
@@ -300,8 +300,8 @@ pusPktHdrBuilder hdr =
   let !pktId = packPktID (_pusHdrTcVersion hdr)
                          (_pusHdrType hdr)
                          (_pusHdrDfhFlag hdr)
-                         (_pusHdrTcApid hdr)
-      !seqFlags = packSeqFlags (_pusHdrSeqFlags hdr) (_pusHdrTcSsc hdr)
+                         (_pusHdrAPID hdr)
+      !seqFlags = packSeqFlags (_pusHdrSeqFlags hdr) (_pusHdrSSC hdr)
   in  word16BE pktId <> word16BE seqFlags <> word16BE (_pusHdrTcLength hdr)
 
 
@@ -443,7 +443,10 @@ pusPktParserPayload missionSpecific comm hdr = do
         PUSTC -> dfhParser (missionSpecific ^. pmsTCDataFieldHeader)
       else return PUSEmptyHeader
     | comm == IF_CNC -> if hdr ^. pusHdrDfhFlag
-      then dfhParser defaultCnCTCHeader
+      then 
+        case hdr ^. pusHdrType of 
+          PUSTM -> dfhParser (missionSpecific ^. pmsTMDataFieldHeader)
+          PUSTC -> dfhParser defaultCnCTCHeader
       else return PUSEmptyHeader
     | comm == IF_EDEN || comm == IF_EDEN_SCOE -> if hdr ^. pusHdrDfhFlag
       then case hdr ^. pusHdrType of
@@ -469,5 +472,8 @@ pusPktParserPayload missionSpecific comm hdr = do
     _ -> plCRC
 
   --traceM (hexdumpBS pl)
-
+  
+  -- Also take the CRC itself to make sure, we consume the whole packet 
+  void $ A.take crcLen
+  
   return (ProtocolPacket comm (PUSPacket hdr dfh Nothing pl))

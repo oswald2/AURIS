@@ -23,7 +23,9 @@ import           Data.PUS.Events
 import           Data.PUS.ExtractedPUSPacket
 
 import           Protocol.NCTRS
+import           Protocol.CnC
 import           Protocol.ProtocolInterfaces
+
 import           Control.PUS.Classes
 
 import           Interface.Interface
@@ -79,14 +81,7 @@ runProcessing cfg missionSpecific mibPath interface mainWindow = do
 
       liftIO $ mwInitialiseDataModel mainWindow model
 
-      -- logInfo "An info message"
-      -- logWarn "A warning message"
-      -- logError "Error message. Very important"
-
-      -- let l x = logWarn $ display ("Warning " :: Text) <> displayShow x
-      -- mapM_ l [1..212]
-
-      runTMChain cfg
+      runTMChain cfg missionSpecific
     pure ()
 
 ignoreConduit :: ConduitT i o (ResourceT (RIO GlobalState)) ()
@@ -100,10 +95,7 @@ runTMNctrsChain cfg pktQueue = do
   (_thread, vcMap) <- setupFrameSwitcher IF_NCTRS pktQueue
 
   let chain =
-        receiveTmNcduC
-          .| ncduToTMFrameC
-          .| storeFrameC
-          .| tmFrameSwitchVC vcMap
+        receiveTmNcduC .| ncduToTMFrameC .| storeFrameC .| tmFrameSwitchVC vcMap
 
   runGeneralTCPReconnectClient
     (clientSettings (aurisNctrsTMPort cfg) (encodeUtf8 (aurisNctrsHost cfg)))
@@ -120,13 +112,44 @@ runTMNctrsChain cfg pktQueue = do
     liftIO (raiseEvent env (EVAlarms EVNctrsTmDisconnected))
     case res of
       Left (e :: SomeException) -> do
-        logError $ display @Text "Exception: " <> displayShow e
+        logError $ display @Text "NCTRS Interface Exception: " <> displayShow e
         throwM e
       Right _ -> return ()
 
 
-runTMChain :: AurisConfig -> RIO GlobalState ()
-runTMChain cfg = do
+
+runTMCnCChain
+  :: AurisConfig
+  -> PUSMissionSpecific
+  -> TBQueue ExtractedPacket
+  -> RIO GlobalState ()
+runTMCnCChain cfg missionSpecific pktQueue = do
+  logDebug "runTMCnCChain entering"
+
+  let chain = receiveCnCC missionSpecific .| sinkTBQueue pktQueue
+
+  runGeneralTCPReconnectClient
+    (clientSettings (aurisCnCTMPort cfg) (encodeUtf8 (aurisCnCHost cfg)))
+    200000
+    (tmClient chain)
+
+  logDebug "runTMCnCChain leaving"
+ where
+  tmClient chain app = do
+    env <- ask
+    liftIO $ raiseEvent env (EVAlarms EVCncTmConnected)
+    res <- try $ void $ runConduitRes (appSource app .| chain)
+
+    liftIO (raiseEvent env (EVAlarms EVCncTmDisconnected))
+    case res of
+      Left (e :: SomeException) -> do
+        logError $ display @Text "CnC Interface Exception: " <> displayShow e
+        throwM e
+      Right _ -> return ()
+
+
+runTMChain :: AurisConfig -> PUSMissionSpecific -> RIO GlobalState ()
+runTMChain cfg missionSpecific = do
   logDebug "runTMCain entering"
   pktQueue <- newTBQueueIO 5000
 
@@ -135,14 +158,17 @@ runTMChain cfg = do
           .| packetProcessorC
           .| raiseTMPacketC
           .| raiseTMParameterC
+          .| ignoreConduit
 
 
-  let processingThread = Concurrently $ runConduitRes (chain .| ignoreConduit)
-      nctrsTMThread    = Concurrently $ runTMNctrsChain cfg pktQueue
+  let processingThread = Concurrently $ runConduitRes chain
+      nctrsTMThread = Concurrently $ runTMNctrsChain cfg pktQueue
+      cncTMThread = Concurrently $ runTMCnCChain cfg missionSpecific pktQueue
 
-  void $ runConcurrently $ (,)
+  void $ runConcurrently $ (,,)
     <$> processingThread
     <*> nctrsTMThread
+    <*> cncTMThread
 
   logDebug "runTMCain leaving"
 

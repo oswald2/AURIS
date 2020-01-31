@@ -91,6 +91,8 @@ data EventAlarm =
     | EVIllegalAction Text
     | EVNctrsTmConnected
     | EVNctrsTmDisconnected
+    | EVCncTmConnected
+    | EVCncTmDisconnected
     | EVPacketInfo Text
     | EVPacketWarn Text
     | EVPacketAlarm Text

@@ -36,10 +36,10 @@ instance ToJSON ConfigLogLevel where
   toEncoding = genericToEncoding defaultOptions
 
 convLogLevel :: ConfigLogLevel -> LogLevel
-convLogLevel LogLevelDebug = LevelDebug
-convLogLevel LogLevelInfo = LevelInfo
-convLogLevel LogLevelWarn = LevelWarn
-convLogLevel LogLevelError = LevelError
+convLogLevel LogLevelDebug     = LevelDebug
+convLogLevel LogLevelInfo      = LevelInfo
+convLogLevel LogLevelWarn      = LevelWarn
+convLogLevel LogLevelError     = LevelError
 convLogLevel (LogLevelOther x) = LevelOther x
 
 
@@ -51,6 +51,9 @@ data AurisConfig = AurisConfig {
     , aurisNctrsTMPort :: Int
     , aurisNctrsTCPort :: Int
     , aurisNctrsAdminPort :: Int
+    , aurisCnCHost :: Text
+    , aurisCnCTMPort :: Int
+    , aurisCnCTCPort :: Int
     , aurisMIB :: Maybe Text
     , aurisLogLevel :: ConfigLogLevel
     , aurisPusConfig :: Config
@@ -65,6 +68,9 @@ defaultConfig = AurisConfig { aurisPusConfig = Data.PUS.Config.defaultConfig
                             , aurisNctrsTMPort    = 2502
                             , aurisNctrsTCPort    = 20009
                             , aurisNctrsAdminPort = 20010
+                            , aurisCnCHost        = "localhost"
+                            , aurisCnCTMPort      = 33333
+                            , aurisCnCTCPort      = 22222
                             , aurisLogLevel       = LogLevelInfo
                             , aurisMIB            = Nothing
                             }

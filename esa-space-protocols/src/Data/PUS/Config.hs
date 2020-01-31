@@ -80,7 +80,10 @@ data Config = Config {
     , cfgLeapSeconds :: LeapSeconds
     -- | Packets, which cannot be identified will be given this 
     -- SPID
-    , cfgUnknownSPID :: SPID 
+    , cfgUnknownSPID :: SPID
+    -- | Configures, if packets on the C&C protocol link should 
+    -- be CRC checked or not 
+    , cfgCncHasCRC :: Bool
 } deriving (Eq, Generic)
 
 instance FromJSON Config
@@ -125,6 +128,7 @@ defaultConfig = Config { cfgCltuBlockSize        = CltuBS_8
                        , cfgEpoch                = UnixTime
                        , cfgLeapSeconds          = 17
                        , cfgUnknownSPID          = SPID 5071
+                       , cfgCncHasCRC            = False
                        }
 
 -- | write the config as a serialized string to a file. Uses the Show class for serizalization

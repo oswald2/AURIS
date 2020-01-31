@@ -4,11 +4,10 @@
     , NoImplicitPrelude
 #-}
 module Protocol.CnC
-  (
-    receiveCnCC
-    , scoeCommandC
-    , SCOECommand(..)
-    , generateAckData
+  ( receiveCnCC
+  , scoeCommandC
+  , SCOECommand(..)
+  , generateAckData
   )
 where
 
@@ -28,11 +27,16 @@ import qualified Data.Vector                   as V
 import           Data.Char
 
 import           Data.PUS.PUSPacket
+import           Data.PUS.ExtractedDU
+import           Data.PUS.ExtractedPUSPacket
 import           Data.PUS.MissionSpecific.Definitions
+import           Data.PUS.Events
 
 import           Protocol.ProtocolInterfaces
 
-
+import           General.Time
+import           General.PUSTypes
+import           Control.PUS.Classes
 
 
 -- if we have SCOE packet, and it has a secondary header, it is a binary
@@ -40,28 +44,65 @@ import           Protocol.ProtocolInterfaces
 isASCIICc :: ProtocolPacket PUSPacket -> Bool
 isASCIICc (ProtocolPacket IF_CNC pusPkt) =
   let hdr = pusPkt ^. pusHdr
-  in  hdr ^. pusHdrTcVersion == 3 && hdr ^. pusHdrDfhFlag == False
+  in  hdr ^. pusHdrTcVersion == 3 && not (hdr ^. pusHdrDfhFlag)
 isASCIICc _ = False
 
 
 receiveCnCC
-  :: (MonadIO m, MonadReader env m, HasLogFunc env)
+  :: (MonadIO m, MonadReader env m, HasLogFunc env, HasRaiseEvent env)
   => PUSMissionSpecific
-  -> ConduitT ByteString (ProtocolPacket PUSPacket) m ()
+  -> ConduitT ByteString ExtractedPacket m ()
 receiveCnCC missionSpecific = do
-  conduitParserEither (pusPktParser missionSpecific IF_CNC) .| sink
+  conduitParserEither (match (pusPktParser missionSpecific IF_CNC))
+    .| sink Nothing
  where
-  sink = awaitForever $ \tc -> do
-    case tc of
-      Left err -> logError $ "Error decoding CnC packet: " <> displayShow err
-      Right (_, pkt) -> yield pkt
+  sink lastSSC = do
+    logDebug "receiveCnCC: awaiting..."
+    x <- await
+    case x of
+      Nothing -> return ()
+      Just tc -> do
+        case tc of
+          Left err -> do
+            env <- ask
+            let msg = "Error decoding CnC packet: " <> displayShow err
+            logError msg
+            liftIO $ raiseEvent
+              env
+              (EVAlarms (EVPacketAlarm (utf8BuilderToText msg)))
+            return ()
+          Right (_, (byts, protPkt)) -> do
+            ert <- liftIO getCurrentTime
+            let epd = ExtractedDU { _epQuality = toFlag Good True
+                                  , _epERT     = ert
+                                  , _epGap     = determineGap lastSSC newSSC
+                                  , _epSource  = IF_CNC
+                                  , _epVCID    = VCID 0
+                                  , _epDU      = pkt
+                                  }
+                newSSC = pkt ^. pusHdr . pusHdrSSC
+                pkt    = protPkt ^. protContent
+                newPkt = ExtractedPacket byts epd
 
-      
-scoeCommandC :: (Monad m) => ConduitT (ProtocolPacket PUSPacket) SCOECommand m ()
-scoeCommandC = awaitForever $ \pusPkt -> do 
-    case extractCommand pusPkt of 
-        Just scoeCmd -> yield scoeCmd 
-        Nothing -> scoeCommandC 
+            logDebug $ "CnC TM: received packet: " <> displayShow epd
+
+            yield newPkt
+            sink (Just newSSC)
+
+  determineGap Nothing       _   = Nothing
+  determineGap (Just oldSSC) ssc = if oldSSC + 1 == ssc
+    then Nothing
+    else Just (fromIntegral oldSSC, fromIntegral ssc)
+
+
+
+
+scoeCommandC
+  :: (Monad m) => ConduitT (ProtocolPacket PUSPacket) SCOECommand m ()
+scoeCommandC = awaitForever $ \pusPkt -> do
+  case extractCommand pusPkt of
+    Just scoeCmd -> yield scoeCmd
+    Nothing      -> scoeCommandC
 
 
 
@@ -80,7 +121,7 @@ scoeCommandC = awaitForever $ \pusPkt -> do
 extractCommand :: ProtocolPacket PUSPacket -> Maybe SCOECommand
 extractCommand cpkt@(ProtocolPacket IF_CNC pusPkt) = if isASCIICc cpkt
   then case parse scoeCommandParser (pusPkt ^. pusData) of
-    Fail {} -> Nothing
+    Fail{}     -> Nothing
     Partial _  -> Nothing
     Done _ res -> Just res
   else Nothing

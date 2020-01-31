@@ -162,7 +162,7 @@ library
     , attoparsec-binary
     , base64-bytestring-type
     , mtl
-    , hashtables
+    , hashtables == 1.2.3.4
     , colour
 
   -- Directories containing source files.

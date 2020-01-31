@@ -45,10 +45,9 @@ import           Data.PUS.Events
 import           General.GetBitField
 import           General.Types
 import           General.Time
+import General.Hexdump
 
---import Text.Show.Pretty
-
---import           General.Hexdump
+--import           Protocol.ProtocolInterfaces 
 
 
 
@@ -85,6 +84,7 @@ packetProcessorC = awaitForever $ \pkt@(ExtractedPacket oct pusPkt) -> do
         Just (key, def) -> do
           if def ^. tmpdCheck
             then do
+              logDebug $ display (hexdumpBS oct)
               case crcCheck oct of
                 Left err -> logError $ "CRC Check on TM packet failed: "
                       <> display err <> ". Packet ignored."
@@ -96,14 +96,15 @@ packetProcessorC = awaitForever $ \pkt@(ExtractedPacket oct pusPkt) -> do
                             <> ", calculated: "
                             <> display crcCalcd
                             <> ". Packet ignored."
-            else yieldM $ processPacket def key pkt
+            else            
+              yieldM $ processPacket def key pkt
         Nothing  -> do
             -- if we have a packet, that is not found in the data model,
             -- we create a new TM packet from it where the data part
             -- is the data part of the PUS packet
             logWarn
                 $  "No packet defintion found for packet: APID:"
-                <> display (pusPkt ^. epDU . pusHdr . pusHdrTcApid)
+                <> display (pusPkt ^. epDU . pusHdr . pusHdrAPID)
                 <> " Type:"
                 <> display (pusType (pusPkt ^. epDU . pusDfh))
                 <> " SubType:"
@@ -121,7 +122,7 @@ packetProcessorC = awaitForever $ \pkt@(ExtractedPacket oct pusPkt) -> do
                     _tmpSPID = cfgUnknownSPID cfg
                     , _tmpMnemonic = "UNKNOWN PACKET"
                     , _tmpDescr = ""
-                    , _tmpAPID = pusPkt ^. epDU . pusHdr . pusHdrTcApid
+                    , _tmpAPID = pusPkt ^. epDU . pusHdr . pusHdrAPID
                     , _tmpType = pusType (pusPkt ^. epDU . pusDfh)
                     , _tmpSubType = pusSubType (pusPkt ^. epDU . pusDfh)
                     , _tmpPI1 = 0
@@ -129,7 +130,7 @@ packetProcessorC = awaitForever $ \pkt@(ExtractedPacket oct pusPkt) -> do
                     , _tmpERT = pusPkt ^. epERT
                     , _tmpTimeStamp = timeStamp
                     , _tmpVCID = pusPkt ^. epVCID
-                    , _tmpSSC = pusPkt ^. epDU . pusHdr . pusHdrTcSsc
+                    , _tmpSSC = pusPkt ^. epDU . pusHdr . pusHdrSSC
                     , _tmpEvent = PIDNo
                     , _tmpParams = V.singleton param
                     }
@@ -145,7 +146,7 @@ getPackeDefinition
 getPackeDefinition model (ExtractedPacket bytes pkt) =
     let pusPkt     = pkt ^. epDU
         hdr        = pusPkt ^. pusHdr
-        apid       = hdr ^. pusHdrTcApid
+        apid       = hdr ^. pusHdrAPID
         dfh        = pusPkt ^. pusDfh
         t          = pusType dfh
         st         = pusSubType dfh
@@ -210,7 +211,7 @@ processPacket pktDef (TMPacketKey _apid _t _st pi1 pi2) pkt@(ExtractedPacket _ p
       , _tmpERT = pusDU ^. epERT
       , _tmpTimeStamp = timestamp
       , _tmpVCID = pusDU ^. epVCID
-      , _tmpSSC = pusDU ^. epDU . pusHdr . pusHdrTcSsc
+      , _tmpSSC = pusDU ^. epDU . pusHdr . pusHdrSSC
       , _tmpEvent = _tmpdEvent pktDef
       , _tmpParams = params
       }
@@ -534,7 +535,7 @@ getVariableParams timestamp ert epoch pktDef (ExtractedPacket oct' ep) _tpsd dfh
                         <> display @Text " SubType: "
                         <> display (pktDef ^. tmpdSubType)
                         <> display @Text " APID: "
-                        <> display (ep ^. epDU . pusHdr . pusHdrTcSsc)
+                        <> display (ep ^. epDU . pusHdr . pusHdrSSC)
 
                 case choiceRes of 
                     Left err -> do

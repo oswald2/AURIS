@@ -38,6 +38,7 @@ module GUI.MainWindow
   , mwAboutWindow
   , mwFrameTab
   , mwNCTRSConnection
+  , mwCnCConnection
   , mwInitialiseDataModel
   )
 where
@@ -329,6 +330,11 @@ mwNCTRSConnection :: MainWindow -> Bool -> IO ()
 mwNCTRSConnection MainWindow {..} True =
   mcsBoxGreen (_mwNCTRSConn ^. mfNctrsTMConn) txtConnected
 mwNCTRSConnection MainWindow {..} False =
-  mcsBoxAlarm (_mwNCTRSConn ^. mfNctrsTMConn) txtConnected
+  mcsBoxAlarm (_mwNCTRSConn ^. mfNctrsTMConn) txtDisconnected
 
+mwCnCConnection :: MainWindow -> Bool -> IO ()
+mwCnCConnection MainWindow {..} True =
+  mcsBoxGreen (_mwCnCConn ^. mfCncTMConn) txtConnected
+mwCnCConnection MainWindow {..} False =
+  mcsBoxAlarm (_mwCnCConn ^. mfCncTMConn) txtDisconnected
 

@@ -1,12 +1,16 @@
 {
+    "aurisCnCTCPort": 22222,
     "aurisNctrsTMPort": 2502,
+    "aurisCnCHost": "localhost",
     "aurisNctrsHost": "localhost",
-    "aurisNctrsTCPort": 32111,
+    "aurisNctrsTCPort": 20009,
+    "aurisCnCTMPort": 33333,
     "aurisMIB": null,
-    "aurisNctrsAdminPort": 32110,
+    "aurisNctrsAdminPort": 20010,
     "aurisMission": "DEFAULT",
     "aurisPusConfig": {
         "cfgUnknownSPID": 5071,
+        "cfgCncHasCRC": false,
         "cfgEpoch": "UnixTime",
         "cfgInterfacePort": 55555,
         "cfgRandomizerStartValue": 255,

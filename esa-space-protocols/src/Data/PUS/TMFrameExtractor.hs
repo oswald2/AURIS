@@ -471,8 +471,8 @@ pktReconstructorC missionSpecific pIf segLen pktStore = do
 mkPktKey :: PUSHeader -> PktKey
 mkPktKey hdr =
   let pktKey = PktKey apid ssc
-      apid   = hdr ^. pusHdrTcApid
-      ssc    = hdr ^. pusHdrTcSsc
+      apid   = hdr ^. pusHdrAPID
+      ssc    = hdr ^. pusHdrSSC
   in  pktKey
 
 
@@ -511,7 +511,7 @@ processFirstSegment hdr part pktStore =
                                   , impSegFlag = hdr ^. pusHdrSeqFlags
                                   , impQuality = toFlag Good True
                                   }
-      pktKey   = PktKey (hdr ^. pusHdrTcApid) (hdr ^. pusHdrTcSsc)
+      pktKey   = PktKey (hdr ^. pusHdrAPID) (hdr ^. pusHdrSSC)
       newStore = HM.insert pktKey newPkt pktStore
   in  newStore
 
@@ -524,8 +524,8 @@ processContinuationSegment
   -> PacketPart
   -> m PktStore
 processContinuationSegment segLen pktStore pktKey part = do
-  let apid = hdr ^. pusHdrTcApid
-      ssc  = hdr ^. pusHdrTcSsc
+  let apid = hdr ^. pusHdrAPID
+      ssc  = hdr ^. pusHdrSSC
       hdr  = ppHeader part
   case HM.lookup pktKey pktStore of
     Nothing -> do
@@ -587,8 +587,8 @@ processLastSegment
 processLastSegment missionSpecific pIf segLen ert vcid pktStore pktKey part =
   do
     let body   = ppBody part
-        apid   = hdr ^. pusHdrTcApid
-        ssc    = hdr ^. pusHdrTcSsc
+        apid   = hdr ^. pusHdrAPID
+        ssc    = hdr ^. pusHdrSSC
         hdr    = ppHeader part
         hdrBin = ppHeaderBin part
 

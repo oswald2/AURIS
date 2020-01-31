@@ -44,13 +44,13 @@ instance ToCellText (ExtractedDU PUSPacket) where
   toCellText pkt ColumnDefinition { _columnNumber = 1 } =
     displayCell (textDisplay (pkt ^. epERT)) alignLeft
   toCellText pkt ColumnDefinition { _columnNumber = 2 } =
-    displayCell (textDisplay (pkt ^. epDU . pusHdr . pusHdrTcApid)) alignRight
+    displayCell (textDisplay (pkt ^. epDU . pusHdr . pusHdrAPID)) alignRight
   toCellText pkt ColumnDefinition { _columnNumber = 3 } =
     displayCell (textDisplay (pusType (pkt ^. epDU . pusDfh))) alignRight
   toCellText pkt ColumnDefinition { _columnNumber = 4 } =
     displayCell (textDisplay (pusSubType (pkt ^. epDU . pusDfh))) alignRight
   toCellText pkt ColumnDefinition { _columnNumber = 5 } =
-    displayCell (textDisplay (pkt ^. epDU . pusHdr . pusHdrTcSsc)) alignRight
+    displayCell (textDisplay (pkt ^. epDU . pusHdr . pusHdrSSC)) alignRight
   toCellText pkt ColumnDefinition { _columnNumber = 6 } =
     displayCell (hexdumpLineBS (pkt ^. epDU . pusData)) alignLeft
   toCellText _ _ = defDisplayCell
