@@ -38,7 +38,7 @@ where
 
 import           RIO
 import qualified RIO.ByteString                as B
-import qualified RIO.Text as T
+--import qualified RIO.Text as T
 
 import           Data.Bits
 import           Data.ReinterpretCast

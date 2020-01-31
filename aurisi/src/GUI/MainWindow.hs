@@ -233,6 +233,10 @@ mwInitialiseDataModel window model = do
         V.fromList . sortBy s . map snd . HT.toList $ model ^. dmParameters
       s p1 p2 = compare (p1 ^. fpName) (p2 ^. fpName)
   mwAddTMParameterDefinitions window paramDefs
+
+  -- also add the displays 
+  addGRDs (window ^. mwTMParamTab) (model ^. dmGRDs)
+
   return ()
 
 

@@ -27,7 +27,7 @@ data GPFentry = GPFentry {
     , _gpfYTick :: !Word8
     , _gpfXGrid :: !Word8
     , _gpfYGrid :: !Word8
-    , _gpfUpun :: !Word8
+    , _gpfUpun :: Maybe Word8
 } deriving (Eq, Show)
 
 

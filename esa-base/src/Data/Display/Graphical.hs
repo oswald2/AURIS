@@ -4,17 +4,26 @@ module Data.Display.Graphical
   , LineType(..)
   , GRDParameter(..)
   , GRD(..)
+  , GRDColour(..)
   )
 where
 
 import           RIO
+import           RIO.Partial                    ( read )
 
 import           Data.Text.Short                ( ShortText )
 import           Data.Colour
 
+import           Codec.Serialise
+
+import           General.Types ()
+
 
 data PrintRaw = PrRaw | PrCalibrated
   deriving (Eq, Ord, Enum, Show, Generic)
+
+instance Serialise PrintRaw
+
 
 data Symbol =
   NoSymbol
@@ -26,6 +35,9 @@ data Symbol =
   | SquareSymbol
   deriving (Eq, Ord, Enum, Show, Generic)
 
+instance Serialise Symbol
+
+
 data LineType =
   NoLine
   | SolidLine
@@ -35,14 +47,27 @@ data LineType =
   | DashShortDash
   deriving (Eq, Ord, Enum, Show, Generic)
 
+instance Serialise LineType
+
+
+newtype GRDColour = GRDColour (AlphaColour Double)
+  deriving (Show, Generic)
+
+
+instance Serialise GRDColour where
+  encode x = encode (show x)
+  decode = GRDColour . read <$> decode
+
 
 data GRDParameter = GRDParameter {
   _grdpName :: !ShortText
   , _grdpRaw :: !PrintRaw
-  , _grdpPlotColor :: AlphaColour Double
+  , _grdpPlotColor :: GRDColour
   , _grdpSymbol :: !Symbol
   , _grdpLineType :: !LineType
   } deriving (Show, Generic)
+
+instance Serialise GRDParameter
 
 
 data GRD = GRD {
@@ -53,7 +78,7 @@ data GRD = GRD {
     , _grdDays :: !Int
     , _grdHours :: !Int
     , _grdMinutes :: !Int
-    , _grdAxesColor :: AlphaColour Double
+    , _grdAxesColor :: GRDColour
     , _grdXTick :: !Int
     , _grdYTick :: !Int
     , _grdXGrid :: !Int
@@ -62,4 +87,4 @@ data GRD = GRD {
   } deriving (Show, Generic)
 
 
-
+instance Serialise GRD

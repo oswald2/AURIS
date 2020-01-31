@@ -1,9 +1,13 @@
 module Data.Conversion.GRD
-  ()
+  ( loadGRDs
+  )
 where
 
 
-import           RIO
+import           RIO                     hiding ( to )
+
+import           Control.Lens
+
 import qualified RIO.Vector                    as V
 import qualified RIO.Map                       as M
 
@@ -18,15 +22,15 @@ import           Data.Colour
 import           Data.Colour.Names
 
 
-charToColor :: Char -> AlphaColour Double
-charToColor '1' = opaque green
-charToColor '2' = opaque blue
-charToColor '3' = opaque cyan
-charToColor '4' = opaque red
-charToColor '5' = opaque yellow
-charToColor '6' = opaque magenta
-charToColor '7' = opaque white
-charToColor _   = opaque blue
+charToColor :: Char -> GRDColour
+charToColor '1' = GRDColour $ opaque green
+charToColor '2' = GRDColour $ opaque blue
+charToColor '3' = GRDColour $ opaque cyan
+charToColor '4' = GRDColour $ opaque red
+charToColor '5' = GRDColour $ opaque yellow
+charToColor '6' = GRDColour $ opaque magenta
+charToColor '7' = GRDColour $ opaque white
+charToColor _   = GRDColour $ opaque blue
 
 convertRaw :: CharDefaultTo a -> PrintRaw
 convertRaw x = case getDefaultChar x of
@@ -53,6 +57,7 @@ convertLineType x = case getDefaultChar x of
   '3' -> Dash
   '4' -> ShortDash
   '5' -> DashShortDash
+  _   -> NoLine
 
 
 convertGPC :: GPCentry -> GRDParameter
@@ -83,7 +88,10 @@ convertGPF GPFentry {..} params = GRD
   }
 
 
-loadGRDs :: (MonadIO m, MonadReader env m, HasLogFunc env) => FilePath -> m (Either Text (Map ShortText GRD))
+loadGRDs
+  :: (MonadIO m, MonadReader env m, HasLogFunc env)
+  => FilePath
+  -> m (Either Text (Map ShortText GRD))
 loadGRDs path = do
   gpcs' <- GPC.loadFromFile path
   case gpcs' of
@@ -92,5 +100,13 @@ loadGRDs path = do
       gpfs' <- GPF.loadFromFile path
       case gpfs' of
         Left  err  -> return (Left err)
-        Right gpfs -> return (Right M.empty)
+        Right gpfs -> do
+          let filt gpf x = _gpfName gpf == _gpcName x
+              params gpf =
+                gpcs ^.. folded . filtered (filt gpf) . to convertGPC
+              
+              f gpf = 
+                let p = params gpf in 
+                (_gpfName gpf, convertGPF gpf p)
+          return (Right (M.fromList . fmap f . toList $ gpfs))
 

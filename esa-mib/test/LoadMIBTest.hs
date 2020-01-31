@@ -4,6 +4,7 @@ import           RIO
 import qualified RIO.Text                      as T
 import qualified RIO.Vector                    as V
 import qualified RIO.HashMap                   as HM
+import qualified RIO.Map                       as M
 
 import qualified Data.Text.IO                  as T
 import qualified Data.HashTable.ST.Basic       as HT
@@ -21,8 +22,11 @@ import           Data.MIB.PCF                  as PCF
 import           Data.MIB.PID                  as PID
 import           Data.MIB.PLF                  as PLF
 import           Data.MIB.TPCF                 as TPCF
+import           Data.MIB.GPF                  as GPF
+import           Data.MIB.GPC                  as GPC
 
---import           Data.TM.TMParameterDef
+--import           Data.TM.TMParameterDe
+import           Data.Conversion.GRD
 
 import           Test.Hspec
 import           Text.Show.Pretty
@@ -68,6 +72,11 @@ testPlf = testLoadTab PLF.loadFromFile
 testTpcf :: FilePath -> IO ()
 testTpcf = testLoadTab TPCF.loadFromFile
 
+testGpc :: FilePath -> IO ()
+testGpc = testLoadTab GPC.loadFromFile
+
+testGpf :: FilePath -> IO ()
+testGpf = testLoadTab GPF.loadFromFile
 
 
 testLoadTab
@@ -119,6 +128,17 @@ testLoadSyn mibPath = do
       pPrint r
       T.putStrLn $ "Count: " <> T.pack (show (HM.size r))
 
+testLoadGRDs :: FilePath -> IO ()
+testLoadGRDs mibPath = do
+  res <- runRIOTestAction (loadGRDs mibPath)
+  case res of
+    Left err -> do
+      T.putStrLn err
+      exitFailure
+    Right r -> do
+      pPrint r
+      T.putStrLn $ "Count: " <> T.pack (show (M.size r))
+
 
 testLoadParameters :: FilePath -> IO ()
 testLoadParameters mibPath = do
@@ -156,11 +176,11 @@ testLoadParameters mibPath = do
 
       T.putStrLn "\n\nValidity Parameters:\n"
       case HT.ilookup params "S2KUPDC1" of
-          Just x  -> pPrint x
-          Nothing -> T.putStrLn "S2KUPDC1 not found."
+        Just x  -> pPrint x
+        Nothing -> T.putStrLn "S2KUPDC1 not found."
       case HT.ilookup params "S2KTP201" of
-          Just x  -> pPrint x
-          Nothing -> T.putStrLn "S2KTP201 not found."
+        Just x  -> pPrint x
+        Nothing -> T.putStrLn "S2KTP201 not found."
 
 
 
@@ -205,15 +225,22 @@ main = do
   -- testPlf mibPath
   -- T.putStrLn "\n\n\nTPCFs:\n"
   -- testTpcf mibPath
+  -- T.putStrLn "\n\n\nGPCs:\n"
+  -- testGpc mibPath
+  -- T.putStrLn "\n\n\nGPFs:\n"
+  -- testGpf mibPath
 
 
-  T.putStrLn "\n\n\nLoading Data Structures:\n===============\n"
-  T.putStrLn "LoadCalibs:\n"
-  testLoadCalibs mibPath
-  T.putStrLn "\nLoadSyns:\n"
-  testLoadSyn mibPath
-  T.putStrLn "\nLoadParams:\n"
-  testLoadParameters mibPath
+
+  -- T.putStrLn "\n\n\nLoading Data Structures:\n===============\n"
+  -- T.putStrLn "LoadCalibs:\n"
+  -- testLoadCalibs mibPath
+  -- T.putStrLn "\nLoadSyns:\n"
+  -- testLoadSyn mibPath
+  -- T.putStrLn "\nLoadParams:\n"
+  -- testLoadParameters mibPath
+  -- T.putStrLn "\n\n\nGRDs:\n"
+  -- testLoadGRDs mibPath
 
   T.putStrLn "\n\n\nLoading MIB:\n===============\n"
   T.putStrLn "LoadMIB:\n"

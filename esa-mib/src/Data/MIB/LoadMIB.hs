@@ -53,6 +53,7 @@ import           Data.Conversion.Calibration
 import           Data.Conversion.Parameter
 import           Data.Conversion.Types
 import           Data.Conversion.TMPacket
+import           Data.Conversion.GRD
 
 -- import           General.PUSTypes
 
@@ -132,14 +133,24 @@ loadMIB mibPath = do
           maybe (return ())
             (\w -> logWarn ("On parameter import: " <> display w))
             wa
-          return $ Right DataModel { _dmCalibrations    = calibs
-            , _dmSyntheticParams = syns
-            , _dmParameters      = params
-            , _dmPacketIdIdx     = pIdx
-            , _dmTMPackets       = packets
-            , _dmVPDStructs      = vpdLookup
-            }
+          
+          procGRDs calibs syns params pIdx packets vpdLookup
 
+    procGRDs calibs syns params pIdx packets vpdLookup = do 
+        grds' <- loadGRDs mibPath
+        case grds' of 
+            Left err -> do 
+                logError (display err)
+                return (Left err)
+            Right grds -> do 
+                return $ Right DataModel { _dmCalibrations    = calibs
+                    , _dmSyntheticParams = syns
+                    , _dmParameters      = params
+                    , _dmPacketIdIdx     = pIdx
+                    , _dmTMPackets       = packets
+                    , _dmVPDStructs      = vpdLookup
+                    , _dmGRDs = grds 
+                    } 
 
 
 loadParameters

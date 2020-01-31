@@ -23,6 +23,7 @@ import           Data.PUS.TMStoreFrame
 import           Data.PUS.Config
 import           Data.PUS.MissionSpecific.Definitions
 import           Data.PUS.ExtractedDU
+import           Data.PUS.ExtractedPUSPacket
 import           Data.PUS.GlobalState
 import           Data.PUS.PUSPacket
 import           Data.PUS.PUSDfh
@@ -149,7 +150,7 @@ pusPacketExtraction cfg = do
   --T.putStrLn $ T.pack (show result)
 
   length result `shouldBe` 1
-  (snd . head) result ^. epDU `shouldBe` pusPkt
+  (_extrPacket . head) result ^. epDU `shouldBe` pusPkt
   return ()
 
 testFrameExtraction2 :: Config -> IO ()
@@ -194,28 +195,27 @@ testFrameExtraction2 cfg = do
       , _epSource  = IF_NCTRS
       , _epERT     = now
       , _epVCID    = mkVCID 0
-      , _epDU      =
-        PUSPacket
-          { _pusHdr  = PUSHeader { _pusHdrPktID     = 2065
-                                 , _pusHdrTcVersion = 0
-                                 , _pusHdrType      = PUSTM
-                                 , _pusHdrDfhFlag   = True
-                                 , _pusHdrTcApid    = APID { getAPID = 17 }
-                                 , _pusHdrSeqFlags  = SegmentStandalone
-                                 , _pusHdrTcSsc     = mkSSC 3
-                                 , _pusHdrSeqCtrl   = 49155
-                                 , _pusHdrTcLength  = 15
-                                 }
-          , _pusDfh  = PUSTMStdHeader
-                         { _stdTmVersion       = 1
-                         , _stdTmType          = mkPUSType 1
-                         , _stdTmSubType       = mkPUSSubType 1
-                         , _stdTmDestinationID = mkSourceID 0
-                         , _stdTmOBTime = CUCTime 1251876634 984787 False
-                         }
-          , _pusPIs  = Nothing
-          , _pusData = "\NUL\NUL\NUL\NUL"
-          }
+      , _epDU      = PUSPacket
+                       { _pusHdr = PUSHeader { _pusHdrPktID     = 2065
+                                             , _pusHdrTcVersion = 0
+                                             , _pusHdrType      = PUSTM
+                                             , _pusHdrDfhFlag   = True
+                                             , _pusHdrAPID = APID { getAPID = 17 }
+                                             , _pusHdrSeqFlags = SegmentStandalone
+                                             , _pusHdrSSC       = mkSSC 3
+                                             , _pusHdrSeqCtrl   = 49155
+                                             , _pusHdrTcLength  = 15
+                                             }
+                       , _pusDfh  = PUSTMStdHeader
+                                      { _stdTmVersion       = 1
+                                      , _stdTmType          = mkPUSType 1
+                                      , _stdTmSubType       = mkPUSSubType 1
+                                      , _stdTmDestinationID = mkSourceID 0
+                                      , _stdTmOBTime = CUCTime 1251876634 984787 False
+                                      }
+                       , _pusPIs  = Nothing
+                       , _pusData = "\NUL\NUL\NUL\NUL"
+                       }
       }
 
     conduit =
@@ -225,7 +225,7 @@ testFrameExtraction2 cfg = do
 
   -- T.putStrLn $ T.pack (show result)
   length result `shouldBe` 1
-  (snd . head) result `shouldBe` extractedPacket
+  (_extrPacket . head) result `shouldBe` extractedPacket
   return ()
 
 

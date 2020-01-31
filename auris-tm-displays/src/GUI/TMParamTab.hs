@@ -8,12 +8,14 @@ module GUI.TMParamTab
   , createTMParamTab
   , addParameterValues
   , addParameterDefinitions
+  , addGRDs
   , callOnDisplay
   )
 where
 
 import           RIO                     hiding ( (^.) )
 import qualified RIO.Vector                    as V
+import qualified RIO.Map                       as M
 import qualified Data.Text.IO                  as T
 import qualified Data.Text.Short               as ST
 import           Data.Colour
@@ -25,10 +27,13 @@ import           Graphics.Rendering.Chart.Backend.Types
 import qualified Graphics.Rendering.Chart.Easy as Ch
 
 import           General.Time
+
 import           Data.TM.Parameter
 import           Data.TM.Value
 import           Data.TM.Validity
 import           Data.TM.TMParameterDef
+
+import           Data.Display.Graphical
 
 import           GUI.Colors
 import           GUI.Graph
@@ -95,7 +100,7 @@ data ParDisplays = ParDisplays {
   }
 makeLenses ''ParDisplays
 
-emptyParDisplays :: ParDisplays 
+emptyParDisplays :: ParDisplays
 emptyParDisplays = ParDisplays GSSingle Nothing Nothing Nothing Nothing
 
 data DisplaySel =
@@ -107,10 +112,14 @@ data DisplaySel =
 
 callOnDisplay
   :: ParDisplays -> DisplaySel -> (ParamDisplay -> t -> IO ()) -> t -> IO ()
-callOnDisplay parDisp Display1 cb t = maybe (return ()) (`cb` t) (parDisp ^. parDisp1)
-callOnDisplay parDisp Display2 cb t = maybe (return ()) (`cb` t) (parDisp ^. parDisp2)
-callOnDisplay parDisp Display3 cb t = maybe (return ()) (`cb` t) (parDisp ^. parDisp3)
-callOnDisplay parDisp Display4 cb t = maybe (return ()) (`cb` t) (parDisp ^. parDisp4)
+callOnDisplay parDisp Display1 cb t =
+  maybe (return ()) (`cb` t) (parDisp ^. parDisp1)
+callOnDisplay parDisp Display2 cb t =
+  maybe (return ()) (`cb` t) (parDisp ^. parDisp2)
+callOnDisplay parDisp Display3 cb t =
+  maybe (return ()) (`cb` t) (parDisp ^. parDisp3)
+callOnDisplay parDisp Display4 cb t =
+  maybe (return ()) (`cb` t) (parDisp ^. parDisp4)
 
 
 
@@ -210,7 +219,14 @@ createTMParamTab TMParamTabFluid {..} = do
   graphWidget <- setupGraphWidget _tmParDisplayGroup "TestGraph" table
 
   atomically $ do
-    writeTVar ref (ParDisplays GSSingle (Just (GraphDisplay graphWidget)) Nothing Nothing Nothing)
+    writeTVar
+      ref
+      (ParDisplays GSSingle
+                   (Just (GraphDisplay graphWidget))
+                   Nothing
+                   Nothing
+                   Nothing
+      )
 
   -- now add a parameter to watch 
   -- let lineStyle = def & line_color .~ opaque Ch.blue & line_width .~ 1.0
@@ -267,13 +283,17 @@ addParameterDefinitions gui params = do
 addParameterValues :: TMParamTab -> Vector TMParameter -> IO ()
 addParameterValues gui values = do
   displays <- readTVarIO (gui ^. tmParamDisplays)
-  
+
   maybe (return ()) (`paramDispInsertValues` values) (displays ^. parDisp1)
   maybe (return ()) (`paramDispInsertValues` values) (displays ^. parDisp2)
   maybe (return ()) (`paramDispInsertValues` values) (displays ^. parDisp3)
   maybe (return ()) (`paramDispInsertValues` values) (displays ^. parDisp4)
 
 
+addGRDs :: TMParamTab -> Map ST.ShortText GRD -> IO ()
+addGRDs gui grdMap = do
+  let browser = gui ^. tmParamBrowserGRD
+  mapM_ (add browser . ST.toText) (M.keys grdMap)
 
 
 determineSize :: TMParamTab -> GraphSelector -> IO (Vector Rectangle)
@@ -290,7 +310,8 @@ determineSize TMParamTab {..} GSHorizontal = do
 
   return $ V.fromList [rect1, rect2]
 determineSize TMParamTab {..} GSVertical = do
-  Rectangle (Position (X x) (Y y)) (Size (Width w) (Height h)) <- getRectangle _tmParamDisplayGroup
+  Rectangle (Position (X x) (Y y)) (Size (Width w) (Height h)) <- getRectangle
+    _tmParamDisplayGroup
 
   let rect1 = Rectangle (Position (X x) (Y y)) (Size (Width m) (Height h))
       rect2 =
@@ -305,10 +326,11 @@ determineSize TMParamTab {..} GSFour = do
   let rect1 = Rectangle (Position (X x) (Y y)) (Size (Width m) (Height n))
       rect2 =
         Rectangle (Position (X (x + m)) (Y y)) (Size (Width (w - m)) (Height n))
-      rect3 = Rectangle (Position (X x) (Y (y + n))) (Size (Width m) (Height (h - n)))
-      rect4 =
-        Rectangle (Position (X (x + m)) (Y (y + n))) (Size (Width (w - m)) (Height (h - n)))
-      
+      rect3 =
+        Rectangle (Position (X x) (Y (y + n))) (Size (Width m) (Height (h - n)))
+      rect4 = Rectangle (Position (X (x + m)) (Y (y + n)))
+                        (Size (Width (w - m)) (Height (h - n)))
+
       m = w `quot` 2
       n = h `quot` 2
   return $ V.fromList [rect1, rect2, rect3, rect4]

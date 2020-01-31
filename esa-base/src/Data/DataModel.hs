@@ -25,6 +25,7 @@ module Data.DataModel
   , dmTMPackets
   , dmPacketIdIdx
   , dmVPDStructs
+  , dmGRDs
   , empty
   , writeDataModel
   , readDataModel
@@ -33,6 +34,7 @@ where
 
 import           RIO
 import qualified RIO.HashMap                   as HM
+import qualified RIO.Map                       as M
 import qualified RIO.ByteString.Lazy           as BL
 import qualified RIO.Text                      as T
 import           Control.Lens                   ( makeLenses )
@@ -49,6 +51,8 @@ import           Data.TM.Calibration
 import           Data.TM.Synthetic
 import           Data.TM.TMParameterDef
 import           Data.TM.TMPacketDef
+
+import           Data.Display.Graphical
 
 import           General.Types
 
@@ -72,6 +76,8 @@ data DataModel = DataModel {
     -- up in this table. The rest of the packet is then replaced with these 
     -- 'VarParams' structure. 
     , _dmVPDStructs :: IHashTable Int VarParams
+    -- | Graphical displays 
+    , _dmGRDs :: Map ShortText GRD
     }
     deriving (Show, Generic)
 makeLenses ''DataModel
@@ -89,6 +95,7 @@ empty =
                 , _dmPacketIdIdx     = emptyPICSearchIndex
                 , _dmTMPackets       = packets
                 , _dmVPDStructs      = HT.iempty
+                , _dmGRDs            = M.empty
                 }
 
 
@@ -105,6 +112,7 @@ encodeDataModel model =
     <> encode (_dmPacketIdIdx model)
     <> encodeHashTable (_dmTMPackets model)
     <> encodeHashTable (_dmVPDStructs model)
+    <> encode (_dmGRDs model)
 
 decodeDataModel :: Decoder s DataModel
 decodeDataModel = do
@@ -114,13 +122,15 @@ decodeDataModel = do
   params  <- decodeHashTable
   idx     <- decode
   packets <- decodeHashTable
-  vpds    <- decodeHashTable 
+  vpds    <- decodeHashTable
+  grds    <- decode
   return DataModel { _dmCalibrations    = calibs
                    , _dmSyntheticParams = synths
                    , _dmParameters      = params
                    , _dmPacketIdIdx     = idx
                    , _dmTMPackets       = packets
                    , _dmVPDStructs      = vpds
+                   , _dmGRDs            = grds
                    }
 
 -- | Serializes the 'DataModel' and writes it to a file. Uses 
