@@ -24,6 +24,8 @@ import           Data.PUS.ExtractedPUSPacket
 
 import           Protocol.NCTRS
 import           Protocol.CnC
+import           Protocol.EDEN
+import           Protocol.EDENProcessor
 import           Protocol.ProtocolInterfaces
 
 import           Control.PUS.Classes
@@ -156,7 +158,8 @@ runTMEdenChain
 runTMEdenChain cfg missionSpecific pktQueue = do
   logDebug "runTMEdenChain entering"
 
-  let chain = receiveEdenMessageC .| edenMessageProcessorC .| sinkTBQueue pktQueue
+  let chain =
+        receiveEdenMessageC .| edenMessageProcessorC missionSpecific .| sinkTBQueue pktQueue
 
   runGeneralTCPReconnectClient
     (clientSettings (aurisEdenPort cfg) (encodeUtf8 (aurisEdenHost cfg)))
@@ -167,10 +170,10 @@ runTMEdenChain cfg missionSpecific pktQueue = do
  where
   tmClient chain app = do
     env <- ask
-    liftIO $ raiseEvent env (EVAlarms EVEdenTmConnected)
+    liftIO $ raiseEvent env (EVAlarms EVEdenConnected)
     res <- try $ void $ runConduitRes (appSource app .| chain)
 
-    liftIO (raiseEvent env (EVAlarms EVEdenTmDisconnected))
+    liftIO (raiseEvent env (EVAlarms EVEdenDisconnected))
     case res of
       Left (e :: SomeException) -> do
         logError $ display @Text "EDEN Interface Exception: " <> displayShow e
@@ -196,7 +199,9 @@ runTMChain cfg missionSpecific = do
       nctrsTMThread = Concurrently $ runTMNctrsChain cfg pktQueue
       cncTMThread = Concurrently $ runTMCnCChain cfg missionSpecific pktQueue
 
-  void $ runConcurrently $ (,,)
+  void
+    $   runConcurrently
+    $   (,,)
     <$> processingThread
     <*> nctrsTMThread
     <*> cncTMThread
