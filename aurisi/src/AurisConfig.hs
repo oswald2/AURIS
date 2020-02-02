@@ -54,6 +54,8 @@ data AurisConfig = AurisConfig {
     , aurisCnCHost :: Text
     , aurisCnCTMPort :: Int
     , aurisCnCTCPort :: Int
+    , aurisEdenHost :: Text
+    , aurisEdenPort :: Int
     , aurisMIB :: Maybe Text
     , aurisLogLevel :: ConfigLogLevel
     , aurisPusConfig :: Config
@@ -71,6 +73,8 @@ defaultConfig = AurisConfig { aurisPusConfig = Data.PUS.Config.defaultConfig
                             , aurisCnCHost        = "localhost"
                             , aurisCnCTMPort      = 33333
                             , aurisCnCTCPort      = 22222
+                            , aurisEdenHost       = "localhost"
+                            , aurisEdenPort       = 40300
                             , aurisLogLevel       = LogLevelInfo
                             , aurisMIB            = Nothing
                             }

@@ -17,7 +17,7 @@
 #
 # resolver: ./custom-snapshot.yaml
 # resolver: https://example.com/snapshots/2018-01-01.yaml
-resolver: lts-14.20
+resolver: lts-14.22
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -56,15 +56,13 @@ extra-deps:
 - bytestring-to-vector-0.3.0.1
 - fltkhs-0.8.0.2
 - hw-prim-bits-0.1.0.4
-- github: oswald2/Chart-fltkhs
-  commit: 15bad77c770de1e17b70a2a73344cdef7d051659
-
+- Chart-fltkhs-0.1.0.4
 # Override default flag values for local packages and extra-deps
 flags:
-    fltkhs:
-      bundled: true
-    # fltkhs:
-    #   opengl: true
+   fltkhs:
+     bundled: true
+  #  fltkhs:
+  #    opengl: true
     esa-base:
       llvm: true
     esa-mib:

@@ -81,6 +81,7 @@ library
         Data.PUS.NcduToTMFrame
         Protocol.NCTRS
         Protocol.EDEN
+        Protocol.EDENProcessor
         Protocol.CnC
         Protocol.ProtocolInterfaces
         Protocol.Switcher

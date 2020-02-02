@@ -50,15 +50,13 @@ module Protocol.EDEN
   , edenScoeData
   , edenTmSecHeader
   , edenTmData
-
-  , edenType 
-  , edenSubType 
-  , edenField1 
+  , edenType
+  , edenSubType
+  , edenField1
   , edenField2
-  , edenField3 
-  , edenDataFieldLength 
-  , edenDataField 
-
+  , edenField3
+  , edenDataFieldLength
+  , edenDataField
   )
 where
 
@@ -89,6 +87,7 @@ import           General.SizeOf
 
 import           General.Hexdump
 import           General.Padding
+import           General.Time
 
 
 data EdenType =
@@ -103,7 +102,7 @@ data EdenType =
     | EdenDumpType
     | EdenCmdType
     | EdenSeqType
-    deriving (Eq, Ord, Enum, Show, Read)
+    deriving (Eq, Ord, Enum, Show, Read, Generic)
 
 
 data EdenSubType =
@@ -122,27 +121,27 @@ data EdenSubType =
     | EdenLog
     | EdenLogErr
     | EdenSpare
-    deriving (Eq, Ord, Enum, Show, Read)
+    deriving (Eq, Ord, Enum, Show, Read, Generic)
 
 data EdenTCType = EdenTcPacket
     | EdenTcSegment
     | EdenTcFrame
     | EdenTcCltu
     | EdenTcPhysical
-    deriving (Ord, Eq, Show, Read)
+    deriving (Ord, Eq, Enum, Show, Read, Generic)
 
 data EdenTCOrigin = EdenOriginLocal
     | EdenOriginCCS
     | EdenOriginOCC
     | EdenOriginOCCNDIU
     | EdenOriginPlayback
-    deriving (Ord, Eq, Show, Read)
+    deriving (Ord, Eq, Enum, Show, Read, Generic)
 
 data EdenTCSequenceFlags = EdenSegContinuation
     | EdenSegFirst
     | EdenSegLast
     | EdenSegUnsegmented
-    deriving (Ord, Eq, Show, Read)
+    deriving (Ord, Eq, Enum, Show, Read, Generic)
 
 
 
@@ -157,7 +156,7 @@ data EdenTcSecHeader = EdenTcSecHeader {
     _edenSecMapID :: !Word8,
     _edenSecTCEchoStatus :: !Word8,
     _edenSecSequenceFlags :: !EdenTCSequenceFlags
-    } deriving (Read, Show)
+    } deriving (Read, Show, Generic)
 makeLenses ''EdenTcSecHeader
 
 
@@ -167,19 +166,26 @@ data EdenTcSecSCOEHeader = EdenTcSecSCOEHeader {
     _edenSecScoeTCOrigin :: !EdenTCOrigin,
     _edenSecScoeTime :: !C.ByteString,
     _edenSecScoeTCEchoStatus :: !Word8
-    } deriving (Read, Show)
+    } deriving (Read, Show, Generic)
 makeLenses ''EdenTcSecSCOEHeader
 
 
+data EdenTmStructureType =
+  EdenTmSpace
+  | EdenTmSCOE
+  | EdenTmUnknown
+  deriving (Eq, Ord, Enum, Read, Show, Generic)
+
+
 data EdenTmSecHeader = EdenTmSecHeader {
-    _edenTmStructure :: !Word8,
+    _edenTmStructure :: !EdenTmStructureType,
     _edenTmSecChannel :: !Word8,
     _edenTmSecDataQuality :: !Word8,
     _edenTmSecCLCW :: !CLCW,
-    _edenTmSecTime :: !C.ByteString,
+    _edenTmSecTime :: !SunTime,
     _edenTmSecMCFC :: !Word8,
     _edenTmSecVCFC :: !Word8
-    } deriving (Read, Show)
+    } deriving (Read, Show, Generic)
 makeLenses ''EdenTmSecHeader
 
 
@@ -230,7 +236,7 @@ instance FixedSize EdenTmSecHeader where
   fixedSizeOf = 36
 
 instance SizeOf EdenData where
-  sizeof (EdenRawData x    ) = B.length x
+  sizeof (EdenRawData x     ) = B.length x
   sizeof (EdenSpaceTC _hdr x) = fixedSizeOf @EdenTcSecHeader + B.length x
   sizeof (EdenSCOETC  _hdr x) = fixedSizeOf @EdenTcSecSCOEHeader + B.length x
   sizeof (EdenTM      _hdr x) = fixedSizeOf @EdenTmSecHeader + B.length x
@@ -283,7 +289,7 @@ instance Display EdenTmSecHeader where
       <> "\n  CLCW              : "
       <> displayShow (_edenTmSecCLCW x)
       <> "\n  Time              : "
-      <> displayBytesUtf8 (_edenTmSecTime x)
+      <> displayBytesUtf8 (edenTime (_edenTmSecTime x))
       <> "\n  Master Channel FC : "
       <> displayShow (_edenTmSecMCFC x)
       <> "\n  Virtual Channel FC: "
@@ -390,16 +396,21 @@ edenTcSecSCOEHeaderBuilder x =
     <> word8 0
 
 
+edenTmStructureBuilder :: EdenTmStructureType -> Builder
+edenTmStructureBuilder EdenTmSpace   = word8 1
+edenTmStructureBuilder EdenTmSCOE    = word8 3
+edenTmStructureBuilder EdenTmUnknown = word8 0
+
 
 edenTmSecHeaderBuilder :: EdenTmSecHeader -> Builder
 edenTmSecHeaderBuilder x =
-  word8 1
+  edenTmStructureBuilder (_edenTmStructure x)
     <> word8 (_edenTmSecChannel x)
     <> word8 (_edenTmSecDataQuality x)
     <> word8 0
     <> clcwBuilder (_edenTmSecCLCW x)
     <> word16BE 0
-    <> bytes (rightPaddedC ' ' 22 (_edenTmSecTime x))
+    <> bytes (edenTime (_edenTmSecTime x))
     <> word8 (_edenTmSecMCFC x)
     <> word8 (_edenTmSecVCFC x)
     <> word16BE 0
@@ -500,6 +511,7 @@ receiveEdenMessageC = conduitParserEither edenMessageParser .| sink
       liftIO $ raiseEvent st $ EVAlarms
         (EVEDENParseError (T.pack (errorMessage err)))
     Right (_, tc') -> yield tc'
+
 
 
 encodeEdenMessageC
@@ -608,17 +620,27 @@ edenScoeSecHeaderParser = do
 
 edenTmSecHeaderParser :: Parser EdenTmSecHeader
 edenTmSecHeaderParser = do
-  str  <- A.anyWord8
+  str  <- edenTmStructureTypeParser
   chan <- A.anyWord8
   qual <- A.anyWord8
   _    <- A.anyWord8
   clcw <- unpackValues <$> A.anyWord32be
   _    <- A.anyWord16be
-  tim  <- A.take 22
+  tim  <- edenTimeParser
   mc   <- A.anyWord8
   vc   <- A.anyWord8
   _    <- A.anyWord16be
   return $ EdenTmSecHeader str chan qual clcw tim mc vc
+
+
+edenTmStructureTypeParser :: Parser EdenTmStructureType
+edenTmStructureTypeParser = do
+  str <- A.anyWord8
+  case str of
+    1 -> return EdenTmSpace
+    3 -> return EdenTmSCOE
+    _ -> return EdenTmUnknown
+
 
 edenTCTypeParser :: Parser EdenTCType
 edenTCTypeParser = do

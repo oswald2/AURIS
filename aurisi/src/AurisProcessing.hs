@@ -148,6 +148,37 @@ runTMCnCChain cfg missionSpecific pktQueue = do
       Right _ -> return ()
 
 
+runTMEdenChain
+  :: AurisConfig
+  -> PUSMissionSpecific
+  -> TBQueue ExtractedPacket
+  -> RIO GlobalState ()
+runTMEdenChain cfg missionSpecific pktQueue = do
+  logDebug "runTMEdenChain entering"
+
+  let chain = receiveEdenMessageC .| edenMessageProcessorC .| sinkTBQueue pktQueue
+
+  runGeneralTCPReconnectClient
+    (clientSettings (aurisEdenPort cfg) (encodeUtf8 (aurisEdenHost cfg)))
+    200000
+    (tmClient chain)
+
+  logDebug "runTMEdenChain leaving"
+ where
+  tmClient chain app = do
+    env <- ask
+    liftIO $ raiseEvent env (EVAlarms EVEdenTmConnected)
+    res <- try $ void $ runConduitRes (appSource app .| chain)
+
+    liftIO (raiseEvent env (EVAlarms EVEdenTmDisconnected))
+    case res of
+      Left (e :: SomeException) -> do
+        logError $ display @Text "EDEN Interface Exception: " <> displayShow e
+        throwM e
+      Right _ -> return ()
+
+
+
 runTMChain :: AurisConfig -> PUSMissionSpecific -> RIO GlobalState ()
 runTMChain cfg missionSpecific = do
   logDebug "runTMCain entering"

@@ -143,6 +143,8 @@ library
     , bytestring
     , vector
     , text
+    , text-short
+    , text-builder
     , rio
     , binary
     , aeson
@@ -151,7 +153,6 @@ library
     , serialise
     , binary-ieee754
     , conduit
-    , text-short
     , lens
     , megaparsec
     , reinterpret-cast
@@ -162,7 +163,7 @@ library
     , attoparsec-binary
     , base64-bytestring-type
     , mtl
-    , hashtables == 1.2.3.4
+    , hashtables
     , colour
 
   -- Directories containing source files.

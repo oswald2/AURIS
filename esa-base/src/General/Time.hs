@@ -56,6 +56,7 @@ module General.Time
   , fromDouble
   , DeltaTime(..)
   , edenTime
+  , edenTimeParser
   , fromText
   , sunTimeParser
   , (<+>)
@@ -113,14 +114,20 @@ import           Data.Thyme.Calendar.OrdinalDate
 import qualified Data.Time.Clock               as TI
 import           Data.Time.Clock.System         ( systemEpochDay )
 import qualified Data.Time.Calendar            as TI
-                                                
+
 import           Data.Aeson
 
+import qualified Text.Builder                  as TB
 import           Formatting
 
 import           Text.Megaparsec
 --import           Text.Megaparsec.Char.Lexer
 import           Text.Megaparsec.Char
+
+import qualified Data.Attoparsec.ByteString    as A
+import qualified Data.Attoparsec.ByteString.Char8
+                                               as A
+
 
 import           General.Types                  ( ToDouble(..) )
 import           General.TimeSpan
@@ -527,26 +534,43 @@ edenTime (SunTime t _) =
       time          = localTimeOfDay t1
       dayOfYear     = odDay $ localDay t1 ^. ordinalDate
       (secs, micro) = fromEnum (todSec time) `quotRem` 1_000_000
-      str           = sformat
-        ( (left 4 '0' %. int)
-        % " "
-        % (left 3 '0' %. int)
-        % ":"
-        % (left 2 '0' %. int)
-        % ":"
-        % (left 2 '0' %. int)
-        % ":"
-        % (left 2 '0' %. int)
-        % "."
-        % (left 3 '0' %. int)
-        )
-        (ymdYear date)
-        dayOfYear
-        (todHour time)
-        (todMin time)
-        secs
-        (micro `quot` 1_000)
+      str =
+          TB.run
+            $  TB.padFromLeft 4 '0' (TB.decimal (ymdYear date))
+            <> TB.char ' '
+            <> TB.padFromLeft 3 '0' (TB.decimal dayOfYear)
+            <> TB.char ':'
+            <> TB.padFromLeft 2 '0' (TB.decimal (todHour time))
+            <> TB.char ':'
+            <> TB.padFromLeft 2 '0' (TB.decimal (todMin time))
+            <> TB.char ':'
+            <> TB.padFromLeft 2 '0' (TB.decimal secs)
+            <> TB.char '.'
+            <> TB.padFromLeft 3 '0' (TB.decimal (micro `quot` 1_000))
+            <> TB.char ' '
   in  encodeUtf8 str
+
+
+{-# INLINABLE edenTimeParser #-}
+edenTimeParser :: A.Parser SunTime
+edenTimeParser = do
+  years <- A.decimal
+  void $ A.char ' '
+  days <- A.decimal
+  void $ A.char ':'
+  hours <- A.decimal
+  void $ A.char ':'
+  minutes <- A.decimal
+  void $ A.char ':'
+  seconds <- A.decimal
+  void $ A.char '.'
+  subSeconds <- A.decimal
+  void $ A.char ' '
+
+  let sec = daySegmToSeconds years days hours minutes seconds
+
+  return $ makeTime sec (subSeconds * 1000) False
+
 
 
 
