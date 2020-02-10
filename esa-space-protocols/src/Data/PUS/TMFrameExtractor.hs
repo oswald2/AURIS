@@ -26,8 +26,7 @@ module Data.PUS.TMFrameExtractor
   , storeFrameC
   , raisePUSPacketC
   , raiseFrameC
-  , extrBytes
-  , extrPacket
+  , pusPacketGapCheckC
   )
 where
 
@@ -639,6 +638,29 @@ pusPacketDecodeC pIf = do
     .| pktReconstructorC missionSpecific pIf segLen pktStore
 
 
+pusPacketGapCheckC :: (Monad m) => ConduitT ExtractedPacket ExtractedPacket m () 
+pusPacketGapCheckC = worker Nothing 
+  where 
+    worker sscs = awaitForever $ \pkt -> do 
+      let ssc = pkt ^. extrPacket . epDU . pusHdr . pusHdrSSC 
+          APID ap = pkt ^. extrPacket . epDU . pusHdr .pusHdrAPID 
+          apid = fromIntegral ap
+      case sscs of 
+        Nothing -> do 
+          yield pkt 
+          worker (Just (M.singleton apid ssc))
+        Just old -> do 
+          case M.lookup apid old of 
+            Nothing -> do 
+              yield pkt 
+              worker (Just (M.insert apid ssc old))
+            Just oldSSC -> do 
+              if oldSSC + 1 == ssc 
+                then yield pkt 
+                else yield (pkt & extrPacket . epGap .~ Just (fromIntegral oldSSC, fromIntegral ssc)) 
+              worker (Just (M.insert apid ssc old))
+
+
 
 -- | A conduit chain. Reads from a TBQueue which delivers 'TMFrame' s,
 -- extracts the packets from the frames, passes them to the PUS Packet
@@ -676,6 +698,7 @@ tmFrameExtraction interf = do
     .| raiseFrameC
     .| extractPktFromTMFramesC missionSpecific interf
     .| pusPacketDecodeC interf
+    .| pusPacketGapCheckC
 
 
 checkGapsValid :: TMSegmentLen -> IntermediatePacket -> PUSHeader -> Bool
