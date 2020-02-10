@@ -105,7 +105,7 @@ instance Serialise DataModel where
 
 encodeDataModel :: DataModel -> Encoding
 encodeDataModel model =
-  encodeListLen 5
+  encodeListLen 7
     <> encode (_dmCalibrations model)
     <> encode (_dmSyntheticParams model)
     <> encodeHashTable (_dmParameters model)

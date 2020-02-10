@@ -77,12 +77,15 @@ runProcessing cfg missionSpecific mibPath interface mainWindow = do
 
     runRIO state $ do
       -- first, try to load a data model or import a MIB
+      logInfo "Loading Data Model..."
       model <- loadDataModel mibPath
       var   <- view getDataModel
       atomically $ writeTVar var model
 
+      logInfo "Initialising Data Model..."
       liftIO $ mwInitialiseDataModel mainWindow model
 
+      logInfo "Starting TM Chain..."
       runTMChain cfg missionSpecific
     pure ()
 
@@ -195,16 +198,14 @@ runTMChain cfg missionSpecific = do
           .| ignoreConduit
 
 
-  let processingThread = Concurrently $ runConduitRes chain
-      nctrsTMThread = Concurrently $ runTMNctrsChain cfg pktQueue
-      cncTMThread = Concurrently $ runTMCnCChain cfg missionSpecific pktQueue
+  let processingThread = conc $ runConduitRes chain
+      nctrsTMThread = conc $ runTMNctrsChain cfg pktQueue
+      cncTMThread = conc $ runTMCnCChain cfg missionSpecific pktQueue
+      edenThread = conc $ runTMEdenChain cfg missionSpecific pktQueue
 
-  void
-    $   runConcurrently
-    $   (,,)
-    <$> processingThread
-    <*> nctrsTMThread
-    <*> cncTMThread
+
+  runConc $ 
+    processingThread <> nctrsTMThread <> cncTMThread <> edenThread
 
   logDebug "runTMCain leaving"
 
@@ -227,13 +228,16 @@ loadDataModel opts = do
         Right model -> do
           logInfo $ display ("Successfully imported MIB." :: Text)
           liftIO $ createDirectoryIfMissing True (home </> configPath)
+          logInfo "Writing data model to disk..."
           writeDataModel (home </> defaultMIBFile) model
+          logInfo "Data Model written."
           return model
     Nothing -> do
       let path = home </> defaultMIBFile
       ex <- liftIO $ doesFileExist path
       if ex
         then do
+          logDebug "calling readDataModel..."
           res <- readDataModel path
           case res of
             Left err -> do

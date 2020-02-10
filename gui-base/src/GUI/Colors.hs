@@ -118,7 +118,7 @@ mcsGroupingSetColor w = do
 mcsBrowserSetColor :: Ref Browser -> IO ()
 mcsBrowserSetColor w = do
   setColor w mcsWidgetBG
-  setColorWithBgSel w mcsWidgetBG mcsWidgetFG
+  setColorWithBgSel w mcsWidgetBG mcsTableSelectionColor
   setTextcolor w mcsFontColor
 
 

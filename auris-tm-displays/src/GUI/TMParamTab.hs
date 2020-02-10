@@ -161,6 +161,10 @@ createTMParamTab TMParamTabFluid {..} = do
   mcsBrowserSetColor _tmParBrowserGRD
   mcsBrowserSetColor _tmParBrowserSCD
 
+  setType _tmParBrowserAND HoldBrowserType 
+  setType _tmParBrowserGRD HoldBrowserType 
+  setType _tmParBrowserSCD HoldBrowserType 
+
   initSwitcher _tmParDispSwitcher
 
   ref     <- newTVarIO emptyParDisplays
