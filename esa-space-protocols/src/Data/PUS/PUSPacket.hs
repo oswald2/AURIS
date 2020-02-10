@@ -460,7 +460,10 @@ pusPktParserPayload missionSpecific comm hdr = do
   -- The length in the PUS header is data length - 1, so we need to take
   -- one byte more, but we have to ignore the CRC, which is also considered
   -- in the length calculation
-  let plCRC = A.take len
+  let plCRC = do 
+          x <- A.take len
+          void $ A.take crcLen
+          return x  
       len = fromIntegral (hdr ^. pusHdrTcLength) + 1 - crcLen - dfhLength dfh
       lenWoCRC = fromIntegral (hdr ^. pusHdrTcLength) + 1 - dfhLength dfh
   pl <- case comm of
@@ -472,8 +475,5 @@ pusPktParserPayload missionSpecific comm hdr = do
     _ -> plCRC
 
   --traceM (hexdumpBS pl)
-  
-  -- Also take the CRC itself to make sure, we consume the whole packet 
-  void $ A.take crcLen
-  
+    
   return (ProtocolPacket comm (PUSPacket hdr dfh Nothing pl))
