@@ -114,6 +114,7 @@ data GraphWidget = GraphWidget {
   , _gwDrawingArea :: Maybe (Ref Widget)
   , _gwParamSelection :: NameDescrTable
   , _gwGraph :: TVar Graph
+  , _gwOffscreen :: FlOffscreen
 }
 makeLenses ''GraphWidget
 
@@ -133,20 +134,23 @@ setupGraphWidget parent title paramSelector = do
 
   let graph = emptyGraph title
 
-  var  <- newTVarIO graph
+  var       <- newTVarIO graph
 
-  rect <- getRectangle parent
+  rect@(FL.Rectangle _ (Size (Width w) (Height h))) <- getRectangle parent
+
+  offscreen <- flcCreateOffscreen (Size (Width (w * 2)) (Height (h * 2)))
 
   let g = GraphWidget { _gwParent         = parent
                       , _gwDrawingArea    = Nothing
                       , _gwParamSelection = paramSelector
                       , _gwGraph          = var
+                      , _gwOffscreen      = offscreen
                       }
 
   widget' <- widgetCustom
     rect
     Nothing
-    (drawChart var)
+    (drawChart g)
     defaultCustomWidgetFuncs { handleCustom = Just (handleMouse g paramSelector)
                              }
 
@@ -219,7 +223,7 @@ handleRemoveParam gw widget param _ = do
 
 handlePrintToFile :: GraphWidget -> Ref MenuItem -> IO ()
 handlePrintToFile gw _ = do
-  graph <- readTVarIO (gw ^. gwGraph)
+  graph   <- readTVarIO (gw ^. gwGraph)
   chooser <- nativeFileChooserNew (Just BrowseSaveFile)
   setTitle chooser "Save Chart..."
   setFilter chooser "SVG\t*.svg"
@@ -228,9 +232,9 @@ handlePrintToFile gw _ = do
   res <- showWidget chooser
   case res of
     NativeFileChooserPicked -> do
-      name'  <- getFilename chooser
-      case name' of 
-        Just name -> do 
+      name' <- getFilename chooser
+      case name' of
+        Just name -> do
 
           let options = def & fo_format .~ SVG
 
@@ -454,11 +458,14 @@ chart Graph {..} = toRenderable layout
     graphLayout & layout_title .~ T.unpack _graphName & layout_plots .~ plots
 
 
-drawChart :: TVar Graph -> Ref Widget -> IO ()
-drawChart var widget = do
+drawChart :: GraphWidget -> Ref Widget -> IO ()
+drawChart gw widget = do
   rectangle' <- getRectangle widget
-  graph      <- readTVarIO var
-  withFlClip rectangle' $ void $ renderToWidget widget (chart graph)
+  graph      <- readTVarIO (gw ^. gwGraph)
+  let offscreen = gw ^. gwOffscreen
+  withFlClip rectangle' $ void $ renderToWidgetOffscreen widget
+                                                         offscreen
+                                                         (chart graph)
 
 
 

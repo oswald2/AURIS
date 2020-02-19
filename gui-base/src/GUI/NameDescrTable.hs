@@ -10,6 +10,9 @@ module GUI.NameDescrTable
   , setupCallback
   , getSelectedItems
   , nmDescrForwardParameter
+  , nmDescTbl 
+  , nmDescTblModel 
+  , nmDecTclInput
   )
 where
 
