@@ -89,6 +89,7 @@ library
     Data.TM.PIVals
     Data.TM.Synthetic
     Data.Display.Graphical
+    Data.TM.DepValue
 
   -- Modules included in this library but not exported.
   -- other-modules:

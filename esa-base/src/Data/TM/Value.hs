@@ -350,7 +350,7 @@ isNumeric _                           = False
 
 
 {-# INLINABLE getInt #-}
-getInt :: TMValue -> Maybe Integer
+getInt :: Integral a => TMValue -> Maybe a
 getInt (TMValue (TMValInt    x) _) = Just $ fromIntegral x
 getInt (TMValue (TMValUInt   x) _) = Just $ fromIntegral x
 getInt (TMValue (TMValDouble x) _) = Just $ truncate x
