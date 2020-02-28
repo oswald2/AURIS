@@ -56,7 +56,7 @@ extra-deps:
 - bytestring-to-vector-0.3.0.1
 - fltkhs-0.8.0.2
 - hw-prim-bits-0.1.0.4
-- ../Chart-fltkhs
+- Chart-fltkhs-0.1.0.5
 # Override default flag values for local packages and extra-deps
 flags:
    fltkhs:
