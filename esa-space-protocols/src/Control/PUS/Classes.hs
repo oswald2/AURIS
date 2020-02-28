@@ -17,22 +17,27 @@ access control to IO functions. Used within the encoding conduits.
     , RankNTypes
 #-}
 module Control.PUS.Classes
-    ( HasConfig(..)
-    , HasPUSState(..)
-    , HasGlobalState
-    , HasFOPState(..)
-    , HasCorrelationState(..)
-    , HasMissionSpecific(..)
-    , HasDataModel(..)
-    , HasRaiseEvent(..)
-    )
+  ( HasConfig(..)
+  , HasPUSState(..)
+  , HasGlobalState
+  , HasFOPState(..)
+  , HasCorrelationState(..)
+  , HasMissionSpecific(..)
+  , HasDataModel(..)
+  , getDataModel
+  , setDataModel
+  , HasRaiseEvent(..)
+  )
 where
 
-import           RIO                     hiding ( to )
+import           RIO                     hiding ( to
+                                                , (^.)
+                                                )
 import qualified RIO.HashMap.Partial           as HM
 
 import           Control.Lens.Getter
 
+import           Data.Compact
 import           Data.DataModel
 import           Data.PUS.Config
 import           Data.PUS.Events
@@ -65,10 +70,21 @@ class HasCorrelationState env where
 
 -- | class for accessing the data model 
 class HasDataModel env where
-    getDataModel :: Getter env (TVar DataModel)
+    getDataModelVar :: Getter env (TVar (Compact DataModel))
+
+getDataModel :: (MonadIO m) => HasDataModel env => env -> m DataModel
+getDataModel env = do 
+    d <- liftIO $ readTVarIO (env ^. getDataModelVar)
+    return (getCompact d)
+
+setDataModel :: (MonadIO m) => HasDataModel env => env -> DataModel -> m () 
+setDataModel env dm = do 
+    d <- liftIO $ compactWithSharing dm 
+    atomically $ writeTVar (env ^. getDataModelVar) d 
+
 
 -- | class for raising an event to the user interfaces
-class HasRaiseEvent env where 
+class HasRaiseEvent env where
     raiseEvent :: env -> Event -> IO ()
 
 
@@ -78,33 +94,33 @@ class (HasConfig env,
     HasFOPState env,
     HasMissionSpecific env,
     HasCorrelationState env,
-    HasLogFunc env, 
+    HasLogFunc env,
     HasDataModel env,
-    HasRaiseEvent env) => HasGlobalState env 
+    HasRaiseEvent env) => HasGlobalState env
 
 
 
 instance HasConfig GlobalState where
-    getConfig = to glsConfig
+  getConfig = to glsConfig
 
 instance HasPUSState GlobalState where
-    appStateG = to glsState
+  appStateG = to glsState
 
 instance HasMissionSpecific GlobalState where
-    getMissionSpecific = to glsMissionSpecific
+  getMissionSpecific = to glsMissionSpecific
 
 instance HasFOPState GlobalState where
-    copStateG = to glsFOP1
-    fopStateG vcid env = glsFOP1 env HM.! vcid
+  copStateG = to glsFOP1
+  fopStateG vcid env = glsFOP1 env HM.! vcid
 
 instance HasCorrelationState GlobalState where
-    corrStateG = to glsCorrState
+  corrStateG = to glsCorrState
 
 instance HasDataModel GlobalState where
-    getDataModel = to glsDataModel
+  getDataModelVar = to glsDataModel
 
 instance HasRaiseEvent GlobalState where
-    raiseEvent = glsRaiseEvent
+  raiseEvent = glsRaiseEvent
 
-instance HasGlobalState GlobalState 
+instance HasGlobalState GlobalState
 

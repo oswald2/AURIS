@@ -76,8 +76,8 @@ packetProcessorC = awaitForever $ \pkt@(ExtractedPacket oct pusPkt) -> do
 
     logDebug $ display ("packetProcessorC: got packet: " :: Text) <> displayShow pkt
 
-    model' <- view getDataModel
-    model  <- readTVarIO model'
+    env <- ask 
+    model <- getDataModel env 
     cfg <- view getConfig
     let def' = getPackeDefinition model pkt
     case def' of
@@ -572,7 +572,7 @@ getVariableParams timestamp ert epoch pktDef (ExtractedPacket oct' ep) _tpsd dfh
         processChoice !tpsd !offset = do 
             -- traceM $ "processChoice " <> T.pack (show tpsd)
             env <- ask 
-            dm <- readTVarIO (env ^. getDataModel)
+            dm <- getDataModel env 
             let vpds = dm ^. dmVPDStructs
             case HT.ilookup vpds (fromIntegral tpsd) of 
                 Nothing -> return $ Left ("Choice parameter: could not find TPSD " <> T.pack (show tpsd) <> " in VPD")

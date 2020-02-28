@@ -40,7 +40,7 @@ import qualified RIO.Text                      as T
 import           Control.Lens                   ( makeLenses )
 
 import           Data.Text.Short                ( ShortText )
-
+import           Data.Compact
 import           Codec.Serialise
 import           Codec.Serialise.Encoding
 import           Codec.Serialise.Decoding
@@ -121,7 +121,8 @@ decodeDataModel :: Decoder s DataModel
 decodeDataModel = do
   len <- decodeListLen
   when (fromIntegral len /= encodedLen)
-    $  fail $ "Error decoding data model: "
+    $  fail
+    $  "Error decoding data model: "
     <> show len
     <> ", should be "
     <> show encodedLen
