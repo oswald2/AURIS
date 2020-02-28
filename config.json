@@ -1,18 +1,17 @@
 {
-    "aurisCnCTCPort": 22222,
-    "aurisNctrsTMPort": 2502,
-    "aurisCnCHost": "localhost",
-    "aurisEdenHost": "localhost",
-    "aurisNctrsHost": "localhost",
-    "aurisEdenPort": 40300,
-    "aurisNctrsTCPort": 20009,
-    "aurisCnCTMPort": 33333,
     "aurisMIB": null,
-    "aurisNctrsAdminPort": 20010,
     "aurisMission": "DEFAULT",
     "aurisPusConfig": {
+        "cfgCnC": [
+            {
+                "cfgCncHasCRC": true,
+                "cfgCncPortTM": 10000,
+                "cfgCncHost": "localhost",
+                "cfgCncPortTC": 11000,
+                "cfgCncID": 1
+            }
+        ],
         "cfgUnknownSPID": 5071,
-        "cfgCncHasCRC": false,
         "cfgEpoch": "UnixTime",
         "cfgInterfacePort": 55555,
         "cfgRandomizerStartValue": 255,
@@ -30,12 +29,24 @@
         "cfgSCID": {
             "getSCID": 0
         },
+        "cfgNCTRS": [
+            {
+                "cfgNctrsPortTC": 20009,
+                "cfgNctrsID": 1,
+                "cfgNctrsHost": "localhost",
+                "cfgNctrsPortADM": 20010,
+                "cfgNctrsPortTM": 2502
+            }
+        ],
         "cfgMaxTMFrameLen": 1115,
         "cfgCltuBlockSize": "CltuBS_8",
-        "cfgEDEN": {
-            "cfgEdenHost": "localhost",
-            "cfgEdenPort": 40300
-        },
+        "cfgEDEN": [
+            {
+                "cfgEdenID": 1,
+                "cfgEdenHost": "localhost",
+                "cfgEdenPort": 40300
+            }
+        ],
         "cfgTMSegLength": "TMSegment65536",
         "cfgTMFrameHasCRC": true
     },

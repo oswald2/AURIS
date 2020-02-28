@@ -7,7 +7,7 @@ module AurisProcessing
 where
 
 import           RIO
-
+import qualified Data.Text.IO                  as T
 import           Data.PUS.Config
 import           Data.PUS.GlobalState
 import           Data.PUS.MissionSpecific.Definitions
@@ -68,11 +68,10 @@ runProcessing cfg missionSpecific mibPath interface mainWindow = do
       env   <- ask
       setDataModel env model
 
-      logInfo "Initialising Data Model..."
+      logInfo "Initialising User Interface with Data Model..."
       liftIO $ mwInitialiseDataModel mainWindow model
 
       logInfo "Starting TM Chain..."
-
       let pusCfg   = aurisPusConfig cfg
           nctrsCfg = cfgNCTRS pusCfg
           cncCfg   = cfgCnC pusCfg

@@ -37,7 +37,6 @@ import qualified RIO.HashMap.Partial           as HM
 
 import           Control.Lens.Getter
 
-import           Data.Compact
 import           Data.DataModel
 import           Data.PUS.Config
 import           Data.PUS.Events
@@ -70,17 +69,15 @@ class HasCorrelationState env where
 
 -- | class for accessing the data model 
 class HasDataModel env where
-    getDataModelVar :: Getter env (TVar (Compact DataModel))
+    getDataModelVar :: Getter env (TVar DataModel)
 
 getDataModel :: (MonadIO m) => HasDataModel env => env -> m DataModel
 getDataModel env = do 
-    d <- liftIO $ readTVarIO (env ^. getDataModelVar)
-    return (getCompact d)
+    liftIO $ readTVarIO (env ^. getDataModelVar)
 
 setDataModel :: (MonadIO m) => HasDataModel env => env -> DataModel -> m () 
 setDataModel env dm = do 
-    d <- liftIO $ compactWithSharing dm 
-    atomically $ writeTVar (env ^. getDataModelVar) d 
+    atomically $ writeTVar (env ^. getDataModelVar) dm 
 
 
 -- | class for raising an event to the user interfaces
