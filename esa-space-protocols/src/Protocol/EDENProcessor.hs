@@ -25,8 +25,9 @@ import           General.PUSTypes
 edenMessageProcessorC
   :: (MonadIO m, MonadReader env m, HasRaiseEvent env, HasLogFunc env)
   => PUSMissionSpecific
+  -> ProtocolInterface
   -> ConduitT EdenMessage ExtractedPacket m ()
-edenMessageProcessorC missionSpecific = worker HM.empty
+edenMessageProcessorC missionSpecific interf = worker HM.empty
  where
   worker counters = do
     x <- await
@@ -34,7 +35,7 @@ edenMessageProcessorC missionSpecific = worker HM.empty
       Just eden -> case eden ^. edenDataField of
           -- handle TM via EDEN
         dat@EdenTM {..} -> do
-          case handleEdenPacket missionSpecific dat counters of
+          case handleEdenPacket missionSpecific interf dat counters of
             Left err -> do
               env <- ask
               let
@@ -54,17 +55,18 @@ edenMessageProcessorC missionSpecific = worker HM.empty
 
 handleEdenPacket
   :: PUSMissionSpecific
+  -> ProtocolInterface
   -> EdenData
   -> HashMap VCID Word8
   -> Either Text (ExtractedPacket, HashMap VCID Word8)
-handleEdenPacket missionSpecific EdenTM {..} counters = do
-  case parseOnly (match (pusPktParser missionSpecific IF_EDEN)) _edenTmData of
+handleEdenPacket missionSpecific interf EdenTM {..} counters = do
+  case parseOnly (match (pusPktParser missionSpecific interf)) _edenTmData of
     Left err -> Left (T.pack err)
     Right (oct, packet) ->
       let epu = ExtractedDU { _epQuality = toFlag Good True
                             , _epERT     = _edenTmSecHeader ^. edenTmSecTime
                             , _epGap     = gap
-                            , _epSource  = IF_EDEN
+                            , _epSource  = interf
                             , _epVCID    = vcid
                             , _epDU      = packet ^. protContent
                             }
@@ -78,5 +80,5 @@ handleEdenPacket missionSpecific EdenTM {..} counters = do
               then Nothing
               else Just (fromIntegral oldVCFC, fromIntegral vcfc)
       in  Right (extracted, newMap)
-handleEdenPacket _missionSpecific _ _counters = undefined
+handleEdenPacket _missionSpecific _ _ _counters = undefined
 

@@ -85,6 +85,8 @@ library
         Protocol.CnC
         Protocol.ProtocolInterfaces
         Protocol.Switcher
+        Application.Chains
+        Application.DataModel
 
 
     hs-source-dirs: src
@@ -178,6 +180,9 @@ library
         , hashtables-mo
         , vector-builder
         , pretty-show
+        , compact
+        , filepath
+        , directory
 
     if flag(llvm)
         ghc-options: -O2 -Wall -Wcompat -Widentities -Wincomplete-record-updates

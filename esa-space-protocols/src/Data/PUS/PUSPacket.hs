@@ -437,18 +437,18 @@ pusPktParserPayload
   -> Parser (ProtocolPacket PUSPacket)
 pusPktParserPayload missionSpecific comm hdr = do
   dfh <- if
-    | comm == IF_NCTRS -> if hdr ^. pusHdrDfhFlag
+    | isNctrs comm -> if hdr ^. pusHdrDfhFlag
       then case hdr ^. pusHdrType of
         PUSTM -> dfhParser (missionSpecific ^. pmsTMDataFieldHeader)
         PUSTC -> dfhParser (missionSpecific ^. pmsTCDataFieldHeader)
       else return PUSEmptyHeader
-    | comm == IF_CNC -> if hdr ^. pusHdrDfhFlag
+    | isCnc comm -> if hdr ^. pusHdrDfhFlag
       then 
         case hdr ^. pusHdrType of 
           PUSTM -> dfhParser (missionSpecific ^. pmsTMDataFieldHeader)
           PUSTC -> dfhParser defaultCnCTCHeader
       else return PUSEmptyHeader
-    | comm == IF_EDEN || comm == IF_EDEN_SCOE -> if hdr ^. pusHdrDfhFlag
+    | isEden comm || isEdenScoe comm -> if hdr ^. pusHdrDfhFlag
       then case hdr ^. pusHdrType of
         PUSTM -> dfhParser (missionSpecific ^. pmsTMDataFieldHeader)
         PUSTC -> dfhParser (missionSpecific ^. pmsTCDataFieldHeader)
@@ -467,7 +467,7 @@ pusPktParserPayload missionSpecific comm hdr = do
       len = fromIntegral (hdr ^. pusHdrTcLength) + 1 - crcLen - dfhLength dfh
       lenWoCRC = fromIntegral (hdr ^. pusHdrTcLength) + 1 - dfhLength dfh
   pl <- case comm of
-    IF_CNC -> case dfh of
+    IfCnc _ -> case dfh of
       PUSCnCTCHeader { _cncTcCrcFlags = val } -> if val == 1      -- the packet contains a CRC
         then plCRC
         else A.take lenWoCRC

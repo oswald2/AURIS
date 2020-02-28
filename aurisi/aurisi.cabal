@@ -81,7 +81,8 @@ Executable AURISi
     text-short,
     file-embed,
     hashtables-mo,
-    stm-conduit
+    stm-conduit,
+    compact
 
   Other-Modules: AURISi
 

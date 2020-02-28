@@ -50,7 +50,7 @@ main = do
             receiveTmNcduC
               .| ncduToTMFrameC
               .| storeFrameC
-              .| tmFrameExtraction IF_NCTRS
+              .| tmFrameExtraction (IfNctrs 1)
               .| C.print
 
 

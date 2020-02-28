@@ -13,6 +13,10 @@ module Protocol.ProtocolInterfaces
         , ProtocolDestination(..)
         , protInterface
         , protContent
+        , isNctrs
+        , isCnc
+        , isEden
+        , isEdenScoe
     )
 where
 
@@ -27,11 +31,11 @@ import Codec.Serialise
 
 -- | Enumeration of the available interfaces
 data ProtocolInterface =
-    IF_NCTRS
-    | IF_CNC
-    | IF_EDEN
-    | IF_EDEN_SCOE
-    deriving (Eq, Ord, Enum, Show, Read, Generic)
+    IfNctrs Word16
+    | IfCnc Word16
+    | IfEden Word16
+    | IfEdenScoe Word16
+    deriving (Eq, Ord, Show, Read, Generic)
 
 instance Binary ProtocolInterface
 instance Serialise ProtocolInterface
@@ -41,10 +45,28 @@ instance ToJSON ProtocolInterface where
 
 
 instance Display ProtocolInterface where
-  textDisplay IF_NCTRS = "NCTRS"
-  textDisplay IF_CNC = "C&C"
-  textDisplay IF_EDEN = "EDEN"
-  textDisplay IF_EDEN_SCOE = "EDEN"
+  display (IfNctrs x) = display @Text "NCTRS " <> display x
+  display (IfCnc x) = display @Text "C&C " <> display x 
+  display (IfEden x) = display @Text "EDEN " <> display x
+  display (IfEdenScoe x) = display @Text "EDEN (SCOE) " <> display x
+
+
+isNctrs :: ProtocolInterface -> Bool 
+isNctrs (IfNctrs _) = True 
+isNctrs _ = False 
+
+isCnc :: ProtocolInterface -> Bool 
+isCnc (IfCnc _) = True 
+isCnc _ = False 
+
+isEden :: ProtocolInterface -> Bool 
+isEden (IfEden _) = True 
+isEden _ = False 
+
+isEdenScoe :: ProtocolInterface -> Bool 
+isEdenScoe (IfEdenScoe _) = True 
+isEdenScoe _ = False 
+
 
 -- | This is a simple data type wrapper around another
 -- type. It just adds a field with a 'ProtocolInterface' value to specify

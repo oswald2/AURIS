@@ -39,10 +39,11 @@ import           General.PUSTypes
 import           Control.PUS.Classes
 
 
+
 -- if we have SCOE packet, and it has a secondary header, it is a binary
 -- TC, else an ASCII one.
 isASCIICc :: ProtocolPacket PUSPacket -> Bool
-isASCIICc (ProtocolPacket IF_CNC pusPkt) =
+isASCIICc (ProtocolPacket (IfCnc _) pusPkt) =
   let hdr = pusPkt ^. pusHdr
   in  hdr ^. pusHdrTcVersion == 3 && not (hdr ^. pusHdrDfhFlag)
 isASCIICc _ = False
@@ -51,9 +52,10 @@ isASCIICc _ = False
 receiveCnCC
   :: (MonadIO m, MonadReader env m, HasLogFunc env, HasRaiseEvent env)
   => PUSMissionSpecific
+  -> ProtocolInterface 
   -> ConduitT ByteString ExtractedPacket m ()
-receiveCnCC missionSpecific = do
-  conduitParserEither (match (pusPktParser missionSpecific IF_CNC))
+receiveCnCC missionSpecific interf = do
+  conduitParserEither (match (pusPktParser missionSpecific interf))
     .| sink Nothing
  where
   sink lastSSC = do
@@ -76,7 +78,7 @@ receiveCnCC missionSpecific = do
             let epd = ExtractedDU { _epQuality = toFlag Good True
                                   , _epERT     = ert
                                   , _epGap     = determineGap lastSSC newSSC
-                                  , _epSource  = IF_CNC
+                                  , _epSource  = interf
                                   , _epVCID    = VCID 0
                                   , _epDU      = pkt
                                   }
@@ -119,7 +121,7 @@ scoeCommandC = awaitForever $ \pusPkt -> do
 
 
 extractCommand :: ProtocolPacket PUSPacket -> Maybe SCOECommand
-extractCommand cpkt@(ProtocolPacket IF_CNC pusPkt) = if isASCIICc cpkt
+extractCommand cpkt@(ProtocolPacket (IfCnc _) pusPkt) = if isASCIICc cpkt
   then case parse scoeCommandParser (pusPkt ^. pusData) of
     Fail{}     -> Nothing
     Partial _  -> Nothing

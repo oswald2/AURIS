@@ -47,15 +47,6 @@ convLogLevel (LogLevelOther x) = LevelOther x
 
 data AurisConfig = AurisConfig {
     aurisMission :: Text
-    , aurisNctrsHost :: Text
-    , aurisNctrsTMPort :: Int
-    , aurisNctrsTCPort :: Int
-    , aurisNctrsAdminPort :: Int
-    , aurisCnCHost :: Text
-    , aurisCnCTMPort :: Int
-    , aurisCnCTCPort :: Int
-    , aurisEdenHost :: Text
-    , aurisEdenPort :: Int
     , aurisMIB :: Maybe Text
     , aurisLogLevel :: ConfigLogLevel
     , aurisPusConfig :: Config
@@ -66,15 +57,6 @@ data AurisConfig = AurisConfig {
 defaultConfig :: AurisConfig
 defaultConfig = AurisConfig { aurisPusConfig = Data.PUS.Config.defaultConfig
                             , aurisMission        = "DEFAULT"
-                            , aurisNctrsHost      = "localhost"
-                            , aurisNctrsTMPort    = 2502
-                            , aurisNctrsTCPort    = 20009
-                            , aurisNctrsAdminPort = 20010
-                            , aurisCnCHost        = "localhost"
-                            , aurisCnCTMPort      = 33333
-                            , aurisCnCTCPort      = 22222
-                            , aurisEdenHost       = "localhost"
-                            , aurisEdenPort       = 40300
                             , aurisLogLevel       = LogLevelInfo
                             , aurisMIB            = Nothing
                             }

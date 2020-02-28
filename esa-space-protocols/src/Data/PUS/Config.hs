@@ -16,6 +16,9 @@ module Data.PUS.Config
     Config(..)
     -- | Type for the CLTU code block size. Restricted to be 5 .. 8
   , CltuBlockSize(..)
+  , NctrsConfig(..)
+  , CncConfig(..)
+  , EDENConfig(..)
   , cltuBlockSizeAsWord8
   , defaultConfig
     -- , writeConfigString
@@ -40,9 +43,41 @@ import           General.PUSTypes
 import           General.Time
 
 
+data NctrsConfig = NctrsConfig {
+  cfgNctrsID :: Word16
+  , cfgNctrsHost :: Text
+  , cfgNctrsPortTC :: Word16
+  , cfgNctrsPortTM :: Word16
+  , cfgNctrsPortADM :: Word16
+} deriving (Eq, Generic)
+
+instance FromJSON NctrsConfig
+instance ToJSON NctrsConfig where
+  toEncoding = genericToEncoding defaultOptions
+
+
+data CncConfig = CncConfig {
+  -- | A numerical ID, which needs to be unique for this C&C connection
+  cfgCncID :: Word16
+  -- | The host where to connect to 
+  , cfgCncHost :: Text
+  -- | The TM port to connect to 
+  , cfgCncPortTM :: Word16
+  -- | The TC port to connect to 
+  , cfgCncPortTC :: Word16
+    -- | Configures, if packets on the C&C protocol link should 
+    -- be CRC checked or not 
+  , cfgCncHasCRC :: Bool
+} deriving (Eq, Generic)
+
+instance FromJSON CncConfig
+instance ToJSON CncConfig where
+  toEncoding = genericToEncoding defaultOptions
+
 
 data EDENConfig = EDENConfig {
-    cfgEdenHost :: Text
+    cfgEdenID :: Word16
+    , cfgEdenHost :: Text
     , cfgEdenPort :: Word16
     }
     deriving (Eq, Generic)
@@ -72,8 +107,6 @@ data Config = Config {
     , cfgTMFrameHasCRC :: Bool
     -- | The configured segment length for TM Frames
     , cfgTMSegLength :: !TMSegmentLen
-    -- | Specifies the configuration of an EDEN connection
-    , cfgEDEN :: Maybe EDENConfig
     -- | Specifies the time epoch to be used for time handling
     , cfgEpoch :: EpochType
     -- | Specified the used leap seconds
@@ -81,10 +114,14 @@ data Config = Config {
     -- | Packets, which cannot be identified will be given this 
     -- SPID
     , cfgUnknownSPID :: SPID
-    -- | Configures, if packets on the C&C protocol link should 
-    -- be CRC checked or not 
-    , cfgCncHasCRC :: Bool
+    -- | Specifies the configurations for the available NCTRS connections
+    , cfgNCTRS :: [NctrsConfig]
+    -- | Specifies the configurations of the available C&C connections
+    , cfgCnC :: [CncConfig]
+    -- | Specifies the configuration of the available EDEN connections
+    , cfgEDEN :: [EDENConfig]
 } deriving (Eq, Generic)
+
 
 instance FromJSON Config
 instance ToJSON Config where
@@ -112,7 +149,25 @@ cltuBlockSizeAsWord8 CltuBS_8 = 8
 
 defaultEdenConfig :: EDENConfig
 defaultEdenConfig =
-  EDENConfig { cfgEdenHost = "localhost", cfgEdenPort = 40300 }
+  EDENConfig { cfgEdenID = 1, cfgEdenHost = "localhost", cfgEdenPort = 40300 }
+
+
+defaultNctrsConfig :: NctrsConfig
+defaultNctrsConfig = NctrsConfig { cfgNctrsID      = 1
+                                 , cfgNctrsHost    = "localhost"
+                                 , cfgNctrsPortTC  = 20009
+                                 , cfgNctrsPortTM  = 2502
+                                 , cfgNctrsPortADM = 20010
+                                 }
+
+defaultCncConfig :: CncConfig
+defaultCncConfig = CncConfig { cfgCncID     = 1
+                             , cfgCncHost   = "localhost"
+                             , cfgCncPortTM = 10000
+                             , cfgCncPortTC = 11000
+                             , cfgCncHasCRC = True
+                             }
+
 
 -- | a default configuration with typical values.
 defaultConfig :: Config
@@ -124,11 +179,12 @@ defaultConfig = Config { cfgCltuBlockSize        = CltuBS_8
                        , cfgMaxTMFrameLen        = 1115
                        , cfgTMFrameHasCRC        = True
                        , cfgTMSegLength          = TMSegment65536
-                       , cfgEDEN                 = Just defaultEdenConfig
                        , cfgEpoch                = UnixTime
                        , cfgLeapSeconds          = 17
                        , cfgUnknownSPID          = SPID 5071
-                       , cfgCncHasCRC            = False
+                       , cfgNCTRS                = [defaultNctrsConfig]
+                       , cfgCnC                  = [defaultCncConfig]
+                       , cfgEDEN                 = [defaultEdenConfig]
                        }
 
 -- | write the config as a serialized string to a file. Uses the Show class for serizalization

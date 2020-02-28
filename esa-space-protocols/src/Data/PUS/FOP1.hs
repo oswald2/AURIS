@@ -55,6 +55,7 @@ import           Protocol.ProtocolInterfaces
 
 data FOPData = FOPData {
     _fvcid :: VCID
+    , _fInterface :: ProtocolInterface 
     , _fwaitQueue :: TMVar EncodedSegment
     , _fcop1Queue :: COP1Queue
     , _fout :: TBQueue TCFrameTransport
@@ -66,14 +67,15 @@ makeLenses ''FOPData
 startFOP1
     :: (MonadIO m, MonadReader env m, HasGlobalState env)
     => VCID
+    -> ProtocolInterface
     -> COP1Queue
     -> TMVar EncodedSegment
     -> TBQueue TCFrameTransport
     -> m ()
-startFOP1 vcid cop1Queue waitQueue outQueue = do
+startFOP1 vcid interf cop1Queue waitQueue outQueue = do
     timerWheel <- liftIO $ TW.create (TW.Config 5 0.1)
     let fopData =
-            FOPData vcid waitQueue cop1Queue outQueue (startTimerSTM timerWheel)
+            FOPData vcid interf waitQueue cop1Queue outQueue (startTimerSTM timerWheel)
     fop1Program fopData
     pure ()
 
@@ -494,7 +496,7 @@ sendBCFrameSTM cfg fopData fopState directive = do
             , _tcFrameData    = encDirective
             }
         trans  = TCFrameTransport frame rqst
-        rqst   = TCRequest 0 IF_NCTRS scid vcid (TCDir directive)
+        rqst   = TCRequest 0 (fopData ^. fInterface) scid vcid (TCDir directive)
 
 -- create a new state which has V(S) incremented
         !newst = fopState & fopVS +~ 1 & addToSentQueue trans False
@@ -522,7 +524,7 @@ sendInitBCFrameSTM cfg fopData fopState directive = do
             , _tcFrameData    = encDirective
             }
         trans  = TCFrameTransport frame rqst
-        rqst   = TCRequest 0 IF_NCTRS scid vcid (TCDir directive)
+        rqst   = TCRequest 0 (fopData ^. fInterface) scid vcid (TCDir directive)
 
 -- create a new state which has V(S) incremented
         !newst = fopState & fopVS +~ 1 & addToSentQueue trans False
@@ -579,7 +581,7 @@ _sendBCFrame fopData directive = do
                 , _tcFrameData    = encDirective
                 }
             trans = TCFrameTransport frame rqst
-            rqst  = TCRequest 0 IF_NCTRS scid vcid (TCDir directive)
+            rqst  = TCRequest 0 (fopData ^. fInterface) scid vcid (TCDir directive)
 
 -- create a new state which has V(S) incremented
             newst = st & fopVS +~ 1
