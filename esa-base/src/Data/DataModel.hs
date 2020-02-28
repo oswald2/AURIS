@@ -35,7 +35,7 @@ where
 import           RIO
 import qualified RIO.HashMap                   as HM
 import qualified RIO.Map                       as M
-import qualified RIO.ByteString.Lazy           as BL
+--import qualified RIO.ByteString.Lazy           as BL
 import qualified RIO.Text                      as T
 import           Control.Lens                   ( makeLenses )
 
@@ -69,6 +69,8 @@ data DataModel = DataModel {
     , _dmParameters :: IHashTable ShortText TMParameterDef
     -- | A search index for packet identification criterias
     , _dmPacketIdIdx :: PICSearchIndex
+    -- | Graphical displays 
+    , _dmGRDs :: Map ShortText GRD
     -- | A map into the packets
     , _dmTMPackets :: IHashTable TMPacketKey TMPacketDef
     -- | A map into VPD structures. Used for VPD_CHOICE variable packets.
@@ -76,8 +78,6 @@ data DataModel = DataModel {
     -- up in this table. The rest of the packet is then replaced with these 
     -- 'VarParams' structure. 
     , _dmVPDStructs :: IHashTable Int VarParams
-    -- | Graphical displays 
-    , _dmGRDs :: Map ShortText GRD
     }
     deriving (Show, Generic)
 makeLenses ''DataModel
@@ -103,45 +103,53 @@ instance Serialise DataModel where
   encode = encodeDataModel
   decode = decodeDataModel
 
+encodedLen :: Word
+encodedLen = 7
+
 encodeDataModel :: DataModel -> Encoding
 encodeDataModel model =
-  encodeListLen 7
+  encodeListLen encodedLen
     <> encode (_dmCalibrations model)
     <> encode (_dmSyntheticParams model)
-    <> encodeHashTable (_dmParameters model)
+    <> encode (_dmGRDs model)
     <> encode (_dmPacketIdIdx model)
+    <> encodeHashTable (_dmParameters model)
     <> encodeHashTable (_dmTMPackets model)
     <> encodeHashTable (_dmVPDStructs model)
-    <> encode (_dmGRDs model)
 
 decodeDataModel :: Decoder s DataModel
 decodeDataModel = do
-  _len    <- decodeListLen
+  len <- decodeListLen
+  when (fromIntegral len /= encodedLen)
+    $  fail $ "Error decoding data model: "
+    <> show len
+    <> ", should be "
+    <> show encodedLen
   calibs  <- decode
   synths  <- decode
-  params  <- decodeHashTable
+  grds    <- decode
   idx     <- decode
+  params  <- decodeHashTable
   packets <- decodeHashTable
   vpds    <- decodeHashTable
-  grds    <- decode
   return DataModel { _dmCalibrations    = calibs
                    , _dmSyntheticParams = synths
-                   , _dmParameters      = params
                    , _dmPacketIdIdx     = idx
+                   , _dmGRDs            = grds
+                   , _dmParameters      = params
                    , _dmTMPackets       = packets
                    , _dmVPDStructs      = vpds
-                   , _dmGRDs            = grds
                    }
 
 -- | Serializes the 'DataModel' and writes it to a file. Uses 
 -- the serialise library under the hood.
 writeDataModel :: (MonadIO m) => FilePath -> DataModel -> m ()
-writeDataModel path model = liftIO $ BL.writeFile path (serialise model)
+writeDataModel path model = liftIO $ writeFileSerialise path model
 
 -- | Reads the serialized 'DataModel' from a file
-readDataModel :: (MonadIO m) => FilePath -> m (Either Text DataModel)
+readDataModel :: (MonadUnliftIO m) => FilePath -> m (Either Text DataModel)
 readDataModel path = do
-  res <- deserialiseOrFail <$> BL.readFile path
+  res <- try $ liftIO $ readFileDeserialise path
   case res of
     Left  (DeserialiseFailure _ err) -> return $ Left (T.pack err)
     Right model                      -> return (Right model)

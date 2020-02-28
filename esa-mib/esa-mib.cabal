@@ -155,7 +155,7 @@ library
     , esa-base
     , text-short
     , mtl
-    , hashtables
+    , hashtables-mo
     , colour
 
   -- Directories containing source files.
@@ -235,4 +235,4 @@ executable LoadMIBTest
         hspec,
         pretty-show,
         vector,
-        hashtables
+        hashtables-mo

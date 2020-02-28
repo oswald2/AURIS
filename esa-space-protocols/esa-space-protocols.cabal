@@ -175,7 +175,7 @@ library
         , streaming-commons
         , text-short
         , resourcet
-        , hashtables
+        , hashtables-mo
         , vector-builder
         , pretty-show
 
@@ -475,4 +475,4 @@ executable TMModelTest
         , unliftio
         , mwc-random
         , text-short
-        , hashtables
+        , hashtables-mo

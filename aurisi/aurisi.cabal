@@ -80,7 +80,7 @@ Executable AURISi
     filepath,
     text-short,
     file-embed,
-    hashtables,
+    hashtables-mo,
     stm-conduit
 
   Other-Modules: AURISi

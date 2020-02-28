@@ -163,7 +163,7 @@ library
     , attoparsec-binary
     , base64-bytestring-type
     , mtl
-    , hashtables
+    , hashtables-mo
     , colour
 
   -- Directories containing source files.

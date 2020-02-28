@@ -295,7 +295,7 @@ instance BitOffsets Offset where
       in  Offset (ByteOffset newByteOff) (BitOffset newBitOff)
   subOff off1 off2 = toOffset (toBitOffset off1 - toBitOffset off2)
 
-
+-- | Class for offset calculations
 class OffsetCalculations a b where
     (.+.) :: a -> b -> Offset
     (.-.) :: a -> b -> Offset
@@ -316,10 +316,11 @@ instance OffsetCalculations Offset BitSize where
   off .-. (BitSize x) = off `subOff` toOffset (BitOffset x)
 
 
-
+-- | Convert a value to a 'Double'
 class ToDouble a where
     toDouble :: a -> Double
 
+-- | Convert a value from a 'Double'
 class FromDouble a where
     fromDouble :: Double -> a
 
@@ -343,7 +344,7 @@ instance Display ShortText where
   display = display . ST.toText
 
 
-
+-- | Serialise a 'IHashTable' 
 encodeHashTable :: (Serialise k, Serialise v) => IHashTable k v -> SE.Encoding
 encodeHashTable ht =
   let lst = HT.toList ht
@@ -351,6 +352,7 @@ encodeHashTable ht =
              (SE.encodeListLen (fromIntegral (length lst)))
              (HT.toList ht)
 
+-- | Deserialise a 'IHashTable'
 decodeHashTable
   :: (Serialise k, Serialise v, Eq k, Hashable k) => Decoder s (IHashTable k v)
 decodeHashTable = do

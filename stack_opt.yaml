@@ -38,7 +38,7 @@ packages:
 - gui-base
 - auris-tm-displays
 - aurisi
-- hashtables
+- hashtables-mo
 
 # Dependency packages to be pulled from upstream that are not in the resolver.
 # These entries can reference officially published versions as well as
@@ -79,7 +79,7 @@ flags:
       optimize: true
     mcs-interface:
       optimize: true
-    hashtables:
+    hashtables-mo:
       unsafe-tricks: true
       sse42: true
 

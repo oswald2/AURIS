@@ -9,20 +9,23 @@ module Data.Display.Graphical
 where
 
 import           RIO
-import           RIO.Partial                    ( read )
 
 import           Data.Text.Short                ( ShortText )
 import           Data.Colour
+import           Data.Colour.SRGB
+import           Data.Aeson
+import           Codec.Serialise               as S
 
-import           Codec.Serialise
-
-import           General.Types ()
+import           General.Types                  ( )
 
 
 data PrintRaw = PrRaw | PrCalibrated
   deriving (Eq, Ord, Enum, Show, Generic)
 
 instance Serialise PrintRaw
+instance FromJSON PrintRaw
+instance ToJSON PrintRaw where
+  toEncoding = genericToEncoding defaultOptions
 
 
 data Symbol =
@@ -36,6 +39,9 @@ data Symbol =
   deriving (Eq, Ord, Enum, Show, Generic)
 
 instance Serialise Symbol
+instance FromJSON Symbol 
+instance ToJSON Symbol where 
+  toEncoding = genericToEncoding defaultOptions 
 
 
 data LineType =
@@ -48,16 +54,47 @@ data LineType =
   deriving (Eq, Ord, Enum, Show, Generic)
 
 instance Serialise LineType
+instance FromJSON LineType 
+instance ToJSON LineType where 
+  toEncoding = genericToEncoding defaultOptions 
 
 
 newtype GRDColour = GRDColour (AlphaColour Double)
   deriving (Show, Generic)
 
 
-instance Serialise GRDColour where
-  encode x = encode (show x)
-  decode = GRDColour . read <$> decode
+data EncColor = EncColor !Double !Double !Double !Double
+  deriving Generic
 
+instance Serialise EncColor
+
+
+{-# INLINABLE pureColour #-}
+pureColour :: AlphaColour Double -> Colour Double
+pureColour ac = darken (recip a) (ac `Data.Colour.over` black)
+  where a = alphaChannel ac
+
+
+{-# INLINABLE toEncColor #-}
+toEncColor :: GRDColour -> EncColor
+toEncColor (GRDColour c) =
+  let rgb = toSRGB (pureColour c)
+  in  EncColor (channelRed rgb)
+               (channelGreen rgb)
+               (channelBlue rgb)
+               (alphaChannel c)
+
+{-# INLINABLE fromEncColor #-}
+fromEncColor :: EncColor -> GRDColour
+fromEncColor (EncColor red green blue alpha) = 
+   let c = sRGB red green blue 
+   in
+   GRDColour (withOpacity c alpha)
+
+
+instance Serialise GRDColour where
+  encode = S.encode . toEncColor
+  decode = fromEncColor <$> S.decode
 
 data GRDParameter = GRDParameter {
   _grdpName :: !ShortText

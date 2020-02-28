@@ -29,6 +29,7 @@ resolver: lts-14.27
 #   - auto-update
 #   - wai
 packages:
+- hashtables-mo
 - esa-base
 - esa-mib
 - esa-space-protocols
@@ -38,7 +39,6 @@ packages:
 - gui-base
 - auris-tm-displays
 - aurisi
-- hashtables
 
 # Dependency packages to be pulled from upstream that are not in the resolver.
 # These entries can reference officially published versions as well as

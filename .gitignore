@@ -29,3 +29,5 @@ stdout
 DefaultConfig.json
 DefaultConfig.json
 DefaultConfig.json
+stack_opt.yaml.orig
+stack_llvm.yaml.orig

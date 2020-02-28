@@ -10,6 +10,7 @@ import qualified Data.Text.IO                  as T
 import qualified Data.HashTable.ST.Basic       as HT
 import           UnliftIO.Environment
 
+import           Data.DataModel
 import           Data.MIB.LoadMIB
 import           Data.MIB.CAF                  as CAF
 import           Data.MIB.CAP                  as CAP
@@ -193,8 +194,16 @@ testLoadMIB mibPath = do
       exitFailure
     Right r -> do
       pPrint r
-      --return (force r)
-      T.putStrLn "Done."
+      T.putStrLn "Writing data model..."
+      writeDataModel "/tmp/writemib.tmp" r
+      T.putStrLn "Reading data model..."
+      chk <- readDataModel "/tmp/writemib.tmp"
+      case chk of
+        Left err -> do
+          T.putStrLn $ "Error reading model: " <> err
+          exitFailure
+        Right _model -> T.putStrLn "Done."
+
 
 
 
@@ -203,44 +212,44 @@ main = do
   [mibPath] <- getArgs
 
   T.putStrLn "Loading Tables:\n===============\n"
-  -- T.putStrLn "CAFs:\n"
-  -- testCaf mibPath
-  -- T.putStrLn "\n\n\nCAPs:\n"
-  -- testCap mibPath
-  -- T.putStrLn "\n\n\nMCFs:\n"
-  -- testMcf mibPath
-  -- T.putStrLn "\n\n\nLGFs:\n"
-  -- testLgf mibPath
-  -- T.putStrLn "\n\n\nTXFs:\n"
-  -- testTxf mibPath
-  -- T.putStrLn "\n\n\nTXPs:\n"
-  -- testTxp mibPath
-  -- T.putStrLn "\n\n\nCURs:\n"
-  -- testCur mibPath
-  -- T.putStrLn "\n\n\nPCFs:\n"
-  -- testPcf mibPath
-  -- T.putStrLn "\n\n\nPIDs:\n"
-  -- testPid mibPath
-  -- T.putStrLn "\n\n\nPLFs:\n"
-  -- testPlf mibPath
-  -- T.putStrLn "\n\n\nTPCFs:\n"
-  -- testTpcf mibPath
-  -- T.putStrLn "\n\n\nGPCs:\n"
-  -- testGpc mibPath
-  -- T.putStrLn "\n\n\nGPFs:\n"
-  -- testGpf mibPath
+  T.putStrLn "CAFs:\n"
+  testCaf mibPath
+  T.putStrLn "\n\n\nCAPs:\n"
+  testCap mibPath
+  T.putStrLn "\n\n\nMCFs:\n"
+  testMcf mibPath
+  T.putStrLn "\n\n\nLGFs:\n"
+  testLgf mibPath
+  T.putStrLn "\n\n\nTXFs:\n"
+  testTxf mibPath
+  T.putStrLn "\n\n\nTXPs:\n"
+  testTxp mibPath
+  T.putStrLn "\n\n\nCURs:\n"
+  testCur mibPath
+  T.putStrLn "\n\n\nPCFs:\n"
+  testPcf mibPath
+  T.putStrLn "\n\n\nPIDs:\n"
+  testPid mibPath
+  T.putStrLn "\n\n\nPLFs:\n"
+  testPlf mibPath
+  T.putStrLn "\n\n\nTPCFs:\n"
+  testTpcf mibPath
+  T.putStrLn "\n\n\nGPCs:\n"
+  testGpc mibPath
+  T.putStrLn "\n\n\nGPFs:\n"
+  testGpf mibPath
 
 
 
-  -- T.putStrLn "\n\n\nLoading Data Structures:\n===============\n"
-  -- T.putStrLn "LoadCalibs:\n"
-  -- testLoadCalibs mibPath
-  -- T.putStrLn "\nLoadSyns:\n"
-  -- testLoadSyn mibPath
-  -- T.putStrLn "\nLoadParams:\n"
-  -- testLoadParameters mibPath
-  -- T.putStrLn "\n\n\nGRDs:\n"
-  -- testLoadGRDs mibPath
+  T.putStrLn "\n\n\nLoading Data Structures:\n===============\n"
+  T.putStrLn "LoadCalibs:\n"
+  testLoadCalibs mibPath
+  T.putStrLn "\nLoadSyns:\n"
+  testLoadSyn mibPath
+  T.putStrLn "\nLoadParams:\n"
+  testLoadParameters mibPath
+  T.putStrLn "\n\n\nGRDs:\n"
+  testLoadGRDs mibPath
 
   T.putStrLn "\n\n\nLoading MIB:\n===============\n"
   T.putStrLn "LoadMIB:\n"
