@@ -63,10 +63,14 @@ newtype GRDColour = GRDColour (AlphaColour Double)
   deriving (Show, Generic)
 
 
+
 data EncColor = EncColor !Double !Double !Double !Double
   deriving Generic
 
 instance Serialise EncColor
+instance FromJSON EncColor 
+instance ToJSON EncColor where
+  toEncoding = genericToEncoding defaultOptions
 
 
 {-# INLINABLE pureColour #-}
@@ -96,6 +100,13 @@ instance Serialise GRDColour where
   encode = S.encode . toEncColor
   decode = fromEncColor <$> S.decode
 
+instance FromJSON GRDColour where 
+  parseJSON x = fromEncColor <$> parseJSON x
+
+instance ToJSON GRDColour where 
+  toJSON = toJSON . toEncColor 
+  toEncoding = toEncoding . toEncColor
+
 data GRDParameter = GRDParameter {
   _grdpName :: !ShortText
   , _grdpRaw :: !PrintRaw
@@ -105,6 +116,9 @@ data GRDParameter = GRDParameter {
   } deriving (Show, Generic)
 
 instance Serialise GRDParameter
+instance FromJSON GRDParameter 
+instance ToJSON GRDParameter where
+  toEncoding = genericToEncoding defaultOptions
 
 
 data GRD = GRD {
@@ -125,3 +139,6 @@ data GRD = GRD {
 
 
 instance Serialise GRD
+instance FromJSON GRD 
+instance ToJSON GRD where
+  toEncoding = genericToEncoding defaultOptions

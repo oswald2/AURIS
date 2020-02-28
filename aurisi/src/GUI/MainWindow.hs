@@ -16,8 +16,8 @@ module GUI.MainWindow
   , createMainWindow
   , scrollNew
   , mwWindow
-  , mmOpenFile
-  , mmSaveFile
+  , mmExit
+  , mmImportMIB
   , mmAbout
   , mwProgress
   , mwTabs
@@ -78,8 +78,8 @@ import           General.Time
 
 
 data MainMenu = MainMenu {
-    _mmOpenFile :: Ref MenuItemBase
-  , _mmSaveFile :: Ref MenuItemBase
+    _mmImportMIB :: Ref MenuItemBase
+  , _mmExit :: Ref MenuItemBase
   , _mmFullScreen :: Ref MenuItemBase
   , _mmFullScreenOff :: Ref MenuItemBase
   , _mmAbout :: Ref MenuItemBase

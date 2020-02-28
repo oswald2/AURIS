@@ -64,7 +64,9 @@ data TMPIDef = TMPIDef {
 makeLenses ''TMPIDef
 
 instance Serialise TMPIDef
-
+instance FromJSON TMPIDef 
+instance ToJSON TMPIDef where 
+  toEncoding = genericToEncoding defaultOptions
 
 data TMPIValues = TMPIValues {
   _tmpiP1 :: Maybe TMPIVal
@@ -86,3 +88,6 @@ data TMPIDefs = TMPIDefs {
 makeLenses ''TMPIDefs
 
 instance Serialise TMPIDefs
+instance FromJSON TMPIDefs 
+instance ToJSON TMPIDefs where 
+  toEncoding = genericToEncoding defaultOptions

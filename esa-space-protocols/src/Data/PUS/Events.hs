@@ -40,6 +40,9 @@ import           Data.PUS.TMPacket              ( TMPacket )
 
 import           Data.TM.Parameter
 
+import           Data.DataModel
+
+
 -- | The events themselves
 data Event = EVCommanding EventCommanding
     | EVAlarms EventAlarm
@@ -98,6 +101,8 @@ data EventAlarm =
     | EVPacketInfo Text
     | EVPacketWarn Text
     | EVPacketAlarm Text
+    | EVMIBLoaded DataModel
+    | EVMIBLoadError Text
     deriving (Show, Generic)
 
 instance Serialise EventAlarm

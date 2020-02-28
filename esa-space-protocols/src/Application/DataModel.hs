@@ -1,5 +1,6 @@
 module Application.DataModel
   ( loadDataModel
+  , loadDataModelDef
   , LoadFrom(..)
   )
 where
@@ -14,6 +15,8 @@ import           Data.MIB.LoadMIB
 import           System.Directory
 import           System.FilePath
 
+import           Text.Builder
+
 
 -- | Specifies from where to load a 'DataModel'. 
 data LoadFrom =
@@ -27,12 +30,12 @@ data LoadFrom =
 
 
 -- | Load a data model either from MIB or directly from the serialized 
--- representation.
-loadDataModel
+-- representation. If the model could not be loaded, returns an empty model.
+loadDataModelDef
   :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env)
   => LoadFrom
   -> m DataModel
-loadDataModel (LoadFromMIB str serializedPath) = do
+loadDataModelDef (LoadFromMIB str serializedPath) = do
   res <- loadMIB str
   case res of
     Left err -> do
@@ -45,7 +48,7 @@ loadDataModel (LoadFromMIB str serializedPath) = do
       writeDataModel serializedPath model
       logInfo "Data Model written."
       return model
-loadDataModel (LoadFromSerialized path) = do
+loadDataModelDef (LoadFromSerialized path) = do
   ex <- liftIO $ doesFileExist path
   if ex
     then do
@@ -68,3 +71,38 @@ loadDataModel (LoadFromSerialized path) = do
         <> display (T.pack path)
         <> display ("' does not exist." :: Text)
       return Data.DataModel.empty
+
+
+
+
+
+-- | Load a data model either from MIB or directly from the serialized 
+-- representation.
+loadDataModel
+  :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env)
+  => LoadFrom
+  -> m (Either Text DataModel)
+loadDataModel (LoadFromMIB str serializedPath) = do
+  res <- loadMIB str
+  case res of
+    Left  err   -> return (Left err)
+    Right model -> do
+      logDebug $ display ("Successfully imported MIB." :: Text)
+      liftIO $ createDirectoryIfMissing True (takeDirectory serializedPath)
+      logDebug "Writing data model to disk..."
+      writeDataModel serializedPath model
+      logDebug "Data Model written."
+      return (Right model)
+loadDataModel (LoadFromSerialized path) = do
+  ex <- liftIO $ doesFileExist path
+  if ex
+    then do
+      logDebug "calling readDataModel..."
+      readDataModel path
+    else do
+      return
+        $  Left
+        $  run
+        $  text "Data model file '"
+        <> text (T.pack path)
+        <> text "' does not exist."

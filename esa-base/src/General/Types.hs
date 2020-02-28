@@ -60,7 +60,9 @@ import           Data.HashTable.ST.Basic        ( IHashTable )
 import           Data.HashTable.ST.Basic       as HT
 import           Data.Attoparsec.Text           ( Parser )
 import qualified Data.Attoparsec.Text          as A
-import           Data.Char                      ( ord, isHexDigit )
+import           Data.Char                      ( ord
+                                                , isHexDigit
+                                                )
 
 import           Codec.Serialise               as S
 import           Codec.Serialise.Encoding      as SE
@@ -112,6 +114,9 @@ newtype BitOffset = BitOffset Int
     deriving (Eq, Ord, Num, Show, Read, Generic, NFData)
 
 instance Serialise BitOffset
+instance FromJSON BitOffset
+instance ToJSON BitOffset where 
+  toEncoding = genericToEncoding defaultOptions
 
 instance Display BitOffset where
   display (BitOffset x) = display x
@@ -134,6 +139,10 @@ data Offset = Offset ByteOffset BitOffset
 
 instance NFData Offset
 instance Serialise Offset
+instance FromJSON Offset
+instance ToJSON Offset where 
+  toEncoding = genericToEncoding defaultOptions
+
 
 instance Display Offset where
   display (Offset b bi) =
@@ -333,6 +342,13 @@ instance Serialise ShortText where
 instance FromJSON ShortText where
   parseJSON = withText "ShortText" $ pure . ST.fromText
 
+instance ToJSONKey ShortText where
+  toJSONKey = ToJSONKeyText ST.toText (E.text . ST.toText)
+
+instance FromJSONKey ShortText where
+  fromJSONKey = FromJSONKeyText ST.fromText
+
+
 instance ToJSON ShortText where
   toJSON = String . ST.toText
   {-# INLINE toJSON #-}
@@ -359,6 +375,15 @@ decodeHashTable = do
   len <- SE.decodeListLen
   lst <- replicateM len ((,) <$> S.decode <*> S.decode)
   return (HT.fromList lst)
+
+
+instance (ToJSON k, ToJSON v) => ToJSON (IHashTable k v) where
+  toJSON ht = let lst = HT.toList ht in toJSON lst
+  toEncoding ht = let lst = HT.toList ht in E.list toEncoding lst
+
+instance (Eq k, Hashable k, FromJSON k, FromJSON v) => FromJSON (IHashTable k v) where
+  parseJSON x = HT.fromList <$> parseJSONList x
+
 
 -- | A newtype wrapper around 'ByteString' for text-serialising a 'ByteString'
 -- into a hex-coded string value
@@ -389,13 +414,11 @@ instance ToJSON HexBytes where
   {-# INLINE toEncoding #-}
 
 instance FromJSON HexBytes where
-  parseJSON (String t) = 
-    case A.parseOnly parseHexLine t of 
-      Left err -> fail err 
-      Right x -> return x 
-  parseJSON invalid =    
-    E.prependFailure "parsing HexBytes failed, "
-      (E.typeMismatch "String" invalid)
+  parseJSON (String t) = case A.parseOnly parseHexLine t of
+    Left  err -> fail err
+    Right x   -> return x
+  parseJSON invalid = E.prependFailure "parsing HexBytes failed, "
+                                       (E.typeMismatch "String" invalid)
 
 
 

@@ -31,6 +31,7 @@ where
 import           RIO
 import           Data.Coerce
 import           Codec.Serialise
+import           Data.Aeson
 
 
 data Hours = Hours deriving Generic
@@ -40,10 +41,22 @@ data MilliSeconds = MilliSeconds deriving Generic
 data MicroSeconds = MicroSeconds deriving Generic
 
 instance Serialise Hours
-instance Serialise Minutes 
-instance Serialise Seconds 
-instance Serialise MilliSeconds 
-instance Serialise MicroSeconds 
+instance Serialise Minutes
+instance Serialise Seconds
+instance Serialise MilliSeconds
+instance Serialise MicroSeconds
+
+instance FromJSON Hours
+instance FromJSON Minutes
+instance FromJSON Seconds
+instance FromJSON MilliSeconds
+instance FromJSON MicroSeconds
+
+instance ToJSON Hours
+instance ToJSON Minutes
+instance ToJSON Seconds
+instance ToJSON MilliSeconds
+instance ToJSON MicroSeconds
 
 
 -- | We store the time internally in micro seconds precision
@@ -66,6 +79,9 @@ instance ToMicro Hours where
   toMicro _ val = truncate (val * 3600 * 1_000_000)
 
 instance Serialise a => Serialise (TimeSpn a)
+instance FromJSON a => FromJSON (TimeSpn a)
+instance ToJSON a => ToJSON (TimeSpn a) where
+  toEncoding = genericToEncoding defaultOptions
 
 mkTimeSpan :: ToMicro a => a -> Double -> TimeSpn a
 mkTimeSpan t val = TimeSpn (toMicro t val)

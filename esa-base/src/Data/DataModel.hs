@@ -40,10 +40,10 @@ import qualified RIO.Text                      as T
 import           Control.Lens                   ( makeLenses )
 
 import           Data.Text.Short                ( ShortText )
-import           Data.Compact
-import           Codec.Serialise
-import           Codec.Serialise.Encoding
-import           Codec.Serialise.Decoding
+import           Data.Aeson                    as AE
+import           Codec.Serialise               as S
+import           Codec.Serialise.Encoding      as S 
+import           Codec.Serialise.Decoding      as S 
 
 import           Data.HashTable.ST.Basic       as HT
 
@@ -103,16 +103,22 @@ instance Serialise DataModel where
   encode = encodeDataModel
   decode = decodeDataModel
 
+instance FromJSON DataModel
+instance ToJSON DataModel where
+  toEncoding = genericToEncoding defaultOptions
+
+
+
 encodedLen :: Word
 encodedLen = 7
 
-encodeDataModel :: DataModel -> Encoding
+encodeDataModel :: DataModel -> S.Encoding
 encodeDataModel model =
   encodeListLen encodedLen
-    <> encode (_dmCalibrations model)
-    <> encode (_dmSyntheticParams model)
-    <> encode (_dmGRDs model)
-    <> encode (_dmPacketIdIdx model)
+    <> S.encode (_dmCalibrations model)
+    <> S.encode (_dmSyntheticParams model)
+    <> S.encode (_dmGRDs model)
+    <> S.encode (_dmPacketIdIdx model)
     <> encodeHashTable (_dmParameters model)
     <> encodeHashTable (_dmTMPackets model)
     <> encodeHashTable (_dmVPDStructs model)
@@ -126,10 +132,10 @@ decodeDataModel = do
     <> show len
     <> ", should be "
     <> show encodedLen
-  calibs  <- decode
-  synths  <- decode
-  grds    <- decode
-  idx     <- decode
+  calibs  <- S.decode
+  synths  <- S.decode
+  grds    <- S.decode
+  idx     <- S.decode
   params  <- decodeHashTable
   packets <- decodeHashTable
   vpds    <- decodeHashTable

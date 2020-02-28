@@ -26,7 +26,7 @@ Function {makeWindow(IO(MainWindowFluid))} {open
     Fl_Scroll mainScrolled {open
       xywh {0 0 2060 1025}
     } {
-      Fl_Group deskHeaderGroup {
+      Fl_Group deskHeaderGroup {open
         xywh {5 5 1755 70} box THIN_UP_FRAME
       } {
         Fl_Group rGroup1 {open
@@ -39,12 +39,12 @@ Function {makeWindow(IO(MainWindowFluid))} {open
             label {&File} open
             xywh {10 10 70 21}
           } {
-            MenuItem menuSaveFile {
-              label {Save File}
+            MenuItem menuImportMIB {
+              label {Import MIB}
               xywh {10 10 36 21}
             }
-            MenuItem menuOpenFile {
-              label {&Open}
+            MenuItem menuExit {
+              label Exit
               xywh {10 10 36 21}
             }
           }
@@ -72,7 +72,7 @@ Function {makeWindow(IO(MainWindowFluid))} {open
           }
         }
         Fl_Output labelMission {
-          label {Mission:}
+          label {Mission:} selected
           xywh {140 15 105 20} box FLAT_BOX textfont 10
         }
         Fl_Group logoGroup {
@@ -520,8 +520,8 @@ let { tmfTab = TMFrameTabFluid {
 
         
 let { mainMenu = MainMenu {
-    _mmOpenFile = menuOpenFile
-  , _mmSaveFile = menuSaveFile
+    _mmImportMIB = menuImportMIB
+  , _mmExit = menuExit
   , _mmFullScreen = menuItemFullScreen
   , _mmFullScreenOff = menuItemFullScreenOff
   , _mmAbout = menuItemAbout
@@ -577,8 +577,7 @@ let { window = MainWindowFluid { _mfWindow = mainWindow
     , _mfEdenConn = edenConn
     , _mfTimeLabel = timeField
     }};
-    return window} {selected
-  }
+    return window} {}
 }
 
 Function {makeAboutWindow(IO(AboutWindowFluid))} {open

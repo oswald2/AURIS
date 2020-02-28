@@ -7,7 +7,7 @@ module AurisProcessing
 where
 
 import           RIO
-import qualified Data.Text.IO                  as T
+--import qualified Data.Text.IO                  as T
 import           Data.PUS.Config
 import           Data.PUS.GlobalState
 import           Data.PUS.MissionSpecific.Definitions
@@ -29,12 +29,6 @@ import           Application.Chains
 import           Application.DataModel
 
 
-configPath :: FilePath
-configPath = ".config/AURISi"
-
-
-defaultMIBFile :: FilePath
-defaultMIBFile = configPath </> "data_model.raw"
 
 runProcessing
   :: AurisConfig
@@ -64,7 +58,7 @@ runProcessing cfg missionSpecific mibPath interface mainWindow = do
             Nothing -> LoadFromSerialized serializedPath
           serializedPath = home </> configPath </> defaultMIBFile
 
-      model <- loadDataModel path
+      model <- loadDataModelDef path
       env   <- ask
       setDataModel env model
 

@@ -120,6 +120,9 @@ data SuperCommutated = SuperCommutated {
 makeLenses ''SuperCommutated
 
 instance Serialise SuperCommutated
+instance AE.FromJSON SuperCommutated
+instance AE.ToJSON SuperCommutated where 
+  toEncoding = AE.genericToEncoding AE.defaultOptions
 
 
 -- | This data type specifies a parameter location and is therefore the
@@ -141,6 +144,9 @@ data TMParamLocation = TMParamLocation {
 makeLenses ''TMParamLocation
 
 instance Serialise TMParamLocation
+instance AE.FromJSON TMParamLocation
+instance AE.ToJSON TMParamLocation where 
+  toEncoding = AE.genericToEncoding AE.defaultOptions
 
 -- | returns if a param location is supercommutated
 isSuperCommutated :: TMParamLocation -> Bool
@@ -175,6 +181,9 @@ data TMVarParamModifier =
   deriving (Show, Generic)
 
 instance Serialise TMVarParamModifier
+instance AE.FromJSON TMVarParamModifier
+instance AE.ToJSON TMVarParamModifier where 
+  toEncoding = AE.genericToEncoding AE.defaultOptions
 
 
 data TMVarAlignment =
@@ -184,6 +193,9 @@ data TMVarAlignment =
   deriving (Show, Generic)
 
 instance Serialise TMVarAlignment
+instance AE.FromJSON TMVarAlignment
+instance AE.ToJSON TMVarAlignment where 
+  toEncoding = AE.genericToEncoding AE.defaultOptions
 
 
 data TMVarDisp =
@@ -193,6 +205,9 @@ data TMVarDisp =
   deriving (Show, Generic)
 
 instance Serialise TMVarDisp
+instance AE.FromJSON TMVarDisp
+instance AE.ToJSON TMVarDisp where 
+  toEncoding = AE.genericToEncoding AE.defaultOptions
 
 data TMVarRadix =
   TMVarBinary
@@ -203,6 +218,9 @@ data TMVarRadix =
   deriving (Show, Generic)
 
 instance Serialise TMVarRadix
+instance AE.FromJSON TMVarRadix
+instance AE.ToJSON TMVarRadix where 
+  toEncoding = AE.genericToEncoding AE.defaultOptions
 
 
 
@@ -221,6 +239,9 @@ data TMVarParamDef = TMVarParamDef {
 makeLenses '' TMVarParamDef 
 
 instance Serialise TMVarParamDef
+instance AE.FromJSON TMVarParamDef
+instance AE.ToJSON TMVarParamDef where 
+  toEncoding = AE.genericToEncoding AE.defaultOptions
 
 
 data VarParams = 
@@ -241,6 +262,9 @@ data VarParams =
   deriving (Show, Generic)
 
 instance Serialise VarParams
+instance AE.FromJSON VarParams
+instance AE.ToJSON VarParams where 
+  toEncoding = AE.genericToEncoding AE.defaultOptions
 
 
 
@@ -257,6 +281,10 @@ data TMPacketParams =
   deriving (Show, Generic)
 
 instance Serialise TMPacketParams
+instance AE.FromJSON TMPacketParams
+instance AE.ToJSON TMPacketParams where 
+  toEncoding = AE.genericToEncoding AE.defaultOptions
+
 
 -- | The TM packet definition. All information to extract the contents of a
 -- packet is contained here.
@@ -281,6 +309,10 @@ makeLenses ''TMPacketDef
 
 
 instance Serialise TMPacketDef
+instance AE.FromJSON TMPacketDef
+instance AE.ToJSON TMPacketDef where 
+  toEncoding = AE.genericToEncoding AE.defaultOptions
+
 
 -- | The tuple (APID, PUSType, PUSSubType, PI1, PI2) which is the lookup key
 -- for the packet definition
@@ -289,6 +321,9 @@ data TMPacketKey = TMPacketKey !APID !PUSType !PUSSubType !Int64 !Int64
 
 instance Hashable TMPacketKey
 instance Serialise TMPacketKey
+instance AE.FromJSON TMPacketKey
+instance AE.ToJSON TMPacketKey where 
+  toEncoding = AE.genericToEncoding AE.defaultOptions
 
 -- | The definition of the map which is used. Currently this is a immutable
 -- hash table
@@ -314,6 +349,10 @@ instance Ord ApidKey where
 
 instance Hashable ApidKey
 instance Serialise ApidKey
+instance AE.FromJSON ApidKey 
+instance AE.ToJSON ApidKey where
+  toEncoding = AE.genericToEncoding AE.defaultOptions
+
 
 -- | Create an ApidKey
 mkApidKey :: APID -> PUSType -> PUSSubType -> ApidKey
@@ -334,6 +373,9 @@ instance Ord TypeSubTypeKey where
 
 instance Hashable TypeSubTypeKey
 instance Serialise TypeSubTypeKey
+instance AE.FromJSON TypeSubTypeKey
+instance AE.ToJSON TypeSubTypeKey where
+  toEncoding = AE.genericToEncoding AE.defaultOptions
 
 -- | Create a 'TypeSubTypeKey'
 mkTypeSubTypeKey :: PUSType -> PUSSubType -> TypeSubTypeKey
@@ -350,6 +392,9 @@ data PacketIDCriteria = PacketIDCriteria {
   } deriving (Show, Generic)
 
 instance Serialise PacketIDCriteria
+instance AE.FromJSON PacketIDCriteria
+instance AE.ToJSON PacketIDCriteria where 
+  toEncoding = AE.genericToEncoding AE.defaultOptions
 
 
 -- | A search index. The lookup of packet identification criterias is a multiple
@@ -371,6 +416,11 @@ emptyPICSearchIndex = runST $ do
 instance Serialise PICSearchIndex where
   encode = encodeSearchIndex
   decode = decodeSearchIndex
+
+instance AE.FromJSON PICSearchIndex
+instance AE.ToJSON PICSearchIndex where 
+  toEncoding = AE.genericToEncoding AE.defaultOptions
+
 
 encodeSearchIndex :: PICSearchIndex -> Encoding
 encodeSearchIndex idx =

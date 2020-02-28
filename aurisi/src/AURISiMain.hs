@@ -39,7 +39,6 @@ ui = do
   window      <- makeWindow
   aboutWindow <- makeAboutWindow
   mainWindow  <- createMainWindow window aboutWindow
-  setupCallbacks mainWindow
   showWidget (_mwWindow mainWindow)
   pure mainWindow
 
@@ -113,6 +112,11 @@ main = do
 
         -- setup the interface
         (interface, _eventThread) <- initialiseInterface mainWindow
+
+        -- Setup the callbacks. Since we need the interface there, we can 
+        -- do this only here
+        setupCallbacks mainWindow interface
+
         -- determine the mission-specific functionality
         missionSpecific           <- getMissionSpecific cfg
         -- start the processing chains

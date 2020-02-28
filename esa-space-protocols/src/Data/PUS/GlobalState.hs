@@ -79,7 +79,7 @@ data GlobalState = GlobalState {
     , glsState :: !AppState
     , glsFOP1 :: COP1State
     , glsCorrState :: CorrelationVar
-    , glsDataModel :: TVar (DataModel)
+    , glsDataModel :: TVar DataModel
 
     , glsMissionSpecific :: PUSMissionSpecific
 

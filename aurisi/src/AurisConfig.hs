@@ -11,6 +11,8 @@ module AurisConfig
   , AurisConfig.defaultConfig
   , defaultConfigFileName
   , convLogLevel
+  , configPath
+  , defaultMIBFile
   )
 where
 
@@ -21,6 +23,17 @@ import           Data.Aeson
 import           Data.Aeson.Encode.Pretty       ( encodePretty )
 
 import           Data.PUS.Config
+import           System.FilePath
+
+
+
+configPath :: FilePath
+configPath = ".config/AURISi"
+
+
+defaultMIBFile :: FilePath
+defaultMIBFile = configPath </> "data_model.raw"
+
 
 
 data ConfigLogLevel =
@@ -56,9 +69,9 @@ data AurisConfig = AurisConfig {
 
 defaultConfig :: AurisConfig
 defaultConfig = AurisConfig { aurisPusConfig = Data.PUS.Config.defaultConfig
-                            , aurisMission        = "DEFAULT"
-                            , aurisLogLevel       = LogLevelInfo
-                            , aurisMIB            = Nothing
+                            , aurisMission   = "DEFAULT"
+                            , aurisLogLevel  = LogLevelInfo
+                            , aurisMIB       = Nothing
                             }
 
 defaultConfigFileName :: FilePath
