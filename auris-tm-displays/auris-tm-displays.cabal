@@ -19,7 +19,7 @@ source-repository head
 
 custom-setup
   setup-depends:
-      Cabal >=2.2.0.0 && <3
+      Cabal >=2.2.0.0 && <4
     , base >=4.4
     , filepath
 

@@ -210,7 +210,7 @@ handleMouse _ _ widget event = handleWidgetBase (safeCast widget) event
 
 handleSetTitle :: GraphWidget -> Ref Widget -> Ref MenuItem -> IO ()
 handleSetTitle gw widget _ = do
-  res <- flInput "Set Chart Name: "
+  res <- flInput "Set Chart Name: " Nothing
   forM_ res (graphWidgetSetChartName gw)
   redraw widget
 
