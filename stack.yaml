@@ -17,7 +17,7 @@
 #
 # resolver: ./custom-snapshot.yaml
 # resolver: https://example.com/snapshots/2018-01-01.yaml
-resolver: lts-15.1
+resolver: lts-15.2
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -58,7 +58,9 @@ extra-deps:
 - hw-prim-bits-0.1.0.4
 - Chart-fltkhs-0.1.0.6
 - selda-sqlite-0.1.7.1
-- ../timer-wheel
+# timer-wheel is a patched version since it does not compile with ghc 8.8.3.
+# this should be changed when it is fixed or if it is included in an LTS again
+- timer-wheel
 - direct-sqlite-2.3.26
 
 
