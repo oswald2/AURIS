@@ -34,7 +34,6 @@ aurisVersion = T.concat
   , dirty
   , "\nCommit Date: "
   , $(gitCommitDate)
-  , "\n\nLogo based on icon made by https://www.flaticon.com/authors/freepik from https://www.flaticon.com/"
   ]
 
 dirty :: Text
