@@ -3,7 +3,7 @@
 A new, open source mission control system in Haskell
 
 A mission control system is the ground software that controls satellites and space probes. An example of an actual operational system can be seen here (example from the European Space Operations Center ESOC, on the monitors): [ESA's SCOS-2000](https://www.esa.int/ESA_Multimedia/Images/2015/08/Mission_control_system)
-or fromn the German Space Operations Center (GSOC): [DLR GECCOS](https://www.aerosieger.de/images/news_picupload/pic_sid13250-1-norm.jpg)
+or from the German Space Operations Center (GSOC): [DLR GECCOS](https://www.aerosieger.de/images/news_picupload/pic_sid13250-1-norm.jpg)
 
 ## First Screenshots
 
@@ -44,7 +44,7 @@ The libraries are designed so that they will be able to be used in a variety of 
 
 A standalone executable with a GUI is called AURISi (for AURIS integrated) in the 'aurisi' directory. Currently all it does is connect to a simulator via NCTRS protocol and display incoming telemetry packets and parameters
 
-Once the internal models are implemented and working, this will be improved.
+The AURISi executable uses FLTKHS (thanks a lot Deech!) for the graphical user interface. 
 
 ## Database 
 
