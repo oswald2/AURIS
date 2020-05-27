@@ -38,9 +38,6 @@ initLogo box logoSVG = do
       exitFailure
     Right svg -> do
       setColor box mcsWhite
-      (Rectangle _ s1@(Size (Width w) (Height h))) <- getRectangle box 
-      s2@(Size (Width iw) (Height ih)) <- getDataSize svg 
-      let size = Size (Width (w * 2)) (Height (h * 2))
-      print (s1, s2)
-      scale svg size (Just True) Nothing
+      (Rectangle _ size) <- getRectangle box 
+      scale svg size (Just True) Nothing 
       setImage box (Just svg)
