@@ -163,7 +163,7 @@ library
         , thyme
         , vector-binary-instances
         , bytestring-to-vector
-        , timer-wheel
+        , timers-updatable
         , base64-bytestring-type
         , containers
         , word8

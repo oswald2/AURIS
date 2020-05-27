@@ -59,52 +59,53 @@ pusPackets = RIO.map (\i -> (pkt1 i, rqst1)) [1 .. 1000]
 
 main :: IO ()
 main = do
-    np <- getNumProcessors
-    setNumCapabilities np
+    return ()
+    -- np <- getNumProcessors
+    -- setNumCapabilities np
 
-    defLogOptions <- logOptionsHandle stdout True
-    let logOptions = setLogMinLevel LevelDebug defLogOptions
-    withLogFunc logOptions $ \logFunc -> do
-        state <- newGlobalState
-            defaultConfig
-            (defaultMissionSpecific defaultConfig)
-            logFunc
-            (\ev -> T.putStrLn ("Event: " <> T.pack (show ev)))
+    -- defLogOptions <- logOptionsHandle stdout True
+    -- let logOptions = setLogMinLevel LevelDebug defLogOptions
+    -- withLogFunc logOptions $ \logFunc -> do
+    --     state <- newGlobalState
+    --         defaultConfig
+    --         (defaultMissionSpecific defaultConfig)
+    --         logFunc
+    --         (\ev -> T.putStrLn ("Event: " <> T.pack (show ev)))
 
-        runRIO state $ do
+    --     runRIO state $ do
 
-            channels  <- createProtocolChannels
-            waitQueue <- liftIO newEmptyTMVarIO
-            outQueue  <- liftIO $ newTBQueueIO 1000
+    --         channels  <- createProtocolChannels
+    --         waitQueue <- liftIO newEmptyTMVarIO
+    --         outQueue  <- liftIO $ newTBQueueIO 1000
 
-            let chain =
-                    sourceList pusPackets
-                        .| pusPacketEncoderC
-                        .| tcSegmentEncoderC
-                        .| protocolSwitcherC channels
+    --         let chain =
+    --                 sourceList pusPackets
+    --                     .| pusPacketEncoderC
+    --                     .| tcSegmentEncoderC
+    --                     .| protocolSwitcherC channels
 
-                cop1C = cop1Conduit (channels ^. prChNCTRS) waitQueue outQueue
+    --             cop1C = cop1Conduit (channels ^. prChNCTRS) waitQueue outQueue
 
-                interfC = sourceTBQueue outQueue
-                    .| tcFrameEncodeC
-                    .| tcFrameToCltuC
-                    .| cltuEncodeRandomizedC
-                    .| cltuToNcduC
-                    .| encodeTcNcduC
+    --             interfC = sourceTBQueue outQueue
+    --                 .| tcFrameEncodeC
+    --                 .| tcFrameToCltuC
+    --                 .| cltuEncodeRandomizedC
+    --                 .| cltuToNcduC
+    --                 .| encodeTcNcduC
 
-                showConduit = awaitForever $ \ncdu -> liftIO (print ncdu)
+    --             showConduit = awaitForever $ \ncdu -> liftIO (print ncdu)
 
 
-            runGeneralTCPClient (clientSettings 32111 "localhost") $ \app ->
-                void
-                    $   runConc
-                    $   (,,,)
-                    <$> conc (runConduitRes chain)
-                    <*> conc (runConduitRes cop1C)
-                    <*> conc (runConduitRes (interfC .| appSink app))
-                    <*> conc
-                            (runConduitRes
-                                (appSource app .| receiveTcNcduC .| showConduit)
-                            )
+    --         runGeneralTCPClient (clientSettings 32111 "localhost") $ \app ->
+    --             void
+    --                 $   runConc
+    --                 $   (,,,)
+    --                 <$> conc (runConduitRes chain)
+    --                 <*> conc (runConduitRes cop1C)
+    --                 <*> conc (runConduitRes (interfC .| appSink app))
+    --                 <*> conc
+    --                         (runConduitRes
+    --                             (appSource app .| receiveTcNcduC .| showConduit)
+    --                         )
 
 
