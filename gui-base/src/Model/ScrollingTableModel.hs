@@ -279,16 +279,16 @@ instance TableModel MVectorTableModel where
             indexes = [len - 1, len - 2 .. 1]
             
             upd i = do 
-              val' <- VM.read vec (i-1)
-              VM.write vec i val'
+              val' <- VM.unsafeRead vec (i-1)
+              VM.unsafeWrite vec i val'
         mapM_ upd indexes 
-        VM.write vec 0 val
+        VM.unsafeWrite vec 0 val
 
   tableModelSetValues model t = 
     withLockedTableModel model $ \m -> do 
       let len = length t 
           cont = zip [0..] (toList t)
       vec <- VM.new len 
-      mapM_ (uncurry (VM.write vec)) cont 
+      mapM_ (uncurry (VM.unsafeWrite vec)) cont 
       writeIORef (_tabMVData m) vec   
       

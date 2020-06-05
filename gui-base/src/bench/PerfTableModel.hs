@@ -32,8 +32,8 @@ main = do
   defaultMain
     [ bgroup
         "tableModelAddValue"
-        [ bench "TableModel" $ whnfIO $ vectorModel 10000
-        , bench "MTableModel" $ whnfIO $ mvectorModel 10000
+        [ bench "TableModel" $ nfIO $ vectorModel 10000
+        , bench "MTableModel" $ nfIO $ mvectorModel 10000
         ]
     ]
 
@@ -41,9 +41,17 @@ main = do
 
 vectorModel size = do
   (model :: VectorTableModel Int)  <- tableModelNew 
-  sequence_ $ replicate size (tableModelAddValue model 500 513456)
+  let action = do 
+        tableModelAddValue model 500 513456
+        let idx = [0..499]
+        mapM_ (tableModelIndexUnlocked model) idx 
+  sequence_ $ replicate size action
 
 
 mvectorModel size = do
   (model :: MVectorTableModel Int) <- tableModelNew 
-  sequence_ $ replicate size (tableModelAddValue model 500 513456)
+  let action = do 
+        tableModelAddValue model 500 513456
+        let idx = [0..499]
+        mapM_ (tableModelIndexUnlocked model) idx 
+  sequence_ $ replicate size action

@@ -54,34 +54,37 @@ extra-deps:
 - closed-0.2.0.1
 - attoparsec-time-1
 - bytestring-to-vector-0.3.0.1
-- fltkhs-0.8.0.2
 - hw-prim-bits-0.1.0.4
-- Chart-fltkhs-0.1.0.4
+- Chart-fltkhs-0.1.0.6
+- selda-sqlite-0.1.7.1
+- timers-updatable-0.2.0.2
+- direct-sqlite-2.3.26
+- git: https://github.com/deech/fltkhs.git
+  commit: 71af56f7194946a495e0d9d6457470f97988f754
+
 # Override default flag values for local packages and extra-deps
 flags:
-   fltkhs:
-     bundled: true
-  #  fltkhs:
-  #    opengl: true
-    esa-base:
-      optimize: true
-    esa-mib:
-      optimize: true
-    esa-db:
-      optimize: true
-    esa-space-protocols:
-      optimize: true
-    auris-tm-displays:
-      optimize: true
-    aurisi:
-      optimize: true
-    gui-base:
-      optimize: true
-    mcs-interface:
-      optimize: true
-    hashtables-mo:
-      unsafe-tricks: true
-      sse42: true
+  fltkhs:
+    bundled: true
+  esa-base:
+    optimize: true
+  esa-mib:
+    optimize: true
+  esa-db:
+    optimize: true
+  esa-space-protocols:
+    optimize: true
+  auris-tm-displays:
+    optimize: true
+  aurisi:
+    optimize: true
+  gui-base:
+    optimize: true
+  mcs-interface:
+    optimize: true
+  hashtables-mo:
+    unsafe-tricks: true
+    sse42: true
 
 # Extra package databases containing global packages
 # extra-package-dbs: []

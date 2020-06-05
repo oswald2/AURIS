@@ -34,7 +34,7 @@ import           Graphics.UI.FLTK.LowLevel.Fl_Enumerations
 
 
 
-type PUSPacketModel = MVectorTableModel (ExtractedDU PUSPacket)
+type PUSPacketModel = VectorTableModel (ExtractedDU PUSPacket)
 
 
 instance ToCellText (ExtractedDU PUSPacket) where
