@@ -15,7 +15,7 @@ import           Graphics.UI.FLTK.LowLevel.Fl_Enumerations
 
 
 
-type TMPParamModel = TableModel TMParameter
+type TMPParamModel = MVectorTableModel TMParameter
 
 
 instance ToCellText TMParameter where

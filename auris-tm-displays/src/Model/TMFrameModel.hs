@@ -18,7 +18,7 @@ import           GUI.Colors
 
 
 
-type TMFrameModel = TableModel (ExtractedDU TMFrame)
+type TMFrameModel = MVectorTableModel (ExtractedDU TMFrame)
 
 
 instance ToCellText (ExtractedDU TMFrame) where

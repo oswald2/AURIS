@@ -43,7 +43,7 @@ import           GHC.Conc.Sync
 
 
 rqst1 :: TCRequest
-rqst1 = TCRequest 0 IF_NCTRS (mkSCID 533) (mkVCID 1) (TCCommand 0 BD)
+rqst1 = TCRequest 0 (IfNctrs 1) (mkSCID 533) (mkVCID 1) (TCCommand 0 BD)
 
 tcPacket :: Int -> TCPacket
 tcPacket n = TCPacket (APID 256) (mkPUSType 2) (mkPUSSubType 10) (mkSourceID 10)
@@ -67,14 +67,14 @@ main = do
   withLogFunc logOptions $ \logFunc -> do
     state <- newGlobalState
       Data.PUS.Config.defaultConfig
-      defaultMissionSpecific
+      (defaultMissionSpecific Data.PUS.Config.defaultConfig)
       logFunc
       (\ev -> T.putStrLn ("Event: " <> T.pack (show ev)))
 
 
     let chain len =
           sourceList (packets len)
-            .| tcPktEncoderC defaultMissionSpecific
+            .| tcPktEncoderC (defaultMissionSpecific Data.PUS.Config.defaultConfig)
             .| tcPktToEncPUSC
             .| tcSegmentEncoderC
             .| tcSegmentToTransferFrame

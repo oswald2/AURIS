@@ -15,7 +15,7 @@ import           Graphics.UI.FLTK.LowLevel.Fl_Enumerations
 
 
 
-type TMPacketModel = TableModel TMPacket
+type TMPacketModel = MVectorTableModel TMPacket
 
 
 instance ToCellText TMPacket where

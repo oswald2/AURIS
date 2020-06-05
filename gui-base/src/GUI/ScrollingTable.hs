@@ -23,7 +23,7 @@ import qualified RIO.Text                      as T
 import qualified RIO.Vector                    as V
 import qualified RIO.Vector.Partial            as V
 
-import qualified Data.Sequence                 as S
+-- import qualified Data.Sequence                 as S
 
 import           Graphics.UI.FLTK.LowLevel.FLTKHS
 import           Graphics.UI.FLTK.LowLevel.Fl_Enumerations
@@ -41,9 +41,9 @@ import           Model.ScrollingTableModel
 -- | Setup a FLTKHS table for a given 'TableModel' with the given
 -- 'ColumnDefinition's.
 setupTable
-    :: (ToCellText a)
+    :: (ToCellText a, TableModel tm)
     => Ref Group
-    -> TableModel a
+    -> tm a
     -> Vector ColumnDefinition
     -> IO (Ref TableRow)
 setupTable group model colDefinitions = do
@@ -62,7 +62,7 @@ setupTable group model colDefinitions = do
 
 
 initializeTable
-    :: Ref TableRow -> TableModel a -> Vector ColumnDefinition -> IO ()
+    :: TableModel tm => Ref TableRow -> tm a -> Vector ColumnDefinition -> IO ()
 initializeTable table model colDefinitions = do
     begin table
 
@@ -100,7 +100,7 @@ initializeTable table model colDefinitions = do
 
 -- | refresh a table from a model. There is no maxRow check, so
 -- the model is displayed as-is
-setTableFromModel :: Ref TableRow -> TableModel a -> IO ()
+setTableFromModel :: TableModel tm => Ref TableRow -> tm a -> IO ()
 setTableFromModel table model = do
   nRows <- tableModelSize model
   setRows table (Rows nRows)
@@ -113,7 +113,7 @@ modelMaxRows = 200
 
 -- | Add a new value to the table as well as to the 'TableModel'.
 -- The table is redrawn afterwards
-addRow :: Ref TableRow -> TableModel a -> a -> IO ()
+addRow :: TableModel tm => Ref TableRow -> tm a -> a -> IO ()
 addRow table model pkt = do
     (Rows nRows) <- getRows table
     when (nRows < modelMaxRows) $ setRows table (Rows (nRows + 1))
@@ -122,8 +122,8 @@ addRow table model pkt = do
 
 
 drawCell
-    :: (ToCellText a)
-    => TableModel a
+    :: (ToCellText a, TableModel tm)
+    => tm a 
     -> Vector ColumnDefinition
     -> Ref TableRow
     -> TableContext
@@ -165,9 +165,9 @@ padRectangle (Rectangle (Position (X x) (Y y)) (Size (Width w) (Height h))) pad
 
 
 drawData
-    :: (ToCellText a)
+    :: (ToCellText a, TableModel tm)
     => Ref TableRow
-    -> TableModel a
+    -> tm a 
     -> TableCoordinate
     -> ColumnDefinition
     -> Rectangle
@@ -176,9 +176,12 @@ drawData table model (TableCoordinate (Row row) (Column _col)) colDef rectangle
     = do
         flcPushClip rectangle
 
-        cell <- queryTableModelUnlocked
-            model
-            (\s -> maybe defDisplayCell (`toCellText` colDef) (s V.!? row))
+        -- cell <- queryTableModelUnlocked
+        --     model
+        --     (\s -> maybe defDisplayCell (`toCellText` colDef) (s V.!? row))
+
+        val <- tableModelIndexUnlocked model row 
+        let cell = maybe defDisplayCell (`toCellText` colDef) val 
 
         (bgColor, fgColor) <- do
             isSelected' <- getRowSelected table (Row row)
