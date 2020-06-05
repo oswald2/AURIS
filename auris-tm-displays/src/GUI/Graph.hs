@@ -22,6 +22,7 @@ module GUI.Graph
   , gwParent
   , gwParamSelection
   , gwGraph
+  , gwOffscreen
   )
 where
 
@@ -35,7 +36,7 @@ import qualified RIO.Text                      as T
 --import           Data.Text.Short                ( ShortText )
 import qualified Data.Text.Short               as ST
 --import qualified Data.Text.IO                  as T
-import           Control.Lens                   ( makeLenses )
+--import           Control.Lens                   ( makeLenses )
 
 
 import           Data.MultiSet                  ( MultiSet )
@@ -111,7 +112,7 @@ emptyGraph name = Graph name HS.empty M.empty
 
 data GraphWidget = GraphWidget {
   _gwParent :: Ref Group
-  , _gwDrawingArea :: Maybe (Ref Widget)
+  , _gwDrawingArea :: Ref Widget
   , _gwParamSelection :: NameDescrTable
   , _gwGraph :: TVar Graph
   , _gwOffscreen :: FlOffscreen
@@ -119,13 +120,14 @@ data GraphWidget = GraphWidget {
 makeLenses ''GraphWidget
 
 
-graphWidgetGetParamNames :: GraphWidget -> IO [ShortText]
-graphWidgetGetParamNames gw = getParameterNames <$> readTVarIO (gw ^. gwGraph)
+graphWidgetGetParamNames :: TVar Graph -> IO [ShortText]
+graphWidgetGetParamNames var = getParameterNames <$> readTVarIO var 
 
-graphWidgetSetChartName :: GraphWidget -> Text -> IO ()
-graphWidgetSetChartName gw name = do
+graphWidgetSetChartName :: TVar Graph -> Text -> IO ()
+graphWidgetSetChartName var name = do
   let f x = x & graphName .~ name
-  atomically $ modifyTVar (gw ^. gwGraph) f
+  atomically $ modifyTVar var f
+
 
 
 setupGraphWidget :: Ref Group -> Text -> NameDescrTable -> IO GraphWidget
@@ -140,60 +142,58 @@ setupGraphWidget parent title paramSelector = do
 
   offscreen <- flcCreateOffscreen (Size (Width (w * 2)) (Height (h * 2)))
 
-  let g = GraphWidget { _gwParent         = parent
-                      , _gwDrawingArea    = Nothing
-                      , _gwParamSelection = paramSelector
-                      , _gwGraph          = var
-                      , _gwOffscreen      = offscreen
-                      }
-
   widget' <- widgetCustom
     rect
     Nothing
-    (drawChart g)
-    defaultCustomWidgetFuncs { handleCustom = Just (handleMouse g paramSelector)
+    (drawChart var offscreen)
+    defaultCustomWidgetFuncs { handleCustom = Just (handleMouse var paramSelector)
                              }
 
   end parent
   showWidget widget'
 
-  let newG = g & gwDrawingArea ?~ widget'
+  let g = GraphWidget { _gwParent         = parent
+                      , _gwDrawingArea    = widget'
+                      , _gwParamSelection = paramSelector
+                      , _gwGraph          = var
+                      , _gwOffscreen      = offscreen
+                      }
 
-  return newG
+  return g
 
 
 
 handleMouse
-  :: GraphWidget
+  :: TVar Graph
   -> NameDescrTable
   -> Ref Widget
   -> Event
   -> IO (Either UnknownEvent ())
-handleMouse graph paramSelector widget Push = do
+handleMouse var paramSelector widget Push = do
   res <- FL.eventButton3
   if res
     then do
-      paramNames <- graphWidgetGetParamNames graph
+      paramNames <- graphWidgetGetParamNames var
       let menuEntries =
             [ MenuEntry
                 "Add Parameter..."
                 (Just (KeyFormat "^p"))
-                (Just (addParamFromSelection graph paramSelector widget))
+                (Just (addParamFromSelection var paramSelector widget))
                 (MenuItemFlags [MenuItemNormal])
               , MenuEntry "Set Graph Title"
                           Nothing
-                          (Just (handleSetTitle graph widget))
+                          (Just (handleSetTitle var widget))
                           (MenuItemFlags [MenuItemNormal])
               , MenuEntry "Print to File"
                           Nothing
-                          (Just (handlePrintToFile graph))
+                          (Just (handlePrintToFile var))
                           (MenuItemFlags [MenuItemNormal])
               ]
               ++ map param paramNames
           param x = MenuEntry
             ("Remove Parameter/" <> ST.toText x)
             Nothing
-            (Just (handleRemoveParam graph widget (ST.toText x)))
+            (Just (handleRemoveParam var widget (ST.toText x)))
             (MenuItemFlags [MenuItemNormal])
 
 
@@ -208,22 +208,22 @@ handleMouse _ _ widget event = handleWidgetBase (safeCast widget) event
 
 
 
-handleSetTitle :: GraphWidget -> Ref Widget -> Ref MenuItem -> IO ()
-handleSetTitle gw widget _ = do
+handleSetTitle :: TVar Graph -> Ref Widget -> Ref MenuItem -> IO ()
+handleSetTitle var widget _ = do
   res <- flInput "Set Chart Name: " Nothing
-  forM_ res (graphWidgetSetChartName gw)
+  forM_ res (graphWidgetSetChartName var)
   redraw widget
 
 
-handleRemoveParam :: GraphWidget -> Ref Widget -> Text -> Ref MenuItem -> IO ()
-handleRemoveParam gw widget param _ = do
-  void $ graphRemoveParameter gw (ST.fromText param)
+handleRemoveParam :: TVar Graph -> Ref Widget -> Text -> Ref MenuItem -> IO ()
+handleRemoveParam var widget param _ = do
+  void $ graphRemoveParameter' var (ST.fromText param)
   redraw widget
 
 
-handlePrintToFile :: GraphWidget -> Ref MenuItem -> IO ()
+handlePrintToFile :: TVar Graph -> Ref MenuItem -> IO ()
 handlePrintToFile gw _ = do
-  graph   <- readTVarIO (gw ^. gwGraph)
+  graph   <- readTVarIO gw
   chooser <- nativeFileChooserNew (Just BrowseSaveFile)
   setTitle chooser "Save Chart..."
   setFilter chooser "SVG\t*.svg"
@@ -263,31 +263,32 @@ styles :: [(Ch.LineStyle, Ch.PointStyle)]
 styles = map (\x -> (def & line_color .~ x, def)) chartColors
 
 
-numParameters :: GraphWidget -> IO Int
-numParameters gw = do
-  graph <- readTVarIO (gw ^. gwGraph)
+numParameters :: TVar Graph -> IO Int
+numParameters var = do
+  graph <- readTVarIO var
   return (HS.size (graph ^. graphParameters))
 
 
 addParamFromSelection
-  :: GraphWidget -> NameDescrTable -> Ref Widget -> Ref MenuItem -> IO ()
-addParamFromSelection graphWidget paramSelector widget _item = do
+  :: TVar Graph -> NameDescrTable -> Ref Widget -> Ref MenuItem -> IO ()
+addParamFromSelection var paramSelector widget _item = do
   selItems <- getSelectedItems paramSelector
-  num      <- numParameters graphWidget
+  num      <- numParameters var
 
   let vec    = drop (num - 1) styles
       values = zipWith (\x (l, p) -> (ST.fromText (_tableValName x), l, p))
                        selItems
                        vec
 
-  void $ graphAddParameters graphWidget values
+  void $ graphAddParameters' var values
   redraw widget
+
 
 
 addParamFromSelector :: GraphWidget -> RIO.Vector TableValue -> IO ()
 addParamFromSelector graphWidget table = do
   let selItems = V.toList table
-  num <- numParameters graphWidget
+  num <- numParameters (graphWidget ^. gwGraph)
 
   let vec    = drop (num - 1) styles
       values = zipWith (\x (l, p) -> (ST.fromText (_tableValName x), l, p))
@@ -298,7 +299,7 @@ addParamFromSelector graphWidget table = do
 
 
 redrawGraph :: GraphWidget -> IO ()
-redrawGraph gw = maybe (return ()) redraw (gw ^. gwDrawingArea)
+redrawGraph gw = redraw (gw ^. gwDrawingArea)
 
 
 -- | This function finally insert actual values to draw into the graph. Currently 
@@ -325,17 +326,18 @@ graphAddParameter gw name lineStyle pointStyle = do
   return hs
 
 
-graphRemoveParameter :: GraphWidget -> ShortText -> IO (HashSet ShortText)
-graphRemoveParameter gw name = do
+graphRemoveParameter' :: TVar Graph -> ShortText -> IO (HashSet ShortText)
+graphRemoveParameter' var name = do
   atomically $ do
-    graph <- readTVar (gw ^. gwGraph)
+    graph <- readTVar var
 
     let newSet   = HS.delete name (graph ^. graphParameters)
         newData  = M.delete name (graph ^. graphData)
         newGraph = graph & graphParameters .~ newSet & graphData .~ newData
 
-    writeTVar (gw ^. gwGraph) newGraph
+    writeTVar var newGraph
     return newSet
+
 
 
 -- | Add multiple parameters to the chart. The chart then accepts parameter values 
@@ -344,14 +346,23 @@ graphAddParameters
   :: GraphWidget
   -> [(ShortText, Ch.LineStyle, Ch.PointStyle)]
   -> IO (HashSet ShortText)
-graphAddParameters gw ls = do
+graphAddParameters gw = graphAddParameters' (gw ^. gwGraph)
+
+
+graphAddParameters'
+  :: TVar Graph
+  -> [(ShortText, Ch.LineStyle, Ch.PointStyle)]
+  -> IO (HashSet ShortText)
+graphAddParameters' var ls = do
   atomically $ do
-    graph <- readTVar (gw ^. gwGraph)
+    graph <- readTVar var
 
     let newGraph = foldl' insertInGraph graph ls
 
-    writeTVar (gw ^. gwGraph) newGraph
+    writeTVar var newGraph
     return (newGraph ^. graphParameters)
+
+
 
 insertInGraph :: Graph -> (ShortText, Ch.LineStyle, Ch.PointStyle) -> Graph
 insertInGraph graph (name, lineStyle, pointStyle) =
@@ -458,11 +469,10 @@ chart Graph {..} = toRenderable layout
     graphLayout & layout_title .~ T.unpack _graphName & layout_plots .~ plots
 
 
-drawChart :: GraphWidget -> Ref Widget -> IO ()
-drawChart gw widget = do
+drawChart :: TVar Graph -> FlOffscreen -> Ref Widget -> IO ()
+drawChart graphVar offscreen widget = do
   rectangle' <- getRectangle widget
-  graph      <- readTVarIO (gw ^. gwGraph)
-  let offscreen = gw ^. gwOffscreen
+  graph      <- readTVarIO graphVar
   withFlClip rectangle' $ void $ renderToWidgetOffscreen widget
                                                          offscreen
                                                          (chart graph)

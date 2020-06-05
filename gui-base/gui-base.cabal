@@ -147,7 +147,7 @@ library
                      -funbox-strict-fields -freverse-errors
 
 
-executable PerfTableModel 
+benchmark PerfTableModel 
     type: exitcode-stdio-1.0
     main-is: PerfTableModel.hs
     default-language: Haskell2010
