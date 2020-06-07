@@ -72,16 +72,21 @@ import           GUI.PopupMenu
 
 -- | The internal value of a graph. Used to get a 'Eq' and 'Ord' instance
 -- across the time value (first field)
-data GraphVal = GraphVal {
-  _graphValTime :: !TI.UTCTime
-  , _graphValValue :: !Double
-}
+-- data GraphVal = GraphVal {
+--   _graphValTime :: !TI.UTCTime
+--   , _graphValValue :: !Double
+-- }
 
-instance Eq GraphVal where
-  g1 == g2 = _graphValTime g1 == _graphValTime g2
+type GraphVal = (TI.UTCTime, Double)
 
-instance Ord GraphVal where
-  compare g1 g2 = compare (_graphValTime g1) (_graphValTime g2)
+
+-- instance Eq GraphVal where
+--   --g1 == g2 = _graphValTime g1 == _graphValTime g2
+--   (t1, _) == (t2 , _) = t1 == t2
+
+-- instance Ord GraphVal where
+--   --compare g1 g2 = compare (_graphValTime g1) (_graphValTime g2)
+--   compare (t1, _) (t2, _) = compare t1 t2
 
 
 -- | Defines a plot. For the parameter with the given 
@@ -387,7 +392,8 @@ insertParamValue g@Graph {..} param =
       Just plotVal ->
         let
           val =
-            GraphVal (toUTCTime (param ^. pTime)) (toDouble (param ^. pValue))
+            --GraphVal (toUTCTime (param ^. pTime)) (toDouble (param ^. pValue))
+            (toUTCTime (param ^. pTime), toDouble (param ^. pValue))
           newSet     = MS.insert val (plotVal ^. plotValValues)
           newPlotVal = plotVal & plotValValues .~ newSet
           newMap     = M.insert paramName newPlotVal _graphData
@@ -406,7 +412,8 @@ plotValToPlot PlotVal {..} =
     $  plot_lines_title
     .~ ST.unpack _plotValName
     $  def
-  where values = map (\(GraphVal t p) -> (t, p)) . MS.toList $ _plotValValues
+  where --values = map (\(GraphVal t p) -> (t, p)) . MS.toList $ _plotValValues
+    values = MS.toList $ _plotValValues
 
 
 titleStyle :: FontStyle

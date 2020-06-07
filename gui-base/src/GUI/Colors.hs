@@ -7,33 +7,80 @@ import           Graphics.UI.FLTK.LowLevel.FLTKHS
 import           Graphics.UI.FLTK.LowLevel.Fl_Enumerations
 
 
+-- mcsBackground :: Color
+-- mcsBackground = Color 0x64646400
+
+-- mcsWidgetBG :: Color
+-- mcsWidgetBG = Color 0x50505000
+
+-- mcsWidgetBGGroup :: Color
+-- mcsWidgetBGGroup = Color 0x46464600
+
+-- mcsWidgetFG :: Color
+-- mcsWidgetFG = Color 0x7d7d7d00
+
+-- mcsFontColor :: Color
+-- mcsFontColor = Color 0xADE2E600
+
+-- mcsEmphColor :: Color
+-- mcsEmphColor = Color 0xD9D9A800
+
+
+-- mcsTableBG :: Color
+-- mcsTableBG = Color 0x7d7d7d00
+
+-- mcsTableFG :: Color
+-- mcsTableFG = Color 0xffffff00
+
+-- mcsTableSelectionColor :: Color
+-- mcsTableSelectionColor = Color 0x0000aa00
+
+-- mcsWhite :: Color
+-- mcsWhite = Color 0xffffff00
+
+-- mcsBlack :: Color
+-- mcsBlack = Color 0
+
+-- mcsRed :: Color
+-- mcsRed = Color 0xff000000
+
+-- mcsGreen :: Color
+-- mcsGreen = Color 0x00CC0000
+
+-- mcsYellow :: Color
+-- mcsYellow = Color 0xffff0000
+
+
+
+
+
 mcsBackground :: Color
-mcsBackground = Color 0x64646400
+mcsBackground = Color 0x1d263800
 
 mcsWidgetBG :: Color
-mcsWidgetBG = Color 0x50505000
+mcsWidgetBG = Color 0x293d5d00
 
 mcsWidgetBGGroup :: Color
-mcsWidgetBGGroup = Color 0x46464600
+mcsWidgetBGGroup = Color 0x1c293f00
 
 mcsWidgetFG :: Color
-mcsWidgetFG = Color 0x7d7d7d00
+mcsWidgetFG = Color 0x4d979f00
 
 mcsFontColor :: Color
-mcsFontColor = Color 0xADE2E600
+mcsFontColor = Color 0x70AFDF00
 
 mcsEmphColor :: Color
 mcsEmphColor = Color 0xD9D9A800
 
 
 mcsTableBG :: Color
-mcsTableBG = Color 0x7d7d7d00
+mcsTableBG = Color 0x1c293f00
 
 mcsTableFG :: Color
-mcsTableFG = Color 0xffffff00
+mcsTableFG = Color 0xafb7c400
 
 mcsTableSelectionColor :: Color
-mcsTableSelectionColor = Color 0x0000aa00
+mcsTableSelectionColor = Color 0x4a6ba500
 
 mcsWhite :: Color
 mcsWhite = Color 0xffffff00
@@ -49,6 +96,7 @@ mcsGreen = Color 0x00CC0000
 
 mcsYellow :: Color
 mcsYellow = Color 0xffff0000
+
 
 
 mcsWindowSetColor :: Ref Window -> IO ()
@@ -69,6 +117,13 @@ mcsMenuBarSetColor w = do
   setColor w mcsWidgetBG
   setColorWithBgSel w mcsWidgetBG mcsWidgetFG
   setLabelcolor w mcsFontColor
+
+mcsSysMenuBarSetColor :: Ref SysMenuBar -> IO ()
+mcsSysMenuBarSetColor w = do
+  setColor w mcsWidgetBG
+  setColorWithBgSel w mcsWidgetBG mcsWidgetFG
+  setLabelcolor w mcsFontColor
+
 
 mcsButtonSetColor :: Ref Button -> IO ()
 mcsButtonSetColor w = do
@@ -93,13 +148,13 @@ mcsLightButtonSetColor w = do
 mcsTabsSetColor :: Ref Tabs -> IO ()
 mcsTabsSetColor w = do
   setColor w mcsWidgetBG
-  setColorWithBgSel w mcsBackground mcsBackground
+  setColorWithBgSel w mcsTableBG mcsTableBG
   setLabelcolor w mcsFontColor
 
 mcsGroupSetColor :: Ref Group -> IO ()
 mcsGroupSetColor w = do
   setColor w mcsBackground
-  setColorWithBgSel w mcsBackground mcsWidgetFG
+  setColorWithBgSel w mcsBackground mcsWidgetBG
   setLabelcolor w mcsFontColor
 
 mcsHeaderGroupSetColor :: Ref Group -> IO ()
@@ -129,7 +184,7 @@ mcsTableSetColor w = do
 
 mcsInputSetColor :: Ref Input -> IO () 
 mcsInputSetColor w = do 
-  setColor w mcsTableBG
+  setColor w mcsWidgetBG
   setSelectionColor w mcsTableSelectionColor
   setTextcolor w mcsTableFG
 

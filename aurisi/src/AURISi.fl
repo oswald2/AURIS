@@ -21,7 +21,7 @@ Function {makeWindow(IO(MainWindowFluid))} {open
 } {
   Fl_Window mainWindow {
     label AURISi open
-    xywh {3 51 1600 845} type Double color 30 labelcolor 6 visible
+    xywh {225 65 1600 845} type Double color 30 labelcolor 6 visible
   } {
     Fl_Scroll mainScrolled {open
       xywh {0 0 2060 1025}
@@ -72,7 +72,7 @@ Function {makeWindow(IO(MainWindowFluid))} {open
           }
         }
         Fl_Output labelMission {
-          label {Mission:} selected
+          label {Mission:}
           xywh {140 15 105 20} box FLAT_BOX textfont 10
         }
         Fl_Group logoGroup {
@@ -151,7 +151,7 @@ Function {makeWindow(IO(MainWindowFluid))} {open
         xywh {5 70 2055 890}
       } {
         Fl_Group tabTMFrames {
-          label {TM Frames} open
+          label {TM Frames}
           xywh {5 90 1965 835} hide
         } {
           Fl_Group tableTMFrames {open
@@ -273,7 +273,7 @@ Function {makeWindow(IO(MainWindowFluid))} {open
           }
         }
         Fl_Group tabTMPackets {
-          label {TM Packets} open
+          label {TM Packets}
           xywh {5 90 1751 804} hide hotspot
         } {
           Fl_Group tableTMPackets {open
@@ -356,7 +356,7 @@ Function {makeWindow(IO(MainWindowFluid))} {open
           Fl_Group tmParDisplayGroup {open
             xywh {220 109 1380 626} box ENGRAVED_BOX
           } {}
-          Fl_Group tmParSwitcherGroup {open
+          Fl_Group tmParSwitcherGroup {
             xywh {220 90 425 40}
           } {
             Fl_Light_Button tmParDispSingleBt {
@@ -381,7 +381,7 @@ Function {makeWindow(IO(MainWindowFluid))} {open
           } {
             Fl_Group tmParSelectionDisplays {
               label Displays open
-              xywh {5 115 215 620}
+              xywh {5 115 215 620} hide
             } {
               Fl_Tabs tmDisplayBrowser {open
                 xywh {10 120 210 615} box ENGRAVED_BOX
@@ -413,8 +413,8 @@ Function {makeWindow(IO(MainWindowFluid))} {open
               }
             }
             Fl_Group tmParSelectionParameters {
-              label Parameters open
-              xywh {5 115 215 620} hide
+              label Parameters open selected
+              xywh {5 115 215 620}
             } {}
           }
         }
@@ -520,7 +520,8 @@ let { tmfTab = TMFrameTabFluid {
 
         
 let { mainMenu = MainMenu {
-    _mmImportMIB = menuImportMIB
+  _mmMenuBar = menuBar
+  , _mmImportMIB = menuImportMIB
   , _mmExit = menuExit
   , _mmFullScreen = menuItemFullScreen
   , _mmFullScreenOff = menuItemFullScreenOff

@@ -78,7 +78,8 @@ import           General.Time
 
 
 data MainMenu = MainMenu {
-    _mmImportMIB :: Ref MenuItemBase
+  _mmMenuBar :: Ref SysMenuBar
+  , _mmImportMIB :: Ref MenuItemBase
   , _mmExit :: Ref MenuItemBase
   , _mmFullScreen :: Ref MenuItemBase
   , _mmFullScreenOff :: Ref MenuItemBase
@@ -252,6 +253,7 @@ createMainWindow MainWindowFluid {..} aboutWindow = do
 
   mcsScrolledSetColor _mfMainScrolled
   mcsTabsSetColor _mfTabs
+  mcsSysMenuBarSetColor (_mmMenuBar _mfMainMenu)
 
   setResizable _mfTabs (Just _mfTMPGroup)
 

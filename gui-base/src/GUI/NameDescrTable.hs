@@ -64,6 +64,7 @@ newModel = TableNameDescrModel <$> newTVarIO emptyModel
 data NameDescrTable = NameDescrTable {
   _nmDescTbl :: Ref TableRow
   , _nmDescTblModel :: TableNameDescrModel
+  , _nmDecTblLabel :: Ref Box 
   , _nmDecTclInput :: Ref Input
 }
 makeLenses ''NameDescrTable
@@ -96,8 +97,11 @@ setupTable group menuEntries = do
 
   let tableRect =
         Rectangle (Position (X x) (Y y)) (Size (Width w) (Height (h - 20)))
+      labelRect = 
+        Rectangle (Position (X x) (Y (y + h - 38))) (Size (Width labelWidth) (Height 20))
       inputRect =
-        Rectangle (Position (X x) (Y (y + h - 40))) (Size (Width w) (Height 20))
+        Rectangle (Position (X (x + labelWidth)) (Y (y + h - 38))) (Size (Width (w - labelWidth)) (Height 20))
+      labelWidth = 50
 
       funcs = case menuEntries of
         Just entries -> defaultCustomWidgetFuncs
@@ -113,15 +117,20 @@ setupTable group menuEntries = do
                        defaultCustomTableFuncs
 
   input <- inputNew inputRect Nothing (Just FlNormalInput)
+  label <- boxNewWithBoxtype NoBox labelRect "Filter:"
+
+  mcsBoxLabel label
   mcsInputSetColor input
+  
   setWhen input [WhenChanged, WhenEnterKey, WhenRelease]
 
-  let table' = NameDescrTable table model input
+  let table' = NameDescrTable table model label input
 
   initializeTable table'
   mcsGroupSetColor group
 
   add group table
+  add group label
   add group input
 
   setCallback input (handleFilter table')
