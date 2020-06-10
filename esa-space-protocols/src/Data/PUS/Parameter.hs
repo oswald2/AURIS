@@ -1,6 +1,22 @@
+{-|
+Module      : Data.PUS.Parameter
+Description : Provides types and functions for telecommand parameters
+Copyright   : (c) Michael Oswald, 2019
+License     : BSD-3
+Maintainer  : michael.oswald@onikudaki.net
+Stability   : experimental
+Portability : POSIX
+
+This module is used for specifying the parameters of a telecommand. A Packet is basically 
+a header, a trailer and the payload in between. The payload consists of individual parameters,
+each can have it's own type. 
+
+There are two possibilities to specify parameter lists for the payload of a packet:
+  1. Parameters following each other. This is the simplest method 
+  2. Parameters with a specified bit-offset. With these arbitrary packets can be created easily.
+-}
 {-# LANGUAGE
-    AutoDeriveTypeable
-    , BangPatterns
+    BangPatterns
     , BinaryLiterals
     , ConstraintKinds
     , DataKinds
@@ -21,7 +37,6 @@
     , InstanceSigs
     , KindSignatures
     , LambdaCase
-    , MonadFailDesugaring
     , MultiParamTypeClasses
     , MultiWayIf
     , NamedFieldPuns
@@ -90,8 +105,6 @@ import           RIO.List.Partial               ( (!!) )
 import           Control.Lens                   ( makeLenses
                                                 , (.~)
                                                 )
---import           Control.Monad.ST
-
 import           Data.Binary
 import           Data.Aeson              hiding ( Value )
 import qualified Data.Vector.Storable          as VS
@@ -111,8 +124,12 @@ import           General.SetBitField
 import           General.Types
 
 
+-- | Represents a normal parameter without location specification. The parameter location is
+-- determined by its pre-decessor and it is appended directly to the previous parameter on encoding
 data Parameter = Parameter {
+  -- | The parameter name. 
   _paramName :: !Text,
+  -- | The value of the 'Parameter'
   _paramValue :: !Value
   }
   deriving (Show, Read, Generic)
@@ -124,16 +141,20 @@ instance FromJSON Parameter
 instance ToJSON Parameter
 instance NFData Parameter
 
-
+-- | This type represents a parameter, that has a specific location within the packet. 
+-- The encoded length is determined from the 'Value'. 
 data ExtParameter = ExtParameter {
+  -- | Name of the parameter
   _extParName :: !Text,
+  -- | Value of the parameter
   _extParValue :: !Value,
+  -- | The location of the parameter in the packet as a 'BitOffset' from the start of the packet
   _extParOff :: !BitOffset
   }
   deriving (Show, Read, Generic)
 makeLenses ''ExtParameter
 
-
+-- | Simply remove the location information
 extParamToParam :: ExtParameter -> Parameter
 extParamToParam ExtParameter {..} = Parameter _extParName _extParValue
 
@@ -156,14 +177,21 @@ instance BitSizes Parameter where
 instance BitSizes ExtParameter where
     bitSize (ExtParameter _ val _) = bitSize val
 
-
-data ParameterList = Empty
+-- | A list of parameters. Packets with group repeaters can be represented with this type.
+data ParameterList = 
+    -- | The empty list
+    Empty
+    -- | A normal list of successive 'Parameter' values
     | List [Parameter] ParameterList
+    -- | A group. The first 'Parameter' in the group specifies how often the 
+    -- following 'ParameterList' is repeated
     | Group Parameter ParameterList
     deriving (Show, Read, Generic)
 
 instance NFData ParameterList
 
+
+-- | A parameter list, that also tracks it's size in bits.
 data SizedParameterList = SizedParameterList {
         _splSize :: BitSize
         , _splParams ::  [Parameter]
@@ -185,6 +213,8 @@ instance Read SizedParameterList where
     readsPrec n s = map func (readsPrec n s)
         where func (a, str) = (SizedParameterList (bitSize a) a, str)
 
+-- | Convert a 'ParameterList' into a 'SizedParaemterList'. Performs an expansion
+-- of group repeaters, calculates the size and forces the result via 'NFData'
 toSizedParamList :: ParameterList -> SizedParameterList
 toSizedParamList ps =
     let expanded = expandGroups ps
@@ -503,6 +533,8 @@ expandGroups' (Group n t) prevGroup = n
 --         pure (vectorToByteString vec)
 
 
+-- | Encodes a 'SizedParameterList' into a 'ByteString'. This 'ByteString' can 
+-- be used as a payload in a 'PUSPacket'
 encodeParameters :: SizedParameterList -> ByteString
 encodeParameters params =
     let size = unByteSize . bitSizeToBytes . nextByteAligned $ _splSize params

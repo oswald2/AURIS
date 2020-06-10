@@ -1,3 +1,14 @@
+{-|
+Module      : Data.PUS.TCPacket
+Description : Represents a telecommand to be sent.
+Copyright   : (c) Michael Oswald, 2019
+License     : BSD-3
+Maintainer  : michael.oswald@onikudaki.net
+Stability   : experimental
+Portability : POSIX
+
+Represents a telecommand as a packet (header and parameters).
+-}
 {-# LANGUAGE
     DeriveGeneric
     , GeneralizedNewtypeDeriving
@@ -28,12 +39,17 @@ import           General.APID
 import           Data.PUS.Parameter
 
 
-
+-- | A TC packet.
 data TCPacket = TCPacket {
+    -- | Application ID
     _tcpAPID :: APID
+    -- | PUS Service Type of this TC
     , _tcpType :: PUSType
+    -- | PUS Service Sub-Type of this TC 
     , _tcpSubType :: PUSSubType
+    -- | PUS Source ID 
     , _tcpSourceID :: SourceID
+    -- | The list of parameters of this command
     , _tcpParams :: SizedParameterList
     }
     deriving (Show, Read, Generic)

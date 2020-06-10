@@ -86,10 +86,13 @@ import           GHC.Conc.Sync
 --     (B.pack [0 .. 10])
 
 
-
+-- | Currently, this request is only a dummy to be able to fill out the 
+-- TC request field of the 'EncodedTCRequest'
 rqst1 :: TCRequest
 rqst1 = TCRequest 0 (IfNctrs 1) (mkSCID 533) (mkVCID 1) (TCCommand 0 BD)
 
+
+-- | Generate a TC Packet where the parameter n is the number of 'Parameter'
 tcPacket :: Int -> TCPacket
 tcPacket n =
     TCPacket (APID 256) (mkPUSType 2) (mkPUSSubType 10) (mkSourceID 10)

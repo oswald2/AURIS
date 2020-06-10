@@ -51,7 +51,7 @@ encodeTCPacket pkt missionSpecific =
             &  dfhTypes
             .~ (_tcpType pkt, _tcpSubType pkt)
             &  dfhSourceID
-            .~ (_tcpSourceID pkt)
+            .~ _tcpSourceID pkt
       payload = encodeParameters (_tcpParams pkt)
   in  PUSPacket hdr dfh Nothing payload
 
