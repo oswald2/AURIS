@@ -7,8 +7,8 @@ where
 
 import RIO
 
-import qualified Data.ByteString               as B
-import qualified Data.ByteString.Lazy          as BL
+import qualified RIO.ByteString               as B
+import qualified RIO.ByteString.Lazy          as BL
 import           Data.Text                      ( Text )
 import           Control.Monad
 
@@ -20,12 +20,12 @@ import           Data.FileEmbed
 import           System.Directory
 import           System.FilePath
 
-import           Utils.Logger
+-- import           Graphics.UI.Gtk.General.CssProvider
+-- import           Graphics.UI.Gtk.General.StyleContext
+-- import           Graphics.UI.Gtk.Gdk.Screen
 
-import           Graphics.UI.Gtk.General.CssProvider
-import           Graphics.UI.Gtk.General.StyleContext
-import           Graphics.UI.Gtk.Gdk.Screen
-
+import GI.Gtk as Gtk
+import GI.Gdk
 
 themeFile :: B.ByteString
 themeFile = $(makeRelativeToProject "theme.tar.gz" >>= embedFile)
@@ -33,13 +33,13 @@ themeFile = $(makeRelativeToProject "theme.tar.gz" >>= embedFile)
 
 extractTheme :: FilePath -> IO ()
 extractTheme homeDir = do 
-  logStr lAreaAlways "Extracting Theme..."
+  putStrLn "Extracting Theme..."
   T.unpack (homeDir </> ".themes")
     . T.read
     . decompress
     . BL.fromStrict
     $ themeFile
-  logStr lAreaAlways "Done."
+  putStrLn "Done."
 
 
 checkDirectory :: FilePath -> IO Bool
@@ -48,10 +48,10 @@ checkDirectory homeDir = do
   th <- doesDirectoryExist themeDir
   if th
     then do
-      logStr lAreaAlways "Theme directory is existing. Not extracting theme."
+      putStrLn "Theme directory is existing. Not extracting theme."
       return True
     else do
-      logStr lAreaAlways "Theme directory does not exist, creating..."
+      putStrLn "Theme directory does not exist, creating..."
       createDirectoryIfMissing True themeDir
       return False
 
@@ -63,10 +63,8 @@ setTheme = do
   unless exists $ do
     extractTheme homeDir
 
-  cssProviderGetNamed ("Numix-BLACK-SLATE" :: Text) Nothing >>= \case
-    Nothing       -> logStr lAreaAlways "Could not load GTK theme"
-    Just provider -> do
-      screenGetDefault >>= \case
-        Nothing     -> logStr lAreaAlways "Could not get screen"
-        Just screen -> styleContextAddProviderForScreen screen provider 600
+  provider <- cssProviderGetNamed ("Numix-BLACK-SLATE" :: Text) Nothing 
+  screenGetDefault >>= \case
+    Nothing     -> putStrLn "Could not get screen"
+    Just screen -> styleContextAddProviderForScreen screen provider 600
 

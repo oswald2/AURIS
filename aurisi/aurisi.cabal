@@ -42,6 +42,7 @@ Executable AURISi
     GUI.MessageDisplay
     GUI.Logo
     GUI.About
+    GUI.Theme
     AurisInterface
     AurisProcessing
     AurisConfig
@@ -60,6 +61,7 @@ Executable AURISi
     esa-space-protocols,
     esa-mib,
     gui-base,
+    fltkhs,
     auris-tm-displays,
     mcs-interface,
     optparse-generic,
@@ -75,7 +77,11 @@ Executable AURISi
     hashtables-mo,
     stm-conduit,
     gi-gtk,
-    gi-gtk-hs
+    gi-gtk-hs,
+    gi-gdk,
+    gi-gobject,
+    tar,
+    zlib
 
   default-extensions:
         AutoDeriveTypeable
@@ -135,15 +141,15 @@ Executable AURISi
                      -funbox-strict-fields  -threaded -rtsopts
 
 
-  -- if impl(ghc >= 7.10) && flag(FastCompile)
-  --    ghc-Options: -fno-specialise -fmax-simplifier-iterations=0 -fsimplifier-phases=0
-  -- if os(windows)
-  --   ghc-Options: -optl-mwindows
-  --   ghc-Options: -pgml g++ "-optl-Wl,--allow-multiple-definition" "-optl-Wl,--whole-archive" "-optl-Wl,-Bstatic" "-optl-Wl,-lfltkc" "-optl-Wl,-Bdynamic" "-optl-Wl,--no-whole-archive"
-  -- if os(darwin)
-  --  ghc-Options: "-optl-Wl,-lfltkc"
-  -- if !os(darwin) && !os(windows)
-  --  ghc-Options: -pgml g++ "-optl-Wl,--allow-multiple-definition" "-optl-Wl,--whole-archive" "-optl-Wl,-Bstatic" "-optl-Wl,-lfltkc" "-optl-Wl,-Bdynamic" "-optl-Wl,--no-whole-archive"
+  if impl(ghc >= 7.10) && flag(FastCompile)
+     ghc-Options: -fno-specialise -fmax-simplifier-iterations=0 -fsimplifier-phases=0
+  if os(windows)
+    ghc-Options: -optl-mwindows
+    ghc-Options: -pgml g++ "-optl-Wl,--allow-multiple-definition" "-optl-Wl,--whole-archive" "-optl-Wl,-Bstatic" "-optl-Wl,-lfltkc" "-optl-Wl,-Bdynamic" "-optl-Wl,--no-whole-archive"
+  if os(darwin)
+   ghc-Options: "-optl-Wl,-lfltkc"
+  if !os(darwin) && !os(windows)
+   ghc-Options: -pgml g++ "-optl-Wl,--allow-multiple-definition" "-optl-Wl,--whole-archive" "-optl-Wl,-Bstatic" "-optl-Wl,-lfltkc" "-optl-Wl,-Bdynamic" "-optl-Wl,--no-whole-archive"
 
 
 

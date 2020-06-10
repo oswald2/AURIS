@@ -2,6 +2,7 @@
   TemplateHaskell
   , DataKinds
   , TypeOperators
+  , OverloadedLabels
 #-}
 module Main where
 
@@ -15,6 +16,7 @@ import qualified Data.Text.IO                  as T
 import           GUI.MainWindow
 import           GUI.MainWindowCallbacks
 import           GUI.About
+import           GUI.Theme
 
 import           Options.Generic
 
@@ -32,13 +34,12 @@ import qualified Data.GI.Gtk.Threading         as Gtk
 import           Version
 
 
--- ui :: IO MainWindow
--- ui = do
---   window      <- makeWindow
---   --aboutWindow <- makeAboutWindow
---   mainWindow  <- createMainWindow window aboutWindow
---   showWidget (_mwWindow mainWindow)
---   pure mainWindow
+ui :: IO MainWindow
+ui = do
+  window <- createMainWindow
+  Gtk.onWidgetDestroy (_mwWindow window) Gtk.mainQuit
+  Gtk.widgetShowAll (_mwWindow window)
+  pure window
 
 
 
@@ -104,27 +105,25 @@ main = do
         Gtk.init Nothing
         Gtk.setCurrentThreadAsGUIThread
         -- create the main window
-        --mainWindow <- ui
-
-        --mwSetMission mainWindow (aurisMission cfg)
+        mainWindow <- ui
+        setTheme
+        mwSetMission mainWindow (aurisMission cfg)
 
         -- setup the interface
-        --(interface, _eventThread) <- initialiseInterface mainWindow
+        (interface, _eventThread) <- initialiseInterface mainWindow
 
         -- Setup the callbacks. Since we need the interface there, we can 
         -- do this only here
         --setupCallbacks mainWindow interface
 
         -- determine the mission-specific functionality
-        missionSpecific <- getMissionSpecific cfg
+        missionSpecific           <- getMissionSpecific cfg
         -- start the processing chains
-        -- _processingThread <- async $ runProcessing cfg
-        --                                            missionSpecific
-        --                                            (importmib opts)
-        --                                            interface
-        --                                            mainWindow
-        -- run the FLTK GUI
-        --FL.run >> FL.flush
+        _processingThread         <- async $ runProcessing cfg
+                                                           missionSpecific
+                                                           (importmib opts)
+                                                           interface
+                                                           mainWindow
 
         Gtk.main
 

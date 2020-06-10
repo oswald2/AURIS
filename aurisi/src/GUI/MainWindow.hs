@@ -31,7 +31,7 @@ module GUI.MainWindow
   , mwSetTMParameters
   , mwAddTMParameters
   , mwAddTMParameterDefinitions
-  --, mwSetMission
+  , mwSetMission
   --, mwDeskHeaderGroup
   --, mwLogoBox
   --, mwMainMenu
@@ -49,6 +49,7 @@ import qualified Data.Text.Encoding            as T
 -- import qualified Data.Text.IO                  as T
 import qualified RIO.Vector                    as V
 import           RIO.List                       ( sortBy )
+import           RIO.Partial                    ( fromJust )
 import           Control.Lens                   ( makeLenses )
 
 import qualified Data.HashTable.ST.Basic       as HT
@@ -76,8 +77,8 @@ import           Data.TM.TMParameterDef
 
 import           General.Time
 
-import qualified GI.Gtk                        as Gtk
-
+import           GI.Gtk                        as Gtk
+import           GI.GObject.Objects.Object      ( Object )
 import           Data.FileEmbed
 
 
@@ -189,7 +190,7 @@ data MainWindow = MainWindow {
     -- , _mwTMPHeaderGroup :: Ref Group
     -- , _mwTMFGroup :: Ref Group
     -- , _mwMessageDisplay :: Ref Browser
-    -- , _mwMission :: Ref Output
+    , _mwMission :: Gtk.Label
     -- , _mwDeskHeaderGroup :: Ref Group
     -- , _mwLogoBox :: Ref Box
     -- , _mwMainMenu :: MainMenu
@@ -231,13 +232,12 @@ mwAddTMParameterDefinitions _ _ = return ()
 --   addParameterDefinitions (window ^. mwTMParamTab) paramDefs
 
 
--- mwSetMission :: MainWindow -> Text -> IO ()
--- mwSetMission window mission = do
---   void $ setValue (window ^. mwMission) mission
+mwSetMission :: MainWindow -> Text -> IO ()
+mwSetMission window = labelSetLabel (window ^. mwMission)
 
 
 mwInitialiseDataModel :: MainWindow -> DataModel -> IO ()
-mwInitialiseDataModel window model = return ()
+mwInitialiseDataModel _window _model = return ()
 --   let paramDefs =
 --         V.fromList . sortBy s . map snd . HT.toList $ model ^. dmParameters
 --       s p1 p2 = compare (p1 ^. fpName) (p2 ^. fpName)
@@ -253,12 +253,23 @@ gladeFile =
   T.decodeUtf8 $(makeRelativeToProject "src/MainWindow.glade" >>= embedFile)
 
 
+getObject :: Gtk.Builder -> Text -> IO Object
+getObject builder obj = do
+  o <- builderGetObject builder obj
+  case o of
+    Nothing ->
+      error $ "GTK: could not find " <> T.unpack obj <> " in Glade file!"
+    Just oo -> return oo
+
+
 createMainWindow :: IO MainWindow
 createMainWindow = do
-  builder <- Gtk.builderNewFromString gladeFile
-                                      (fromIntegral (T.length gladeFile))
+  builder <- builderNewFromString gladeFile (fromIntegral (T.length gladeFile))
 
-  let gui = MainWindow { _mwWindow = undefined }
+  window  <- getObject builder "mainWindow" >>= unsafeCastTo Window
+  missionLabel <-getObject builder "labelMission" >>= unsafeCastTo Label
+
+  let gui = MainWindow { _mwWindow = window, _mwMission = missionLabel }
 
   return gui
 
