@@ -9,10 +9,8 @@ import           RIO
 import qualified RIO.Text                      as T
 import qualified Data.Text.IO                  as T
 
-import           Graphics.UI.FLTK.LowLevel.FLTKHS
-import qualified Graphics.UI.FLTK.LowLevel.FL  as FL
-
-import           AURISi
+-- import           Graphics.UI.FLTK.LowLevel.FLTKHS
+-- import qualified Graphics.UI.FLTK.LowLevel.FL  as FL
 
 import           GUI.MainWindow
 import           GUI.MainWindowCallbacks
@@ -28,19 +26,19 @@ import           AurisMissionSpecific
 import           GHC.Conc
 import           System.Directory               ( doesFileExist )
 
+import qualified GI.Gtk                        as Gtk
+import qualified Data.GI.Gtk.Threading         as Gtk
+
+import           Version
 
 
-
-
-
-
-ui :: IO MainWindow
-ui = do
-  window      <- makeWindow
-  aboutWindow <- makeAboutWindow
-  mainWindow  <- createMainWindow window aboutWindow
-  showWidget (_mwWindow mainWindow)
-  pure mainWindow
+-- ui :: IO MainWindow
+-- ui = do
+--   window      <- makeWindow
+--   --aboutWindow <- makeAboutWindow
+--   mainWindow  <- createMainWindow window aboutWindow
+--   showWidget (_mwWindow mainWindow)
+--   pure mainWindow
 
 
 
@@ -103,29 +101,32 @@ main = do
               Right c -> pure c
 
         -- need to call it once in main before the GUI is started
-        void FL.lock
-
+        Gtk.init Nothing
+        Gtk.setCurrentThreadAsGUIThread
         -- create the main window
-        mainWindow <- ui
+        --mainWindow <- ui
 
-        mwSetMission mainWindow (aurisMission cfg)
+        --mwSetMission mainWindow (aurisMission cfg)
 
         -- setup the interface
-        (interface, _eventThread) <- initialiseInterface mainWindow
+        --(interface, _eventThread) <- initialiseInterface mainWindow
 
         -- Setup the callbacks. Since we need the interface there, we can 
         -- do this only here
-        setupCallbacks mainWindow interface
+        --setupCallbacks mainWindow interface
 
         -- determine the mission-specific functionality
-        missionSpecific           <- getMissionSpecific cfg
+        missionSpecific <- getMissionSpecific cfg
         -- start the processing chains
-        _processingThread         <- async $ runProcessing cfg
-                                                           missionSpecific
-                                                           (importmib opts)
-                                                           interface
-                                                           mainWindow
+        -- _processingThread <- async $ runProcessing cfg
+        --                                            missionSpecific
+        --                                            (importmib opts)
+        --                                            interface
+        --                                            mainWindow
         -- run the FLTK GUI
-        FL.run >> FL.flush
+        --FL.run >> FL.flush
+
+        Gtk.main
+
 
 

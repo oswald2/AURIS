@@ -7,8 +7,8 @@ where
 
 import           RIO
 import qualified RIO.Text                      as T
-import           Graphics.UI.FLTK.LowLevel.FLTKHS
-                                         hiding ( display )
+-- import           Graphics.UI.FLTK.LowLevel.FLTKHS
+--                                          hiding ( display )
 --import qualified Graphics.UI.FLTK.LowLevel.FL  as FL
 
 import           GUI.MainWindow
@@ -73,14 +73,14 @@ addMessageLine' window source level builder = do
       let text = utf8BuilderToText $ display lvl <> display source <> builder
       dispMsg text
 
-  let msgDisplay = window ^. mwMessageDisplay
-  nlines <- getSize msgDisplay
-  setBottomline msgDisplay (LineNumber (nlines - 1))
+  -- let msgDisplay = window ^. mwMessageDisplay
+  -- nlines <- getSize msgDisplay
+  -- setBottomline msgDisplay (LineNumber (nlines - 1))
   where
-    dispMsg text = do
-      let msgDisplay = window ^. mwMessageDisplay
-      withFLLock $ do
-        size <- getSize msgDisplay
-        when (size > maxMsgs) $ remove msgDisplay (LineNumber 1)
-        mapM_ (add msgDisplay) (T.lines text)
+    dispMsg text = return ()
+      -- let msgDisplay = window ^. mwMessageDisplay
+      -- withFLLock $ do
+      --   size <- getSize msgDisplay
+      --   when (size > maxMsgs) $ remove msgDisplay (LineNumber 1)
+      --   mapM_ (add msgDisplay) (T.lines text)
 

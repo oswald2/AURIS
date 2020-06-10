@@ -1,80 +1,54 @@
-{-# LANGUAGE
-  TemplateHaskell
+{-# LANGUAGE OverloadedStrings
+    , TemplateHaskell 
+    , QuasiQuotes
+    , ForeignFunctionInterface     
 #-}
 module GUI.About
-  ( AboutWindowFluid(..)
-  , initAboutWindow
-  , aboutWindowShow
-  , aboutWindowHide
-  , aurisVersion
+  ( createAboutDialog
   )
 where
 
-import           RIO
-import qualified RIO.Text                      as T
-import           Graphics.UI.FLTK.LowLevel.FLTKHS
 
+import           GI.Gtk                        as Gtk
+
+import           Data.Text                     as T
+
+import           Version
+
+import           Data.FileEmbed
 import           GUI.Logo
-import           GUI.Colors
 
-import           Development.GitRev
 
--- Attribution to the author of the earth SVG icon
--- <div>Icons made by <a href="https://www.flaticon.com/authors/freepik" title="Freepik">Freepik</a> from <a href="https://www.flaticon.com/" title="Flaticon">www.flaticon.com</a></div>
+license :: Text
+license = T.pack $(makeRelativeToProject "LICENSE" >>= embedStringFile)
 
-aurisVersion :: Text
-aurisVersion = T.concat
-  [ "AURISi: AURIS integrated.\n\n"
-  , "AURISi Version: 0.1.0.0\n"
-  , "Branch: "
-  , $(gitBranch)
-  , " "
-  , $(gitHash)
-  , "\ndirty: "
-  , dirty
-  , "\nCommit Date: "
-  , $(gitCommitDate)
-  ]
 
-dirty :: Text
-dirty | $(gitDirty) = "true"
-      | otherwise  = "false"
+-- foreign import ccall unsafe "my_pixbuf" pixbufLogo :: Ptr CUChar
 
 
 
+createAboutDialog :: IO Gtk.AboutDialog
+createAboutDialog = do
+    -- setup about dialog
+  aboutDialog <- aboutDialogNew
 
-data AboutWindowFluid = AboutWindowFluid {
-  _awWindow :: Ref Window
-  , _awLogo :: Ref Box
-  , _awText :: Ref TextDisplay
-  , _awButtonOK :: Ref Button
-  }
+  --logo        <- pixbufNewFromInline pixbufLogo
+  --logo        <- getLogoPixbuf
 
+  set
+    aboutDialog
+    [ aboutDialogProgramName := ("AURISi" :: Text)
+    , aboutDialogVersion := aurisVersion
+    , aboutDialogCopyright := ("(C) by Michael Oswald" :: Text)
+    , aboutDialogComments
+      := ("AURIS: an open source mission control system.\n\n" :: Text)
+    , aboutDialogAuthors
+      := ["Michael Oswald (michael.oswald@onikudaki.net)" :: Text]
+    , aboutDialogLicense := license
+    , aboutDialogWrapLicense := True
+    --, aboutDialogLogo := Just logo
+    ]
 
-initAboutWindow :: AboutWindowFluid -> IO ()
-initAboutWindow a@AboutWindowFluid {..} = do
-  mcsWindowSetColor _awWindow
-  mcsTextDisplaySetColor _awText
-  mcsButtonSetColor _awButtonOK
-  initLogo _awLogo aurisLogoBig
-
-  buf <- textBufferNew Nothing Nothing
-  setBuffer _awText (Just buf)
-
-  setText buf aurisVersion
-
-  setCallback _awButtonOK (okCB a)
-
-
-
-aboutWindowShow :: AboutWindowFluid -> IO ()
-aboutWindowShow AboutWindowFluid {..} = showWidget _awWindow
-
-aboutWindowHide :: AboutWindowFluid -> IO ()
-aboutWindowHide AboutWindowFluid {..} = hide _awWindow
+  return aboutDialog
 
 
-okCB :: AboutWindowFluid -> Ref Button -> IO ()
-okCB AboutWindowFluid {..} _ = do
-  hide _awWindow
-  return ()

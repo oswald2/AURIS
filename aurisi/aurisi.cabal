@@ -6,24 +6,16 @@ description:
 license : BSD3
 license-file : LICENSE
 author : Michael Oswald
-build-type: Custom
+build-type: Simple
 maintainer: michael.oswald@onikudaki.net
 homepage:
 category: UI,Graphics
 cabal-version: >=2.0
-extra-source-files:
-    src/AURISi.fl
 
 
 source-repository head
   type: git
   location: http://github.com/oswald2/AURIS
-
-custom-setup
-  setup-depends:
-      Cabal >=2.2.0.0 && <4
-    , base >=4.4
-    , filepath
 
 Flag FastCompile
    Description: Turn off optimizations for faster compilation
@@ -54,12 +46,12 @@ Executable AURISi
     AurisProcessing
     AurisConfig
     AurisMissionSpecific
+    Version
 
   Hs-Source-Dirs: src/
   
   Build-Depends:
     base == 4.*,
-    fltkhs >= 0.8.0.2,
     text >= 1.2.2.0,
     rio,
     lens,
@@ -81,9 +73,9 @@ Executable AURISi
     text-short,
     file-embed,
     hashtables-mo,
-    stm-conduit
-
-  Other-Modules: AURISi
+    stm-conduit,
+    gi-gtk,
+    gi-gtk-hs
 
   default-extensions:
         AutoDeriveTypeable
@@ -143,15 +135,15 @@ Executable AURISi
                      -funbox-strict-fields  -threaded -rtsopts
 
 
-  if impl(ghc >= 7.10) && flag(FastCompile)
-     ghc-Options: -fno-specialise -fmax-simplifier-iterations=0 -fsimplifier-phases=0
-  if os(windows)
-    ghc-Options: -optl-mwindows
-    ghc-Options: -pgml g++ "-optl-Wl,--allow-multiple-definition" "-optl-Wl,--whole-archive" "-optl-Wl,-Bstatic" "-optl-Wl,-lfltkc" "-optl-Wl,-Bdynamic" "-optl-Wl,--no-whole-archive"
-  if os(darwin)
-   ghc-Options: "-optl-Wl,-lfltkc"
-  if !os(darwin) && !os(windows)
-   ghc-Options: -pgml g++ "-optl-Wl,--allow-multiple-definition" "-optl-Wl,--whole-archive" "-optl-Wl,-Bstatic" "-optl-Wl,-lfltkc" "-optl-Wl,-Bdynamic" "-optl-Wl,--no-whole-archive"
+  -- if impl(ghc >= 7.10) && flag(FastCompile)
+  --    ghc-Options: -fno-specialise -fmax-simplifier-iterations=0 -fsimplifier-phases=0
+  -- if os(windows)
+  --   ghc-Options: -optl-mwindows
+  --   ghc-Options: -pgml g++ "-optl-Wl,--allow-multiple-definition" "-optl-Wl,--whole-archive" "-optl-Wl,-Bstatic" "-optl-Wl,-lfltkc" "-optl-Wl,-Bdynamic" "-optl-Wl,--no-whole-archive"
+  -- if os(darwin)
+  --  ghc-Options: "-optl-Wl,-lfltkc"
+  -- if !os(darwin) && !os(windows)
+  --  ghc-Options: -pgml g++ "-optl-Wl,--allow-multiple-definition" "-optl-Wl,--whole-archive" "-optl-Wl,-Bstatic" "-optl-Wl,-lfltkc" "-optl-Wl,-Bdynamic" "-optl-Wl,--no-whole-archive"
 
 
 
