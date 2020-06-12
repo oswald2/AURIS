@@ -9,6 +9,7 @@ import RIO
 
 import qualified RIO.ByteString               as B
 import qualified RIO.ByteString.Lazy          as BL
+import qualified Data.Text.IO as T
 import           Data.Text                      ( Text )
 import           Control.Monad
 
@@ -33,13 +34,13 @@ themeFile = $(makeRelativeToProject "theme.tar.gz" >>= embedFile)
 
 extractTheme :: FilePath -> IO ()
 extractTheme homeDir = do 
-  putStrLn "Extracting Theme..."
+  T.putStrLn "Extracting Theme..."
   T.unpack (homeDir </> ".themes")
     . T.read
     . decompress
     . BL.fromStrict
     $ themeFile
-  putStrLn "Done."
+  T.putStrLn "Done."
 
 
 checkDirectory :: FilePath -> IO Bool
@@ -48,10 +49,10 @@ checkDirectory homeDir = do
   th <- doesDirectoryExist themeDir
   if th
     then do
-      putStrLn "Theme directory is existing. Not extracting theme."
+      T.putStrLn "Theme directory is existing. Not extracting theme."
       return True
     else do
-      putStrLn "Theme directory does not exist, creating..."
+      T.putStrLn "Theme directory does not exist, creating..."
       createDirectoryIfMissing True themeDir
       return False
 
@@ -65,6 +66,6 @@ setTheme = do
 
   provider <- cssProviderGetNamed ("Numix-BLACK-SLATE" :: Text) Nothing 
   screenGetDefault >>= \case
-    Nothing     -> putStrLn "Could not get screen"
+    Nothing     -> T.putStrLn "Could not get screen"
     Just screen -> styleContextAddProviderForScreen screen provider 600
 

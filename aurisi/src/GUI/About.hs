@@ -8,7 +8,7 @@ module GUI.About
   )
 where
 
-
+import           RIO
 import           GI.Gtk                        as Gtk
 
 import           Data.Text                     as T
@@ -35,7 +35,7 @@ createAboutDialog = do
   --logo        <- pixbufNewFromInline pixbufLogo
   --logo        <- getLogoPixbuf
 
-  set
+  Gtk.set
     aboutDialog
     [ aboutDialogProgramName := ("AURISi" :: Text)
     , aboutDialogVersion := aurisVersion

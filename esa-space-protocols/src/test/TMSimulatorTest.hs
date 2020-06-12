@@ -27,6 +27,9 @@ import           Protocol.ProtocolInterfaces
 
 import           GHC.Conc.Sync
 
+-- For ghcid: execute with ghcid -c "stack ghci esa-space-protocols:exe:TMSimulatorTest"
+
+
 
 
 
@@ -52,7 +55,6 @@ main = do
               .| storeFrameC
               .| tmFrameExtraction (IfNctrs 1)
               .| C.print
-
 
           showConduitF = awaitForever $ \_du -> pure ()
 

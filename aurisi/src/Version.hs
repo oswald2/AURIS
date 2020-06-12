@@ -7,7 +7,7 @@ module Version
     )
 where
 
-
+import RIO
 import Data.Text as T
 import Development.GitRev
 
