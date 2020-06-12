@@ -50,7 +50,8 @@ Executable AURISi
     Version
 
   Hs-Source-Dirs: src/
-  
+  c-sources: src/AurisLogo.c 
+
   Build-Depends:
     base == 4.*,
     text >= 1.2.2.0,

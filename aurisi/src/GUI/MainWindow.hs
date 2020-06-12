@@ -3,6 +3,7 @@
     , TemplateHaskell
     , NoImplicitPrelude
     , RecordWildCards
+    , OverloadedLabels
 #-}
 module GUI.MainWindow
   ( --MainWindowFluid(..)
@@ -182,7 +183,7 @@ makeLenses ''MainMenu
 
 data MainWindow = MainWindow {
     _mwWindow :: Gtk.Window
-    -- , _mwProgress :: Ref Progress
+    , _mwProgress :: Gtk.ProgressBar
     -- , _mwTabs :: Ref Tabs
     -- , _mwTMPTab :: TMPacketTab
     -- , _mwTMParamTab :: TMParamTab
@@ -266,11 +267,22 @@ createMainWindow :: IO MainWindow
 createMainWindow = do
   builder <- builderNewFromString gladeFile (fromIntegral (T.length gladeFile))
 
-  window  <- getObject builder "mainWindow" >>= unsafeCastTo Window
-  missionLabel <-getObject builder "labelMission" >>= unsafeCastTo Label
+  window       <- getObject builder "mainWindow" >>= unsafeCastTo Window
+  missionLabel <- getObject builder "labelMission" >>= unsafeCastTo Label
+  progressBar  <- getObject builder "progressBar" >>= unsafeCastTo ProgressBar
+  aboutItem <- getObject builder "menuitemAbout" >>= unsafeCastTo MenuItem 
 
-  let gui = MainWindow { _mwWindow = window, _mwMission = missionLabel }
+  let gui = MainWindow { _mwWindow   = window
+                       , _mwMission  = missionLabel
+                       , _mwProgress = progressBar
+                       }
 
+  void $ Gtk.on aboutItem #activate $ do 
+    diag <- createAboutDialog
+    void $ dialogRun diag    
+    widgetHide diag 
+
+    
   return gui
 
 

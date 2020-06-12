@@ -1,6 +1,5 @@
 {-# LANGUAGE
-    AutoDeriveTypeable
-    , BangPatterns
+    BangPatterns
     , BinaryLiterals
     , ConstraintKinds
     , DataKinds
@@ -21,7 +20,6 @@
     , InstanceSigs
     , KindSignatures
     , LambdaCase
-    , MonadFailDesugaring
     , MultiParamTypeClasses
     , MultiWayIf
     , NamedFieldPuns

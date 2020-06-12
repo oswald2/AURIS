@@ -1,5 +1,6 @@
 {-# LANGUAGE
   TemplateHaskell
+  , ForeignFunctionInterface
 #-}
 module GUI.Logo
   ( aurisLogo
@@ -17,6 +18,12 @@ import qualified RIO.ByteString                as B
 import           Data.FileEmbed
 
 import           GUI.Colors
+import           Foreign.Ptr
+import           Foreign.C.Types
+
+foreign import ccall "auris_logo_inline" aurisLogoInline :: Ptr ()
+
+foreign import ccall "auris_logo_len" aurisLogoLen :: CInt
 
 
 aurisLogo :: ByteString

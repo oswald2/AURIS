@@ -251,7 +251,7 @@ Author: Michael Oswald
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
                             <child>
-                              <object class="GtkImageMenuItem">
+                              <object class="GtkImageMenuItem" id="menuitemAbout">
                                 <property name="label">gtk-about</property>
                                 <property name="visible">True</property>
                                 <property name="can_focus">False</property>
@@ -1147,6 +1147,7 @@ Author: Michael Oswald
         </child>
         <child>
           <object class="GtkProgressBar" id="progressBar">
+            <property name="height_request">25</property>
             <property name="visible">True</property>
             <property name="can_focus">False</property>
           </object>
