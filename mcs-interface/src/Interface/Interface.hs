@@ -46,7 +46,7 @@ import qualified RIO.Vector                    as V
 import           Data.PUS.TCRequest
 
 import           Interface.Events
-
+import           Interface.CoreProcessor
 
 -- | Table of actions which can be called. Direction is from the 
 -- client (GUI, script, command line) to the MCS
@@ -70,11 +70,6 @@ data Interface = Interface {
 callAction :: TBQueue InterfaceAction -> InterfaceAction -> IO ()
 callAction queue action = atomically $ writeTBQueue queue action
 
-data InterfaceAction =
-  Quit
-  | ImportMIB FilePath FilePath
-  deriving (Show, Generic)
-
 
 
 actionTable :: TBQueue InterfaceAction -> ActionTable
@@ -86,10 +81,10 @@ actionTable queue = ActionTable
 
 
 -- | creates the 'Interface' from the given 'EventHandler'.
-createInterface :: EventHandler -> IO Interface
+createInterface ::  EventHandler -> IO (Interface, TBQueue InterfaceAction)
 createInterface handler = do 
     queue <- newTBQueueIO 5000
-    pure (Interface (actionTable queue) (V.singleton handler))
+    pure (Interface (actionTable queue) (V.singleton handler), queue)
 
 -- | Adds a new event handler to the given 'Interface'. Only an event handler
 -- is added, the 'ActionTable' stays the same
@@ -123,3 +118,6 @@ syncCallInterface interface f = do
 -- socket interfaces etc)
 ifRaiseEvent :: Interface -> IfEvent -> IO ()
 ifRaiseEvent interface event = V.mapM_ (\f -> f event) (ifEventFuncs interface)
+
+
+  

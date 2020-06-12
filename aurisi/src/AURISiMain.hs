@@ -111,7 +111,7 @@ main = do
         mwSetMission mainWindow (aurisMission cfg)
 
         -- setup the interface
-        (interface, _eventThread) <- initialiseInterface mainWindow
+        (interface, _eventThread, coreQueue) <- initialiseInterface mainWindow
 
         -- Setup the callbacks. Since we need the interface there, we can 
         -- do this only here
@@ -125,6 +125,7 @@ main = do
                                                            (importmib opts)
                                                            interface
                                                            mainWindow
+                                                           coreQueue
         -- run the FLTK GUI
         FL.run >> FL.flush
 

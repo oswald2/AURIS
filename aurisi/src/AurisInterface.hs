@@ -14,6 +14,7 @@ import           RIO
 --import qualified Data.Text.IO                  as T
 import           Interface.Interface
 import           Interface.Events
+import           Interface.CoreProcessor
 
 import           Data.PUS.Events
 import           Data.PUS.PUSPacket
@@ -100,13 +101,17 @@ eventProcessor g (EventPUS (EVAlarms (EVIllegalPUSPacket txt))) = do
   withFLLock (mwLogWarn g txt)
 eventProcessor g (EventPUS (EVAlarms (EVIllegalAction txt))) = do
   withFLLock (mwLogWarn g txt)
-
+eventProcessor g (EventPUS (EVAlarms (EVMIBLoadError txt))) = do
+  withFLLock (mwLogAlarm g txt)
+eventProcessor g (EventPUS (EVAlarms (EVMIBLoaded _))) = do
+  withFLLock (mwLogInfo g "MIB loaded successfully")
 eventProcessor _ _ = pure ()
 
 
-initialiseInterface :: MainWindow -> IO (Interface, Async ())
+initialiseInterface
+  :: MainWindow -> IO (Interface, Async (), TBQueue InterfaceAction)
 initialiseInterface mainWindow = do
-  queue       <- newTBQueueIO 1000
-  interface   <- createInterface (aurisEventHandler queue)
-  eventThread <- async (eventProcessorThread mainWindow queue)
-  pure (interface, eventThread)
+  queue                  <- newTBQueueIO 1000
+  (interface, coreQueue) <- createInterface (aurisEventHandler queue)
+  eventThread            <- async (eventProcessorThread mainWindow queue)
+  pure (interface, eventThread, coreQueue)

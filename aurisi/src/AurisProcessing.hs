@@ -16,6 +16,7 @@ import           Control.PUS.Classes
 
 import           Interface.Interface
 import           Interface.Events
+import           Interface.CoreProcessor
 
 import           AurisConfig
 
@@ -36,8 +37,9 @@ runProcessing
   -> Maybe FilePath
   -> Interface
   -> MainWindow
+  -> TBQueue InterfaceAction
   -> IO ()
-runProcessing cfg missionSpecific mibPath interface mainWindow = do
+runProcessing cfg missionSpecific mibPath interface mainWindow coreQueue = do
   defLogOptions <- logOptionsHandle stdout True
   let logOptions =
         setLogMinLevel (convLogLevel (aurisLogLevel cfg)) defLogOptions
@@ -70,6 +72,8 @@ runProcessing cfg missionSpecific mibPath interface mainWindow = do
           nctrsCfg = cfgNCTRS pusCfg
           cncCfg   = cfgCnC pusCfg
           edenCfg  = cfgEDEN pusCfg
+
+      void $ async $ runCoreThread coreQueue
 
       runTMChain nctrsCfg cncCfg edenCfg missionSpecific
     pure ()

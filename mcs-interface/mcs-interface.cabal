@@ -69,6 +69,7 @@ library
     Interface.Executor
     Interface.Events
     Interface.Client.SocketClient
+    Interface.CoreProcessor
 
   -- Modules included in this library but not exported.
   -- other-modules:

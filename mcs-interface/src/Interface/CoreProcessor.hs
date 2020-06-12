@@ -1,5 +1,6 @@
 module Interface.CoreProcessor
   ( runCoreThread
+  , InterfaceAction(..)
   )
 where
 
@@ -7,14 +8,30 @@ where
 import           RIO
 
 import           Application.DataModel
-import           Interface.Interface
+
+import           Control.PUS.Classes
+import           Data.PUS.Events
+
+
+
+data InterfaceAction =
+  Quit
+  | ImportMIB FilePath FilePath
+  deriving (Show, Generic)
 
 
 runCoreThread
-  :: (MonadIO m, MonadReader env m, HasLogFunc env)
+  :: ( MonadUnliftIO m
+     , MonadReader env m
+     , HasRaiseEvent env
+     , HasDataModel env
+     , HasLogFunc env
+     )
   => TBQueue InterfaceAction
   -> m ()
-runCoreThread queue = loop True
+runCoreThread queue = do 
+  logDebug "Starting CoreThread..."
+  loop True
  where
   loop False = do
     logInfo "Terminating!"
@@ -29,24 +46,39 @@ runCoreThread queue = loop True
 
 
 processMsg
-  :: (MonadIO m, MonadReader env m, HasLogFunc env) => InterfaceAction -> m ()
+  :: ( MonadUnliftIO m
+     , MonadReader env m
+     , HasRaiseEvent env
+     , HasDataModel env
+     , HasLogFunc env
+     )
+  => InterfaceAction
+  -> m ()
 processMsg Quit                           = return ()
 processMsg (ImportMIB path serializePath) = importMIB path serializePath
 
 
 
 importMIB
-  :: (MonadIO m, MonadReader env m, HasLogFunc env)
+  :: ( MonadUnliftIO m
+     , MonadReader env m
+     , HasRaiseEvent env
+     , HasDataModel env
+     , HasLogFunc env
+     )
   => FilePath
   -> FilePath
   -> m ()
 importMIB path serializePath = do
+  logDebug "Loading data model..."
+  env    <- ask
   model' <- loadDataModel (LoadFromMIB path serializePath)
   case model' of
     Left err -> do
-      ifRaiseEvent env (EVAlarms (EVMIBLoadError err))
+      logDebug "Error loading MIB"
+      liftIO $ raiseEvent env (EVAlarms (EVMIBLoadError err))
     Right model -> do
-      env <- ask
       setDataModel env model
-      ifRaiseEvent env (EVAlarms (EVMIBLoaded model))
+      logDebug "Successfully loaded MIB"
+      liftIO $ raiseEvent env (EVAlarms (EVMIBLoaded model))
 
