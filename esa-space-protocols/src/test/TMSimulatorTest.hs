@@ -29,9 +29,132 @@ import           GHC.Conc.Sync
 
 
 
+-- data Config = Config {
+--   hostname :: Text 
+-- }
+
+-- data Settings = Settings {
+--   processHighSpeed :: Bool 
+--   ........
+-- }
 
 
-main :: IO ()
+-- data Env = Env {
+--   cfg :: Config 
+--   , settings :: TVar Settings 
+--   , logFunc :: LogFunc 
+--   , raiseEvent :: Event -> IO () 
+-- }
+
+-- -- connectSocket :: Text -> IO ()
+
+-- --connectSocket :: Text -> ReaderT Config IO ()
+
+
+
+-- someFunc :: Int -> RIO Env () 
+-- someFunc x = do 
+--   env <- ask
+--   let config = cfg env 
+
+--   highSpeed <- atomically $ do 
+--     set <- readTVar (settings env)
+--     return (processHighSpeed set)
+
+--   if highSpeed then do 
+
+--   connectSocket (hostname cfg)
+--   logDebug "DebugTxt "
+--   logWarn "A Warning "
+
+
+-- setupSocket :: RIO Env ()
+-- setupSocket = do 
+--   env <- ask 
+--   queue <- newTBQueueIO 500
+--   sock <- connectSocket (hostname (cfg env)) 2502
+--   concurrently_ (receiveThread sock queue)
+--                 (processNcduTM queue)
+
+-- data NcduTM = NcduTM {
+-- }
+
+-- processNcduTM :: TBQueue NcduTM -> RIO Env () 
+-- processNcduTM queue = do 
+--   ncdutm <- atomically $ readTBQueue queue 
+--   doStuffWith ncduTM
+
+
+
+-- receiveThread :: Sraceocket -> TBQueue NcduTM -> RIO Env () 
+-- receiveThread sock queue = do 
+--   content <- recv sock 
+--   case parse NcduTMParser content of 
+--     Left error -> logError error
+--     Right ncdutm -> do 
+--       liftIO $ (raiseEvent env) (EventNcduTM ncdutm)
+--       atomically $ writeTBQueue queue ncdutm 
+--       receiveThread sock queue 
+
+
+
+-- ConduitT input output monad ret
+
+
+
+
+
+-- parseNcduTMC :: ConduitT ByteString NcduTM m () 
+-- parseNcduTMC = do 
+--   x <- await
+--   case x of 
+--     Nothing -> return ()
+--     Just bs -> case parse NcduTMParser content of 
+--       Left error -> logError error
+--       Right ncdutm -> do
+--         yield ncdutm 
+--         parseNcduTMC
+
+
+-- parseNcduTMC' :: ConduitT ByteString NcduTM m () 
+-- parseNcduTMC' = awaitForever \bs -> 
+--     case parse NcduTMParser content of 
+--       Left error -> logError error
+--       Right ncdutm -> do
+--         yield ncdutm 
+
+
+-- processNcduTMC :: ConduitT NcduTM TMFrame m () 
+
+
+-- socketSourceC :: Socket -> ConduitT () ByteString m () 
+
+
+-- socketSourceC .| parseNcduTMC .| processNcduTM 
+
+-- queueConduit :: TBQueue NcduTM -> ConduitT () NcduTM m () 
+-- queueConduit queue = do
+--   val <- atomically $ readTBQueue queue
+--   yield value 
+--   queueConduit queue
+
+
+-- sink :: ConduitT NcduTM Void m () 
+-- sink 
+
+
+-- testData :: [ByteString]
+
+-- listConduit testData .| parseNcduTMC .| processNcduTM 
+
+
+
+
+
+
+
+
+main :: IO () 
 main = do
   np <- getNumProcessors
   setNumCapabilities np
