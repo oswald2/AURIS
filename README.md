@@ -25,11 +25,28 @@ Graphical Parameter Display:
 
 Currently, building via stack is recommended. Cabal new-* commands should also work, but currently there is no cabal.project file available. 
 
+There are some dependencies need beforehand (for Debian based systems):
+
+```
+sudo apt-get install build-essential autoconf libxft-dev libfltk1.3-dev libx11-dev -y
+```
 There are 3 stack.yaml files provided:
  * stack.yaml: this is for developing with non-optimized code
  * stack_opt.yaml: this is for the optimized build (much slower)
  * stack_llvm:yaml: optimized build via LLVM (much much slower)
- 
+
+
+Some users have reported build issues with fltkhs. As a workaround, you can just install fltkhs before building AURIS.
+
+```
+git clone http://github.com/deech/fltkhs-hello-world
+cd ./fltkhs-hello-world
+stack install --flag fltkhs:bundled
+cd <path to AURIS checkout>
+stack build
+```
+
+
  ## Data Processing
 
 The architecture of the data processing backend looks like this:
