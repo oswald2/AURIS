@@ -7,12 +7,12 @@ Maintainer  : michael.oswald@onikudaki.net
 Stability   : experimental
 Portability : POSIX
 
-NCTRS is the network control tracking and routing system and connects the 
-mission control system to the ground stations around the world. The MCS is 
-a client to the NCTRS via a normal TCP/IP socket and communicates via the 
+NCTRS is the network control tracking and routing system and connects the
+mission control system to the ground stations around the world. The MCS is
+a client to the NCTRS via a normal TCP/IP socket and communicates via the
 NCTRS protocol, which is represented in this module.
 
- - NCDU = NCTRS Data Unit 
+ - NCDU = NCTRS Data Unit
 -}
 {-# LANGUAGE OverloadedStrings
     , BangPatterns
@@ -137,16 +137,16 @@ import           General.Hexdump
 
 
 
--- | The type of an NCDU. 
--- - TC = telecommand 
--- - PKT = telemetry packet 
--- - LNK = link status 
+-- | The type of an NCDU.
+-- - TC = telecommand
+-- - PKT = telemetry packet
+-- - LNK = link status
 -- - RES = response to a NCTRS request
--- - TE = Throw Event 
+-- - TE = Throw Event
 -- - CLTU = Command Link Transfer Unit, special parity encoding for transmission of TCs
 -- - FSP = Forward Space Packet, commanding not via CLTU but on the packet level
 -- - NIS = other name for NCTRS
--- - Frame = transport unit of packets 
+-- - Frame = transport unit of packets
 data NcduHeaderType =
     NCDU_TC_PKT_TYPE
     | NCDU_PKT_RES_TYPE
@@ -168,7 +168,7 @@ data NcduHeaderType =
     deriving (Ord, Eq, Show, Read, Enum)
 
 
--- | The length of a NCDU TC header 
+-- | The length of a NCDU TC header
 hdrLen :: Int
 hdrLen = 4 + 2 + 2
 
@@ -187,7 +187,7 @@ pktHdrLen :: Int
 pktHdrLen = 7
 
 
--- | Length of the TM header 
+-- | Length of the TM header
 tmHdrLen :: Int
 tmHdrLen = 4 + 2 + 1 + 1 + 2 + 8 + 1 + 1
 
@@ -197,12 +197,12 @@ admMessageHdrLen :: Int
 admMessageHdrLen = 4 + 8 + 2 + 2 + 4
 
 
--- | The structure for the NCDU header for TCs. This header is always 
+-- | The structure for the NCDU header for TCs. This header is always
 -- present in TCs. The following part may differ for different units
 data NcduTcHeader = NcduTcHeader {
     -- | size of the NCDU, excluding the size field
     _ncduPktSize :: !Word32,
-    -- | The type of the NCDU 
+    -- | The type of the NCDU
     _ncduType :: !NcduHeaderType,
     -- | Spacecraft ID
     _ncduScID :: !SCID
@@ -212,29 +212,29 @@ makeLenses ''NcduTcHeader
 instance FixedSize NcduTcHeader where
   fixedSizeOf = hdrLen
 
--- | The structure of a TC CLTU header, following the 'NcduTcHeader'. For a 
+-- | The structure of a TC CLTU header, following the 'NcduTcHeader'. For a
 -- detailed meaning of the fields have a look at the NCTRS ICD (inteface control
 -- document)
 data NcduTcCltuHeader = NcduTcCltuHeader {
     -- | Specifies if AD, BD or BC mode is used for transmission
     _ncduTcCltuTransType :: !TransmissionMode,
-    -- | Sequence Count 
+    -- | Sequence Count
     _ncduTcCltuSeqCnt :: !Word32,
     -- | Virtual Channel ID
     _ncduTcCltuVcID :: !VCID,
     -- | MAP ID: multiplexer access point ID
     _ncduTcCltuMapID :: !MAPID,
-    -- | Aggregartion flags 
+    -- | Aggregartion flags
     _ncduTcCltuAggrFlags :: !Word32,
     -- | Earliest production time flags
     _ncduTcCltuEarliestProdTimeFlags :: !Word32,
     -- | Earliest production time (CDS format)
     _ncduTcCltuEarliestProdTime :: !Word64,
-    -- | Latest production time flags 
+    -- | Latest production time flags
     _ncduTcCltuLatestProdTimeFlag :: !Word32,
-    -- | Latest production time 
+    -- | Latest production time
     _ncduTcCltuLatestProdTime :: !Word64,
-    -- | Delay 
+    -- | Delay
     _ncduTcCltuDelay :: !Word32
     }
     deriving (Show, Read)
@@ -255,11 +255,11 @@ data NcduDirectiveType =
     deriving (Ord, Eq, Show, Read)
 
 
--- | The NCDU secondary header for TC packets 
+-- | The NCDU secondary header for TC packets
 data NcduTcPktHeader = NcduTcPktHeader {
     -- | The transmission mode AD, BD or BC
     _ncduTcPktTransType :: !TransmissionMode,
-    -- | The sequence count 
+    -- | The sequence count
     _ncduTcPktSeqCnt :: !Word32,
     -- | The virtual channel ID
     _ncduTcPktVcID :: !VCID,
@@ -293,21 +293,21 @@ data NcduTmStreamType =
     deriving (Ord, Eq, Enum, Show, Read)
 
 
--- | NCDU header for TM data 
+-- | NCDU header for TM data
 data NcduTmDuHeader = NcduTmDuHeader {
-    -- | Size of the DU, excluding the size field itself 
+    -- | Size of the DU, excluding the size field itself
     _ncduTmSize :: !Word32,
-    -- | Spacecraft ID 
+    -- | Spacecraft ID
     _ncduTmScID :: !SCID,
-    -- | The stream type 
+    -- | The stream type
     _ncduTmDataStreamType :: !NcduTmStreamType,
     -- | Virtual Channel ID
     _ncduTmVcID :: !VCID,
-    -- | Ground Station ID 
+    -- | Ground Station ID
     _ncduTmGsID :: !Word16,
     -- | Earth Reception Time of the contained TM frame
     _ncduTmERT :: !CDSTime,
-    -- | Sequence flags 
+    -- | Sequence flags
     _ncduTmSeqFlag :: !Word8,
     -- | Quality of the telemetry, as flagged from the ground station
     _ncduTmQualityFlag :: !Word8
@@ -317,7 +317,7 @@ makeLenses ''NcduTmDuHeader
 instance FixedSize NcduTmDuHeader where
   fixedSizeOf = tmHdrLen
 
--- | The complete NCTRS TM Data Unit 
+-- | The complete NCTRS TM Data Unit
 data NcduTmDu = NcduTmDu {
     _ncduTmHeader :: NcduTmDuHeader,
     _ncduTmData :: !ByteString
@@ -339,23 +339,23 @@ data NcduTcCltuRespAck =
     deriving (Ord, Eq, Show, Read, Enum)
 
 
--- | The NCTRS CLTU response 
+-- | The NCTRS CLTU response
 data NcduTcCltuResponse = NcduTcCltuResponse {
-    -- | Response time stamp in CDS time 
+    -- | Response time stamp in CDS time
     _ncduCltuRespTime :: !Word64,
-    -- | Transmission type of the response 
+    -- | Transmission type of the response
     _ncduCltuRespTransType :: !TransmissionMode,
-    -- | Ground station ID 
+    -- | Ground station ID
     _ncduCltuRespGsID :: !Word16,
     -- | The TC ID of the CLTU (sequence count)
     _ncduCltuRespTCID :: !Word32,
-    -- | Type of the response 
+    -- | Type of the response
     _ncduCltuRespAck :: !NcduTcCltuRespAck,
     -- | Rejection reason
     _ncduCltuRespReason :: !Word8,
-    -- | Actual space in the transmission queue 
+    -- | Actual space in the transmission queue
     _ncduCltuRespSpaceInQueue :: !Word8,
-    -- | Expected next TC ID 
+    -- | Expected next TC ID
     _ncduCltuRespNextTCID :: !Word32,
     -- | The last CLCW
     _ncduCltuLastCLCW :: !Word32
@@ -375,17 +375,17 @@ data NcduAdminMessageSeverity =
     | NCDU_ALARM
     deriving (Ord, Eq, Enum, Show, Read)
 
--- | The NCTRS admin message 
+-- | The NCTRS admin message
 data NcduAdminMessage = NcduAdminMessage {
     -- | Size of the message, excluding the size field itself
     _ncduAdmLength :: !Word32,
-    -- | The time stamp of the message in CDS time format 
+    -- | The time stamp of the message in CDS time format
     _ncduAdmTime :: !Word64,
     -- | Message for TM or TC
     _ncduAdmType :: !NcduAdminMessageType,
-    -- | Severity of the message 
+    -- | Severity of the message
     _ncduAdmSeverity :: !NcduAdminMessageSeverity,
-    -- | Event ID 
+    -- | Event ID
     _ncduAdmEventID :: !Word32,
     -- | The message itself in ASCII
     _ncduAdmMsg :: !BC.ByteString
@@ -401,7 +401,7 @@ data NcduTcData =
     NcduTcDuPktData {
         _ncduTcPktHdr :: !NcduTcPktHeader,
         _ncduTcPktData :: !ByteString}
-    -- | The CLTU header and the CLTU itself as data 
+    -- | The CLTU header and the CLTU itself as data
     | NcduTcDuCltuData {
         _ncduTcCltuHdr :: !NcduTcCltuHeader,
         _ncduTcCltuData :: !ByteString}
@@ -428,7 +428,7 @@ makeLenses ''NcduTcDu
 instance SizeOf NcduTcDu where
   sizeof NcduTcDu {..} = fixedSizeOf @NcduTcHeader + sizeof _ncduTcData
 
--- | Conduit for receiving TC NCDUs. Receives a 'ByteString' which is 
+-- | Conduit for receiving TC NCDUs. Receives a 'ByteString' which is
 -- parsed and converted into a 'NcduTcDu'
 receiveTcNcduC
   :: (MonadIO m, MonadReader env m, HasGlobalState env)
@@ -439,7 +439,7 @@ receiveTcNcduC = conduitParserEither ncduTcParser .| sink
     Left err -> do
       st <- ask
       let errorMsg = T.pack (errorMessage err)
-      logError $ text errorMsg
+      logError $ display errorMsg
       liftIO $ raiseEvent st $ EVAlarms
         (EVNCDUParseError errorMsg)
       sink
