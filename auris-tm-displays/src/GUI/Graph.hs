@@ -102,27 +102,27 @@ data TimeScaleSettings = TimeScaleSettings {
 }
 makeLenses ''TimeScaleSettings
 
-timeScaleSettings now =
-  let range = TI.secondsToNominalDiffTime 60
-  in  TimeScaleSettings { _tssInterval = range
-                        , _tssOldMin   = now
-                        , _tssOldMax   = TI.addUTCTime range now
-                        }
+-- timeScaleSettings now =
+--   let range = TI.secondsToNominalDiffTime 60
+--   in  TimeScaleSettings { _tssInterval = range
+--                         , _tssOldMin   = now
+--                         , _tssOldMax   = TI.addUTCTime range now
+--                         }
 
-defaultTimeScaleSettings =
-  let !range = TI.secondsToNominalDiffTime 60
-      !defTime = TI.UTCTime (ModifiedJulianDay 0) (TI.secondsToDiffTime 0)
-  in  TimeScaleSettings { _tssInterval = range
-                        , _tssOldMin   = defTime
-                        , _tssOldMax   = TI.addUTCTime range defTime
-                        }
+-- defaultTimeScaleSettings =
+--   let !range = TI.secondsToNominalDiffTime 60
+--       !defTime = TI.UTCTime (ModifiedJulianDay 0) (TI.secondsToDiffTime 0)
+--   in  TimeScaleSettings { _tssInterval = range
+--                         , _tssOldMin   = defTime
+--                         , _tssOldMax   = TI.addUTCTime range defTime
+--                         }
 
 
 data Graph = Graph {
   _graphName :: !Text
   , _graphParameters :: HashSet ShortText
   , _graphData :: Map ShortText PlotVal
-  , _graphTimeAxisSettings :: TimeScaleSettings
+  -- , _graphTimeAxisSettings :: TimeScaleSettings
   }
 makeLenses ''Graph
 
@@ -131,7 +131,7 @@ getParameterNames g = toList (g ^. graphParameters)
 
 
 emptyGraph :: Text -> Graph
-emptyGraph name = Graph name HS.empty M.empty defaultTimeScaleSettings
+emptyGraph name = Graph name HS.empty M.empty 
 
 
 
@@ -236,7 +236,7 @@ handleMouse _ _ widget event = handleWidgetBase (safeCast widget) event
 
 handleSetTitle :: TVar Graph -> Ref Widget -> Ref MenuItem -> IO ()
 handleSetTitle var widget _ = do
-  res <- flInput "Set Chart Name: " Nothing
+  res <- flInput "Set Chart Name: " 
   forM_ res (graphWidgetSetChartName var)
   redraw widget
 
@@ -492,8 +492,8 @@ layoutTimeAxis settings =
 
 
 
-graphLayout :: TimeScaleSettings -> Layout TI.UTCTime Double
-graphLayout settings =
+graphLayout :: {-TimeScaleSettings -> -}Layout TI.UTCTime Double
+graphLayout =
   let graphBgColor = sRGB24 0x29 0x3d 0x5d
   in
   layout_background
@@ -504,8 +504,8 @@ graphLayout settings =
     .~ titleStyle
     $  layout_legend
     ?~ legendStyle
-    $  layout_x_axis
-    .~ layoutTimeAxis settings
+    -- $  layout_x_axis
+    -- .~ layoutTimeAxis settings
     $  layout_y_axis
     .~ layoutAxis
     $  def
@@ -515,7 +515,7 @@ chart Graph {..} = toRenderable layout
  where
   plots = map (plotValToPlot . snd) $ M.toList _graphData
   layout =
-    graphLayout _graphTimeAxisSettings
+    graphLayout
       &  layout_title
       .~ T.unpack _graphName
       &  layout_plots

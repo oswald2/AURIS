@@ -21,7 +21,7 @@ source-repository head
 
 custom-setup
   setup-depends:
-      Cabal >=2.2.0.0 && <4
+      Cabal >=2.2.0.0 && <3
     , base >=4.4
     , filepath
 
@@ -81,7 +81,8 @@ Executable AURISi
     text-short,
     file-embed,
     hashtables-mo,
-    stm-conduit
+    stm-conduit,
+    compact
 
   Other-Modules: AURISi
 
