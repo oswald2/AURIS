@@ -113,7 +113,7 @@ pusPacketEncoding _cfg = do
       decodedPusPkt = decodePktMissionSpecific
         encPusPkt
         (defaultMissionSpecific defaultConfig)
-        IF_NCTRS
+        (IfNctrs 0)
 
   -- T.putStrLn $ hexdumpBS encPusPkt
   -- T.putStrLn $ T.pack (show decodedPusPkt)
