@@ -439,7 +439,7 @@ receiveTcNcduC = conduitParserEither ncduTcParser .| sink
     Left err -> do
       st <- ask
       let errorMsg = T.pack (errorMessage err)
-      logError errorMsg
+      logError $ text errorMsg
       liftIO $ raiseEvent st $ EVAlarms
         (EVNCDUParseError errorMsg)
       sink
