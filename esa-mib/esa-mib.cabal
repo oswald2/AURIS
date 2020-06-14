@@ -242,7 +242,8 @@ test-suite esa-mib-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
-      Spec.Parser
+      Spec.Parser,
+      Spec.Calibration
   hs-source-dirs:
       test
   default-extensions:
@@ -254,5 +255,6 @@ test-suite esa-mib-test
       cassava,
       hspec,
       vector,
+      esa-base,
       esa-mib
   default-language: Haskell2010

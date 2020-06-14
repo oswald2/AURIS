@@ -64,7 +64,7 @@ data PolynomialCalibration = PolynomialCalibration {
     , _pa3 :: !Double
     , _pa4 :: !Double
     }
-    deriving (Show, Generic)
+    deriving (Eq, Show, Generic)
 makeLenses ''PolynomialCalibration
 
 instance NFData PolynomialCalibration

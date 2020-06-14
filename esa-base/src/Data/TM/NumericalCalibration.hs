@@ -49,7 +49,7 @@ data CalibPoint = CalibPoint {
     _cx :: !Double
     , _cy :: !Double
     }
-    deriving (Show, Generic)
+    deriving (Eq, Show, Generic)
 makeLenses ''CalibPoint
 
 instance NFData CalibPoint
@@ -70,7 +70,7 @@ data NumericalCalibration = NumericalCalibration {
     , _calibNInterpolation :: !CalibInterpolation
     , _calibNPoints :: Vector CalibPoint
     }
-    deriving (Show, Generic)
+    deriving (Eq, Show, Generic)
 makeLenses ''NumericalCalibration
 
 instance NFData NumericalCalibration

@@ -64,7 +64,7 @@ data LogarithmicCalibration = LogarithmicCalibration {
     , _la3 :: !Double
     , _la4 :: !Double
     }
-    deriving(Show, Generic)
+    deriving(Eq, Show, Generic)
 makeLenses ''LogarithmicCalibration
 
 instance NFData LogarithmicCalibration
