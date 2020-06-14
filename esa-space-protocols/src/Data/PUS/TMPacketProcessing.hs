@@ -3,6 +3,7 @@ module Data.PUS.TMPacketProcessing
     ( packetProcessorC
     , raiseTMPacketC
     , raiseTMParameterC
+    , passTMParameterC
     , getPackeDefinition
     )
 where
@@ -64,6 +65,12 @@ raiseTMParameterC :: (MonadIO m, MonadReader env m, HasGlobalState env)
 raiseTMParameterC = awaitForever $ \pkt -> do 
   env <- ask
   liftIO $ raiseEvent env (EVTelemetry (EVTMParameters (pkt ^. tmpParams)))
+
+passTMParameterC :: (MonadIO m, MonadReader env m, HasGlobalState env) => 
+  TBQueue (Vector TMParameter) -> ConduitT TMPacket Void m () 
+passTMParameterC queue = do 
+    awaitForever $ \pkt -> do 
+      atomically $ writeTBQueue queue (pkt ^. tmpParams)
 
 
 packetProcessorC

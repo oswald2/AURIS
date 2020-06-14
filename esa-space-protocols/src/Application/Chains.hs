@@ -24,6 +24,7 @@ import           Data.PUS.TMPacketProcessing
 import           Data.PUS.NcduToTMFrame
 import           Data.PUS.Events
 import           Data.PUS.ExtractedPUSPacket
+import           Data.TM.Parameter
 
 import           Protocol.NCTRS
 import           Protocol.CnC
@@ -50,7 +51,8 @@ runTMNctrsChain cfg pktQueue = do
 
   runGeneralTCPReconnectClient
     (clientSettings (fromIntegral (cfgNctrsPortTM cfg))
-      (encodeUtf8 (cfgNctrsHost cfg)))
+                    (encodeUtf8 (cfgNctrsHost cfg))
+    )
     200000
     (tmClient chain)
 
@@ -82,8 +84,9 @@ runTMCnCChain cfg missionSpecific pktQueue = do
         .| sinkTBQueue pktQueue
 
   runGeneralTCPReconnectClient
-    (clientSettings (fromIntegral (cfgCncPortTM cfg)) 
-      (encodeUtf8 (cfgCncHost cfg)))
+    (clientSettings (fromIntegral (cfgCncPortTM cfg))
+                    (encodeUtf8 (cfgCncHost cfg))
+    )
     200000
     (tmClient chain)
 
@@ -143,8 +146,9 @@ runTMChain
   -> [CncConfig]
   -> [EDENConfig]
   -> PUSMissionSpecific
+  -> TBQueue (Vector TMParameter)
   -> RIO GlobalState ()
-runTMChain nctrsCfg cncCfg edenCfg missionSpecific = do
+runTMChain nctrsCfg cncCfg edenCfg missionSpecific tmModelQueue = do
   logDebug "runTMCain entering"
   pktQueue <- newTBQueueIO 5000
 
@@ -153,6 +157,7 @@ runTMChain nctrsCfg cncCfg edenCfg missionSpecific = do
           .| packetProcessorC
           .| raiseTMPacketC
           .| raiseTMParameterC
+          .| passTMParameterC tmModelQueue
           .| sinkNull
 
 

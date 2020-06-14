@@ -75,7 +75,9 @@ runProcessing cfg missionSpecific mibPath interface mainWindow coreQueue = do
 
       void $ async $ runCoreThread coreQueue
 
-      runTMChain nctrsCfg cncCfg edenCfg missionSpecific
+      tmModelQueue <- newTBQueueIO 5000
+
+      runTMChain nctrsCfg cncCfg edenCfg missionSpecific tmModelQueue
     pure ()
 
 
