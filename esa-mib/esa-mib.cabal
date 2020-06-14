@@ -236,3 +236,23 @@ executable LoadMIBTest
         pretty-show,
         vector,
         hashtables-mo
+
+
+test-suite esa-mib-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      Spec.Parser
+  hs-source-dirs:
+      test
+  default-extensions:
+      OverloadedStrings
+  ghc-options: -Wall -Werror -O2 -funbox-strict-fields
+  build-depends:
+      base >=4.7 && <5,
+      bytestring,
+      cassava,
+      hspec,
+      vector,
+      esa-mib
+  default-language: Haskell2010
