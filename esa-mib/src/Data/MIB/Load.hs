@@ -1,17 +1,6 @@
-{-# LANGUAGE OverloadedStrings
-    , BangPatterns
-    , GeneralizedNewtypeDeriving
-    , DeriveGeneric
-    , RecordWildCards
-    , NoImplicitPrelude
-    , BinaryLiterals
-    , NumericUnderscores
-    , FlexibleInstances
-    , GADTs
-    , ExistentialQuantification
-#-}
 module Data.MIB.Load
   ( loadFromFileGen
+  , GenericParse(..)
   )
 where
 
@@ -20,11 +9,39 @@ import           RIO
 import           RIO.Char
 import           RIO.FilePath
 import           RIO.Directory
-import           RIO.ByteString.Lazy           as B
-import           RIO.Text                      as T
+import qualified RIO.ByteString.Lazy           as B
+import qualified RIO.Text                      as T
 
-import           Data.ByteString.Lazy.Char8    as BC
+import qualified RIO.Vector                    as V
+import qualified Data.ByteString.Lazy.Char8    as BC
 import           Data.Csv
+
+
+-- | This class provides @genericParse@ function that generates record parser
+-- from data constructor.
+-- It uses type-class magic to recursively parse each of the constructor's
+-- arguments from the input vector.
+class GenericParse ctr res where
+
+  -- | Accepts predicate on the input vector length.
+  genericParse :: (Int -> Bool) -> ctr -> Record -> Parser res
+  genericParse validLen ctr rec
+    | validLen $ V.length rec = genericParse' 0 ctr rec
+    | otherwise = mzero
+
+  -- | This is the function that loops.
+  genericParse' :: Int -> ctr -> Record -> Parser res
+
+
+instance GenericParse res res where
+  genericParse' _ res _ = pure res
+
+
+instance (FromField arg, GenericParse ctr res)
+  => GenericParse (arg -> ctr) res where
+  genericParse' ix ctr rec = do
+    ctr' <- ctr <$> index rec ix
+    genericParse' (ix+1) ctr' rec
 
 
 

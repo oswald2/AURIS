@@ -35,9 +35,7 @@ instance Eq TPCFentry where
 
 
 instance FromRecord TPCFentry where
-  parseRecord v | V.length v == 3 = TPCFentry <$> v .! 0 <*> v .! 1 <*> v .! 2
-                | otherwise       = mzero
-
+  parseRecord = genericParse (== 3) TPCFentry
 
 
 fileName :: FilePath

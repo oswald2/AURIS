@@ -11,7 +11,6 @@ where
 
 import           RIO
 
-import qualified RIO.Vector                    as V
 import           Data.Text.Short                ( ShortText )
 import           Data.Csv
 
@@ -29,15 +28,8 @@ data CURentry = CURentry {
 instance Ord CURentry where
     compare x1 x2 = compare (_curPos x1) (_curPos x2)
 
-
-
 instance FromRecord CURentry where
-  parseRecord v
-    | V.length v == 5
-    = CURentry <$> v .! 0 <*> v .! 1 <*> v .! 2 <*> v .! 3 <*> v .! 4
-    | otherwise
-    = mzero
-
+  parseRecord = genericParse (== 5) CURentry
 
 
 fileName :: FilePath

@@ -14,7 +14,6 @@ import           RIO
 
 import           Data.Text.Short                ( ShortText )
 import           Data.Csv
-import qualified RIO.Vector                    as V
 import qualified RIO.Vector.Partial            as V
                                                 ( last )
 
@@ -34,12 +33,7 @@ data VDFentry = VDFentry {
 
 
 instance FromRecord VDFentry where
-  parseRecord v
-    | V.length v == 5
-    = VDFentry <$> v .! 0 <*> v .! 1 <*> v .! 2 <*> v .! 3 <*> v .! 4
-    | otherwise
-    = mzero
-
+  parseRecord = genericParse (== 5) VDFentry
 
 
 fileName :: FilePath

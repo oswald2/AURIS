@@ -11,8 +11,6 @@ where
 
 import           RIO
 
-import qualified RIO.Vector                    as V
-
 import           Data.Text.Short                ( ShortText )
 import           Data.Csv
 
@@ -31,20 +29,7 @@ data TXPentry = TXPentry {
 
 
 instance FromRecord TXPentry where
-  parseRecord v
-    | V.length v == 4
-    = TXPentry
-      <$> v
-      .!  0
-      <*> v
-      .!  1
-      <*> v
-      .!  2
-      <*> v
-      .!  3
-    | otherwise
-    = mzero
-
+  parseRecord = genericParse (== 4) TXPentry
 
 
 fileName :: FilePath

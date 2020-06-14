@@ -16,8 +16,6 @@ module Data.MIB.PLF
 where
 
 import           RIO
-import qualified RIO.Vector                    as V
---import qualified RIO.HashMap                   as HM
 import           Control.Lens                   ( makeLenses )
 
 import           Data.Text.Short                ( ShortText )
@@ -55,27 +53,7 @@ instance Ord PLFentry where
 
 
 instance FromRecord PLFentry where
-  parseRecord v
-    | V.length v >= 8
-    = PLFentry
-      <$> v
-      .!  0
-      <*> v
-      .!  1
-      <*> v
-      .!  2
-      <*> v
-      .!  3
-      <*> v
-      .!  4
-      <*> v
-      .!  5
-      <*> v
-      .!  6
-      <*> v
-      .!  7
-    | otherwise
-    = mzero
+  parseRecord = genericParse (>= 8) PLFentry
 
 
 fileName :: FilePath

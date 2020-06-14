@@ -6,7 +6,6 @@ where
 
 import           RIO
 
-import qualified RIO.Vector                    as V
 import           Data.Text.Short                ( ShortText )
 import           Data.Csv
 
@@ -36,40 +35,7 @@ instance Ord GPFentry where
   compare x1 x2 = compare (_gpfName x1) (_gpfName x2)
 
 instance FromRecord GPFentry where
-  parseRecord v
-    | V.length v == 14
-    = GPFentry
-      <$> v
-      .!  0
-      <*> v
-      .!  1
-      <*> v
-      .!  2
-      <*> v
-      .!  3
-      <*> v
-      .!  4
-      <*> v
-      .!  5
-      <*> v
-      .!  6
-      <*> v
-      .!  7
-      <*> v
-      .!  8
-      <*> v
-      .!  9
-      <*> v
-      .!  10
-      <*> v
-      .!  11
-      <*> v
-      .!  12
-      <*> v
-      .!  13
-    | otherwise
-    = mzero
-
+  parseRecord = genericParse (== 14) GPFentry
 
 
 fileName :: FilePath

@@ -36,6 +36,7 @@ import           Data.Vector.Algorithms.Merge  as V
 import           System.Directory
 import           System.FilePath
 
+import           Data.MIB.Load (genericParse)
 import           Data.MIB.Types
 
 
@@ -76,39 +77,9 @@ instance Hashable PICentry where
 
 instance FromRecord PICentry where
   parseRecord v
-    | V.length v >= 7
-    = PICentry
-      <$> v
-      .!  0
-      <*> v
-      .!  1
-      <*> v
-      .!  2
-      <*> v
-      .!  3
-      <*> v
-      .!  4
-      <*> v
-      .!  5
-      <*> v
-      .!  6
-    | V.length v >= 6
-    = PICentry
-      <$> v
-      .!  0
-      <*> v
-      .!  1
-      <*> v
-      .!  2
-      <*> v
-      .!  3
-      <*> v
-      .!  4
-      <*> v
-      .!  5
-      <*> pure Nothing
-    | otherwise
-    = mzero
+      | V.length v >= 7 = genericParse (const True) PICentry v
+      | V.length v >= 6 = genericParse (const True) PICentry $ V.snoc v ""
+      | otherwise = mzero
 
 myOptions :: DecodeOptions
 myOptions = defaultDecodeOptions { decDelimiter = fromIntegral (ord '\t') }
