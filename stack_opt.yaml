@@ -55,12 +55,13 @@ extra-deps:
 - attoparsec-time-1
 - bytestring-to-vector-0.3.0.1
 - hw-prim-bits-0.1.0.4
-- Chart-fltkhs-0.1.0.6
 - selda-sqlite-0.1.7.1
 - timers-updatable-0.2.0.2
 - direct-sqlite-2.3.26
 - git: https://github.com/deech/fltkhs.git
   commit: 71af56f7194946a495e0d9d6457470f97988f754
+- git: https://github.com/oswald2/Chart-fltkhs
+  commit: 38076d9e8af12f14b84b44db028d4213690845f8
 
 # Override default flag values for local packages and extra-deps
 flags:
