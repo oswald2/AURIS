@@ -24,9 +24,23 @@ in pkgs.haskell-nix.stackProject {
     name = "AURIS";
     src = ./.;
   };
-  modules = [
-    {
-      # packages.fltkhs.flags.bundled = false;
-    }
-  ];
+  modules = [{
+    # Bundled FLTK breaks when configured without "--libdir" (custom Setup.hs)
+    packages.fltkhs.flags.bundled = false;
+    # fltkhs is not correctly depended upon in fltkhs.cabal
+    packages.fltkhs.components.library.libs = [ pkgs.fltk14 pkgs.libjpeg ];
+    packages.fltkhs.components.library.build-tools =
+      [ pkgs.fltk14 pkgs.autoconf ];
+    # NOTE(SN): these libs might only be required when linking exes
+    packages.Chart-fltkhs.components.library.libs = [
+      pkgs.fontconfig
+      pkgs.libpng
+      pkgs.xorg.libX11
+      pkgs.xorg.libXext
+      pkgs.xorg.libXfixes
+      pkgs.xorg.libXft
+      pkgs.xorg.libXrender
+      pkgs.zlib
+    ];
+  }];
 }
