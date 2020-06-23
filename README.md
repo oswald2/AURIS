@@ -16,7 +16,7 @@ Telemetry Packet Display:
 ![TM Packet Display](screenshots/TMPackets.png)
 
 Graphical Parameter Display:
-
+➜
 ![TM Parameter Display](screenshots/GRD.png)
 
 
@@ -35,7 +35,6 @@ There are 3 stack.yaml files provided:
  * stack_opt.yaml: this is for the optimized build (much slower)
  * stack_llvm:yaml: optimized build via LLVM (much much slower)
 
-
 Some users have reported build issues with fltkhs. As a workaround, you can just install fltkhs before building AURIS.
 
 ```
@@ -46,8 +45,27 @@ cd <path to AURIS checkout>
 stack build
 ```
 
+### Using nix
 
- ## Data Processing
+This project can also be built using `nix-build`. This will use
+[https://github.com/input-output-hk/haskell.nix](haskell.nix) to derive nix
+expressions from the `stack.yaml` and then build the local packages using the
+same versions as in the stackage `resolver` and `extra-deps`. However many of
+the packages might not be pre-built, but you can try to use `cachix` from
+`iohk`:
+
+``` sh
+cachix use iohk
+nix-build -A esa-space-protocols.components.all
+ls result/bin
+# CommandingAD  CommandingTest  EventLoggingDBTest  TMModelTest  TMSimulatorTest  WriteConfig
+```
+
+There is also a `shell.nix` which provides build tools and dependencies like `ghc`, `cabal` and `stack` and `ghcide`. Inside the shell you can build using `cabal` and `stack --no-nix --system-ghc --no-install-ghc`, or let `stack --nix` use the `shell.nix` (but this requires `stack` on your host system).
+
+If you have [https://github.com/target/lorri](lorri) set up, you get this things even set up when cd'ing in this environment!
+
+## Data Processing
 
 The architecture of the data processing backend looks like this:
 
