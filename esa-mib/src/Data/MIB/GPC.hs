@@ -6,7 +6,6 @@ where
 
 import           RIO
 
-import qualified RIO.Vector                    as V
 import           Data.Text.Short                ( ShortText )
 import           Data.Csv
 
@@ -33,34 +32,7 @@ instance Ord GPCentry where
   compare x1 x2 = compare (_gpcName x1) (_gpcName x2)
 
 instance FromRecord GPCentry where
-  parseRecord v
-    | V.length v == 11
-    = GPCentry
-      <$> v
-      .!  0
-      <*> v
-      .!  1
-      <*> v
-      .!  2
-      <*> v
-      .!  3
-      <*> v
-      .!  4
-      <*> v
-      .!  5
-      <*> v
-      .!  6
-      <*> v
-      .!  7
-      <*> v
-      .!  8
-      <*> v
-      .!  9
-      <*> v
-      .!  10
-    | otherwise
-    = mzero
-
+  parseRecord = genericParse (== 11) GPCentry
 
 
 fileName :: FilePath

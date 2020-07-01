@@ -6,13 +6,12 @@ where
 
 import           RIO
 
-import qualified RIO.Vector                    as V
-
+import qualified Data.Vector                   as V
 import           Data.Text.Short                ( ShortText )
 import           Data.Csv
 
 import           Data.MIB.Load
-import Data.MIB.Types
+import           Data.MIB.Types
 
 
 data CAFentry = CAFentry {
@@ -27,49 +26,11 @@ data CAFentry = CAFentry {
 } deriving (Eq, Show)
 
 
-
-
-
 instance FromRecord CAFentry where
   parseRecord v
-    | V.length v == 8
-    = CAFentry
-      <$> v
-      .!  0
-      <*> v
-      .!  1
-      <*> v
-      .!  2
-      <*> v
-      .!  3
-      <*> v
-      .!  4
-      <*> v
-      .!  5
-      <*> v
-      .!  6
-      <*> v
-      .!  7
-      | V.length v == 7
-      = CAFentry
-        <$> v
-        .!  0
-        <*> v
-        .!  1
-        <*> v
-        .!  2
-        <*> v
-        .!  3
-        <*> v
-        .!  4
-        <*> v
-        .!  5
-        <*> v
-        .!  6
-        <*> pure (CharDefaultTo 'F')
-      | otherwise
-    = mzero
-
+    | V.length v == 8 = genericParse (const True) CAFentry v
+    | V.length v == 7 = genericParse (const True) CAFentry $ V.snoc v "F"
+    | otherwise = mzero
 
 
 fileName :: FilePath

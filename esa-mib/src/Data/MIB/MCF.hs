@@ -12,8 +12,6 @@ where
 
 import           RIO
 
-import qualified RIO.Vector                    as V
-
 import           Data.Text.Short                ( ShortText )
 import           Data.Csv
 
@@ -32,30 +30,8 @@ data MCFentry = MCFentry {
 } deriving (Eq, Show)
 
 
-
-
-
 instance FromRecord MCFentry where
-  parseRecord v
-    | V.length v == 7
-    = MCFentry
-      <$> v
-      .!  0
-      <*> v
-      .!  1
-      <*> v
-      .!  2
-      <*> v
-      .!  3
-      <*> v
-      .!  4
-      <*> v
-      .!  5
-      <*> v
-      .!  6
-    | otherwise
-    = mzero
-
+  parseRecord = genericParse (== 7) MCFentry
 
 
 fileName :: FilePath

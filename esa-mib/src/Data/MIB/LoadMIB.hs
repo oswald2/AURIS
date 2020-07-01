@@ -55,9 +55,6 @@ import           Data.Conversion.Types
 import           Data.Conversion.TMPacket
 import           Data.Conversion.GRD
 
--- import           General.PUSTypes
-
-
 
 -- | load the whole MIB into a data structure
 loadMIB
@@ -66,91 +63,35 @@ loadMIB
     -> m (Either Text DataModel)
 loadMIB mibPath = do
     handleIO
-            (\e ->
-                return
-                    (Left
-                        ("Error on loading MIB: " <> T.pack (displayException e)
-                        )
-                    )
+            (\e -> return $
+                    Left $"Error on loading MIB: " <> T.pack (displayException e)
             )
-        $ do
-              syns' <- loadSyntheticParameters mibPath
-              case syns' of
-                  Left  err  -> return (Left err)
-                  Right syns -> procCalibs syns
-
+        $ runExceptT $ do
+          syns      <- loadSyntheticParameters mibPath      >>= liftEither
+          calibs    <- loadCalibs mibPath                   >>= liftEither
+          params    <- loadParameters mibPath calibs syns   >>= liftEither >>= logWarnings
+          vpds      <- VPD.loadFromFile mibPath             >>= liftEither
+          vpdLookup <- pure (generateVPDLookup vpds params) >>= liftEither
+          pics      <- PIC.loadFromFile mibPath             >>= liftEither
+          let !pIdx = picSeachIndexFromPIC pics
+          packets   <- loadPackets mibPath params vpdLookup >>= liftEither >>= logWarnings
+          grds      <- loadGRDs mibPath                     >>= liftEither
+          return $ DataModel
+              { _dmCalibrations    = calibs
+              , _dmSyntheticParams = syns
+              , _dmParameters      = params
+              , _dmPacketIdIdx     = pIdx
+              , _dmTMPackets       = packets
+              , _dmVPDStructs      = vpdLookup
+              , _dmGRDs = grds
+              }
 
   where
-    procCalibs syns = do
-        calibs' <- loadCalibs mibPath
-        case calibs' of
-            Left  err    -> return (Left err)
-            Right calibs -> procParameters syns calibs
-
-    procParameters syns calibs = do
-        params' <- loadParameters mibPath calibs syns
-        case params' of
-            Left err -> do
-                logError (display err)
-                return (Left err)
-            Right (wa, params) -> do
-                maybe (return ())
-                      (\w -> logWarn ("On parameter import: " <> display w))
-                      wa
-                procVPDs syns calibs params
-
-    procVPDs syns calibs params = do 
-        vpds' <- VPD.loadFromFile mibPath 
-        case vpds' of 
-            Left err -> do 
-                logError (display err)
-                return (Left err)
-            Right vpds -> do
-                case generateVPDLookup vpds params of 
-                    Left err -> do
-                        logError (display err)
-                        return (Left err)
-                    Right vpdLookup -> do 
-                        procPicIdx syns calibs params vpdLookup
-
-    procPicIdx syns calibs params vpdLookup = do
-      pics' <- PIC.loadFromFile mibPath
-      case pics' of
-        Left err -> do
-          logError (display err)
-          return (Left err)
-        Right pics -> do
-          let !pIdx = picSeachIndexFromPIC pics
-          procPackets syns calibs pIdx params vpdLookup
-
-    procPackets syns calibs pIdx params vpdLookup = do
-      packets' <- loadPackets mibPath params vpdLookup
-      case packets' of
-        Left err -> do
-          logError (display err)
-          return (Left err)
-        Right (wa, packets) -> do
-          maybe (return ())
-            (\w -> logWarn ("On parameter import: " <> display w))
-            wa
-          
-          procGRDs calibs syns params pIdx packets vpdLookup
-
-    procGRDs calibs syns params pIdx packets vpdLookup = do 
-        grds' <- loadGRDs mibPath
-        case grds' of 
-            Left err -> do 
-                logError (display err)
-                return (Left err)
-            Right grds -> do 
-                return $ Right DataModel { _dmCalibrations    = calibs
-                    , _dmSyntheticParams = syns
-                    , _dmParameters      = params
-                    , _dmPacketIdIdx     = pIdx
-                    , _dmTMPackets       = packets
-                    , _dmVPDStructs      = vpdLookup
-                    , _dmGRDs = grds 
-                    } 
+    logWarnings = \case
+        (Nothing, res) -> return res
+        (Just w, res) -> do
+            logWarn $ "On parameter import: " <> display w
+            return res
 
 
 loadParameters
@@ -163,19 +104,10 @@ loadParameters
                  Text
                  (Maybe Text, IHashTable ShortText TMParameterDef)
            )
-loadParameters mibPath calibHM synthHM = do
-    pcfs' <- PCF.loadFromFile mibPath
-    case pcfs' of
-        Left  err  -> return (Left err)
-        Right pcfs -> loadCURs pcfs
-  where
-    loadCURs pcfs = do
-        curs' <- CUR.loadFromFile mibPath
-        case curs' of
-            Left  err  -> return (Left err)
-            Right curs -> do
-              return $ convertParameters pcfs curs calibHM synthHM
-
+loadParameters mibPath calibHM synthHM = runExceptT $ do
+    pcfs <- PCF.loadFromFile mibPath >>= liftEither
+    curs <- CUR.loadFromFile mibPath >>= liftEither
+    pure (convertParameters pcfs curs calibHM synthHM) >>= liftEither
 
 
 
@@ -322,7 +254,4 @@ loadPackets mibPath parameters vpdLookup = do
       ht <- HTC.fromList lst
       Right <$> HT.unsafeFreeze ht
 
-    
-
     return (warnings, hm)
-

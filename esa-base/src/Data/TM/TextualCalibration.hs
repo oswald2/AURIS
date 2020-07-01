@@ -58,7 +58,7 @@ data TextCalibPoint = TextCalibPoint {
     -- value falls within the range [lower, upper] (inclusive)
     , _txpText :: !ShortText
     }
-    deriving (Show, Generic)
+    deriving (Eq, Show, Generic)
 makeLenses ''TextCalibPoint
 
 instance NFData TextCalibPoint
@@ -74,7 +74,7 @@ data TextualCalibration = TextualCalibration {
         , _calibTRawFmt :: !NumType
         , _calibTPoints :: Vector TextCalibPoint
     }
-    deriving (Show, Generic)
+    deriving (Eq, Show, Generic)
 
 instance NFData TextualCalibration
 instance Serialise TextualCalibration

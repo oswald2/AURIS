@@ -37,11 +37,11 @@ module Data.MIB.PCF
 where
 
 import           RIO
-import qualified RIO.Vector                    as V
 import           RIO.HashMap                   as HM
 
 import           Control.Lens                   ( makeLenses )
 
+import qualified Data.Vector                   as V
 import           Data.Text.Short                ( ShortText )
 import           Data.Csv
 
@@ -91,104 +91,15 @@ instance Eq PCFentry where
     pcf1 == pcf2 = _pcfName pcf1 == _pcfName pcf2
 
 
-
 instance FromRecord PCFentry where
-    parseRecord v
-        | V.length v >= 23
-        = PCFentry
-            <$> v
-            .!  0
-            <*> v
-            .!  1
-            <*> v
-            .!  2
-            <*> v
-            .!  3
-            <*> v
-            .!  4
-            <*> v
-            .!  5
-            <*> v
-            .!  6
-            <*> v
-            .!  7
-            <*> v
-            .!  8
-            <*> v
-            .!  9
-            <*> v
-            .!  10
-            <*> v
-            .!  11
-            <*> v
-            .!  12
-            <*> v
-            .!  13
-            <*> v
-            .!  14
-            <*> v
-            .!  15
-            <*> v
-            .!  16
-            <*> v
-            .!  17
-            <*> v
-            .!  18
-            <*> v
-            .!  19
-            <*> v
-            .!  20
-            <*> v
-            .!  21
-            <*> v
-            .!  22
-        | V.length v >= 19
-        = PCFentry
-            <$> v
-            .!  0
-            <*> v
-            .!  1
-            <*> v
-            .!  2
-            <*> v
-            .!  3
-            <*> v
-            .!  4
-            <*> v
-            .!  5
-            <*> v
-            .!  6
-            <*> v
-            .!  7
-            <*> v
-            .!  8
-            <*> v
-            .!  9
-            <*> v
-            .!  10
-            <*> v
-            .!  11
-            <*> v
-            .!  12
-            <*> v
-            .!  13
-            <*> v
-            .!  14
-            <*> v
-            .!  15
-            <*> v
-            .!  16
-            <*> v
-            .!  17
-            <*> v
-            .!  18
-            <*> pure (CharDefaultTo 'Y')
-            <*> pure Nothing
-            <*> pure Nothing
-            <*> pure Nothing
-        | otherwise
-        = mzero
-
+  parseRecord v
+      | V.length v >= 23 = genericParse (const True) PCFentry v
+      | V.length v >= 19 = genericParse (const True) PCFentry
+          $ V.concat
+              [ V.unsafeSlice 0 19 v
+              , V.fromList ["", "", "", ""]
+              ]
+      | otherwise = mzero
 
 
 fileName :: FilePath

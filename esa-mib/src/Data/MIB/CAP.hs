@@ -1,6 +1,5 @@
 {-# LANGUAGE
-    OverloadedStrings
-    , BangPatterns
+      BangPatterns
     , NoImplicitPrelude
 #-}
 module Data.MIB.CAP
@@ -10,8 +9,6 @@ module Data.MIB.CAP
 where
 
 import           RIO
-
-import qualified RIO.Vector                    as V
 
 import           Data.Text.Short                ( ShortText )
 import           Data.Csv
@@ -26,21 +23,8 @@ data CAPentry = CAPentry {
 } deriving (Eq, Show)
 
 
-
-
-
 instance FromRecord CAPentry where
-  parseRecord v
-    | V.length v == 3
-    = CAPentry
-      <$> v
-      .!  0
-      <*> v
-      .!  1
-      <*> v
-      .!  2
-    | otherwise
-    = mzero
+  parseRecord = genericParse (== 3) CAPentry
 
 
 
