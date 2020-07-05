@@ -15,7 +15,7 @@ import           Data.PUS.PUSPacket
 import           Data.PUS.ExtractedDU
 
 
-  -- | This is a data structure which is used internally in the conduits 
+-- | This is a data structure which is used internally in the conduits 
 -- while extracting packets. Basically, it contains the binary 'ByteString'
 -- from which the packet has been extracted (this is also needed later in the
 -- chain after the packet has been extracted) and the 'ExtractedDU' for the 

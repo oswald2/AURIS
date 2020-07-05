@@ -160,7 +160,7 @@ setupFrameSwitcher interf outQueue = do
 
   
   
-  -- | Conduit for switching between multiple channels. It queries the 'Config'
+-- | Conduit for switching between multiple channels. It queries the 'Config'
 -- for a list of configured virtual channels, sets up queues for these channels
 -- and a map to switch between these. Per virtual channel a 'tmFrameExtractionChain'
 -- is run (each in its own thread).
