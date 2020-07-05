@@ -79,7 +79,10 @@ library
     multiset,
     thyme,
     time,
-    pretty-show
+    pretty-show,
+    gi-gtk,
+    gi-gtk-hs,
+    gi-gobject
 
 
   default-extensions:
@@ -111,6 +114,7 @@ library
         NamedFieldPuns
         NoImplicitPrelude
         OverloadedStrings
+        OverloadedLabels
         PartialTypeSignatures
         PatternGuards
         PolyKinds

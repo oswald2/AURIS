@@ -6,6 +6,9 @@ import           RIO
 import           Graphics.UI.FLTK.LowLevel.FLTKHS
 import           Graphics.UI.FLTK.LowLevel.Fl_Enumerations
 
+import           GI.Gdk.Structs.RGBA
+
+import           System.IO.Unsafe
 
 -- mcsBackground :: Color
 -- mcsBackground = Color 0x64646400
@@ -97,6 +100,20 @@ mcsGreen = Color 0x00CC0000
 mcsYellow :: Color
 mcsYellow = Color 0xffff0000
 
+{-# NOINLINE paleYellow #-}
+paleYellow :: RGBA
+paleYellow = unsafePerformIO $ do
+  col <- newZeroRGBA
+  void $ rGBAParse col "ffff00"
+  return col
+
+{-# NOINLINE black #-}
+black :: RGBA
+black = unsafePerformIO $ do
+  col <- newZeroRGBA
+  void $ rGBAParse col "000000"
+  return col
+
 
 
 mcsWindowSetColor :: Ref Window -> IO ()
@@ -182,8 +199,8 @@ mcsTableSetColor w = do
   setColor w mcsTableBG
   setSelectionColor w mcsTableSelectionColor
 
-mcsInputSetColor :: Ref Input -> IO () 
-mcsInputSetColor w = do 
+mcsInputSetColor :: Ref Input -> IO ()
+mcsInputSetColor w = do
   setColor w mcsWidgetBG
   setSelectionColor w mcsTableSelectionColor
   setTextcolor w mcsTableFG

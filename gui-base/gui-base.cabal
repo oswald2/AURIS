@@ -67,6 +67,8 @@ library
     GUI.ScrollingTable
     GUI.NameDescrTable
     GUI.PopupMenu
+    GUI.StatusEntry
+    GUI.TextView
     Model.ScrollingTableModel
 
   -- Modules included in this library but not exported.
@@ -83,6 +85,9 @@ library
     , lens
     , text
     , vector
+    , gi-gtk
+    , gi-gobject
+    , gi-gdk
 
 
   default-extensions:

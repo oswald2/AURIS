@@ -36,6 +36,7 @@ Author: Michael Oswald
   <!-- interface-description AURISi - AURIS Integrated MCS -->
   <!-- interface-copyright Michael Oswald -->
   <!-- interface-authors Michael Oswald -->
+  <object class="GtkTextBuffer" id="textbufferTMFrameDetails"/>
   <object class="GtkApplicationWindow" id="mainWindow">
     <property name="width_request">1600</property>
     <property name="height_request">845</property>
@@ -367,7 +368,7 @@ Author: Michael Oswald
                         <property name="can_focus">True</property>
                         <property name="shadow_type">in</property>
                         <child>
-                          <object class="GtkTreeView">
+                          <object class="GtkTreeView" id="treeviewTMFrames">
                             <property name="visible">True</property>
                             <property name="can_focus">True</property>
                             <child internal-child="selection">
@@ -1042,6 +1043,7 @@ Author: Michael Oswald
                                       <object class="GtkTextView" id="textviewFrameContent">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
+                                        <property name="buffer">textbufferTMFrameDetails</property>
                                       </object>
                                     </child>
                                   </object>
@@ -1085,7 +1087,14 @@ Author: Michael Oswald
                   </packing>
                 </child>
                 <child>
-                  <placeholder/>
+                  <object class="GtkLabel">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="label" translatable="yes">label</property>
+                  </object>
+                  <packing>
+                    <property name="position">1</property>
+                  </packing>
                 </child>
                 <child type="tab">
                   <object class="GtkLabel">

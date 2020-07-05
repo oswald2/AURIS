@@ -114,7 +114,7 @@ main = do
 
         -- Setup the callbacks. Since we need the interface there, we can 
         -- do this only here
-        --setupCallbacks mainWindow interface
+        setupCallbacks mainWindow interface
 
         -- determine the mission-specific functionality
         missionSpecific           <- getMissionSpecific cfg

@@ -37,7 +37,7 @@ module GUI.MainWindow
   --, mwLogoBox
   --, mwMainMenu
   --, mwAboutWindow
-  --, mwFrameTab
+  , mwFrameTab
   , mwNCTRSConnection
   , mwCnCConnection
   , mwInitialiseDataModel
@@ -63,7 +63,7 @@ import           GUI.TMFrameTab
 import           GUI.TMParamTab
 import           GUI.Graph
 import           GUI.Colors
---import           GUI.Utils
+import           GUI.Utils
 import           GUI.Logo
 import           GUI.About
 
@@ -196,7 +196,7 @@ data MainWindow = MainWindow {
     -- , _mwLogoBox :: Ref Box
     -- , _mwMainMenu :: MainMenu
     -- , _mwAboutWindow :: AboutWindowFluid
-    -- , _mwFrameTab :: TMFrameTab
+    , _mwFrameTab :: TMFrameTab
     -- , _mwNCTRSConn :: NctrsConnGroup
     -- , _mwCnCConn :: CncConnGroup
     -- , _mwEdenConn :: EdenConnGroup
@@ -218,9 +218,7 @@ mwSetTMParameters _window _pkt = return ()
 --   tmpTabDetailSetValues (window ^. mwTMPTab) pkt
 
 mwAddTMFrame :: MainWindow -> ExtractedDU TMFrame -> IO ()
-mwAddTMFrame _ _ = return ()
--- mwAddTMFrame window frame = do
---   tmfTabAddRow (window ^. mwFrameTab) frame
+mwAddTMFrame window = tmfTabAddRow (window ^. mwFrameTab)
 
 mwAddTMParameters :: MainWindow -> Vector TMParameter -> IO ()
 mwAddTMParameters _ _ = return ()
@@ -254,27 +252,22 @@ gladeFile =
   T.decodeUtf8 $(makeRelativeToProject "src/MainWindow.glade" >>= embedFile)
 
 
-getObject :: Gtk.Builder -> Text -> IO Object
-getObject builder obj = do
-  o <- builderGetObject builder obj
-  case o of
-    Nothing ->
-      error $ "GTK: could not find " <> T.unpack obj <> " in Glade file!"
-    Just oo -> return oo
-
 
 createMainWindow :: IO MainWindow
 createMainWindow = do
   builder <- builderNewFromString gladeFile (fromIntegral (T.length gladeFile))
 
-  window       <- getObject builder "mainWindow" >>= unsafeCastTo Window
-  missionLabel <- getObject builder "labelMission" >>= unsafeCastTo Label
-  progressBar  <- getObject builder "progressBar" >>= unsafeCastTo ProgressBar
-  aboutItem <- getObject builder "menuitemAbout" >>= unsafeCastTo MenuItem 
+  window       <- getObject builder "mainWindow"  Window
+  missionLabel <- getObject builder "labelMission" Label
+  progressBar  <- getObject builder "progressBar" ProgressBar
+  aboutItem <- getObject builder "menuitemAbout"  MenuItem 
+
+  tmfTab <- createTMFTab builder 
 
   let gui = MainWindow { _mwWindow   = window
                        , _mwMission  = missionLabel
                        , _mwProgress = progressBar
+                       , _mwFrameTab = tmfTab
                        }
 
   void $ Gtk.on aboutItem #activate $ do 

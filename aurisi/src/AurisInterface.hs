@@ -23,6 +23,8 @@ import           GUI.MainWindow
 import           GUI.MainWindowActions
 import           GUI.Utils
 
+import           Data.GI.Gtk.Threading
+
 --import qualified Graphics.UI.FLTK.LowLevel.FL  as FL
 
 
@@ -41,7 +43,7 @@ eventProcessor :: MainWindow -> IfEvent -> IO ()
 eventProcessor g (EventPUS (EVTelemetry (EVTMPacketDecoded pkt))) = do
   withFLLock (mwAddTMPacket g pkt)
 eventProcessor g (EventPUS (EVTelemetry (EVTMFrameReceived frame))) = do
-  withFLLock (mwAddTMFrame g frame)
+  postGUIASync (mwAddTMFrame g frame)
 eventProcessor g (EventPUS (EVTelemetry (EVTMParameters params))) = do
   withFLLock (mwAddTMParameters g params)
 eventProcessor g (EventPUS (EVTelemetry (EVTMFrameGap old new))) = do

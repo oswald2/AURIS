@@ -54,11 +54,10 @@ setupCallbacks window interface = do
   -- GUI.ScrollingTable.setupCallback (window ^. mwTMPTab . tmpTable)
   --                                  (doubleClickTMP window)
 
-  --GUI.TMFrameTab.setupCallbacks (window ^. mwFrameTab)
+  GUI.TMFrameTab.setupCallbacks (window ^. mwFrameTab)
 
   --setCallback (window ^. mwMainMenu . mmAbout)     (aboutCB window)
   --setCallback (window ^. mwMainMenu . mmImportMIB) (importMIB interface)
-  pure ()
 
 
 doubleClickTMP :: MainWindow -> Int -> IO ()
