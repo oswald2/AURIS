@@ -20,6 +20,8 @@ import           Interface.CoreProcessor
 
 import           AurisConfig
 
+import           Persistence.Logging            ( withDatabaseLogger )
+
 import           System.Directory
 import           System.FilePath
 
@@ -40,12 +42,11 @@ runProcessing
   -> TBQueue InterfaceAction
   -> IO ()
 runProcessing cfg missionSpecific mibPath interface mainWindow coreQueue = do
-  defLogOptions <- logOptionsHandle stdout True
-  let logOptions =
-        setLogMinLevel (convLogLevel (aurisLogLevel cfg)) defLogOptions
-  withLogFunc logOptions $ \logFunc -> do
-    let logf = logFunc <> messageAreaLogFunc mainWindow
+  withLogging cfg mainWindow $ \logf -> do
+    home <- getHomeDirectory
+    let dbPath = ((home </> configPath) </>) <$> aurisDatabase cfg
     state <- newGlobalState (aurisPusConfig cfg)
+                            dbPath
                             missionSpecific
                             logf
                             (ifRaiseEvent interface . EventPUS)
@@ -54,7 +55,6 @@ runProcessing cfg missionSpecific mibPath interface mainWindow coreQueue = do
       -- first, try to load a data model or import a MIB
       logInfo "Loading Data Model..."
 
-      home <- liftIO getHomeDirectory
       let path = case mibPath of
             Just p  -> LoadFromMIB p serializedPath
             Nothing -> LoadFromSerialized serializedPath
@@ -76,10 +76,17 @@ runProcessing cfg missionSpecific mibPath interface mainWindow coreQueue = do
       void $ async $ runCoreThread coreQueue
 
       runTMChain nctrsCfg cncCfg edenCfg missionSpecific
-    pure ()
 
 
+withLogging :: AurisConfig -> MainWindow -> (LogFunc -> IO ()) -> IO ()
+withLogging cfg mainWindow app = do
+  defLogOptions <- logOptionsHandle stdout True
+  let logOptions =
+        setLogMinLevel (convLogLevel (aurisLogLevel cfg)) defLogOptions
 
-
-
-
+  withLogFunc logOptions $ \logFn -> do
+    let logFn' = logFn <> messageAreaLogFunc mainWindow
+    case (aurisDatabase cfg, aurisDbLogLevel cfg) of
+      (Just dbPath, Just logLvl) -> withDatabaseLogger
+        dbPath (convLogLevel logLvl) $ app . mappend logFn'
+      _ -> app logFn'
