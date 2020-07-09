@@ -23,20 +23,20 @@ module Data.PUS.TMFrameExtractor
   , pusPacketDecodeC
   , tmFrameEncodeC
   , tmFrameDecodeC
-  , storeFrameC
+  , frameDbSink
   , raisePUSPacketC
   , raiseFrameC
   , pusPacketGapCheckC
   )
 where
 
-import           RIO hiding (view, (^.))
+import           RIO
 import qualified RIO.ByteString                as B
 import qualified Data.IntMap.Strict            as M
 import qualified RIO.Text                      as T
 import qualified RIO.HashMap                   as HM
 
-import Control.Lens
+import           Control.Lens                   ( (.~) )
 
 import           ByteString.StrictBuilder
 
@@ -60,6 +60,8 @@ import           Data.PUS.ExtractedDU
 import           Data.PUS.ExtractedPUSPacket
 import           Data.PUS.TMStoreFrame
 import           Data.PUS.EncTime
+
+import qualified Persistence.TMFrame as Persistence
 
 import           General.Time
 
@@ -118,14 +120,16 @@ tmFrameDecodeC = do
             yield f
 
 
-
-storeFrameC :: (MonadIO m) => ConduitT TMStoreFrame TMStoreFrame m ()
-storeFrameC = awaitForever $ \sf -> do
-  -- TODO
-    --let frame = sf ^. tmstFrame
-  -- unless (isIdleTmFrame frame) $ do
-      -- store value in database
-  yield sf
+frameDbSink :: (MonadIO m, MonadResource m) => FilePath -> ConduitT TMStoreFrame Void m ()
+frameDbSink dbPath = mapC transform .| Persistence.databaseSink dbPath
+  where
+    transform tm = Persistence.TMFrame
+      (tm ^. tmstTime . to (fromIntegral . timeToWord64))
+      (tm ^. tmstFrame . tmFrameHdr . tmFrameScID . to (fromIntegral . getSCID))
+      (tm ^. tmstFrame . tmFrameHdr . tmFrameVcID . to (fromIntegral . getVCID))
+      (tm ^. tmstFrame . tmFrameHdr . tmFrameMCFC . to fromIntegral)
+      (tm ^. tmstFrame . tmFrameHdr . tmFrameVCFC . to fromIntegral)
+      (tm ^. tmstBinary)
 
 
 setupFrameSwitcher 

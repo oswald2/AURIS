@@ -45,8 +45,19 @@ runTMNctrsChain cfg pktQueue = do
 
   (_thread, vcMap) <- setupFrameSwitcher (IfNctrs (cfgNctrsID cfg)) pktQueue
 
-  let chain =
-        receiveTmNcduC .| ncduToTMFrameC .| storeFrameC .| tmFrameSwitchVC vcMap
+  dbConfig <- view getDatabasePath
+  storeTMFrames <- cfgStoreTMFrames . glsConfig <$> ask
+
+  let dbSink = case (dbConfig, storeTMFrames) of
+        (Just dbPath, True) -> frameDbSink dbPath
+        _                   -> sinkNull
+
+  let chain = receiveTmNcduC
+        .| ncduToTMFrameC
+        .| getZipSink
+            (  ZipSink dbSink
+            *> ZipSink (tmFrameSwitchVC vcMap)
+            )
 
   runGeneralTCPReconnectClient
     (clientSettings (fromIntegral (cfgNctrsPortTM cfg))

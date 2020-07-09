@@ -173,7 +173,6 @@ main = do
       let chain =
             receiveTmNcduC
               .| ncduToTMFrameC
-              .| storeFrameC
               .| tmFrameExtraction (IfNctrs 1)
               .| C.print
 
