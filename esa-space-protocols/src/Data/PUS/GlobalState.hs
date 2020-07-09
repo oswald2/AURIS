@@ -35,6 +35,7 @@ module Data.PUS.GlobalState
   , glsRaiseEvent
   , glsMissionSpecific
   , glsDataModel
+  , glsDatabasePath
   , newGlobalState
   , nextADCount
   )
@@ -85,6 +86,7 @@ data GlobalState = GlobalState {
 
     , glsRaiseEvent :: Event -> IO ()
     , glsLogFunc :: !LogFunc
+    , glsDatabasePath :: Maybe FilePath
 }
 
 -- | Constructor for the global state. Takes a configuration, a
@@ -92,11 +94,12 @@ data GlobalState = GlobalState {
 -- function to report events to the application
 newGlobalState
   :: Config
+  -> Maybe FilePath
   -> PUSMissionSpecific
   -> LogFunc
   -> (Event -> IO ())
   -> IO GlobalState
-newGlobalState cfg missionSpecific logErr raiseEvent = do
+newGlobalState cfg dbPath  missionSpecific logErr raiseEvent = do
   st     <- defaultPUSState cfg
   tv     <- newTVarIO st
   cv     <- newTVarIO defaultCoeffs
@@ -113,6 +116,7 @@ newGlobalState cfg missionSpecific logErr raiseEvent = do
                           , glsLogFunc         = logErr
                           , glsDataModel       = dmodel
                           , glsMissionSpecific = missionSpecific
+                          , glsDatabasePath    = dbPath
                           }
   pure state
 

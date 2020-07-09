@@ -120,6 +120,7 @@ data Config = Config {
     , cfgCnC :: [CncConfig]
     -- | Specifies the configuration of the available EDEN connections
     , cfgEDEN :: [EDENConfig]
+    , cfgStoreTMFrames :: Bool
 } deriving (Eq, Generic)
 
 
@@ -185,6 +186,7 @@ defaultConfig = Config { cfgCltuBlockSize        = CltuBS_8
                        , cfgNCTRS                = [defaultNctrsConfig]
                        , cfgCnC                  = [defaultCncConfig]
                        , cfgEDEN                 = [defaultEdenConfig]
+                       , cfgStoreTMFrames        = True
                        }
 
 -- | write the config as a serialized string to a file. Uses the Show class for serizalization
