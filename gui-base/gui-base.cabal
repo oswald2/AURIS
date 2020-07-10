@@ -69,6 +69,7 @@ library
     GUI.PopupMenu
     GUI.StatusEntry
     GUI.TextView
+    GUI.Definitions
     Model.ScrollingTableModel
 
   -- Modules included in this library but not exported.

@@ -5,12 +5,13 @@ module GUI.TMFrameTable
   ( TMFrameTable
   , createTMFrameTable
   , tmFrameTableAddRow
+  , tmFrameTableSetValues
   , tmFrameTableSetCallback
   )
 where
 
 import           RIO
-import qualified RIO.Text                      as T
+--import qualified RIO.Text                      as T
 
 import           GI.Gtk                        as Gtk
 import           Data.GI.Gtk.ModelView.SeqStore
@@ -22,6 +23,8 @@ import           General.PUSTypes
 
 import           GUI.Utils
 import           GUI.Colors
+import           GUI.Definitions
+
 
 
 data TMFrameTable = TMFrameTable {
@@ -29,21 +32,46 @@ data TMFrameTable = TMFrameTable {
   , _tmfrModel :: SeqStore (ExtractedDU TMFrame)
   }
 
+-- | Add a single row of a 'TMFrame' wrapped in a 'ExtractedDU'. Ensures, that 
+-- only 'defMaxRowTM' rows are present at maximum, removes old values if the
+-- size of the store is greater than this number (see "GUI.Definitions" for 
+-- default GUI values). This function is intended for the live-view of incoming
+-- telemetry.
+tmFrameTableAddRow :: TMFrameTable -> ExtractedDU TMFrame -> IO ()
+tmFrameTableAddRow g val = do 
+  let model = _tmfrModel g
+  n <- seqStoreGetSize model 
+  when (n > defMaxRowTM) $ do 
+    seqStoreRemove model (n - 1)
+  seqStorePrepend model val 
 
-tmFrameTableAddRow :: TMFrameTable -> ExtractedDU TMFrame -> IO () 
-tmFrameTableAddRow g = seqStorePrepend (_tmfrModel g)
 
-tmFrameTableSetCallback :: TMFrameTable -> (ExtractedDU TMFrame -> IO ()) -> IO () 
-tmFrameTableSetCallback g action = do 
-  void $ Gtk.on (_tmfrTable g) #rowActivated $ \path _col -> do 
-    ipath <- treePathGetIndices path 
-    forM_ ipath $ \idxs -> do  
-      case idxs of 
-        (idx : _) -> do 
-          val <- seqStoreGetValue (_tmfrModel g) idx 
-          action val 
-        [] -> return () 
+-- | Set the internal model to the list of given 'TMFrame' values. In contrast
+-- to 'tmFrameTableAddRow', this function does not limit the length as it is 
+-- intended to be used in retrieval, which depends on the requested data size
+tmFrameTableSetValues :: TMFrameTable -> [ExtractedDU TMFrame] -> IO () 
+tmFrameTableSetValues g values = do 
+  let model = _tmfrModel g
+  seqStoreClear model 
+  mapM_ (seqStorePrepend model)  values 
 
+-- | Set the callback function to be called, when a row in the table is activated
+-- (which in GTK terms means double clicked). The callback must take the value as 
+-- an 'ExtractedDU TMFrame'.
+tmFrameTableSetCallback
+  :: TMFrameTable -> (ExtractedDU TMFrame -> IO ()) -> IO ()
+tmFrameTableSetCallback g action = do
+  void $ Gtk.on (_tmfrTable g) #rowActivated $ \path _col -> do
+    ipath <- treePathGetIndices path
+    forM_ ipath $ \idxs -> do
+      case idxs of
+        (idx : _) -> do
+          val <- seqStoreGetValue (_tmfrModel g) idx
+          action val
+        [] -> return ()
+
+
+-- | Create a 'TMFrameTable' from a 'Gtk.Builder'.
 createTMFrameTable :: Gtk.Builder -> IO TMFrameTable
 createTMFrameTable builder = do
   tv    <- getObject builder "treeviewTMFrames" TreeView
@@ -137,7 +165,10 @@ createTMFrameTable builder = do
     ]
   qualityAttrs flag
     | toBool flag
-    = [ #text := ("GOOD" :: Text) , #backgroundSet := False, #foregroundSet := False]
+    = [ #text := ("GOOD" :: Text)
+      , #backgroundSet := False
+      , #foregroundSet := False
+      ]
     | otherwise
     = [ #text := ("BAD" :: Text)
       , #backgroundRgba := paleYellow

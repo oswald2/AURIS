@@ -508,8 +508,8 @@ Author: Michael Oswald
                                                 <property name="visible">True</property>
                                                 <property name="can_focus">True</property>
                                                 <property name="editable">False</property>
-                                                <property name="width_chars">4</property>
-                                                <property name="xalign">1</property>
+                                                <property name="width_chars">6</property>
+                                                <property name="xalign">0.5</property>
                                               </object>
                                               <packing>
                                                 <property name="expand">False</property>
@@ -534,39 +534,13 @@ Author: Michael Oswald
                                                 <property name="visible">True</property>
                                                 <property name="can_focus">True</property>
                                                 <property name="editable">False</property>
-                                                <property name="width_chars">5</property>
-                                                <property name="xalign">0.5</property>
-                                              </object>
-                                              <packing>
-                                                <property name="expand">False</property>
-                                                <property name="fill">True</property>
-                                                <property name="position">9</property>
-                                              </packing>
-                                            </child>
-                                            <child>
-                                              <object class="GtkLabel">
-                                                <property name="visible">True</property>
-                                                <property name="can_focus">False</property>
-                                                <property name="label" translatable="yes">Order:</property>
-                                              </object>
-                                              <packing>
-                                                <property name="expand">False</property>
-                                                <property name="fill">True</property>
-                                                <property name="position">10</property>
-                                              </packing>
-                                            </child>
-                                            <child>
-                                              <object class="GtkEntry" id="entryTMFrameOrder">
-                                                <property name="visible">True</property>
-                                                <property name="can_focus">True</property>
-                                                <property name="editable">False</property>
                                                 <property name="width_chars">6</property>
                                                 <property name="xalign">0.5</property>
                                               </object>
                                               <packing>
                                                 <property name="expand">False</property>
                                                 <property name="fill">True</property>
-                                                <property name="position">11</property>
+                                                <property name="position">9</property>
                                               </packing>
                                             </child>
                                           </object>
@@ -683,6 +657,7 @@ Author: Michael Oswald
                                                 <property name="visible">True</property>
                                                 <property name="can_focus">True</property>
                                                 <property name="width_chars">12</property>
+                                                <property name="xalign">0.5</property>
                                               </object>
                                               <packing>
                                                 <property name="left_attach">1</property>
@@ -763,6 +738,33 @@ Author: Michael Oswald
                                                 <property name="expand">False</property>
                                                 <property name="fill">True</property>
                                                 <property name="position">1</property>
+                                              </packing>
+                                            </child>
+                                            <child>
+                                              <object class="GtkLabel">
+                                                <property name="visible">True</property>
+                                                <property name="can_focus">False</property>
+                                                <property name="label" translatable="yes">Order:</property>
+                                              </object>
+                                              <packing>
+                                                <property name="expand">False</property>
+                                                <property name="fill">True</property>
+                                                <property name="padding">5</property>
+                                                <property name="position">2</property>
+                                              </packing>
+                                            </child>
+                                            <child>
+                                              <object class="GtkEntry" id="entryTMFrameOrder">
+                                                <property name="visible">True</property>
+                                                <property name="can_focus">True</property>
+                                                <property name="editable">False</property>
+                                                <property name="width_chars">9</property>
+                                                <property name="xalign">0.5</property>
+                                              </object>
+                                              <packing>
+                                                <property name="expand">False</property>
+                                                <property name="fill">True</property>
+                                                <property name="position">3</property>
                                               </packing>
                                             </child>
                                           </object>
