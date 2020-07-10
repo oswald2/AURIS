@@ -23,7 +23,7 @@ import           General.PUSTypes
 
 import           GUI.Utils
 import           GUI.Colors
-import           GUI.Definitions
+import           GUI.ScrollingTable
 
 
 
@@ -38,37 +38,22 @@ data TMFrameTable = TMFrameTable {
 -- default GUI values). This function is intended for the live-view of incoming
 -- telemetry.
 tmFrameTableAddRow :: TMFrameTable -> ExtractedDU TMFrame -> IO ()
-tmFrameTableAddRow g val = do 
-  let model = _tmfrModel g
-  n <- seqStoreGetSize model 
-  when (n > defMaxRowTM) $ do 
-    seqStoreRemove model (n - 1)
-  seqStorePrepend model val 
+tmFrameTableAddRow g = addRowSeqStore (_tmfrModel g)
 
 
 -- | Set the internal model to the list of given 'TMFrame' values. In contrast
 -- to 'tmFrameTableAddRow', this function does not limit the length as it is 
 -- intended to be used in retrieval, which depends on the requested data size
 tmFrameTableSetValues :: TMFrameTable -> [ExtractedDU TMFrame] -> IO () 
-tmFrameTableSetValues g values = do 
-  let model = _tmfrModel g
-  seqStoreClear model 
-  mapM_ (seqStorePrepend model)  values 
+tmFrameTableSetValues g = setRowsSeqStore (_tmfrModel g)
 
 -- | Set the callback function to be called, when a row in the table is activated
 -- (which in GTK terms means double clicked). The callback must take the value as 
 -- an 'ExtractedDU TMFrame'.
 tmFrameTableSetCallback
   :: TMFrameTable -> (ExtractedDU TMFrame -> IO ()) -> IO ()
-tmFrameTableSetCallback g action = do
-  void $ Gtk.on (_tmfrTable g) #rowActivated $ \path _col -> do
-    ipath <- treePathGetIndices path
-    forM_ ipath $ \idxs -> do
-      case idxs of
-        (idx : _) -> do
-          val <- seqStoreGetValue (_tmfrModel g) idx
-          action val
-        [] -> return ()
+tmFrameTableSetCallback g = setTreeViewCallback g _tmfrTable _tmfrModel
+ 
 
 
 -- | Create a 'TMFrameTable' from a 'Gtk.Builder'.

@@ -87,6 +87,7 @@ library
     , text
     , vector
     , gi-gtk
+    , gi-gtk-hs
     , gi-gobject
     , gi-gdk
 
@@ -120,6 +121,7 @@ library
         NamedFieldPuns
         NoImplicitPrelude
         OverloadedStrings
+        OverloadedLabels
         PartialTypeSignatures
         PatternGuards
         PolyKinds

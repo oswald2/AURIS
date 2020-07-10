@@ -15,6 +15,9 @@ module GUI.ScrollingTable
     , addRow
     , setupCallback
     , setTableFromModel
+    , addRowSeqStore
+    , setRowsSeqStore
+    , setTreeViewCallback
     )
 where
 
@@ -23,7 +26,8 @@ import qualified RIO.Text                      as T
 import qualified RIO.Vector                    as V
 import qualified RIO.Vector.Partial            as V
 
--- import qualified Data.Sequence                 as S
+import           GI.Gtk                        as Gtk
+import           Data.GI.Gtk.ModelView.SeqStore
 
 import           Graphics.UI.FLTK.LowLevel.FLTKHS
 import           Graphics.UI.FLTK.LowLevel.Fl_Enumerations
@@ -31,10 +35,43 @@ import qualified Graphics.UI.FLTK.LowLevel.FL  as FL
 
 
 import           GUI.Colors
+import           GUI.Definitions
 
 import           Model.ScrollingTableModel
 
 
+-- | Generic GTK function for adding a new row in a 'SeqStore a'. This is 
+-- intended for the live-view as only 'defMaxRowTM' rows will be added. When
+-- this limit is reached, the oldest row will be removed first.
+addRowSeqStore :: SeqStore a -> a -> IO () 
+addRowSeqStore model val = do 
+  n <- seqStoreGetSize model 
+  when (n > defMaxRowTM) $ do 
+    seqStoreRemove model (n - 1)
+  seqStorePrepend model val 
+
+-- | Set the model to the given list of values, ignoring maximum size. This is 
+-- intended for retrieval mode.
+setRowsSeqStore :: SeqStore a -> [a] -> IO () 
+setRowsSeqStore model values = do 
+  seqStoreClear model 
+  mapM_ (seqStorePrepend model)  values 
+
+
+-- | Setup a callback for the double-click on a table. 
+-- @setTreeViewCallback gui getTv getModel callback@: getTv and getModel are 
+-- functions to extract a 'TreeView' and a 'SeqStore' from the @gui@ element.
+-- @action@ is the callback to be called with the row which was double-clicked.
+setTreeViewCallback :: a -> (a -> TreeView) -> (a -> SeqStore b) -> (b -> IO ()) -> IO () 
+setTreeViewCallback g getTV getModel action = do
+  void $ Gtk.on (getTV g) #rowActivated $ \path _col -> do
+    ipath <- treePathGetIndices path
+    forM_ ipath $ \idxs -> do
+      case idxs of
+        (idx : _) -> do
+          val <- seqStoreGetValue (getModel g) idx
+          action val
+        [] -> return ()
 
 
 
