@@ -16,6 +16,7 @@ module GUI.ScrollingTable
   , setupCallback
   , setTableFromModel
   , addRowSeqStore
+  , addRowSeqStoreAppend
   , setRowsSeqStore
   , setTreeViewCallback
   , createScrollingTable
@@ -52,6 +53,15 @@ addRowSeqStore model val = do
   when (n > defMaxRowTM) $ do
     seqStoreRemove model (n - 1)
   seqStorePrepend model val
+
+
+addRowSeqStoreAppend :: SeqStore a -> a -> IO ()
+addRowSeqStoreAppend model val = do
+  n <- seqStoreGetSize model
+  when (n > defMaxRowTM) $ do
+    seqStoreRemove model (n - 1)
+  void $ seqStoreAppend model val
+
 
 -- | Set the model to the given list of values, ignoring maximum size. This is 
 -- intended for retrieval mode.

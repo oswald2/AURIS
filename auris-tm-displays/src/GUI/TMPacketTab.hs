@@ -59,9 +59,7 @@ tmpTabAddRow tab = tmPacketTableAddRow (_tmpTable tab)
 
 createTMPTab :: Gtk.Builder -> IO TMPacketTab
 createTMPTab builder = do
-  T.putStrLn "creating TM packet table..."
   table      <- createTMPacketTable builder
-  T.putStrLn "creating TM packet parameter table..."
   paramTable <- createTMPParamTable builder
 
   spid       <- getObject builder "entryTMPUSSPID" Entry
@@ -76,30 +74,6 @@ createTMPTab builder = do
   ert        <- getObject builder "entryTMPUSERT" Entry
   vcid       <- getObject builder "entryTMPUSVCID" Entry
   timestamp  <- getObject builder "entryTMPUSTimestamp" Entry
-
-  T.putStrLn "getting button"
-  btAdd     <- getObject builder "buttonAdd" Button
-  
-  Gtk.on btAdd #clicked $ do
-    now <- getCurrentTime
-    T.putStrLn (textDisplay now)
-    let pkt = TMPacket (SPID 10)
-                       "Test"
-                       "Description"
-                       (APID 10)
-                       (mkPUSType 1)
-                       (mkPUSSubType 5)
-                       0
-                       0
-                       now
-                       now
-                       (VCID 1)
-                       (mkSSC 2)
-                       PIDNo
-                       params
-        params = V.empty
-    tmPacketTableAddRow table pkt
-
 
   let g = TMPacketTab { _tmpTable           = table
                       , _tmpParametersTable = paramTable
@@ -119,7 +93,6 @@ createTMPTab builder = do
 
   -- set the double click callback for the main table to set the 
   -- detail values in the details view
-  T.putStrLn "setting table callback"
   tmPacketTableSetCallback table (tmpTabDetailSetValues g)
 
   return g

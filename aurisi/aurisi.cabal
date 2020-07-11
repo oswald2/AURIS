@@ -112,6 +112,7 @@ Executable AURISi
         MultiWayIf
         NamedFieldPuns
         OverloadedStrings
+        OverloadedLabels
         PartialTypeSignatures
         PatternGuards
         PolyKinds

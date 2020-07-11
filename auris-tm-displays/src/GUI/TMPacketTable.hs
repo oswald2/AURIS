@@ -32,9 +32,7 @@ data TMPacketTable = TMPacketTable {
 -- default GUI values). This function is intended for the live-view of incoming
 -- telemetry.
 tmPacketTableAddRow :: TMPacketTable -> TMPacket -> IO ()
-tmPacketTableAddRow g pkt = do
-  T.putStrLn "TMPacketTable: Adding packet..."
-  addRowSeqStore (_tmptModel g) pkt
+tmPacketTableAddRow g = addRowSeqStore (_tmptModel g)
 
 
 -- | Set the internal model to the list of given 'TMPacket' values. In contrast
@@ -54,8 +52,6 @@ tmPacketTableSetCallback g = setTreeViewCallback g _tmptTable _tmptModel
 
 createTMPacketTable :: Gtk.Builder -> IO TMPacketTable
 createTMPacketTable builder = do
-  T.putStrLn "createTMPacketTable called"
-  
   tv <- getObject builder "treeviewTMPUSPackets" TreeView
 
   createScrollingTable

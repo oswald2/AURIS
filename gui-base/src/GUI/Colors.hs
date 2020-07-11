@@ -7,6 +7,7 @@ import           Graphics.UI.FLTK.LowLevel.FLTKHS
 import           Graphics.UI.FLTK.LowLevel.Fl_Enumerations
 
 import           GI.Gdk.Structs.RGBA
+import qualified GI.Gdk.Structs.Color as Gdk
 
 import           System.IO.Unsafe
 
@@ -104,16 +105,38 @@ mcsYellow = Color 0xffff0000
 paleYellow :: RGBA
 paleYellow = unsafePerformIO $ do
   col <- newZeroRGBA
-  void $ rGBAParse col "ffff00"
+  void $ rGBAParse col "#ffff00"
   return col
 
 {-# NOINLINE black #-}
 black :: RGBA
 black = unsafePerformIO $ do
   col <- newZeroRGBA
-  void $ rGBAParse col "000000"
+  void $ rGBAParse col "#000000"
   return col
 
+{-# NOINLINE red #-}
+red :: RGBA
+red = unsafePerformIO $ do
+  col <- newZeroRGBA
+  void $ rGBAParse col "#ff0000"
+  return col
+
+{-# NOINLINE green #-}
+green :: RGBA
+green = unsafePerformIO $ do
+  col <- newZeroRGBA
+  res <- rGBAParse col "#00cc00"
+  unless res $ error "Could not parse green!"
+  return col
+
+
+{-# NOINLINE white #-}
+white :: RGBA
+white = unsafePerformIO $ do
+  col <- newZeroRGBA
+  void $ rGBAParse col "#ffffff"
+  return col
 
 
 mcsWindowSetColor :: Ref Window -> IO ()

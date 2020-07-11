@@ -32,6 +32,7 @@ module GUI.MainWindow
   , mwAddTMParameters
   , mwAddTMParameterDefinitions
   , mwSetMission
+  , mwMessageDisplay
   --, mwDeskHeaderGroup
   --, mwLogoBox
   --, mwMainMenu
@@ -64,6 +65,7 @@ import           GUI.Graph
 import           GUI.Colors
 import           GUI.Utils
 import           GUI.Logo
+import           GUI.MessageDisplay
 import           GUI.About
 
 import           Data.PUS.TMPacket
@@ -183,6 +185,7 @@ makeLenses ''MainMenu
 data MainWindow = MainWindow {
     _mwWindow :: Gtk.Window
     , _mwProgress :: Gtk.ProgressBar
+    , _mwMessageDisplay :: MessageDisplay
     -- , _mwTabs :: Ref Tabs
     , _mwTMPTab :: TMPacketTab
     -- , _mwTMParamTab :: TMParamTab
@@ -208,8 +211,7 @@ makeLenses ''MainWindow
 -- scrollNew = scrolledNew
 
 mwAddTMPacket :: MainWindow -> TMPacket -> IO ()
-mwAddTMPacket window pkt = do 
-  T.putStrLn "mwAddTMPacket called"
+mwAddTMPacket window pkt = do
   tmpTabAddRow (window ^. mwTMPTab) pkt
 
 mwSetTMParameters :: MainWindow -> TMPacket -> IO ()
@@ -256,27 +258,29 @@ createMainWindow :: IO MainWindow
 createMainWindow = do
   builder <- builderNewFromString gladeFile (fromIntegral (T.length gladeFile))
 
-  window       <- getObject builder "mainWindow"  Window
+  window       <- getObject builder "mainWindow" Window
   missionLabel <- getObject builder "labelMission" Label
   progressBar  <- getObject builder "progressBar" ProgressBar
-  aboutItem <- getObject builder "menuitemAbout"  MenuItem 
+  aboutItem    <- getObject builder "menuitemAbout" MenuItem
 
-  tmfTab <- createTMFTab builder 
-  tmpTab <- createTMPTab builder 
+  tmfTab       <- createTMFTab builder
+  tmpTab       <- createTMPTab builder
+  msgDisp      <- createMessageDisplay builder
 
-  let gui = MainWindow { _mwWindow   = window
-                       , _mwMission  = missionLabel
-                       , _mwProgress = progressBar
-                       , _mwFrameTab = tmfTab
-                       , _mwTMPTab   = tmpTab 
+  let gui = MainWindow { _mwWindow         = window
+                       , _mwMission        = missionLabel
+                       , _mwProgress       = progressBar
+                       , _mwMessageDisplay = msgDisp
+                       , _mwFrameTab       = tmfTab
+                       , _mwTMPTab         = tmpTab
                        }
 
-  void $ Gtk.on aboutItem #activate $ do 
+  void $ Gtk.on aboutItem #activate $ do
     diag <- createAboutDialog
-    void $ dialogRun diag    
-    widgetHide diag 
+    void $ dialogRun diag
+    widgetHide diag
 
-    
+
   return gui
 
 

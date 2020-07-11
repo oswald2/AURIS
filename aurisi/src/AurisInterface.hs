@@ -53,14 +53,14 @@ eventProcessor g (EventPUS (EVTelemetry (EVTMFrameGap old new))) = do
           <> display old
           <> ", new VC FC: "
           <> display new
-  withFLLock (mwLogWarn g txt)
+  mwLogWarn g txt
 eventProcessor g (EventPUS (EVTelemetry (EVTMRestartingVC vcid))) = do
   let txt = utf8BuilderToText $ "Restarting Virtual Channel " <> display vcid
-  withFLLock (mwLogWarn g txt)
+  mwLogWarn g txt
 eventProcessor g (EventPUS (EVTelemetry (EVTMRejectSpillOver _))) = do
-  withFLLock (mwLogWarn g "TM Packet Reconstruction: Rejected Spillover")
+  mwLogWarn g "TM Packet Reconstruction: Rejected Spillover"
 eventProcessor g (EventPUS (EVTelemetry (EVTMGarbledSpillOver _))) = do
-  withFLLock (mwLogWarn g "TM Packet Reconstruction: Rejected Spillover")
+  mwLogWarn g "TM Packet Reconstruction: Rejected Spillover"
 eventProcessor g (EventPUS (EVTelemetry (EVTMRejectedSpillOverPkt pkt))) = do
   let txt =
         utf8BuilderToText
@@ -72,7 +72,7 @@ eventProcessor g (EventPUS (EVTelemetry (EVTMRejectedSpillOverPkt pkt))) = do
           <> display (pkt ^. pusDfh . to pusSubType)
           <> " SSC="
           <> display (pkt ^. pusHdr . pusHdrSSC)
-  withFLLock (mwLogWarn g txt)
+  mwLogWarn g txt
 
 
 
