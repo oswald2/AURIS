@@ -33,7 +33,7 @@ createMessageDisplay :: Gtk.Builder -> IO MessageDisplay
 createMessageDisplay builder = do
   tv <- getObject builder "messageDisplay" TreeView
 
-  createScrollingTable
+  tbl <- createScrollingTable
     tv
     MessageDisplay
     [ ("Time"   , timeAttrs)
@@ -41,6 +41,8 @@ createMessageDisplay builder = do
     , ("Source" , sourceAttrs)
     , ("Message", textAttrs)
     ]
+  setTreeViewCallback tbl _msgdDisplay _msgdModel displayMessage 
+  return tbl
 
  where
   timeAttrs (MessageEntry time _ _ _) = [#text := textDisplay time]
@@ -99,6 +101,8 @@ addMessageLine'
   :: MessageDisplay -> LogSource -> LogLevel -> Utf8Builder -> IO ()
 addMessageLine' window source level builder = do
   now <- getCurrentTime
-  postGUIASync $ addRowSeqStoreAppend (_msgdModel window)
+  postGUIASync $ addRowSeqStore (_msgdModel window)
     (MessageEntry now level source (utf8BuilderToText builder))
 
+displayMessage :: MessageEntry -> IO () 
+displayMessage _ = return ()
