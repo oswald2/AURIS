@@ -26,7 +26,7 @@ import           Data.PUS.ExtractedDU
 import           General.Hexdump
 
 import           GUI.Utils
-import           GUI.ScrollingTable 
+import           GUI.ScrollingTable
 
 
 data PUSPacketTable = PUSPacketTable {
@@ -40,13 +40,14 @@ data PUSPacketTable = PUSPacketTable {
 -- default GUI values). This function is intended for the live-view of incoming
 -- telemetry.
 tmPUSPacketTableAddRow :: PUSPacketTable -> ExtractedDU PUSPacket -> IO ()
-tmPUSPacketTableAddRow g = addRowSeqStore (_pptModel g) 
+tmPUSPacketTableAddRow g = addRowSeqStore (_pptModel g)
 
 
 -- | Set the internal model to the list of given 'PUSPacket' values. In contrast
 -- to 'tmFrameTableAddRow', this function does not limit the length as it is 
 -- intended to be used in retrieval, which depends on the requested data size
-tmPUSPacketTableAddRowSetValues :: PUSPacketTable -> [ExtractedDU PUSPacket] -> IO () 
+tmPUSPacketTableAddRowSetValues
+  :: PUSPacketTable -> [ExtractedDU PUSPacket] -> IO ()
 tmPUSPacketTableAddRowSetValues g = setRowsSeqStore (_pptModel g)
 
 
@@ -55,73 +56,31 @@ tmPUSPacketTableAddRowSetValues g = setRowsSeqStore (_pptModel g)
 -- an 'ExtractedDU PUSPacket'.
 tmPUSPacketTableSetCallback
   :: PUSPacketTable -> (ExtractedDU PUSPacket -> IO ()) -> IO ()
-tmPUSPacketTableSetCallback g = setTreeViewCallback g _pptTable _pptModel 
+tmPUSPacketTableSetCallback g = setTreeViewCallback g _pptTable _pptModel
 
 
 createPUSPacketTable :: Gtk.Builder -> IO PUSPacketTable
 createPUSPacketTable builder = do
-  tv    <- getObject builder "treeviewTMPUSPackets" TreeView
-  model <- seqStoreNew []
+  tv <- getObject builder "treeviewTMPUSPackets" TreeView
 
-  treeViewSetModel tv (Just model)
+  createScrollingTable
+    tv
+    PUSPacketTable
+    [ ( "Generation Time"
+      , \pkt ->
+        [#text := maybe "" textDisplay (pusPktTime (pkt ^. epDU . pusDfh))]
+      )
+    , ("ERT", \pkt -> [#text := textDisplay (pkt ^. epERT)])
+    , ( "APID"
+      , \pkt -> [#text := textDisplay (pkt ^. epDU . pusHdr . pusHdrAPID)]
+      )
+    , ("T", \pkt -> [#text := textDisplay (pusType (pkt ^. epDU . pusDfh))])
+    , ( "ST"
+      , \pkt -> [#text := textDisplay (pusSubType (pkt ^. epDU . pusDfh))]
+      )
+    , ( "SSC"
+      , \pkt -> [#text := textDisplay (pkt ^. epDU . pusHdr . pusHdrSSC)]
+      )
+    , ("Data", \pkt -> [#text := hexdumpLineBS (pkt ^. epDU . pusData)])
+    ]
 
-  treeViewSetHeadersVisible tv True
-
-  -- add a couple columns
-  col1 <- treeViewColumnNew
-  col2 <- treeViewColumnNew
-  col3 <- treeViewColumnNew
-  col4 <- treeViewColumnNew
-  col5 <- treeViewColumnNew
-  col6 <- treeViewColumnNew
-  col7 <- treeViewColumnNew
-
-  treeViewColumnSetTitle col1 "Generation Time"
-  treeViewColumnSetTitle col2 "ERT"
-  treeViewColumnSetTitle col3 "APID"
-  treeViewColumnSetTitle col4 "T"
-  treeViewColumnSetTitle col5 "ST"
-  treeViewColumnSetTitle col6 "SSC"
-  treeViewColumnSetTitle col7 "Data"
-
-  renderer1 <- cellRendererTextNew
-  renderer2 <- cellRendererTextNew
-  renderer3 <- cellRendererTextNew
-  renderer4 <- cellRendererTextNew
-  renderer5 <- cellRendererTextNew
-  renderer6 <- cellRendererTextNew
-  renderer7 <- cellRendererTextNew
-
-  cellLayoutPackStart col1 renderer1 True
-  cellLayoutPackStart col2 renderer2 True
-  cellLayoutPackStart col3 renderer3 True
-  cellLayoutPackStart col4 renderer4 True
-  cellLayoutPackStart col5 renderer5 True
-  cellLayoutPackStart col6 renderer6 True
-  cellLayoutPackStart col7 renderer7 True
-
-  cellLayoutSetAttributes col1 renderer1 model $ \pkt ->
-    [#text := maybe "" textDisplay (pusPktTime (pkt ^. epDU . pusDfh))]
-  cellLayoutSetAttributes col2 renderer2 model
-    $ \pkt -> [#text := textDisplay (pkt ^. epERT)]
-  cellLayoutSetAttributes col3 renderer3 model
-    $ \pkt -> [#text := textDisplay (pkt ^. epDU . pusHdr . pusHdrAPID)]
-  cellLayoutSetAttributes col4 renderer4 model
-    $ \pkt -> [#text := textDisplay (pusType (pkt ^. epDU . pusDfh))]
-  cellLayoutSetAttributes col5 renderer5 model
-    $ \pkt -> [#text := textDisplay (pusSubType (pkt ^. epDU . pusDfh))]
-  cellLayoutSetAttributes col6 renderer6 model
-    $ \pkt -> [#text := textDisplay (pkt ^. epDU . pusHdr . pusHdrSSC)]
-  cellLayoutSetAttributes col7 renderer7 model
-    $ \pkt -> [#text := hexdumpLineBS (pkt ^. epDU . pusData)]
-
-  _ <- treeViewAppendColumn tv col1
-  _ <- treeViewAppendColumn tv col2
-  _ <- treeViewAppendColumn tv col3
-  _ <- treeViewAppendColumn tv col4
-  _ <- treeViewAppendColumn tv col5
-  _ <- treeViewAppendColumn tv col6
-  _ <- treeViewAppendColumn tv col7
-
-  let g = PUSPacketTable { _pptTable = tv, _pptModel = model }
-  return g

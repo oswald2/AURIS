@@ -8,7 +8,6 @@
 module GUI.MainWindow
   ( --MainWindowFluid(..)
     MainWindow(..)
-  , TMPacketTabFluid(..)
   , TMPacketTab(..)
   , MainMenu(..)
   --, NctrsConnGroup(..)
@@ -47,7 +46,7 @@ where
 import           RIO
 import qualified RIO.Text                      as T
 import qualified Data.Text.Encoding            as T
--- import qualified Data.Text.IO                  as T
+import qualified Data.Text.IO                  as T
 import qualified RIO.Vector                    as V
 import           RIO.List                       ( sortBy )
 import           RIO.Partial                    ( fromJust )
@@ -185,7 +184,7 @@ data MainWindow = MainWindow {
     _mwWindow :: Gtk.Window
     , _mwProgress :: Gtk.ProgressBar
     -- , _mwTabs :: Ref Tabs
-    -- , _mwTMPTab :: TMPacketTab
+    , _mwTMPTab :: TMPacketTab
     -- , _mwTMParamTab :: TMParamTab
     -- , _mwTMPGroup :: Ref Group
     -- , _mwTMPHeaderGroup :: Ref Group
@@ -209,9 +208,9 @@ makeLenses ''MainWindow
 -- scrollNew = scrolledNew
 
 mwAddTMPacket :: MainWindow -> TMPacket -> IO ()
-mwAddTMPacket _ _ = return ()
--- mwAddTMPacket window pkt = do
---   tmpTabAddRow (window ^. mwTMPTab) pkt
+mwAddTMPacket window pkt = do 
+  T.putStrLn "mwAddTMPacket called"
+  tmpTabAddRow (window ^. mwTMPTab) pkt
 
 mwSetTMParameters :: MainWindow -> TMPacket -> IO ()
 mwSetTMParameters _window _pkt = return ()
@@ -263,11 +262,13 @@ createMainWindow = do
   aboutItem <- getObject builder "menuitemAbout"  MenuItem 
 
   tmfTab <- createTMFTab builder 
+  tmpTab <- createTMPTab builder 
 
   let gui = MainWindow { _mwWindow   = window
                        , _mwMission  = missionLabel
                        , _mwProgress = progressBar
                        , _mwFrameTab = tmfTab
+                       , _mwTMPTab   = tmpTab 
                        }
 
   void $ Gtk.on aboutItem #activate $ do 

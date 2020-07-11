@@ -379,6 +379,8 @@ Author: Michael Oswald
                           <object class="GtkTreeView" id="treeviewTMFrames">
                             <property name="visible">True</property>
                             <property name="can_focus">True</property>
+                            <property name="reorderable">True</property>
+                            <property name="rules_hint">True</property>
                             <child internal-child="selection">
                               <object class="GtkTreeSelection"/>
                             </child>
@@ -1111,7 +1113,6 @@ Author: Michael Oswald
                             <property name="can_focus">True</property>
                             <property name="reorderable">True</property>
                             <property name="rules_hint">True</property>
-                            <property name="fixed_height_mode">True</property>
                             <property name="show_expanders">False</property>
                             <child internal-child="selection">
                               <object class="GtkTreeSelection"/>
@@ -1496,9 +1497,11 @@ Author: Michael Oswald
                                       </packing>
                                     </child>
                                     <child>
-                                      <object class="GtkLabel">
+                                      <object class="GtkButton" id="buttonAdd">
+                                        <property name="label" translatable="yes">button</property>
                                         <property name="visible">True</property>
-                                        <property name="can_focus">False</property>
+                                        <property name="can_focus">True</property>
+                                        <property name="receives_default">True</property>
                                       </object>
                                       <packing>
                                         <property name="left_attach">5</property>
@@ -1549,7 +1552,6 @@ Author: Michael Oswald
                                         <property name="can_focus">True</property>
                                         <property name="reorderable">True</property>
                                         <property name="rules_hint">True</property>
-                                        <property name="fixed_height_mode">True</property>
                                         <property name="show_expanders">False</property>
                                         <child internal-child="selection">
                                           <object class="GtkTreeSelection"/>

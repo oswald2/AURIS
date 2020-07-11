@@ -41,7 +41,7 @@ eventProcessorThread mainWindow queue = forever $ do
 
 eventProcessor :: MainWindow -> IfEvent -> IO ()
 eventProcessor g (EventPUS (EVTelemetry (EVTMPacketDecoded pkt))) = do
-  withFLLock (mwAddTMPacket g pkt)
+  postGUIASync (mwAddTMPacket g pkt)
 eventProcessor g (EventPUS (EVTelemetry (EVTMFrameReceived frame))) = do
   postGUIASync (mwAddTMFrame g frame)
 eventProcessor g (EventPUS (EVTelemetry (EVTMParameters params))) = do

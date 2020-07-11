@@ -156,7 +156,7 @@ createTMFTab builder = do
   gap <- statusEntrySetupCSS gap' 
   qual <- statusEntrySetupCSS qual'
 
-  pure TMFrameTab { _tmfFrameTable = frameTable
+  let g = TMFrameTab { _tmfFrameTable = frameTable
                   , _tmfOutputSCID = scid 
                   , _tmfOutputVCID = vcid 
                   , _tmfOutputOCF = ocf
@@ -173,6 +173,9 @@ createTMFTab builder = do
                   , _tmfCLCW       = clcwDisp
                   , _tmfDump       = content
                   }
+  tmFrameTableSetCallback (g ^. tmfFrameTable) (tmfTabDetailsSetValues g)
+  return g 
+
 
 tmfTabDetailsSetValues :: TMFrameTab -> ExtractedDU TMFrame -> IO ()
 tmfTabDetailsSetValues g frame = do
@@ -241,6 +244,5 @@ setCLCWValues window clcw = do
 
 setupCallbacks :: TMFrameTab -> IO ()
 setupCallbacks g = do
-  tmFrameTableSetCallback (g ^. tmfFrameTable) (tmfTabDetailsSetValues g)
   return ()
 

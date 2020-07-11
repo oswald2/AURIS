@@ -90,6 +90,7 @@ library
     , gi-gtk-hs
     , gi-gobject
     , gi-gdk
+    , haskell-gi-base
 
 
   default-extensions:

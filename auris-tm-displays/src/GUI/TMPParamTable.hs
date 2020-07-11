@@ -1,62 +1,44 @@
 module GUI.TMPParamTable
   ( TMPParamTable
   , createTMPParamTable
+  , tmpParamTableSetValues
   )
 where
 
 import           RIO
+import qualified RIO.Vector                    as V
 import qualified Data.Text.Short               as ST
 import           Data.TM.Parameter
 
 import           GI.Gtk                        as Gtk
 import           Data.GI.Gtk.ModelView.SeqStore
-import           Data.GI.Gtk.ModelView.CellLayout
 
 import           GUI.Utils
+import           GUI.ScrollingTable
 
 
 data TMPParamTable = TMPParamTable {
-  _tmppTable :: TreeView 
-  , _tmppModel :: SeqStore TMParameter 
+  _tmppTable :: TreeView
+  , _tmppModel :: SeqStore TMParameter
   }
+
+
+tmpParamTableSetValues :: TMPParamTable -> Vector TMParameter -> IO ()
+tmpParamTableSetValues g values = do
+  let model = _tmppModel g
+  seqStoreClear model
+  V.mapM_ (seqStorePrepend model) values
 
 
 createTMPParamTable :: Gtk.Builder -> IO TMPParamTable
 createTMPParamTable builder = do
-  tv    <- getObject builder "treeviewTMPUSParameters" TreeView
-  model <- seqStoreNew []
+  tv <- getObject builder "treeviewTMPUSParameters" TreeView
 
-  treeViewSetModel tv (Just model)
+  createScrollingTable
+    tv
+    TMPParamTable
+    [ ("Parameter", \par -> [#text := ST.toText (par ^. pName)])
+    , ("Timestamp", \par -> [#text := textDisplay (par ^. pTime)])
+    , ("Raw Value", \par -> [#text := textDisplay (par ^. pValue)])
+    ]
 
-  treeViewSetHeadersVisible tv True
-
-  -- add a couple columns
-  col1 <- treeViewColumnNew
-  col2 <- treeViewColumnNew
-  col3 <- treeViewColumnNew
-
-  treeViewColumnSetTitle col1 "Parameter"
-  treeViewColumnSetTitle col2 "Timestamp"
-  treeViewColumnSetTitle col3 "Raw Value"
-
-  renderer1 <- cellRendererTextNew
-  renderer2 <- cellRendererTextNew
-  renderer3 <- cellRendererTextNew
-
-  cellLayoutPackStart col1 renderer1 True
-  cellLayoutPackStart col2 renderer2 True
-  cellLayoutPackStart col3 renderer3 True
-
-  cellLayoutSetAttributes col1 renderer1 model $ \par ->
-    [#text := ST.toText (par ^. pName)]
-  cellLayoutSetAttributes col2 renderer2 model
-    $ \par -> [#text := textDisplay (par ^. pTime)]
-  cellLayoutSetAttributes col3 renderer3 model
-    $ \par -> [#text := textDisplay (par ^. pValue)]
-
-  _ <- treeViewAppendColumn tv col1
-  _ <- treeViewAppendColumn tv col2
-  _ <- treeViewAppendColumn tv col3
-
-  let g = TMPParamTable { _tmppTable = tv, _tmppModel = model }
-  return g
