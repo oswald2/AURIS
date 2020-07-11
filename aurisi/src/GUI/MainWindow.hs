@@ -262,10 +262,13 @@ createMainWindow = do
   missionLabel <- getObject builder "labelMission" Label
   progressBar  <- getObject builder "progressBar" ProgressBar
   aboutItem    <- getObject builder "menuitemAbout" MenuItem
+  logo         <- getObject builder "logo" Image
 
   tmfTab       <- createTMFTab builder
   tmpTab       <- createTMPTab builder
   msgDisp      <- createMessageDisplay builder
+
+  setLogo logo 65 65
 
   let gui = MainWindow { _mwWindow         = window
                        , _mwMission        = missionLabel

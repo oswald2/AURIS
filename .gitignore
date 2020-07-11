@@ -34,3 +34,4 @@ stack_llvm.yaml.orig
 a.out
 stack_llvm.yaml.lock
 aurisi/src/MainWindow.glade~
+aurisi/src/AurisLogo.xpm

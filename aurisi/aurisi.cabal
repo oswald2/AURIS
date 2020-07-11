@@ -41,6 +41,7 @@ Executable AURISi
     GUI.MainWindowActions
     GUI.MessageDisplay
     GUI.Logo
+    GUI.LogoXPM
     GUI.About
     GUI.Theme
     AurisInterface
@@ -80,6 +81,7 @@ Executable AURISi
     gi-gtk,
     gi-gtk-hs,
     gi-gdk,
+    gi-gdkpixbuf,
     gi-gobject,
     tar,
     zlib

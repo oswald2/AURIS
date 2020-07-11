@@ -23,17 +23,13 @@ license :: Text
 license = T.pack $(makeRelativeToProject "LICENSE" >>= embedStringFile)
 
 
--- foreign import ccall unsafe "my_pixbuf" pixbufLogo :: Ptr CUChar
-
-
 
 createAboutDialog :: IO Gtk.AboutDialog
 createAboutDialog = do
     -- setup about dialog
   aboutDialog <- aboutDialogNew
 
-  --logo        <- pixbufNewFromInline pixbufLogo
-  --logo        <- getLogoPixbuf
+  logo        <- getLogoPixbuf 150 150
 
   Gtk.set
     aboutDialog
@@ -46,7 +42,7 @@ createAboutDialog = do
       := ["Michael Oswald (michael.oswald@onikudaki.net)" :: Text]
     , aboutDialogLicense := license
     , aboutDialogWrapLicense := True
-    --, aboutDialogLogo := Just logo
+    , aboutDialogLogo := logo
     ]
 
   return aboutDialog
