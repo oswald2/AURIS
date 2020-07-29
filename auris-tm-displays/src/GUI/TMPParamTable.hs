@@ -37,8 +37,8 @@ createTMPParamTable builder = do
   createScrollingTable
     tv
     TMPParamTable
-    [ ("Parameter", \par -> [#text := ST.toText (par ^. pName)])
-    , ("Timestamp", \par -> [#text := textDisplay (par ^. pTime)])
-    , ("Raw Value", \par -> [#text := textDisplay (par ^. pValue)])
+    [ ("Parameter", 80, \par -> [#text := ST.toText (par ^. pName)])
+    , ("Timestamp", 190, \par -> [#text := textDisplay (par ^. pTime)])
+    , ("Raw Value", 100, \par -> [#text := textDisplay (par ^. pValue)])
     ]
 

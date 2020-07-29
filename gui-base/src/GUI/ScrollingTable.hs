@@ -99,7 +99,7 @@ setTreeViewCallback g getTV getModel action = do
 createScrollingTable
   :: TreeView
   -> (TreeView -> SeqStore a -> b)
-  -> [(Text, a -> [AttrOp CellRendererText 'AttrSet])]
+  -> [(Text, Int32, a -> [AttrOp CellRendererText 'AttrSet])]
   -> IO b
 createScrollingTable tv constr attribs = do
   model <- seqStoreNew []
@@ -112,8 +112,11 @@ createScrollingTable tv constr attribs = do
   return $ constr tv model
 
  where
-  createColumn model (name, attr) = do
+  createColumn model (name, width, attr) = do
     col <- treeViewColumnNew
+    treeViewColumnSetFixedWidth col width
+    treeViewColumnSetResizable col True 
+    treeViewColumnSetReorderable col True
     treeViewColumnSetTitle col name
     renderer <- cellRendererTextNew
     cellLayoutPackStart col renderer True

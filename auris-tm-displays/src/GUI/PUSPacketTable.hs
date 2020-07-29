@@ -66,21 +66,21 @@ createPUSPacketTable builder = do
   createScrollingTable
     tv
     PUSPacketTable
-    [ ( "Generation Time"
+    [ ( "Generation Time", 190
       , \pkt ->
         [#text := maybe "" textDisplay (pusPktTime (pkt ^. epDU . pusDfh))]
       )
-    , ("ERT", \pkt -> [#text := textDisplay (pkt ^. epERT)])
-    , ( "APID"
+    , ("ERT", 190, \pkt -> [#text := textDisplay (pkt ^. epERT)])
+    , ( "APID", 50
       , \pkt -> [#text := textDisplay (pkt ^. epDU . pusHdr . pusHdrAPID)]
       )
-    , ("T", \pkt -> [#text := textDisplay (pusType (pkt ^. epDU . pusDfh))])
-    , ( "ST"
+    , ("T", 30, \pkt -> [#text := textDisplay (pusType (pkt ^. epDU . pusDfh))])
+    , ( "ST", 30
       , \pkt -> [#text := textDisplay (pusSubType (pkt ^. epDU . pusDfh))]
       )
-    , ( "SSC"
+    , ( "SSC", 60 
       , \pkt -> [#text := textDisplay (pkt ^. epDU . pusHdr . pusHdrSSC)]
       )
-    , ("Data", \pkt -> [#text := hexdumpLineBS (pkt ^. epDU . pusData)])
+    , ("Data", 600, \pkt -> [#text := hexdumpLineBS (pkt ^. epDU . pusData)])
     ]
 

@@ -63,26 +63,26 @@ createTMFrameTable builder = do
   createScrollingTable
     tv
     TMFrameTable
-    [ ("ERT", \pkt -> [#text := textDisplay (pkt ^. epERT)])
-    , ( "S/C ID"
+    [ ("ERT", 190, \pkt -> [#text := textDisplay (pkt ^. epERT)])
+    , ( "S/C ID", 50
       , \pkt -> [#text := textDisplay (pkt ^. epDU . tmFrameHdr . tmFrameScID)]
       )
-    , ( "V/C ID"
+    , ( "V/C ID", 30
       , \pkt -> [#text := textDisplay (pkt ^. epDU . tmFrameHdr . tmFrameVcID)]
       )
-    , ( "VC FC"
+    , ( "VC FC", 50
       , \pkt -> [#text := textDisplay (pkt ^. epDU . tmFrameHdr . tmFrameVCFC)]
       )
-    , ( "MC FC"
+    , ( "MC FC", 50
       , \pkt -> [#text := textDisplay (pkt ^. epDU . tmFrameHdr . tmFrameMCFC)]
       )
-    , ( "DFH"
+    , ( "DFH", 30
       , \pkt ->
         [#text := if pkt ^. epDU . tmFrameHdr . tmFrameDfh then "T" else "F"]
       )
-    , ("SRC" , \pkt -> [#text := textDisplay (pkt ^. epSource)])
-    , ("Gap" , \pkt -> gapAttrs (pkt ^. epGap))
-    , ("Qual", \pkt -> qualityAttrs (pkt ^. epQuality))
+    , ("SRC" , 60, \pkt -> [#text := textDisplay (pkt ^. epSource)])
+    , ("Gap" , 60, \pkt -> gapAttrs (pkt ^. epGap))
+    , ("Qual", 40, \pkt -> qualityAttrs (pkt ^. epQuality))
     ]
 
  where

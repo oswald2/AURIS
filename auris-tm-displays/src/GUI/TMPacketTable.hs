@@ -57,16 +57,16 @@ createTMPacketTable builder = do
   createScrollingTable
     tv
     TMPacketTable
-    [ ("SPID"           , \pkt -> [#text := textDisplay (pkt ^. tmpSPID)])
-    , ("Mnemonic"       , \pkt -> [#text := ST.toText (pkt ^. tmpMnemonic)])
-    , ("Description"    , \pkt -> [#text := ST.toText (pkt ^. tmpDescr)])
-    , ("Generation Time", \pkt -> [#text := textDisplay (pkt ^. tmpTimeStamp)])
-    , ("ERT"            , \pkt -> [#text := textDisplay (pkt ^. tmpERT)])
-    , ("APID"           , \pkt -> [#text := textDisplay (pkt ^. tmpAPID)])
-    , ("T"              , \pkt -> [#text := textDisplay (pkt ^. tmpType)])
-    , ("ST"             , \pkt -> [#text := textDisplay (pkt ^. tmpSubType)])
-    , ("SSC"            , \pkt -> [#text := textDisplay (pkt ^. tmpSSC)])
-    , ("VC"             , \pkt -> [#text := textDisplay (pkt ^. tmpVCID)])
+    [ ("SPID"           , 70, \pkt -> [#text := textDisplay (pkt ^. tmpSPID)])
+    , ("Mnemonic"       , 80, \pkt -> [#text := ST.toText (pkt ^. tmpMnemonic)])
+    , ("Description"    , 250, \pkt -> [#text := ST.toText (pkt ^. tmpDescr)])
+    , ("Generation Time", 190, \pkt -> [#text := textDisplay (pkt ^. tmpTimeStamp)])
+    , ("ERT"            , 190, \pkt -> [#text := textDisplay (pkt ^. tmpERT)])
+    , ("APID"           , 50, \pkt -> [#text := textDisplay (pkt ^. tmpAPID)])
+    , ("T"              , 30, \pkt -> [#text := textDisplay (pkt ^. tmpType)])
+    , ("ST"             , 30, \pkt -> [#text := textDisplay (pkt ^. tmpSubType)])
+    , ("SSC"            , 60, \pkt -> [#text := textDisplay (pkt ^. tmpSSC)])
+    , ("VC"             , 30, \pkt -> [#text := textDisplay (pkt ^. tmpVCID)])
     ]
 
 

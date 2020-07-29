@@ -36,10 +36,10 @@ createMessageDisplay builder = do
   tbl <- createScrollingTable
     tv
     MessageDisplay
-    [ ("Time"   , timeAttrs)
-    , ("Level"  , levelAttrs)
-    , ("Source" , sourceAttrs)
-    , ("Message", textAttrs)
+    [ ("Time"   , 190, timeAttrs)
+    , ("Level"  , 50, levelAttrs)
+    , ("Source" , 70, sourceAttrs)
+    , ("Message", 800, textAttrs)
     ]
   setTreeViewCallback tbl _msgdDisplay _msgdModel displayMessage 
   return tbl
@@ -99,10 +99,14 @@ addMessageLine window _stack = addMessageLine' window
 
 addMessageLine'
   :: MessageDisplay -> LogSource -> LogLevel -> Utf8Builder -> IO ()
+addMessageLine' _ _ LevelDebug _ = return ()
 addMessageLine' window source level builder = do
   now <- getCurrentTime
   postGUIASync $ addRowSeqStore (_msgdModel window)
     (MessageEntry now level source (utf8BuilderToText builder))
+
+
+
 
 displayMessage :: MessageEntry -> IO () 
 displayMessage _ = return ()
