@@ -28,6 +28,8 @@ import           AurisMissionSpecific
 import           GHC.Conc
 import           System.Directory               ( doesFileExist )
 
+import qualified GI.GLib.Functions             as GI
+import qualified GI.GLib.Constants             as GI
 import qualified GI.Gtk                        as Gtk
 import qualified Data.GI.Gtk.Threading         as Gtk
 
@@ -117,14 +119,16 @@ main = do
         setupCallbacks mainWindow interface
 
         -- determine the mission-specific functionality
-        missionSpecific           <- getMissionSpecific cfg
+        missionSpecific   <- getMissionSpecific cfg
         -- start the processing chains
-        _processingThread         <- async $ runProcessing cfg
-                                                           missionSpecific
-                                                           (importmib opts)
-                                                           interface
-                                                           mainWindow
 
+        _processingThread <- async $ runProcessing cfg
+                                                   missionSpecific
+                                                   (importmib opts)
+                                                   interface
+                                                   mainWindow
+
+        GI.timeoutAddSeconds GI.PRIORITY_DEFAULT 1 (mwTimerLabelCB mainWindow)
         Gtk.main
 
 

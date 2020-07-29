@@ -41,6 +41,7 @@ module GUI.MainWindow
   , mwNCTRSConnection
   , mwCnCConnection
   , mwInitialiseDataModel
+  , mwTimerLabelCB
   )
 where
 
@@ -202,7 +203,7 @@ data MainWindow = MainWindow {
     -- , _mwNCTRSConn :: NctrsConnGroup
     -- , _mwCnCConn :: CncConnGroup
     -- , _mwEdenConn :: EdenConnGroup
-    -- , _mwTimeLabel :: Ref Box
+    , _mwTimeLabel :: Label 
     }
 makeLenses ''MainWindow
 
@@ -263,6 +264,7 @@ createMainWindow = do
   progressBar  <- getObject builder "progressBar" ProgressBar
   aboutItem    <- getObject builder "menuitemAbout" MenuItem
   logo         <- getObject builder "logo" Image
+  timeLabel    <- getObject builder "labelTime" Label
 
   tmfTab       <- createTMFTab builder
   tmpTab       <- createTMPTab builder
@@ -276,6 +278,7 @@ createMainWindow = do
                        , _mwMessageDisplay = msgDisp
                        , _mwFrameTab       = tmfTab
                        , _mwTMPTab         = tmpTab
+                       , _mwTimeLabel      = timeLabel
                        }
 
   void $ Gtk.on aboutItem #activate $ do
@@ -368,11 +371,11 @@ createMainWindow = do
 --   void $ FL.addTimeout 1 (timerCB window)
 
 
--- timerCB :: MainWindow -> IO ()
--- timerCB window = do
---   now <- getCurrentTime
---   setLabel (window ^. mwTimeLabel) (displayTimeMilli now)
---   void $ FL.repeatTimeout 1 (timerCB window)
+mwTimerLabelCB :: MainWindow -> IO Bool
+mwTimerLabelCB window = do
+  now <- getCurrentTime
+  labelSetLabel (window ^. mwTimeLabel) (displayTimeMilli now)
+  return True
 
 
 
