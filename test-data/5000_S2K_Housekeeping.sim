@@ -1,0 +1,131 @@
+[RepeatN 5000 [ Send
+    TMPacket
+      { tmAPID = APID { rawAPID = 20 }
+      , tmType = 3
+      , tmSubType = 25
+      , tmSourceID = SID { fromSID = 0 }
+      , tmPIVals =
+          Just
+            PIDetails
+              { pi1 = TMPIVal { tmpiValue = 2 , tmpiOffset = 16 , tmpiWidth = 8 }
+              , pi2 = TMPIVal { tmpiValue = 0 , tmpiOffset = -1 , tmpiWidth = 0 }
+              }
+      , tmParameters =
+          TMExtList
+            [ ExtParameter
+                { parName = "S2KTP400"
+                , parValue = ValInt4 0
+                , parOffBy = 18
+                , parOffBi = 0
+                }
+            , ExtParameter
+                { parName = "S2KTP401"
+                , parValue = ValInt5 0
+                , parOffBy = 19
+                , parOffBi = 0
+                }
+            , ExtParameter
+                { parName = "S2KTP402"
+                , parValue = ValInt6 0
+                , parOffBy = 20
+                , parOffBi = 0
+                }
+            , ExtParameter
+                { parName = "S2KTP403"
+                , parValue = ValInt7 0
+                , parOffBy = 21
+                , parOffBi = 0
+                }
+            , ExtParameter
+                { parName = "S2KTP404"
+                , parValue = ValInt8 0
+                , parOffBy = 22
+                , parOffBi = 0
+                }
+            , ExtParameter
+                { parName = "S2KTP405"
+                , parValue = ValInt9 0
+                , parOffBy = 23
+                , parOffBi = 0
+                }
+            , ExtParameter
+                { parName = "S2KTP406"
+                , parValue = ValInt10 0
+                , parOffBy = 25
+                , parOffBi = 0
+                }
+            , ExtParameter
+                { parName = "S2KTP407"
+                , parValue = ValInt11 0
+                , parOffBy = 27
+                , parOffBi = 0
+                }
+            , ExtParameter
+                { parName = "S2KTP408"
+                , parValue = ValInt12 0
+                , parOffBy = 29
+                , parOffBi = 0
+                }
+            , ExtParameter
+                { parName = "S2KTP409"
+                , parValue = ValInt13 0
+                , parOffBy = 31
+                , parOffBi = 0
+                }
+            , ExtParameter
+                { parName = "S2KTP410"
+                , parValue = ValInt14 0
+                , parOffBy = 33
+                , parOffBi = 0
+                }
+            , ExtParameter
+                { parName = "S2KTP411"
+                , parValue = ValInt15 0
+                , parOffBy = 35
+                , parOffBi = 0
+                }
+            , ExtParameter
+                { parName = "S2KTP412"
+                , parValue = ValInt16 BiE 0
+                , parOffBy = 37
+                , parOffBi = 0
+                }
+            , ExtParameter
+                { parName = "S2KTP413"
+                , parValue = ValInt24 BiE 0
+                , parOffBy = 39
+                , parOffBi = 0
+                }
+            , ExtParameter
+                { parName = "S2KTP414"
+                , parValue = ValInt32 BiE 0
+                , parOffBy = 42
+                , parOffBi = 0
+                }
+            , ExtParameter
+                { parName = "S2KTP501"
+                , parValue = ValFloat BiE 0.0
+                , parOffBy = 46
+                , parOffBi = 0
+                }
+            , ExtParameter
+                { parName = "S2KTP502"
+                , parValue = ValDouble BiE 0.0
+                , parOffBy = 50
+                , parOffBi = 0
+                }
+            , ExtParameter
+                { parName = "S2KTP503"
+                , parValue = ValMILSingle BiE 0.0
+                , parOffBy = 58
+                , parOffBi = 0
+                }
+            , ExtParameter
+                { parName = "S2KTP504"
+                , parValue = ValMILExtended BiE 0.0
+                , parOffBy = 62
+                , parOffBi = 0
+                }
+            ]
+      }
+]]

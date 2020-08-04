@@ -7,7 +7,7 @@ import           Graphics.UI.FLTK.LowLevel.FLTKHS
 import           Graphics.UI.FLTK.LowLevel.Fl_Enumerations
 
 import           GI.Gdk.Structs.RGBA
-import qualified GI.Gdk.Structs.Color as Gdk
+--import qualified GI.Gdk.Structs.Color as Gdk
 
 import           System.IO.Unsafe
 

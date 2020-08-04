@@ -358,7 +358,7 @@ Author: Michael Oswald
             <property name="visible">True</property>
             <property name="can_focus">True</property>
             <property name="orientation">vertical</property>
-            <property name="position">630</property>
+            <property name="position">610</property>
             <property name="position_set">True</property>
             <child>
               <object class="GtkNotebook" id="notebookMain">
