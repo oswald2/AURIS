@@ -189,7 +189,7 @@ data MainWindow = MainWindow {
     , _mwMessageDisplay :: MessageDisplay
     -- , _mwTabs :: Ref Tabs
     , _mwTMPTab :: TMPacketTab
-    -- , _mwTMParamTab :: TMParamTab
+    , _mwTMParamTab :: TMParamTab
     -- , _mwTMPGroup :: Ref Group
     -- , _mwTMPHeaderGroup :: Ref Group
     -- , _mwTMFGroup :: Ref Group
@@ -203,7 +203,7 @@ data MainWindow = MainWindow {
     -- , _mwNCTRSConn :: NctrsConnGroup
     -- , _mwCnCConn :: CncConnGroup
     -- , _mwEdenConn :: EdenConnGroup
-    , _mwTimeLabel :: Label 
+    , _mwTimeLabel :: Label
     }
 makeLenses ''MainWindow
 
@@ -228,9 +228,8 @@ mwAddTMParameters _ _ = return ()
 --   addParameterValues (window ^. mwTMParamTab) params
 
 mwAddTMParameterDefinitions :: MainWindow -> Vector TMParameterDef -> IO ()
-mwAddTMParameterDefinitions _ _ = return ()
--- mwAddTMParameterDefinitions window paramDefs = do
---   addParameterDefinitions (window ^. mwTMParamTab) paramDefs
+mwAddTMParameterDefinitions window paramDefs = do
+  addParameterDefinitions (window ^. mwTMParamTab) paramDefs
 
 
 mwSetMission :: MainWindow -> Text -> IO ()
@@ -238,11 +237,11 @@ mwSetMission window = labelSetLabel (window ^. mwMission)
 
 
 mwInitialiseDataModel :: MainWindow -> DataModel -> IO ()
-mwInitialiseDataModel _window _model = return ()
---   let paramDefs =
---         V.fromList . sortBy s . map snd . HT.toList $ model ^. dmParameters
---       s p1 p2 = compare (p1 ^. fpName) (p2 ^. fpName)
---   mwAddTMParameterDefinitions window paramDefs
+mwInitialiseDataModel window model = do
+  let paramDefs =
+        V.fromList . sortBy s . map snd . HT.toList $ model ^. dmParameters
+      s p1 p2 = compare (p1 ^. fpName) (p2 ^. fpName)
+  mwAddTMParameterDefinitions window paramDefs
 
 --   -- also add the displays 
 --   addGRDs (window ^. mwTMParamTab) (model ^. dmGRDs)
@@ -270,6 +269,8 @@ createMainWindow = do
   tmpTab       <- createTMPTab builder
   msgDisp      <- createMessageDisplay builder
 
+  paramTab     <- createTMParamTab builder
+
   setLogo logo 65 65
 
   let gui = MainWindow { _mwWindow         = window
@@ -279,6 +280,7 @@ createMainWindow = do
                        , _mwFrameTab       = tmfTab
                        , _mwTMPTab         = tmpTab
                        , _mwTimeLabel      = timeLabel
+                       , _mwTMParamTab     = paramTab
                        }
 
   void $ Gtk.on aboutItem #activate $ do

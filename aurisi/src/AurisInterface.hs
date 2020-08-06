@@ -45,7 +45,7 @@ eventProcessor g (EventPUS (EVTelemetry (EVTMPacketDecoded pkt))) = do
 eventProcessor g (EventPUS (EVTelemetry (EVTMFrameReceived frame))) = do
   postGUIASync (mwAddTMFrame g frame)
 eventProcessor g (EventPUS (EVTelemetry (EVTMParameters params))) = do
-  withFLLock (mwAddTMParameters g params)
+  postGUIASync (mwAddTMParameters g params)
 eventProcessor g (EventPUS (EVTelemetry (EVTMFrameGap old new))) = do
   let txt =
         utf8BuilderToText

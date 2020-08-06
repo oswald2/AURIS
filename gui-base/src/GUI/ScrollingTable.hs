@@ -114,6 +114,7 @@ createScrollingTable tv constr attribs = do
   createColumn model (name, width, attr) = do
     col <- treeViewColumnNew
     treeViewColumnSetFixedWidth col width
+    treeViewColumnSetSizing col TreeViewColumnSizingFixed
     treeViewColumnSetResizable col True 
     treeViewColumnSetReorderable col True
     treeViewColumnSetTitle col name
