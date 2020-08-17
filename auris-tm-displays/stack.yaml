@@ -1,5 +1,5 @@
 flags: {}
-resolver: lts-15.14
+resolver: lts-16.10
 extra-deps:
 - fltkhs-0.8.0.2
 allow-newer: true

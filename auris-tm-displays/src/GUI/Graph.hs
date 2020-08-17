@@ -19,15 +19,15 @@ module GUI.Graph
   , graphName
   , graphParameters
   , graphData
-  , gwParent
+  --, gwParent
   , gwParamSelection
   , gwGraph
-  , gwOffscreen
+  --, gwOffscreen
   )
 where
 
 
-import           RIO
+import           RIO hiding ((.~))
 import qualified RIO.Map                       as M
 import qualified RIO.Vector                    as V
 import qualified RIO.HashSet                   as HS
@@ -54,23 +54,32 @@ import           Data.TM.Value
 
 import           General.Time
 
+
+import qualified GI.Gtk as Gtk
+import qualified GI.Cairo as GI
+import qualified Data.GI.Base.Attributes as GI
+
 import           Graphics.UI.FLTK.LowLevel.FLTKHS
                                                as FL
 import           Graphics.UI.FLTK.LowLevel.Fl_Enumerations
 --import           Graphics.UI.FLTK.LowLevel.Fl_Types
 import qualified Graphics.UI.FLTK.LowLevel.FL  as FL
 
-import           Graphics.Rendering.Chart.Backend.FLTKHS
-import           Graphics.Rendering.Chart
+-- import           Graphics.Rendering.Chart.Backend.FLTKHS
+import           Graphics.Rendering.Chart.Backend.Cairo
+import           Graphics.Rendering.Chart as Ch
 import           Graphics.Rendering.Chart.Easy as Ch
                                          hiding ( (^.) )
-import           Graphics.Rendering.Chart.Backend.Diagrams
+-- import           Graphics.Rendering.Chart.Backend.Diagrams
 --import           Text.Show.Pretty
 
 
 import           GUI.NameDescrTable
 import           GUI.PopupMenu
 
+import Foreign.Ptr
+import Graphics.Rendering.Cairo.Internal (Render(runRender))
+import Graphics.Rendering.Cairo.Types (Cairo(Cairo))
 
 
 -- | The internal value of a graph. Used to get a 'Eq' and 'Ord' instance
@@ -123,6 +132,7 @@ data Graph = Graph {
   , _graphParameters :: HashSet ShortText
   , _graphData :: Map ShortText PlotVal
   , _graphTimeAxisSettings :: TimeScaleSettings
+  , _graphPickFn :: Maybe (PickFn ())
   }
 makeLenses ''Graph
 
@@ -131,16 +141,16 @@ getParameterNames g = toList (g ^. graphParameters)
 
 
 emptyGraph :: Text -> Graph
-emptyGraph name = Graph name HS.empty M.empty defaultTimeScaleSettings
+emptyGraph name = Graph name HS.empty M.empty defaultTimeScaleSettings Nothing
 
 
 
 data GraphWidget = GraphWidget {
-  _gwParent :: Ref Group
-  , _gwDrawingArea :: Ref Widget
+  --_gwParent :: Ref Group
+  _gwDrawingArea :: Gtk.DrawingArea
   , _gwParamSelection :: NameDescrTable
   , _gwGraph :: TVar Graph
-  , _gwOffscreen :: FlOffscreen
+  --, _gwOffscreen :: FlOffscreen
 }
 makeLenses ''GraphWidget
 
@@ -155,35 +165,26 @@ graphWidgetSetChartName var name = do
 
 
 
-setupGraphWidget :: Ref Group -> Text -> NameDescrTable -> IO GraphWidget
+setupGraphWidget :: Gtk.Box -> Text -> NameDescrTable -> IO GraphWidget
 setupGraphWidget parent title paramSelector = do
-  begin parent
 
   let graph = emptyGraph title
 
   var       <- newTVarIO graph
 
-  rect@(FL.Rectangle _ (Size (Width w) (Height h))) <- getRectangle parent
+  da <- Gtk.drawingAreaNew 
 
-  offscreen <- flcCreateOffscreen (Size (Width (w * 2)) (Height (h * 2)))
+  Gtk.boxPackStart parent da True True 0
 
-  widget'   <- widgetCustom
-    rect
-    Nothing
-    (drawChart var offscreen)
-    defaultCustomWidgetFuncs
-      { handleCustom = Just (handleMouse var paramSelector)
-      }
 
-  end parent
-  showWidget widget'
-
-  let g = GraphWidget { _gwParent         = parent
-                      , _gwDrawingArea    = widget'
+  let g = GraphWidget { --_gwParent         = parent
+                      _gwDrawingArea    = da
                       , _gwParamSelection = paramSelector
                       , _gwGraph          = var
-                      , _gwOffscreen      = offscreen
+                      --, _gwOffscreen      = offscreen
                       }
+
+  GI.on da #draw (drawingFunction da var)
 
   return g
 
@@ -321,11 +322,11 @@ addParamFromSelector graphWidget table = do
                        selItems
                        vec
   void $ graphAddParameters graphWidget values
-  redrawGraph graphWidget
+  --redrawGraph graphWidget
 
 
-redrawGraph :: GraphWidget -> IO ()
-redrawGraph gw = redraw (gw ^. gwDrawingArea)
+-- redrawGraph :: GraphWidget -> IO ()
+-- redrawGraph gw = redraw (gw ^. gwDrawingArea)
 
 
 -- | This function finally insert actual values to draw into the graph. Currently 
@@ -336,7 +337,7 @@ graphInsertParamValue gw params = do
     graph <- readTVar (gw ^. gwGraph)
     let newGraph = V.foldl insertParamValue graph params
     writeTVar (gw ^. gwGraph) newGraph
-  redrawGraph gw
+  --redrawGraph gw
 
 -- | Add a parameter to the chart. The chart then accepts parameter values 
 -- for the parameters within it's '_graphParameters' field.
@@ -348,7 +349,7 @@ graphAddParameter
   -> IO (HashSet ShortText)
 graphAddParameter gw name lineStyle pointStyle = do
   hs <- graphAddParameters gw [(name, lineStyle, pointStyle)]
-  redrawGraph gw
+  --redrawGraph gw
   return hs
 
 
@@ -524,11 +525,34 @@ chart Graph {..} = toRenderable layout
 
 drawChart :: TVar Graph -> FlOffscreen -> Ref Widget -> IO ()
 drawChart graphVar offscreen widget = do
-  rectangle' <- getRectangle widget
+  return ()
+  -- rectangle' <- getRectangle widget
+  -- graph      <- readTVarIO graphVar
+  -- withFlClip rectangle' $ void $ renderToWidgetOffscreen widget
+  --                                                        offscreen
+  --                                                        (chart graph)
+
+
+-- updateCanvas :: Renderable a -> Gtk.DrawingArea  -> IO Bool
+-- updateCanvas chart canvas = do
+
+    -- win <- Gtk.widgetGetDrawWindow canvas
+    -- (width, height) <- G.widgetGetSize canvas
+    -- regio <- Gtk.regionRectangle $ GE.Rectangle 0 0 width height
+    -- let sz = (fromIntegral width,fromIntegral height)
+    -- Gtk.drawWindowBeginPaintRegion win regio
+    -- Gtk.renderWithDrawable win $ runBackend (defaultEnv bitmapAlignmentFns) (render chart sz) 
+    -- Gtk.drawWindowEndPaint win
+    -- return True
+
+
+drawingFunction :: Gtk.DrawingArea -> TVar Graph -> GI.Context -> IO Bool 
+drawingFunction drawingArea graphVar ctx = do 
   graph      <- readTVarIO graphVar
-  withFlClip rectangle' $ void $ renderToWidgetOffscreen widget
-                                                         offscreen
-                                                         (chart graph)
-
-
-
+  width <- fromIntegral <$> #getAllocatedWidth drawingArea
+  height <- fromIntegral <$> #getAllocatedHeight drawingArea
+  
+  let rndr = runBackend (defaultEnv bitmapAlignmentFns) (render (chart graph) (width, height))
+  pickFn <- GI.withManagedPtr ctx $ \p -> runReaderT (runRender rndr) (Cairo (castPtr p))
+  atomically $ writeTVar graphVar (graph & graphPickFn ?~ pickFn)
+  return True

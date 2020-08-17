@@ -43,7 +43,9 @@ module Data.PUS.PUSPacket
 where
 
 
-import           RIO                     hiding ( Builder )
+import           RIO                     hiding ( Builder
+                                                , (.~)
+                                                )
 import qualified RIO.ByteString                as B
 import qualified RIO.Vector.Storable           as V
 import qualified RIO.Vector.Storable.Unsafe    as V
@@ -443,10 +445,9 @@ pusPktParserPayload missionSpecific comm hdr = do
         PUSTC -> dfhParser (missionSpecific ^. pmsTCDataFieldHeader)
       else return PUSEmptyHeader
     | isCnc comm -> if hdr ^. pusHdrDfhFlag
-      then 
-        case hdr ^. pusHdrType of 
-          PUSTM -> dfhParser (missionSpecific ^. pmsTMDataFieldHeader)
-          PUSTC -> dfhParser defaultCnCTCHeader
+      then case hdr ^. pusHdrType of
+        PUSTM -> dfhParser (missionSpecific ^. pmsTMDataFieldHeader)
+        PUSTC -> dfhParser defaultCnCTCHeader
       else return PUSEmptyHeader
     | isEden comm || isEdenScoe comm -> if hdr ^. pusHdrDfhFlag
       then case hdr ^. pusHdrType of
@@ -460,10 +461,10 @@ pusPktParserPayload missionSpecific comm hdr = do
   -- The length in the PUS header is data length - 1, so we need to take
   -- one byte more, but we have to ignore the CRC, which is also considered
   -- in the length calculation
-  let plCRC = do 
-          x <- A.take len
-          void $ A.take crcLen
-          return x  
+  let plCRC = do
+        x <- A.take len
+        void $ A.take crcLen
+        return x
       len = fromIntegral (hdr ^. pusHdrTcLength) + 1 - crcLen - dfhLength dfh
       lenWoCRC = fromIntegral (hdr ^. pusHdrTcLength) + 1 - dfhLength dfh
   pl <- case comm of
@@ -475,5 +476,5 @@ pusPktParserPayload missionSpecific comm hdr = do
     _ -> plCRC
 
   --traceM (hexdumpBS pl)
-    
+
   return (ProtocolPacket comm (PUSPacket hdr dfh Nothing pl))

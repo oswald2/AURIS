@@ -4,7 +4,9 @@ module Data.Conversion.GRD
 where
 
 
-import           RIO                     hiding ( to )
+import           RIO                     hiding ( to
+                                                , (^..)
+                                                )
 
 import           Control.Lens
 
@@ -104,9 +106,7 @@ loadGRDs path = do
           let filt gpf x = _gpfName gpf == _gpcName x
               params gpf =
                 gpcs ^.. folded . filtered (filt gpf) . to convertGPC
-              
-              f gpf = 
-                let p = params gpf in 
-                (_gpfName gpf, convertGPF gpf p)
+
+              f gpf = let p = params gpf in (_gpfName gpf, convertGPF gpf p)
           return (Right (M.fromList . fmap f . toList $ gpfs))
 

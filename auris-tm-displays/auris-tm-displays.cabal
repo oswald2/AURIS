@@ -72,7 +72,7 @@ library
     gui-base,
     text-short,
     Chart,
-    Chart-fltkhs,
+    Chart-cairo,
     Chart-diagrams,
     colour,
     data-default-class,
@@ -82,7 +82,12 @@ library
     pretty-show,
     gi-gtk,
     gi-gtk-hs,
-    gi-gobject
+    gi-gobject,
+    gi-cairo,
+    cairo,
+    gi-cairo-connector,
+    gi-cairo-render,
+    haskell-gi-base
 
 
   default-extensions:

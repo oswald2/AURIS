@@ -16,7 +16,7 @@ module Data.PUS.TCPacketEncoder
 where
 
 
-import           RIO
+import           RIO                     hiding ( (.~) )
 
 import           Control.Lens                   ( makeLenses
                                                 , (.~)
@@ -57,7 +57,10 @@ encodeTCPacket pkt missionSpecific =
 
 
 
-tcPktEncoderC :: Monad m => PUSMissionSpecific -> ConduitT EncodedTCRequest EncodedTCPacket m ()
+tcPktEncoderC
+  :: Monad m
+  => PUSMissionSpecific
+  -> ConduitT EncodedTCRequest EncodedTCPacket m ()
 tcPktEncoderC missionSpecific = awaitForever $ \request -> do
   let req = request ^. encTcReqRqst
   case request ^. encTcReqContent of

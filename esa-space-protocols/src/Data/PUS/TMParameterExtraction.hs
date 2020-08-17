@@ -16,7 +16,7 @@ module Data.PUS.TMParameterExtraction
   )
 where
 
-import           RIO
+import           RIO                     hiding ( (.~) )
 
 import           Control.Lens                   ( (.~) )
 
@@ -69,9 +69,8 @@ checkString validity x = case T.fromByteString x of
 
 
 extractExtParameters :: ByteString -> [ExtParameter] -> Maybe [Parameter]
-extractExtParameters bytes = mapM proc 
-  where 
-    proc p = extParamToParam <$> getExtParameter' bytes p 
+extractExtParameters bytes = mapM proc
+  where proc p = extParamToParam <$> getExtParameter' bytes p
 
 
 
@@ -82,15 +81,13 @@ getExtParameter' bytes param =
       off                  = toOffset bitOffset
       value                = param ^. extParValue
   in  if bits == 0 && isSetableAligned value
-        then
-          case getAlignedValue bytes bo value of 
-            Just v -> Just $ param & extParValue .~ v 
-            Nothing -> Nothing 
+        then case getAlignedValue bytes bo value of
+          Just v  -> Just $ param & extParValue .~ v
+          Nothing -> Nothing
         else if isGettableUnaligned value
-          then 
-            case getUnalignedValue bytes off value of 
-              Just v -> Just $ param & extParValue .~ v 
-              Nothing -> Nothing 
+          then case getUnalignedValue bytes off value of
+            Just v  -> Just $ param & extParValue .~ v
+            Nothing -> Nothing
           else
                      -- in this case, we go to the next byte offset. According
                      -- to PUS, we cannot set certain values on non-byte boundaries

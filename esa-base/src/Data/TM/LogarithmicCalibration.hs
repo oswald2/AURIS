@@ -34,7 +34,7 @@ module Data.TM.LogarithmicCalibration
   )
 where
 
-import           RIO
+import           RIO                     hiding ( (.~) )
 
 import           Control.Lens                   ( makeLenses
                                                 , (.~)
