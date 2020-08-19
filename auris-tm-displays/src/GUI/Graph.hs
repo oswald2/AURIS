@@ -66,7 +66,7 @@ import           Graphics.UI.FLTK.LowLevel.Fl_Enumerations
 import qualified Graphics.UI.FLTK.LowLevel.FL  as FL
 
 -- import           Graphics.Rendering.Chart.Backend.FLTKHS
-import           Graphics.Rendering.Chart.Backend.Cairo
+import           Graphics.Rendering.Chart.Backend.GI.Cairo
 import           Graphics.Rendering.Chart as Ch
 import           Graphics.Rendering.Chart.Easy as Ch
                                          hiding ( (^.) )
@@ -78,8 +78,8 @@ import           GUI.NameDescrTable
 import           GUI.PopupMenu
 
 import Foreign.Ptr
-import Graphics.Rendering.Cairo.Internal (Render(runRender))
-import Graphics.Rendering.Cairo.Types (Cairo(Cairo))
+--import Graphics.Rendering.Cairo.Internal (Render(runRender))
+--import Graphics.Rendering.Cairo.Types (Cairo(Cairo))
 
 
 -- | The internal value of a graph. Used to get a 'Eq' and 'Ord' instance
@@ -547,12 +547,14 @@ drawChart graphVar offscreen widget = do
 
 
 drawingFunction :: Gtk.DrawingArea -> TVar Graph -> GI.Context -> IO Bool 
-drawingFunction drawingArea graphVar ctx = do 
-  graph      <- readTVarIO graphVar
-  width <- fromIntegral <$> #getAllocatedWidth drawingArea
-  height <- fromIntegral <$> #getAllocatedHeight drawingArea
+drawingFunction _ _ _ = return False
+
+-- drawingFunction drawingArea graphVar ctx = do 
+--   graph      <- readTVarIO graphVar
+--   width <- fromIntegral <$> #getAllocatedWidth drawingArea
+--   height <- fromIntegral <$> #getAllocatedHeight drawingArea
   
-  let rndr = runBackend (defaultEnv bitmapAlignmentFns) (render (chart graph) (width, height))
-  pickFn <- GI.withManagedPtr ctx $ \p -> runReaderT (runRender rndr) (Cairo (castPtr p))
-  atomically $ writeTVar graphVar (graph & graphPickFn ?~ pickFn)
-  return True
+--   let rndr = runBackend (defaultEnv bitmapAlignmentFns) (render (chart graph) (width, height))
+--   pickFn <- GI.withManagedPtr ctx $ \p -> runReaderT (runRender rndr) (Cairo (castPtr p))
+--   atomically $ writeTVar graphVar (graph & graphPickFn ?~ pickFn)
+--   return True
