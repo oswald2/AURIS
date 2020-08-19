@@ -288,7 +288,10 @@ graphWidgetAddParameters
   :: GraphWidget
   -> [(ShortText, Ch.LineStyle, Ch.PointStyle)]
   -> IO (HashSet ShortText)
-graphWidgetAddParameters gw = graphAddParameters' (gw ^. gwGraph)
+graphWidgetAddParameters gw params = do 
+  res <- graphAddParameters' (gw ^. gwGraph) params 
+  redrawGraph gw
+  return res
 
 
 graphAddParameters'

@@ -13,7 +13,7 @@ module GUI.TMParamTab
   )
 where
 
-import           RIO                     hiding ( (^.) )
+import           RIO                     hiding ( (^.), (.~))
 import qualified RIO.Vector                    as V
 import qualified RIO.Map                       as M
 import qualified Data.Text.IO                  as T
@@ -164,7 +164,8 @@ createTMParamTab builder = do
   paramSel' <- getObject builder "treeviewParameters" TreeView
   paramSel  <- createNameDescrTable paramSel' []
 
-
+  popupMenu <- getObject builder "popupTMParameters" Menu 
+  itemAddParams <- getObject builder "popAddParams" MenuItem 
 
   -- ref     <- newTVarIO emptyParDisplays
 
@@ -251,6 +252,17 @@ createTMParamTab builder = do
   -- --       redraw _tmParDisplayGroup
 
   -- -- setCallback (gui ^. tmParamDispSwitcher . tmParSwSingle) (setValues graphWidget)
+
+  let setValues tbl gw = do
+        items <- getSelectedItems tbl
+        let lineStyle = def & line_color .~ opaque Ch.blue & line_width .~ 1.0
+        let params = map ((, lineStyle, def). ST.fromText . _tableValName) items 
+        graphWidgetAddParameters gw params
+        return () 
+ 
+  void $ Gtk.on itemAddParams #activate (setValues paramSel graphWidget)
+
+  setPopupMenu paramSel popupMenu
 
   return gui
 

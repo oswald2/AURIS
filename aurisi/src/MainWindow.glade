@@ -36,13 +36,17 @@ Author: Michael Oswald
   <!-- interface-description AURISi - AURIS Integrated MCS -->
   <!-- interface-copyright Michael Oswald -->
   <!-- interface-authors Michael Oswald -->
-  <object class="GtkRadioButton" id="radiobuttonParamDisplays">
-    <property name="label" translatable="yes">radiobutton</property>
+  <object class="GtkMenu" id="popupTMParameters">
     <property name="visible">True</property>
-    <property name="can_focus">True</property>
-    <property name="receives_default">False</property>
-    <property name="active">True</property>
-    <property name="draw_indicator">True</property>
+    <property name="can_focus">False</property>
+    <child>
+      <object class="GtkMenuItem" id="popAddParams">
+        <property name="visible">True</property>
+        <property name="can_focus">False</property>
+        <property name="label" translatable="yes">Add Parameters to ...</property>
+        <property name="use_underline">True</property>
+      </object>
+    </child>
   </object>
   <object class="GtkTextBuffer" id="textbufferTMFrameDetails"/>
   <object class="GtkApplicationWindow" id="mainWindow">
