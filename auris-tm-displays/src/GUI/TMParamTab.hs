@@ -40,7 +40,7 @@ import           Data.TM.TMParameterDef
 import           Data.Display.Graphical
 
 import           GUI.Colors
-import           GUI.Graph
+import           GUI.GraphWidget
 import           GUI.ParamDisplay
 import           GUI.NameDescrTable
 import           GUI.PopupMenu

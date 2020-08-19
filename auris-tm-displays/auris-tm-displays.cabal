@@ -50,7 +50,8 @@ library
     GUI.TMPacketTab
     GUI.TMFrameTab
     GUI.TMParamTab
-    GUI.Graph
+    GUI.Chart
+    GUI.GraphWidget
     GUI.ParamDisplay
     Model.PUSPacketModel
     Model.TMPacketModel
