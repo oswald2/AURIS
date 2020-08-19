@@ -7,8 +7,8 @@ module GUI.GraphWidget
   , setupGraphWidget
   , graphWidgetInsertParamValue
   , emptyGraph
-  , graphAddParameter
-  , graphAddParameters
+  , graphWidgetAddParameter
+  , graphWidgetAddParameters
   , addParamFromSelector
   , drawChart
   , plotValName
@@ -84,12 +84,11 @@ import GI.Cairo.Render.Connector
 
 
 data GraphWidget = GraphWidget {
-  --_gwParent :: Ref Group
-  _gwDrawingArea :: !Gtk.DrawingArea
+  _gwParent :: !Gtk.Box
+  , _gwDrawingArea :: !Gtk.DrawingArea
   , _gwParamSelection :: !NameDescrTable
   , _gwGraph :: TVar Graph
   , _gwPickFn :: TVar (Maybe (PickFn ()))
-  --, _gwOffscreen :: FlOffscreen
 }
 makeLenses ''GraphWidget
 
@@ -106,25 +105,20 @@ graphWidgetSetChartName w name = do
 
 setupGraphWidget :: Gtk.Box -> Text -> NameDescrTable -> IO GraphWidget
 setupGraphWidget parent title paramSelector = do
-
   let graph = emptyGraph title
-
   var       <- newTVarIO graph
-
+  var2      <- newTVarIO Nothing 
   da <- Gtk.drawingAreaNew 
-
   Gtk.boxPackStart parent da True True 0
 
-
-  let g = GraphWidget { --_gwParent         = parent
-                      _gwDrawingArea    = da
+  let g = GraphWidget { _gwParent         = parent
+                      , _gwDrawingArea    = da
                       , _gwParamSelection = paramSelector
                       , _gwGraph          = var
-                      --, _gwOffscreen      = offscreen
+                      , _gwPickFn         = var2 
                       }
 
   void $ GI.on da #draw (drawingFunction g)
-
   return g
 
 
@@ -240,12 +234,14 @@ addParamFromSelector graphWidget table = do
       values = zipWith (\x (l, p) -> (ST.fromText (_tableValName x), l, p))
                        selItems
                        vec
-  void $ graphAddParameters graphWidget values
-  --redrawGraph graphWidget
+  void $ graphWidgetAddParameters graphWidget values
+  redrawGraph graphWidget
 
 
--- redrawGraph :: GraphWidget -> IO ()
--- redrawGraph gw = redraw (gw ^. gwDrawingArea)
+redrawGraph :: GraphWidget -> IO ()
+redrawGraph gw = do 
+  let da = gw ^. gwDrawingArea
+  Gtk.widgetQueueDraw da 
 
 
 -- | This function finally insert actual values to draw into the graph. Currently 
@@ -256,19 +252,19 @@ graphWidgetInsertParamValue gw params = do
     graph <- readTVar (gw ^. gwGraph)
     let newGraph = V.foldl graphInsertParamValue graph params
     writeTVar (gw ^. gwGraph) newGraph
-  --redrawGraph gw
+  redrawGraph gw
 
 -- | Add a parameter to the chart. The chart then accepts parameter values 
 -- for the parameters within it's '_graphParameters' field.
-graphAddParameter
+graphWidgetAddParameter
   :: GraphWidget
   -> ShortText
   -> Ch.LineStyle
   -> Ch.PointStyle
   -> IO (HashSet ShortText)
-graphAddParameter gw name lineStyle pointStyle = do
-  hs <- graphAddParameters gw [(name, lineStyle, pointStyle)]
-  --redrawGraph gw
+graphWidgetAddParameter gw name lineStyle pointStyle = do
+  hs <- graphWidgetAddParameters gw [(name, lineStyle, pointStyle)]
+  redrawGraph gw
   return hs
 
 
@@ -288,11 +284,11 @@ graphRemoveParameter' var name = do
 
 -- | Add multiple parameters to the chart. The chart then accepts parameter values 
 -- for the parameters within it's '_graphParameters' field.
-graphAddParameters
+graphWidgetAddParameters
   :: GraphWidget
   -> [(ShortText, Ch.LineStyle, Ch.PointStyle)]
   -> IO (HashSet ShortText)
-graphAddParameters gw = graphAddParameters' (gw ^. gwGraph)
+graphWidgetAddParameters gw = graphAddParameters' (gw ^. gwGraph)
 
 
 graphAddParameters'

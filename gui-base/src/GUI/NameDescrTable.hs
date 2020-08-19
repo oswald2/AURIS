@@ -7,6 +7,7 @@ module GUI.NameDescrTable
   , createNameDescrTable
   , getSelectedItems
   , setTableFromModel
+  , setPopupMenu
   )
 where
 
@@ -18,6 +19,7 @@ import           Control.Lens                   ( makeLenses
 import           GI.Gtk                        as Gtk
 import           Data.GI.Gtk.ModelView.SeqStore
 import           Data.GI.Gtk.ModelView.CellLayout
+import           GI.Gdk.Structs.EventButton
 --import           Data.GI.Base.Attributes
 
 
@@ -31,6 +33,7 @@ makeLenses ''TableValue
 data NameDescrTable = NameDescrTable {
   _nmdtView :: !TreeView 
   , _nmdtModel :: !(SeqStore TableValue)
+  , _nmdtMenu :: TVar (Maybe Menu)
   }
 makeLenses ''NameDescrTable
 
@@ -68,7 +71,13 @@ createNameDescrTable tv values = do
   treeViewSetEnableSearch tv True 
   treeViewSetSearchEqualFunc tv (searchFunc model)
 
-  return (NameDescrTable tv model) 
+  menu <- newTVarIO Nothing 
+
+  let g = NameDescrTable tv model menu 
+
+  void $ Gtk.on tv #buttonPressEvent (buttonCB g)
+
+  return g
 
   where 
     searchFunc model _ _ text iter = do 
@@ -79,6 +88,25 @@ createNameDescrTable tv values = do
           !res = (searchText `T.isPrefixOf` T.toLower (val ^. tableValName)) 
             || (searchText `T.isPrefixOf` T.toLower (val ^. tableValDescr)) 
       return res 
+
+
+setPopupMenu :: NameDescrTable -> Menu -> IO () 
+setPopupMenu tbl menu = atomically $ writeTVar (tbl ^. nmdtMenu) (Just menu)
+
+
+buttonCB :: NameDescrTable -> EventButton -> IO Bool 
+buttonCB tbl evtBtn = do 
+  bt <- getEventButtonButton evtBtn 
+  case bt of 
+    3 -> do --right mouse button 
+      mn <- readTVarIO (tbl ^. nmdtMenu)
+      case mn of 
+        Nothing -> return False 
+        Just menu -> do 
+          menuPopupAtPointer menu Nothing
+          return True 
+    _ -> return False 
+
 
 -- | gets the currently selected items in the table and returns a list of 
 -- the selected values

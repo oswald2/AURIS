@@ -132,6 +132,8 @@ data TMParamTab = TMParamTab {
   -- _tmParamTab :: Ref Group
   _tmParamDisplaysTab :: !Notebook
   , _tmParamDisplaySelector :: !Notebook
+  , _tmParamDisplaySwitcher :: !Notebook 
+  , _tmParamSingleBox :: !Box 
   -- , _tmParamGroupAND :: Ref Group
   -- , _tmParamGroupGRD :: Ref Group
   -- , _tmParamGroupSCD :: Ref Group
@@ -155,16 +157,18 @@ createTMParamTab builder = do
   dispNB    <- getObject builder "notebookDisplays" Notebook
 
   dispSel   <- getObject builder "notebookDisplaySelector" Notebook
+  switcher  <- getObject builder "notebookTMDisplays" Notebook
+
+  singleBox <- getObject builder "boxSingle" Box 
 
   paramSel' <- getObject builder "treeviewParameters" TreeView
   paramSel  <- createNameDescrTable paramSel' []
 
+
+
   -- ref     <- newTVarIO emptyParDisplays
 
   -- menuVar <- newTVarIO []
-
-  -- table   <- setupTable _tmParSelectionParamsGroup (Just menuVar)
-
 
   -- let callback dn x = do
   --       displays <- readTVarIO ref
@@ -193,13 +197,15 @@ createTMParamTab builder = do
 
   let gui = TMParamTab { _tmParamDisplaysTab     = dispNB
                        , _tmParamDisplaySelector = dispSel
+                       , _tmParamDisplaySwitcher = switcher
+                       , _tmParamSingleBox       = singleBox
                        , _tmParamSelector        = paramSel
                        }
 
   -- -- TODO to be changed, to test only a single, fixed chart
   -- --rects <- determineSize gui GSSingle
 
-  -- graphWidget <- setupGraphWidget _tmParDisplayGroup "TestGraph" table
+  graphWidget <- setupGraphWidget singleBox "TestGraph" paramSel
 
   -- atomically $ do
   --   writeTVar

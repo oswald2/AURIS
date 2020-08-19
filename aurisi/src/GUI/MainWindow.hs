@@ -62,7 +62,7 @@ import qualified Data.HashTable.ST.Basic       as HT
 import           GUI.TMPacketTab
 import           GUI.TMFrameTab
 import           GUI.TMParamTab
-import           GUI.Graph
+import           GUI.GraphWidget
 import           GUI.Colors
 import           GUI.Utils
 import           GUI.Logo
