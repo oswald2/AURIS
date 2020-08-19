@@ -72,8 +72,8 @@ library
     gui-base,
     text-short,
     Chart,
-    Chart-cairo,
-    Chart-diagrams,
+    Chart-gi-cairo,
+    -- Chart-diagrams,
     colour,
     data-default-class,
     multiset,
@@ -84,7 +84,6 @@ library
     gi-gtk-hs,
     gi-gobject,
     gi-cairo,
-    cairo,
     gi-cairo-connector,
     gi-cairo-render,
     haskell-gi-base
