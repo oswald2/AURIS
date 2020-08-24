@@ -13,6 +13,7 @@ where
 
 import           RIO
 import qualified RIO.Text as T
+import qualified Data.Text.IO as T
 import qualified RIO.List.Partial as P (head)
 import           Control.Lens                   ( makeLenses
                                                 )
@@ -37,13 +38,46 @@ data NameDescrTable = NameDescrTable {
   }
 makeLenses ''NameDescrTable
 
-createNameDescrTable :: TreeView -> [TableValue] -> IO NameDescrTable
-createNameDescrTable tv values = do 
+
+-- | Create a new 'NameDescrTable' within the given 'Box' and the 
+-- given list of 'TableValue'. The table is a 'TreeView' with a 
+-- filter model. At the bottom, a 'Entry' is added to enter the 
+-- filter values. 
+createNameDescrTable :: Box -> [TableValue] -> IO NameDescrTable
+createNameDescrTable mainBox values = do 
   model <- seqStoreNew values 
 
-  treeViewSetModel tv (Just model)
+  --treeViewSetModel tv (Just model)
 
-  treeViewSetHeadersVisible tv True 
+  -- add a filter entry and a label 
+  filterEntry <- new Entry []
+  filterLabel <- new Label [ #label := "Filter:"]
+  box <- boxNew OrientationHorizontal 0 
+  boxPackStart box filterLabel False False 5 
+  boxPackStart box filterEntry True True 5 
+
+  -- the main box is the treeview in a scrolled window and the 
+  -- filter entry box (label + entry) below
+  scrolledWin <- new ScrolledWindow []
+  tv <- new TreeView [ #enableGridLines := TreeViewGridLinesBoth, 
+    #headersVisible := True, 
+    #rulesHint := True, 
+    #searchColumn := 0 ]
+  containerAdd scrolledWin tv 
+
+  boxPackStart mainBox scrolledWin True True 5 
+  boxPackStart mainBox box False False 5 
+
+  -- create a filter model and set the child model
+  filterModel <- new TreeModelFilter [ #childModel := model ] 
+  -- set the filter function (see below)
+  treeModelFilterSetVisibleFunc filterModel (filterFunction model filterEntry)
+  -- now set the filter model for the TreeView
+  treeViewSetModel tv (Just filterModel)
+
+  -- set callback to retrigger the filtering 
+  after filterEntry #keyReleaseEvent (const $ treeModelFilterRefilter filterModel >> return False)
+
   selection <- treeViewGetSelection tv 
 
   treeSelectionSetMode selection SelectionModeMultiple
@@ -89,6 +123,17 @@ createNameDescrTable tv values = do
             || (searchText `T.isPrefixOf` T.toLower (val ^. tableValDescr)) 
       return res 
 
+    filterFunction model entry _ iter = do 
+      idx <- seqStoreIterToIndex iter 
+      val <- seqStoreGetValue model idx 
+      text <- get entry #text 
+      let searchText = T.toLower text
+          !res = (searchText `T.isInfixOf` T.toLower (val ^. tableValName)) 
+            || (searchText `T.isInfixOf` T.toLower (val ^. tableValDescr)) 
+      return res 
+
+
+
 
 setPopupMenu :: NameDescrTable -> Menu -> IO () 
 setPopupMenu tbl menu = atomically $ writeTVar (tbl ^. nmdtMenu) (Just menu)
@@ -119,8 +164,7 @@ getSelectedItems tbl = do
   (paths, _) <- treeSelectionGetSelectedRows sel 
 
   idxs <- traverse treePathGetIndices paths 
-
-  traverse (seqStoreGetValue model) ((P.head . catMaybes) idxs)
+  traverse (seqStoreGetValue model) ((concat . catMaybes) idxs)
 
 
 

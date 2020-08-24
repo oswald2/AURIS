@@ -223,9 +223,8 @@ mwAddTMFrame :: MainWindow -> ExtractedDU TMFrame -> IO ()
 mwAddTMFrame window = tmfTabAddRow (window ^. mwFrameTab)
 
 mwAddTMParameters :: MainWindow -> Vector TMParameter -> IO ()
-mwAddTMParameters _ _ = return ()
--- mwAddTMParameters window params = do
---   addParameterValues (window ^. mwTMParamTab) params
+mwAddTMParameters window params = do
+  addParameterValues (window ^. mwTMParamTab) params
 
 mwAddTMParameterDefinitions :: MainWindow -> Vector TMParameterDef -> IO ()
 mwAddTMParameterDefinitions window paramDefs = do

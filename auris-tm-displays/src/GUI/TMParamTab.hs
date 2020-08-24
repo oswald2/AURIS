@@ -43,50 +43,11 @@ import           GUI.Colors
 import           GUI.GraphWidget
 import           GUI.ParamDisplay
 import           GUI.NameDescrTable
-import           GUI.PopupMenu
+--import           GUI.PopupMenu
 import           GUI.Utils
 
 
--- data TMParamSwitcher = TMParamSwitcher {
---   _tmParSwSingle :: Ref LightButton
---   , _tmParSwHorzontal :: Ref LightButton
---   , _tmParSwVertical :: Ref LightButton
---   , _tmParSwFour :: Ref LightButton
--- }
--- makeLenses ''TMParamSwitcher
 
-
--- initSwitcher :: TMParamSwitcher -> IO ()
--- initSwitcher TMParamSwitcher {..} = do
---   -- set them to the radio button type_tmParamSelector
---   setType _tmParSwSingle    RadioButtonType
---   setType _tmParSwHorzontal RadioButtonType
---   setType _tmParSwVertical  RadioButtonType
---   setType _tmParSwFour      RadioButtonType
-
---   mcsLightButtonSetColor _tmParSwSingle
---   mcsLightButtonSetColor _tmParSwHorzontal
---   mcsLightButtonSetColor _tmParSwVertical
---   mcsLightButtonSetColor _tmParSwFour
-
-
-
-
--- data TMParamTabFluid = TMParamTabFluid {
---   _tmParTabGroup :: Ref Group
---   , _tmParDisplaysTab :: Ref Tabs
---   , _tmParGroupAND :: Ref Group
---   , _tmParGroupGRD :: Ref Group
---   , _tmParGroupSCD :: Ref Group
---   , _tmParBrowserAND :: Ref Browser
---   , _tmParBrowserGRD :: Ref Browser
---   , _tmParBrowserSCD :: Ref Browser
---   , _tmParSelectionTab :: Ref Tabs
---   , _tmParSelectionDispGroup :: Ref Group
---   , _tmParSelectionParamsGroup :: Ref Group
---   , _tmParDisplayGroup :: Ref Group
---   , _tmParDispSwitcher :: TMParamSwitcher
--- }
 
 data GraphSelector =
   GSSingle
@@ -134,6 +95,7 @@ data TMParamTab = TMParamTab {
   , _tmParamDisplaySelector :: !Notebook
   , _tmParamDisplaySwitcher :: !Notebook 
   , _tmParamSingleBox :: !Box 
+  , _tmParamBrowserBox :: !Box 
   -- , _tmParamGroupAND :: Ref Group
   -- , _tmParamGroupGRD :: Ref Group
   -- , _tmParamGroupSCD :: Ref Group
@@ -145,7 +107,7 @@ data TMParamTab = TMParamTab {
   -- , _tmParamSelectionParamsGroup :: Ref Group
   -- , _tmParamDisplayGroup :: Ref Group
   -- , _tmParamDispSwitcher :: TMParamSwitcher
-  -- , _tmParamDisplays :: TVar ParDisplays
+  , _tmParamDisplays :: TVar ParDisplays
   , _tmParamSelector :: !NameDescrTable
 }
 makeLenses ''TMParamTab
@@ -160,14 +122,15 @@ createTMParamTab builder = do
   switcher  <- getObject builder "notebookTMDisplays" Notebook
 
   singleBox <- getObject builder "boxSingle" Box 
+  browserBox <- getObject builder "boxTMParameterBrowser" Box
 
-  paramSel' <- getObject builder "treeviewParameters" TreeView
-  paramSel  <- createNameDescrTable paramSel' []
+  --paramSel' <- getObject builder "treeviewParameters" TreeView
+  paramSel  <- createNameDescrTable browserBox []
 
   popupMenu <- getObject builder "popupTMParameters" Menu 
   itemAddParams <- getObject builder "popAddParams" MenuItem 
 
-  -- ref     <- newTVarIO emptyParDisplays
+  ref     <- newTVarIO emptyParDisplays
 
   -- menuVar <- newTVarIO []
 
@@ -201,6 +164,8 @@ createTMParamTab builder = do
                        , _tmParamDisplaySwitcher = switcher
                        , _tmParamSingleBox       = singleBox
                        , _tmParamSelector        = paramSel
+                       , _tmParamDisplays        = ref 
+                       , _tmParamBrowserBox      = browserBox 
                        }
 
   -- -- TODO to be changed, to test only a single, fixed chart
@@ -208,15 +173,15 @@ createTMParamTab builder = do
 
   graphWidget <- setupGraphWidget singleBox "TestGraph" paramSel
 
-  -- atomically $ do
-  --   writeTVar
-  --     ref
-  --     (ParDisplays GSSingle
-  --                  (Just (GraphDisplay graphWidget))
-  --                  Nothing
-  --                  Nothing
-  --                  Nothing
-  --     )
+  atomically $ do
+    writeTVar
+      ref
+      (ParDisplays GSSingle
+                   (Just (GraphDisplay graphWidget))
+                   Nothing
+                   Nothing
+                   Nothing
+      )
 
   -- -- now add a parameter to watch 
   -- -- let lineStyle = def & line_color .~ opaque Ch.blue & line_width .~ 1.0
@@ -257,8 +222,7 @@ createTMParamTab builder = do
         items <- getSelectedItems tbl
         let lineStyle = def & line_color .~ opaque Ch.blue & line_width .~ 1.0
         let params = map ((, lineStyle, def). ST.fromText . _tableValName) items 
-        graphWidgetAddParameters gw params
-        return () 
+        void $ graphWidgetAddParameters gw params
  
   void $ Gtk.on itemAddParams #activate (setValues paramSel graphWidget)
 
@@ -285,14 +249,13 @@ addParameterDefinitions gui params = do
 
 -- | New parameter values have arrived, add them to the available displays
 addParameterValues :: TMParamTab -> Vector TMParameter -> IO ()
-addParameterValues gui values = return ()
-  --  do
-  -- displays <- readTVarIO (gui ^. tmParamDisplays)
+addParameterValues gui values = do
+  displays <- readTVarIO (gui ^. tmParamDisplays)
 
-  -- maybe (return ()) (`paramDispInsertValues` values) (displays ^. parDisp1)
-  -- maybe (return ()) (`paramDispInsertValues` values) (displays ^. parDisp2)
-  -- maybe (return ()) (`paramDispInsertValues` values) (displays ^. parDisp3)
-  -- maybe (return ()) (`paramDispInsertValues` values) (displays ^. parDisp4)
+  maybe (return ()) (`paramDispInsertValues` values) (displays ^. parDisp1)
+  maybe (return ()) (`paramDispInsertValues` values) (displays ^. parDisp2)
+  maybe (return ()) (`paramDispInsertValues` values) (displays ^. parDisp3)
+  maybe (return ()) (`paramDispInsertValues` values) (displays ^. parDisp4)
 
 
 -- addGRDs :: TMParamTab -> Map ST.ShortText GRD -> IO ()

@@ -96,12 +96,12 @@ defaultTimeScaleSettings =
 
 chartColors :: [AlphaColour Double]
 chartColors = cycle
-  [ opaque blue
-  , opaque crimson
+  [ opaque white
+  , opaque yellow
   , opaque forestgreen
   , opaque firebrick
   , opaque azure
-  , opaque forestgreen
+  , opaque lightgreen 
   , opaque fuchsia
   , opaque gold
   , opaque blanchedalmond
