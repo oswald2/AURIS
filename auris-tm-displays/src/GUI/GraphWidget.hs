@@ -10,7 +10,7 @@ module GUI.GraphWidget
   , graphWidgetAddParameter
   , graphWidgetAddParameters
   , addParamFromSelector
-  , drawChart
+  -- , drawChart
   , plotValName
   , plotValLineType
   , plotValPointStyle
@@ -57,13 +57,6 @@ import qualified GI.Gtk as Gtk
 import qualified GI.Cairo as GI
 import qualified Data.GI.Base.Attributes as GI
 
-import           Graphics.UI.FLTK.LowLevel.FLTKHS
-                                               as FL
-import           Graphics.UI.FLTK.LowLevel.Fl_Enumerations
---import           Graphics.UI.FLTK.LowLevel.Fl_Types
-import qualified Graphics.UI.FLTK.LowLevel.FL  as FL
-
--- import           Graphics.Rendering.Chart.Backend.FLTKHS
 import           Graphics.Rendering.Chart.Backend.GI.Cairo
 import           Graphics.Rendering.Chart as Ch
 import           Graphics.Rendering.Chart.Easy as Ch
@@ -73,7 +66,6 @@ import           Graphics.Rendering.Chart.Easy as Ch
 
 
 import           GUI.NameDescrTable
-import           GUI.PopupMenu
 import           GUI.Chart
 
 import Foreign.Ptr
@@ -175,32 +167,32 @@ setupGraphWidget parent title paramSelector = do
 --   -- redraw widget
 
 
-handleRemoveParam :: TVar Graph -> Ref Widget -> Text -> Ref MenuItem -> IO ()
-handleRemoveParam var widget param _ = do
-  void $ graphRemoveParameter' var (ST.fromText param)
-  redraw widget
+-- handleRemoveParam :: TVar Graph -> Ref Widget -> Text -> Ref MenuItem -> IO ()
+-- handleRemoveParam var widget param _ = do
+--   void $ graphRemoveParameter' var (ST.fromText param)
+--   redraw widget
 
 
-handlePrintToFile :: TVar Graph -> Ref MenuItem -> IO ()
-handlePrintToFile gw _ = do
-  graph   <- readTVarIO gw
-  chooser <- nativeFileChooserNew (Just BrowseSaveFile)
-  setTitle chooser "Save Chart..."
-  setFilter chooser "SVG\t*.svg"
-  setOptions chooser [SaveasConfirm, NewFolder, Preview, UseFilterExt]
-  setPresetFile chooser $ graph ^. graphName <> ".svg"
-  res <- showWidget chooser
-  case res of
-    NativeFileChooserPicked -> do
-      name' <- getFilename chooser
-      case name' of
-        Just name -> do
+-- handlePrintToFile :: TVar Graph -> Ref MenuItem -> IO ()
+-- handlePrintToFile gw _ = do
+--   graph   <- readTVarIO gw
+--   chooser <- nativeFileChooserNew (Just BrowseSaveFile)
+--   setTitle chooser "Save Chart..."
+--   setFilter chooser "SVG\t*.svg"
+--   setOptions chooser [SaveasConfirm, NewFolder, Preview, UseFilterExt]
+--   setPresetFile chooser $ graph ^. graphName <> ".svg"
+--   res <- showWidget chooser
+--   case res of
+--     NativeFileChooserPicked -> do
+--       name' <- getFilename chooser
+--       case name' of
+--         Just name -> do
 
-          let options = def & fo_format .~ SVG
+--           let options = def & fo_format .~ SVG
 
-          void $ renderableToFile options (T.unpack name) (chart graph)
-        _ -> return ()
-    _ -> return ()
+--           void $ renderableToFile options (T.unpack name) (chart graph)
+--         _ -> return ()
+--     _ -> return ()
 
 
 numParameters :: TVar Graph -> IO Int
@@ -209,19 +201,19 @@ numParameters var = do
   return (HS.size (graph ^. graphParameters))
 
 
-addParamFromSelection
-  :: TVar Graph -> NameDescrTable -> Ref Widget -> Ref MenuItem -> IO ()
-addParamFromSelection var paramSelector widget _item = do
-  selItems <- getSelectedItems paramSelector
-  num      <- numParameters var
+-- addParamFromSelection
+--   :: TVar Graph -> NameDescrTable -> Ref Widget -> Ref MenuItem -> IO ()
+-- addParamFromSelection var paramSelector widget _item = do
+--   selItems <- getSelectedItems paramSelector
+--   num      <- numParameters var
 
-  let vec    = drop (num - 1) chartStyles
-      values = zipWith (\x (l, p) -> (ST.fromText (_tableValName x), l, p))
-                       selItems
-                       vec
+--   let vec    = drop (num - 1) chartStyles
+--       values = zipWith (\x (l, p) -> (ST.fromText (_tableValName x), l, p))
+--                        selItems
+--                        vec
 
-  void $ graphAddParameters' var values
-  redraw widget
+--   void $ graphAddParameters' var values
+--   redraw widget
 
 
 
@@ -338,9 +330,9 @@ chart Graph {..} = toRenderable layout
       .~ plots
 
 
-drawChart :: TVar Graph -> FlOffscreen -> Ref Widget -> IO ()
-drawChart _graphVar _offscreen _widget = do
-  return ()
+-- drawChart :: TVar Graph -> FlOffscreen -> Ref Widget -> IO ()
+-- drawChart _graphVar _offscreen _widget = do
+--   return ()
   -- rectangle' <- getRectangle widget
   -- graph      <- readTVarIO graphVar
   -- withFlClip rectangle' $ void $ renderToWidgetOffscreen widget

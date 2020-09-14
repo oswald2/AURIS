@@ -36,9 +36,6 @@ import           Data.GI.Base.Attributes
 import           GUI.Colors
 import           GUI.Definitions
 
-import           Model.ScrollingTableModel
-
-
 -- | Generic GTK function for adding a new row in a 'SeqStore a'. This is 
 -- intended for the live-view as only 'defMaxRowTM' rows will be added. When
 -- this limit is reached, the oldest row will be removed first.
@@ -123,6 +120,7 @@ createScrollingTable tv constr attribs = do
     cellLayoutSetAttributes col renderer model attr
     void $ treeViewAppendColumn tv col
     return (name, col, renderer)
+
 
 
 

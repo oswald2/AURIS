@@ -53,17 +53,12 @@ library
     GUI.Chart
     GUI.GraphWidget
     GUI.ParamDisplay
-    Model.PUSPacketModel
-    Model.TMPacketModel
-    Model.TMPParamModel
-    Model.TMFrameModel
 
 
 
   Hs-Source-Dirs: src/
   Build-Depends:
     base == 4.*,
-    fltkhs >= 0.8.0.2,
     text >= 1.2.2.0,
     rio,
     lens,

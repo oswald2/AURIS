@@ -15,7 +15,7 @@ name:                gui-base
 version:             0.1.0.0
 
 -- A short (one-line) description of the package.
-synopsis:            Base library for fltkhs GUI related functions
+synopsis:            Base library for GUI related functions
 
 -- A longer description of the package.
 -- description:
@@ -66,11 +66,9 @@ library
     GUI.Utils
     GUI.ScrollingTable
     GUI.NameDescrTable
-    GUI.PopupMenu
     GUI.StatusEntry
     GUI.TextView
     GUI.Definitions
-    Model.ScrollingTableModel
 
   -- Modules included in this library but not exported.
   -- other-modules:
@@ -81,7 +79,6 @@ library
   -- Other library packages from which modules are imported.
   build-depends:       base ==4.*
     , rio
-    , fltkhs >= 0.8.0.2
     , containers
     , lens
     , text
@@ -155,22 +152,3 @@ library
                      -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
                      -funbox-strict-fields -freverse-errors
 
-
-benchmark PerfTableModel 
-    type: exitcode-stdio-1.0
-    main-is: PerfTableModel.hs
-    default-language: Haskell2010
-    hs-source-dirs: src/bench
-    ghc-options: -Wall -O2 -fno-specialise -fmax-simplifier-iterations=0 -fsimplifier-phases=0 -rtsopts
-    if !os(darwin) && !os(windows)
-       ghc-options: -pgml g++ "-optl-Wl,--allow-multiple-definition" "-optl-Wl,--whole-archive" "-optl-Wl,-Bstatic" "-optl-Wl,-lfltkc" "-optl-Wl,-Bdynamic" "-optl-Wl,--no-whole-archive"
-    build-depends:
-      base ==4.*
-      , rio
-      , fltkhs >= 0.8.0.2
-      , containers
-      , lens
-      , text
-      , vector
-      , criterion
-      , gui-base 

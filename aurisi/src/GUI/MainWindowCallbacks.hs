@@ -25,7 +25,7 @@ import           GUI.TMPacketTab
 import           GUI.TMFrameTab
 import           GUI.About
 
-import           Model.ScrollingTableModel
+--import           Model.ScrollingTableModel
 
 import           General.APID
 import           General.PUSTypes
