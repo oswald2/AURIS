@@ -77,31 +77,31 @@ eventProcessor g (EventPUS (EVTelemetry (EVTMRejectedSpillOverPkt pkt))) = do
 
 
 eventProcessor g (EventPUS (EVAlarms EVNctrsTmConnected)) = do
-  withFLLock (mwNCTRSConnection g True)
+  postGUIASync (mwNCTRSConnection g True)
 eventProcessor g (EventPUS (EVAlarms EVNctrsTmDisconnected)) = do
-  withFLLock (mwNCTRSConnection g False)
+  postGUIASync (mwNCTRSConnection g False)
 eventProcessor g (EventPUS (EVAlarms EVCncTmConnected)) = do
-  withFLLock (mwCnCConnection g True)
+  postGUIASync (mwCnCConnection g True)
 eventProcessor g (EventPUS (EVAlarms EVCncTmDisconnected)) = do
-  withFLLock (mwCnCConnection g False)
+  postGUIASync (mwCnCConnection g False)
 eventProcessor g (EventPUS (EVAlarms (EVPacketInfo txt))) = do
-  withFLLock (mwLogInfo g txt)
+  postGUIASync (mwLogInfo g txt)
 eventProcessor g (EventPUS (EVAlarms (EVPacketWarn txt))) = do
-  withFLLock (mwLogWarn g txt)
+  postGUIASync (mwLogWarn g txt)
 eventProcessor g (EventPUS (EVAlarms (EVPacketAlarm txt))) = do
-  withFLLock (mwLogAlarm g txt)
+  postGUIASync (mwLogAlarm g txt)
 eventProcessor g (EventPUS (EVAlarms (EVIllegalTCFrame txt))) = do
-  withFLLock (mwLogWarn g txt)
+  postGUIASync (mwLogWarn g txt)
 eventProcessor g (EventPUS (EVAlarms (EVIllegalTMFrame txt))) = do
-  withFLLock (mwLogWarn g txt)
+  postGUIASync (mwLogWarn g txt)
 eventProcessor g (EventPUS (EVAlarms (EVNCDUParseError txt))) = do
-  withFLLock (mwLogWarn g txt)
+  postGUIASync (mwLogWarn g txt)
 eventProcessor g (EventPUS (EVAlarms (EVEDENParseError txt))) = do
-  withFLLock (mwLogWarn g txt)
+  postGUIASync (mwLogWarn g txt)
 eventProcessor g (EventPUS (EVAlarms (EVIllegalPUSPacket txt))) = do
-  withFLLock (mwLogWarn g txt)
+  postGUIASync (mwLogWarn g txt)
 eventProcessor g (EventPUS (EVAlarms (EVIllegalAction txt))) = do
-  withFLLock (mwLogWarn g txt)
+  postGUIASync (mwLogWarn g txt)
 
 eventProcessor _ _ = pure ()
 

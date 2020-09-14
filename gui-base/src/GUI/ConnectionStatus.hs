@@ -1,6 +1,8 @@
 module GUI.ConnectionStatus
   ( ConnectionStatus
+  , ConnectionState(..)
   , newConnectionStatus
+  , setConnectionState
   )
 where
 
@@ -12,6 +14,14 @@ import           GI.Gtk                        as Gtk
 import           GUI.StatusEntry
 
 import           Protocol.ProtocolInterfaces
+
+
+
+data ConnectionState = 
+  Accepting
+  | Connected 
+  | Disconnected
+
 
 data ConnectionStatus = ConnectionStatus {
   _connStatEntry :: StatusEntry
@@ -63,3 +73,9 @@ newConnectionStatus interface host port = do
   interf (IfCnc      x) = "C&C " <> textDisplay x
   interf (IfEden     x) = "EDEN " <> textDisplay x
   interf (IfEdenScoe x) = "EDEN SCOE " <> textDisplay x
+
+
+setConnectionState :: ConnectionStatus -> ConnectionState -> IO () 
+setConnectionState ConnectionStatus {..} Accepting = statusEntrySetState _connStatEntry ESWarn "ACCEPTING"
+setConnectionState ConnectionStatus {..} Disconnected = statusEntrySetState _connStatEntry ESError "DISCONNECTED"
+setConnectionState ConnectionStatus {..} Connected = statusEntrySetState _connStatEntry ESGreen "CONNECTED"
