@@ -69,6 +69,7 @@ library
     GUI.StatusEntry
     GUI.TextView
     GUI.Definitions
+    GUI.ConnectionStatus
 
   -- Modules included in this library but not exported.
   -- other-modules:
@@ -88,6 +89,7 @@ library
     , gi-gobject
     , gi-gdk
     , haskell-gi-base
+    , esa-space-protocols
 
 
   default-extensions:

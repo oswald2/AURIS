@@ -13,8 +13,8 @@ where
 
 import           RIO
 import qualified RIO.Text as T
-import qualified Data.Text.IO as T
-import qualified RIO.List.Partial as P (head)
+--import qualified Data.Text.IO as T
+--import qualified RIO.List.Partial as P (head)
 import           Control.Lens                   ( makeLenses
                                                 )
 import           GI.Gtk                        as Gtk
@@ -76,7 +76,7 @@ createNameDescrTable mainBox values = do
   treeViewSetModel tv (Just filterModel)
 
   -- set callback to retrigger the filtering 
-  after filterEntry #keyReleaseEvent (const $ treeModelFilterRefilter filterModel >> return False)
+  void $ after filterEntry #keyReleaseEvent (const $ treeModelFilterRefilter filterModel >> return False)
 
   selection <- treeViewGetSelection tv 
 

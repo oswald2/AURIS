@@ -5,7 +5,6 @@
 #-}
 module GUI.Utils
   ( getObject
-  , withFLLock
   )
 where
 
@@ -29,4 +28,3 @@ getObject builder obj gtkConstr = do
 
 
 
-withFLLock _ = return ()
