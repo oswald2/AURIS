@@ -6,7 +6,7 @@
 module Main where
 
 
-import           RIO
+import           RIO                     hiding ( (.~) )
 import qualified RIO.ByteString                as B
 import qualified RIO.Text                      as T
 import qualified Data.Text.IO                  as T
@@ -37,7 +37,7 @@ import           Data.PUS.CRC
 
 import           General.Types
 import           General.Chunks
-import           General.Hexdump
+--import           General.Hexdump
 import           General.Time
 import           General.GetBitField
 
@@ -113,7 +113,7 @@ pusPacketEncoding _cfg = do
       decodedPusPkt = decodePktMissionSpecific
         encPusPkt
         (defaultMissionSpecific defaultConfig)
-        IF_NCTRS
+        (IfNctrs 1)
 
   -- T.putStrLn $ hexdumpBS encPusPkt
   -- T.putStrLn $ T.pack (show decodedPusPkt)
@@ -141,7 +141,7 @@ pusPacketExtraction cfg = do
                                   tmFrameDefaultHeader
                                   encPusPkt
 
-      conduit = C.sourceList frames .| tmFrameExtraction IF_NCTRS .| C.consume
+      conduit = C.sourceList frames .| tmFrameExtraction (IfNctrs 1) .| C.consume
 
   --T.putStrLn $ T.pack (show frames)
 
@@ -192,7 +192,7 @@ testFrameExtraction2 cfg = do
     extractedPacket = ExtractedDU
       { _epQuality = toFlag Good True
       , _epGap     = Nothing
-      , _epSource  = IF_NCTRS
+      , _epSource  = IfNctrs 1
       , _epERT     = now
       , _epVCID    = mkVCID 0
       , _epDU      = PUSPacket
@@ -219,7 +219,7 @@ testFrameExtraction2 cfg = do
       }
 
     conduit =
-      C.sourceList [storeFrame] .| tmFrameExtraction IF_NCTRS .| C.consume
+      C.sourceList [storeFrame] .| tmFrameExtraction (IfNctrs 1) .| C.consume
 
   result <- runRIOTestAction (runConduit conduit)
 
@@ -267,7 +267,7 @@ missingFrame cfg = do
     drop2nd (x : _y : xs) = x : xs
 
     conduit =
-      C.sourceList storeFrames .| tmFrameExtraction IF_NCTRS .| C.consume
+      C.sourceList storeFrames .| tmFrameExtraction (IfNctrs 1) .| C.consume
 
   -- T.putStrLn $ "Frames:\n" <> T.pack (show frames')
   -- T.putStrLn $ "Frames (drop):\n" <> T.pack (show frames)
