@@ -44,6 +44,7 @@
             {
                 "cfgEdenID": 1,
                 "cfgEdenHost": "localhost",
+                "cfgEdenType": "SCOE",
                 "cfgEdenPort": 40300
             }
         ],
