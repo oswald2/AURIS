@@ -76,14 +76,8 @@ eventProcessor g (EventPUS (EVTelemetry (EVTMRejectedSpillOverPkt pkt))) = do
 
 
 
-eventProcessor g (EventPUS (EVAlarms EVNctrsTmConnected)) = do
-  postGUIASync (mwNCTRSConnection g True)
-eventProcessor g (EventPUS (EVAlarms EVNctrsTmDisconnected)) = do
-  postGUIASync (mwNCTRSConnection g False)
-eventProcessor g (EventPUS (EVAlarms EVCncTmConnected)) = do
-  postGUIASync (mwCnCConnection g True)
-eventProcessor g (EventPUS (EVAlarms EVCncTmDisconnected)) = do
-  postGUIASync (mwCnCConnection g False)
+eventProcessor g (EventPUS (EVAlarms (EVEConnection i l c))) = 
+  postGUIASync (mwSetConnectionState g i l c)
 eventProcessor g (EventPUS (EVAlarms (EVPacketInfo txt))) = do
   postGUIASync (mwLogInfo g txt)
 eventProcessor g (EventPUS (EVAlarms (EVPacketWarn txt))) = do

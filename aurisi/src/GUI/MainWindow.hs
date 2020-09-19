@@ -38,8 +38,7 @@ module GUI.MainWindow
   --, mwMainMenu
   --, mwAboutWindow
   , mwFrameTab
-  , mwNCTRSConnection
-  , mwCnCConnection
+  , mwSetConnectionState
   , mwInitialiseDataModel
   , mwTimerLabelCB
   )
@@ -62,6 +61,8 @@ import qualified Data.HashTable.ST.Basic       as HT
 import           GUI.TMPacketTab
 import           GUI.TMFrameTab
 import           GUI.TMParamTab
+import           GUI.ConnectionTab
+import           GUI.ConnectionStatus
 import           GUI.GraphWidget
 import           GUI.Colors
 import           GUI.Utils
@@ -73,6 +74,8 @@ import           Data.PUS.TMPacket
 import           Data.PUS.ExtractedDU
 import           Data.PUS.TMFrame
 
+import           Protocol.ProtocolInterfaces
+
 import           Data.DataModel
 
 import           Data.TM.Parameter
@@ -83,6 +86,8 @@ import           General.Time
 import           GI.Gtk                        as Gtk
 import           GI.GObject.Objects.Object      ( Object )
 import           Data.FileEmbed
+
+import           AurisConfig
 
 
 data MainMenu = MainMenu {
@@ -200,6 +205,7 @@ data MainWindow = MainWindow {
     -- , _mwMainMenu :: MainMenu
     -- , _mwAboutWindow :: AboutWindowFluid
     , _mwFrameTab :: TMFrameTab
+    , _mwConnTab :: ConnectionTab
     -- , _mwNCTRSConn :: NctrsConnGroup
     -- , _mwCnCConn :: CncConnGroup
     -- , _mwEdenConn :: EdenConnGroup
@@ -253,8 +259,8 @@ gladeFile =
 
 
 
-createMainWindow :: IO MainWindow
-createMainWindow = do
+createMainWindow :: AurisConfig -> IO MainWindow
+createMainWindow cfg = do
   builder <- builderNewFromString gladeFile (fromIntegral (T.length gladeFile))
 
   window       <- getObject builder "mainWindow" Window
@@ -264,11 +270,14 @@ createMainWindow = do
   logo         <- getObject builder "logo" Image
   timeLabel    <- getObject builder "labelTime" Label
 
+  -- create the tabs in the notebook
   tmfTab       <- createTMFTab builder
   tmpTab       <- createTMPTab builder
-  msgDisp      <- createMessageDisplay builder
-
   paramTab     <- createTMParamTab builder
+  connTab      <- createConnectionTab (aurisPusConfig cfg) builder
+
+  -- create the message display
+  msgDisp      <- createMessageDisplay builder
 
   setLogo logo 65 65
 
@@ -280,6 +289,7 @@ createMainWindow = do
                        , _mwTMPTab         = tmpTab
                        , _mwTimeLabel      = timeLabel
                        , _mwTMParamTab     = paramTab
+                       , _mwConnTab        = connTab
                        }
 
   void $ Gtk.on aboutItem #activate $ do
@@ -289,6 +299,7 @@ createMainWindow = do
 
 
   return gui
+
 
 
 -- createMainWindow :: MainWindowFluid -> AboutWindowFluid -> IO MainWindow
@@ -380,18 +391,8 @@ mwTimerLabelCB window = do
 
 
 
+mwSetConnectionState
+  :: MainWindow -> ProtocolInterface -> ConnType -> ConnectionState -> IO ()
+mwSetConnectionState g = connTabSetConnection (_mwConnTab g)
 
-mwNCTRSConnection :: MainWindow -> Bool -> IO ()
-mwNCTRSConnection _ _ = return ()
--- mwNCTRSConnection MainWindow {..} True =
---   mcsBoxGreen (_mwNCTRSConn ^. mfNctrsTMConn) txtConnected
--- mwNCTRSConnection MainWindow {..} False =
---   mcsBoxAlarm (_mwNCTRSConn ^. mfNctrsTMConn) txtDisconnected
-
-mwCnCConnection :: MainWindow -> Bool -> IO ()
-mwCnCConnection _ _ = return ()
--- mwCnCConnection MainWindow {..} True =
---   mcsBoxGreen (_mwCnCConn ^. mfCncTMConn) txtConnected
--- mwCnCConnection MainWindow {..} False =
---   mcsBoxAlarm (_mwCnCConn ^. mfCncTMConn) txtDisconnected
 

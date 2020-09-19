@@ -143,12 +143,12 @@ library
   if flag(llvm)
         ghc-options: -O2 -Wall -Wcompat -Widentities -Wincomplete-record-updates
                      -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
-                     -funbox-strict-fields -fllvm -optlo-O3
+                     -funbox-strict-fields -freverse-errors -fllvm -optlo-O3
   else 
     if flag(optimize) 
         ghc-options: -O2 -Wall -Wcompat -Widentities -Wincomplete-record-updates
                      -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
-                     -funbox-strict-fields
+                     -funbox-strict-fields -freverse-errors 
     else 
         ghc-options: -O0 -Wall -Wcompat -Widentities -Wincomplete-record-updates
                      -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields

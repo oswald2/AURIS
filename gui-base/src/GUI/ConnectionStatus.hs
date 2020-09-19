@@ -1,6 +1,5 @@
 module GUI.ConnectionStatus
   ( ConnectionStatus
-  , ConnectionState(..)
   , newConnectionStatus
   , setConnectionState
   , connStatFrame
@@ -18,11 +17,6 @@ import           Protocol.ProtocolInterfaces
 
 
 
-data ConnectionState = 
-  Accepting
-  | Connected 
-  | Disconnected
-
 
 data ConnectionStatus = ConnectionStatus {
   _connStatEntry :: StatusEntry
@@ -34,15 +28,23 @@ data ConnectionStatus = ConnectionStatus {
   }
 
 
-connStatFrame :: ConnectionStatus -> Frame 
+connStatFrame :: ConnectionStatus -> Frame
 connStatFrame = _connStatFrame
 
 
 newConnectionStatus
-  :: ProtocolInterface -> Text -> Word16 -> IO ConnectionStatus
-newConnectionStatus interface host port = do
+  :: ProtocolInterface -> Text -> Text -> Word16 -> IO ConnectionStatus
+newConnectionStatus interface connType host port = do
 
-  frame     <- frameNew (Just (interf interface))
+  frame <- frameNew (Just (interf interface connType))
+  t     <- getFrameLabelWidget frame 
+  case t of
+    Nothing -> return ()
+    Just t2 -> do
+      castTo Label t2 >>= \case
+        Nothing -> return () 
+        Just titleLabel -> labelSetUseMarkup titleLabel True
+
   grid      <- gridNew
 
   hostlabel <- labelNew (Just "Host:")
@@ -55,12 +57,13 @@ newConnectionStatus interface host port = do
   gridAttach grid portlabel 0 1 1 1
   gridAttach grid portl     1 1 1 1
 
-  entry <- entryNew
+  entry  <- entryNew
   status <- statusEntrySetupCSS entry
+  entrySetAlignment entry 0.5
 
-  box <- boxNew OrientationHorizontal 0 
-  boxPackStart box grid False False 5 
-  boxPackStart box entry True True 5 
+  box <- boxNew OrientationHorizontal 0
+  boxPackStart box grid  False False 5
+  boxPackStart box entry True  True  5
 
   containerAdd frame box
 
@@ -71,16 +74,22 @@ newConnectionStatus interface host port = do
                            , _connStatHost     = hostl
                            , _connStatPort     = portl
                            }
+
+  setConnectionState g Disconnected
+
   return g
 
  where
-  interf (IfNctrs    x) = "NCTRS " <> textDisplay x
-  interf (IfCnc      x) = "C&C " <> textDisplay x
-  interf (IfEden     x) = "EDEN " <> textDisplay x
-  interf (IfEdenScoe x) = "EDEN SCOE " <> textDisplay x
+  interf (IfNctrs    x) t = "<b>NCTRS " <> textDisplay x <> " (" <> t <> ")</b>"
+  interf (IfCnc      x) t = "<b>CnC " <> textDisplay x <> " (" <> t <> ")</b>"
+  interf (IfEden     x) _ = "<b>EDEN " <> textDisplay x <> "</b>"
+  interf (IfEdenScoe x) _ = "<b>EDEN SCOE " <> textDisplay x <> "</b>"
 
 
-setConnectionState :: ConnectionStatus -> ConnectionState -> IO () 
-setConnectionState ConnectionStatus {..} Accepting = statusEntrySetState _connStatEntry ESWarn "ACCEPTING"
-setConnectionState ConnectionStatus {..} Disconnected = statusEntrySetState _connStatEntry ESError "DISCONNECTED"
-setConnectionState ConnectionStatus {..} Connected = statusEntrySetState _connStatEntry ESGreen "CONNECTED"
+setConnectionState :: ConnectionStatus -> ConnectionState -> IO ()
+setConnectionState ConnectionStatus {..} Accepting =
+  statusEntrySetState _connStatEntry ESWarn "ACCEPTING"
+setConnectionState ConnectionStatus {..} Disconnected =
+  statusEntrySetState _connStatEntry ESError "DISCONNECTED"
+setConnectionState ConnectionStatus {..} Connected =
+  statusEntrySetState _connStatEntry ESGreen "CONNECTED"

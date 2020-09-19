@@ -11,6 +11,8 @@ module Protocol.ProtocolInterfaces
         ProtocolInterface(..)
         , ProtocolPacket(..)
         , ProtocolDestination(..)
+        , ConnectionState(..)
+        , ConnType(..)
         , protInterface
         , protContent
         , isNctrs
@@ -27,6 +29,31 @@ import Control.Lens (makeLenses)
 import Data.Binary
 import Data.Aeson
 import Codec.Serialise
+
+
+-- | The state of a protocol socket
+data ConnectionState =
+  Accepting
+  | Connected
+  | Disconnected
+  deriving (Eq, Ord, Enum, Show, Read, Generic)    
+
+instance Serialise ConnectionState
+instance FromJSON ConnectionState
+instance ToJSON ConnectionState where
+    toEncoding = genericToEncoding defaultOptions
+
+
+
+data ConnType = ConnTC | ConnTM | ConnAdmin | ConnSingle
+  deriving (Eq, Ord, Enum, Show, Generic)
+
+instance Hashable ConnType
+instance Serialise ConnType
+instance FromJSON ConnType
+instance ToJSON ConnType where
+    toEncoding = genericToEncoding defaultOptions
+
 
 
 -- | Enumeration of the available interfaces

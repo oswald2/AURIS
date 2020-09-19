@@ -36,9 +36,9 @@ import qualified Data.GI.Gtk.Threading         as Gtk
 import           Version
 
 
-ui :: IO MainWindow
-ui = do
-  window <- createMainWindow
+ui :: AurisConfig -> IO MainWindow
+ui cfg = do
+  window <- createMainWindow cfg 
   Gtk.onWidgetDestroy (_mwWindow window) Gtk.mainQuit
   Gtk.widgetShowAll (_mwWindow window)
   pure window
@@ -107,7 +107,7 @@ main = do
         Gtk.init Nothing
         Gtk.setCurrentThreadAsGUIThread
         -- create the main window
-        mainWindow <- ui
+        mainWindow <- ui cfg 
         setTheme
         mwSetMission mainWindow (aurisMission cfg)
 
