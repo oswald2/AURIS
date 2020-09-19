@@ -63,6 +63,7 @@ Executable AURISi
     esa-mib,
     gui-base,
     auris-tm-displays,
+    auris-control-displays,
     mcs-interface,
     optparse-generic,
     gitrev,

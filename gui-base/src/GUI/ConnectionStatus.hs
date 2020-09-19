@@ -3,6 +3,7 @@ module GUI.ConnectionStatus
   , ConnectionState(..)
   , newConnectionStatus
   , setConnectionState
+  , connStatFrame
   )
 where
 
@@ -31,6 +32,10 @@ data ConnectionStatus = ConnectionStatus {
   , _connStatHost :: Label
   , _connStatPort :: Label
   }
+
+
+connStatFrame :: ConnectionStatus -> Frame 
+connStatFrame = _connStatFrame
 
 
 newConnectionStatus

@@ -47,7 +47,6 @@ library
     GUI.Chart
     GUI.GraphWidget
     GUI.ParamDisplay
-    GUI.ConnectionTab
 
 
 

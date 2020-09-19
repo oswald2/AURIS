@@ -37,6 +37,8 @@ data ProtocolInterface =
     | IfEdenScoe Word16
     deriving (Eq, Ord, Show, Read, Generic)
 
+
+instance Hashable ProtocolInterface
 instance Binary ProtocolInterface
 instance Serialise ProtocolInterface
 instance FromJSON ProtocolInterface
