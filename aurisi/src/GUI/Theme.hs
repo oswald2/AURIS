@@ -21,12 +21,8 @@ import           Data.FileEmbed
 import           System.Directory
 import           System.FilePath
 
--- import           Graphics.UI.Gtk.General.CssProvider
--- import           Graphics.UI.Gtk.General.StyleContext
--- import           Graphics.UI.Gtk.Gdk.Screen
-
-import GI.Gtk as Gtk
-import GI.Gdk
+import           GI.Gtk as Gtk
+import           GI.Gdk
 
 themeFile :: B.ByteString
 themeFile = $(makeRelativeToProject "theme.tar.gz" >>= embedFile)

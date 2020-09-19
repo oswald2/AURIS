@@ -10,8 +10,6 @@ module AurisInterface
 where
 
 import           RIO
---import qualified RIO.Text                      as T
---import qualified Data.Text.IO                  as T
 import           Interface.Interface
 import           Interface.Events
 
@@ -24,8 +22,6 @@ import           GUI.MainWindowActions
 import           GUI.Utils
 
 import           Data.GI.Gtk.Threading
-
---import qualified Graphics.UI.FLTK.LowLevel.FL  as FL
 
 
 

@@ -10,9 +10,6 @@ import           RIO
 import qualified RIO.Text                      as T
 import qualified Data.Text.IO                  as T
 
--- import           Graphics.UI.FLTK.LowLevel.FLTKHS
--- import qualified Graphics.UI.FLTK.LowLevel.FL  as FL
-
 import           GUI.MainWindow
 import           GUI.MainWindowCallbacks
 import           GUI.About
