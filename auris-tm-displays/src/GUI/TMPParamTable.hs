@@ -27,7 +27,7 @@ tmpParamTableSetValues :: TMPParamTable -> Vector TMParameter -> IO ()
 tmpParamTableSetValues g values = do
   let model = _tmppModel g
   seqStoreClear model
-  V.mapM_ (seqStorePrepend model) values
+  V.mapM_ (seqStoreAppend model) values
 
 
 createTMPParamTable :: Gtk.Builder -> IO TMPParamTable

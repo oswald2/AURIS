@@ -43,23 +43,12 @@ import           GUI.Colors
 import           GUI.GraphWidget
 import           GUI.ParamDisplay
 import           GUI.NameDescrTable
---import           GUI.PopupMenu
 import           GUI.Utils
 
 
 
-
-data GraphSelector =
-  GSSingle
-  | GSHorizontal
-  | GSVertical
-  | GSFour
-  deriving (Eq, Ord, Enum, Show)
-
-
 data ParDisplays = ParDisplays {
-  _parDispType :: !GraphSelector
-  , _parDisp1 :: Maybe ParamDisplay
+  _parDisp1 :: Maybe ParamDisplay
   , _parDisp2 :: Maybe ParamDisplay
   , _parDisp3 :: Maybe ParamDisplay
   , _parDisp4 :: Maybe ParamDisplay
@@ -67,7 +56,7 @@ data ParDisplays = ParDisplays {
 makeLenses ''ParDisplays
 
 emptyParDisplays :: ParDisplays
-emptyParDisplays = ParDisplays GSSingle Nothing Nothing Nothing Nothing
+emptyParDisplays = ParDisplays Nothing Nothing Nothing Nothing
 
 data DisplaySel =
   Display1
@@ -76,37 +65,14 @@ data DisplaySel =
   | Display4
   deriving (Eq, Ord, Enum, Show)
 
--- callOnDisplay
---   :: ParDisplays -> DisplaySel -> (ParamDisplay -> t -> IO ()) -> t -> IO ()
--- callOnDisplay parDisp Display1 cb t =
---   maybe (return ()) (`cb` t) (parDisp ^. parDisp1)
--- callOnDisplay parDisp Display2 cb t =
---   maybe (return ()) (`cb` t) (parDisp ^. parDisp2)
--- callOnDisplay parDisp Display3 cb t =
---   maybe (return ()) (`cb` t) (pareturn () Disp ^. parDisp3)
--- callOnDisplay parDisp Display4 cb t =
---   maybe (return ()) (`cb` t) (parDisp ^. parDisp4)
-
 
 
 data TMParamTab = TMParamTab {
-  -- _tmParamTab :: Ref Group
   _tmParamDisplaysTab :: !Notebook
   , _tmParamDisplaySelector :: !Notebook
   , _tmParamDisplaySwitcher :: !Notebook 
   , _tmParamSingleBox :: !Box 
   , _tmParamBrowserBox :: !Box 
-  -- , _tmParamGroupAND :: Ref Group
-  -- , _tmParamGroupGRD :: Ref Group
-  -- , _tmParamGroupSCD :: Ref Group
-  -- , _tmParamBrowserAND :: Ref Browser
-  -- , _tmParamBrowserGRD :: Ref Browser
-  -- , _tmParamBrowserSCD :: Ref Browser
-  -- , _tmParamSelectionTab :: Ref Tabs
-  -- , _tmParamSelectionDispGroup :: Ref Group
-  -- , _tmParamSelectionParamsGroup :: Ref Group
-  -- , _tmParamDisplayGroup :: Ref Group
-  -- , _tmParamDispSwitcher :: TMParamSwitcher
   , _tmParamDisplays :: TVar ParDisplays
   , _tmParamSelector :: !NameDescrTable
 }
@@ -124,40 +90,17 @@ createTMParamTab builder = do
   singleBox <- getObject builder "boxSingle" Box 
   browserBox <- getObject builder "boxTMParameterBrowser" Box
 
-  --paramSel' <- getObject builder "treeviewParameters" TreeView
   paramSel  <- createNameDescrTable browserBox []
 
   popupMenu <- getObject builder "popupTMParameters" Menu 
-  itemAddParams <- getObject builder "popAddParams" MenuItem 
+  itemAddParamsD1 <- getObject builder "menuItemAddDisplay1" MenuItem 
+  itemAddParamsD2 <- getObject builder "menuItemAddDisplay2" MenuItem 
+  itemAddParamsD3 <- getObject builder "menuItemAddDisplay3" MenuItem 
+  itemAddParamsD4 <- getObject builder "menuItemAddDisplay4" MenuItem 
 
-  ref     <- newTVarIO emptyParDisplays
+  graphWidget <- setupGraphWidget singleBox "TestGraph" paramSel
 
-  -- menuVar <- newTVarIO []
-
-  -- let callback dn x = do
-  --       displays <- readTVarIO ref
-  --       callOnDisplay displays dn paramDispAddParameterDef x
-
-  --     menuEntries =
-  --       [ MenuEntry "Add Parameters to:/Display 1"
-  --                   (Just (KeyFormat "#1"))
-  --                   (Just (nmDescrForwardParameter table (callback Display1)))
-  --                   (MenuItemFlags [])
-  --       , MenuEntry "Add Parameters to:/Display 2"
-  --                   (Just (KeyFormat "#2"))
-  --                   (Just (nmDescrForwardParameter table (callback Display2)))
-  --                   (MenuItemFlags [])
-  --       , MenuEntry "Add Parameters to:/Display 3"
-  --                   (Just (KeyFormat "#3"))
-  --                   (Just (nmDescrForwardParameter table (callback Display3)))
-  --                   (MenuItemFlags [])
-  --       , MenuEntry "Add Parameters to:/Display 4"
-  --                   (Just (KeyFormat "#4"))
-  --                   (Just (nmDescrForwardParameter table (callback Display4)))
-  --                   (MenuItemFlags [])
-  --       ]
-
-  -- atomically $ writeTVar menuVar menuEntries
+  ref     <- newTVarIO (emptyParDisplays & parDisp1 ?~ GraphDisplay graphWidget)
 
   let gui = TMParamTab { _tmParamDisplaysTab     = dispNB
                        , _tmParamDisplaySelector = dispSel
@@ -167,21 +110,6 @@ createTMParamTab builder = do
                        , _tmParamDisplays        = ref 
                        , _tmParamBrowserBox      = browserBox 
                        }
-
-  -- -- TODO to be changed, to test only a single, fixed chart
-  -- --rects <- determineSize gui GSSingle
-
-  graphWidget <- setupGraphWidget singleBox "TestGraph" paramSel
-
-  atomically $ do
-    writeTVar
-      ref
-      (ParDisplays GSSingle
-                   (Just (GraphDisplay graphWidget))
-                   Nothing
-                   Nothing
-                   Nothing
-      )
 
   -- -- now add a parameter to watch 
   -- -- let lineStyle = def & line_color .~ opaque Ch.blue & line_width .~ 1.0
@@ -218,13 +146,17 @@ createTMParamTab builder = do
 
   -- -- setCallback (gui ^. tmParamDispSwitcher . tmParSwSingle) (setValues graphWidget)
 
-  let setValues tbl gw = do
-        items <- getSelectedItems tbl
-        let lineStyle = def & line_color .~ opaque Ch.blue & line_width .~ 1.0
-        let params = map ((, lineStyle, def). ST.fromText . _tableValName) items 
-        void $ graphWidgetAddParameters gw params
+  let setValues g dispSelector = do
+        items <- getSelectedItemsVector (g ^. tmParamSelector)
+        disps <- readTVarIO (g ^. tmParamDisplays)
+        case disps ^. dispSelector of 
+          Just d -> paramDispAddParameterDef d items
+          Nothing -> return ()
  
-  void $ Gtk.on itemAddParams #activate (setValues paramSel graphWidget)
+  void $ Gtk.on itemAddParamsD1 #activate (setValues gui parDisp1)
+  void $ Gtk.on itemAddParamsD2 #activate (setValues gui parDisp2)
+  void $ Gtk.on itemAddParamsD3 #activate (setValues gui parDisp3)
+  void $ Gtk.on itemAddParamsD4 #activate (setValues gui parDisp4)
 
   setPopupMenu paramSel popupMenu
 

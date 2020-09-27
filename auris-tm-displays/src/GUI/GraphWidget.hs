@@ -10,7 +10,6 @@ module GUI.GraphWidget
   , graphWidgetAddParameter
   , graphWidgetAddParameters
   , addParamFromSelector
-  -- , drawChart
   , plotValName
   , plotValLineType
   , plotValPointStyle
@@ -18,10 +17,8 @@ module GUI.GraphWidget
   , graphName
   , graphParameters
   , graphData
-  --, gwParent
   , gwParamSelection
   , gwGraph
-  --, gwOffscreen
   )
 where
 
@@ -34,7 +31,7 @@ import           RIO.List                       ( cycle )
 import qualified RIO.Text                      as T
 --import           Data.Text.Short                ( ShortText )
 import qualified Data.Text.Short               as ST
---import qualified Data.Text.IO                  as T
+import qualified Data.Text.IO                  as T
 --import           Control.Lens                   ( makeLenses )
 
 
@@ -61,9 +58,6 @@ import           Graphics.Rendering.Chart.Backend.GI.Cairo
 import           Graphics.Rendering.Chart as Ch
 import           Graphics.Rendering.Chart.Easy as Ch
                                          hiding ( (^.) )
--- import           Graphics.Rendering.Chart.Backend.Diagrams
---import           Text.Show.Pretty
-
 
 import           GUI.NameDescrTable
 import           GUI.Chart
@@ -240,6 +234,7 @@ redrawGraph gw = do
 -- this function is a bit slow and could be optimized.
 graphWidgetInsertParamValue :: GraphWidget -> RIO.Vector TMParameter -> IO ()
 graphWidgetInsertParamValue gw params = do
+  --T.putStrLn $ "graphWidgetInsertParamValue: " <> T.pack (show params)
   atomically $ do
     graph <- readTVar (gw ^. gwGraph)
     let newGraph = V.foldl graphInsertParamValue graph params

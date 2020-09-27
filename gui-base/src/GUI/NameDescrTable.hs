@@ -6,6 +6,7 @@ module GUI.NameDescrTable
   , NameDescrTable
   , createNameDescrTable
   , getSelectedItems
+  , getSelectedItemsVector
   , setTableFromModel
   , setPopupMenu
   )
@@ -13,15 +14,13 @@ where
 
 import           RIO
 import qualified RIO.Text as T
---import qualified Data.Text.IO as T
---import qualified RIO.List.Partial as P (head)
+import qualified RIO.Vector as V
 import           Control.Lens                   ( makeLenses
                                                 )
 import           GI.Gtk                        as Gtk
 import           Data.GI.Gtk.ModelView.SeqStore
 import           Data.GI.Gtk.ModelView.CellLayout
 import           GI.Gdk.Structs.EventButton
---import           Data.GI.Base.Attributes
 
 
 
@@ -166,74 +165,14 @@ getSelectedItems tbl = do
   idxs <- traverse treePathGetIndices paths 
   traverse (seqStoreGetValue model) ((concat . catMaybes) idxs)
 
+-- | gets the currently selected items in the table and returns a 'Vector' of 
+-- the selected values
+getSelectedItemsVector :: NameDescrTable -> IO (Vector TableValue)
+getSelectedItemsVector tbl = V.fromList <$> getSelectedItems tbl
 
 
 
--- handleMouse
---   :: TableNameDescrModel
---   -> TVar [MenuEntry]
---   -> Ref TableRow
---   -> Event
---   -> IO (Either UnknownEvent ())
--- handleMouse _model menuEntriesVar table Push = do
---   res <- FL.eventButton3
---   if res
---     then do
---       menuEntries <- readTVarIO menuEntriesVar
---       void $ popupMenu menuEntries
---       return (Right ())
---     else handleTableRowBase (safeCast table) Push
--- handleMouse _ _ table Release = do
---   res <- FL.eventButton3
---   if res then return (Right ()) else handleTableRowBase (safeCast table) Release
--- handleMouse _ _ table event = handleTableRowBase (safeCast table) event
-
-
--- nmDescrForwardParameter
---   :: NameDescrTable -> (Vector TableValue -> IO ()) -> Ref MenuItem -> IO ()
--- nmDescrForwardParameter table cb _ = do
---   items <- V.fromList <$> getSelectedItems table
---   cb items
-
-
--- handleFilter :: NameDescrTable -> Ref Input -> IO ()
--- handleFilter table inp = do
---   filt <- getValue inp
---   n    <- atomically $ do
---     vals <- readTVar (table ^. nmDescTblModel . content)
---     let newVals = filterTable filt vals
---         n       = getNRows newVals
---     writeTVar (table ^. nmDescTblModel . content) newVals
---     return n
---   setRows (table ^. nmDescTbl) (Rows n)
---   redraw (table ^. nmDescTbl)
-
-
-
-
--- filterTable :: Text -> ModelValue -> ModelValue
--- filterTable filt model =
---   let filtered (TableValue nm desc) =
---           filt' `T.isInfixOf` T.toUpper nm || filt' `T.isInfixOf` T.toUpper desc
---       filt'  = T.toUpper filt
---       result = if T.null filt
---         then Nothing
---         else Just (filt, V.filter filtered (model ^. modelContent))
---   in  model & modelFiltered .~ result
-
-
-
--- getNRows :: ModelValue -> Int
--- getNRows model = V.length $ getData model
-
-
--- getData :: ModelValue -> Vector TableValue
--- getData (ModelValue cont filt) = case filt of
---   Just (_, vec) -> vec
---   Nothing       -> cont
-
-
--- | refresh a table from a model. There is no maxRow check, so
+-- | refresh a table from a the given values. There is no maxRow check, so
 -- the model is displayed as-is
 setTableFromModel :: NameDescrTable -> Vector TableValue -> IO ()
 setTableFromModel table vals = do
@@ -244,26 +183,3 @@ setTableFromModel table vals = do
 
 
 
-
-
-
-
--- setupCallback :: Ref TableRow -> (Row -> IO ()) -> IO ()
--- setupCallback table doubleClickCB = do
---   setCallback table (eventCallback doubleClickCB)
-
-
--- eventCallback :: (Row -> IO ()) -> Ref TableRow -> IO ()
--- eventCallback doubleClickCB table = do
---   r        <- callbackRow table
---   context' <- callbackContext table
---   case context' of
---     ContextCell -> do
---       event'       <- FL.eventIsClick
---       mouseButton' <- FL.eventButton
---       clicks'      <- FL.eventClicks
---       case mouseButton' of
---         Nothing -> return ()
---         Just mb' ->
---           when (event' && mb' == Mouse_Left && clicks' == 1) $ doubleClickCB r
---     _ -> return ()

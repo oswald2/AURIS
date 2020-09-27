@@ -45,6 +45,44 @@ Author: Michael Oswald
         <property name="can_focus">False</property>
         <property name="label" translatable="yes">Add Parameters to ...</property>
         <property name="use_underline">True</property>
+        <child type="submenu">
+          <object class="GtkMenu">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <child>
+              <object class="GtkMenuItem" id="menuItemAddDisplay1">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="label" translatable="yes">Display 1</property>
+                <property name="use_underline">True</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkMenuItem" id="menuItemAddDisplay2">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="label" translatable="yes">Display 2</property>
+                <property name="use_underline">True</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkMenuItem" id="menuItemAddDisplay3">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="label" translatable="yes">Display 3</property>
+                <property name="use_underline">True</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkMenuItem" id="menuItemAddDisplay4">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="label" translatable="yes">Display 4</property>
+                <property name="use_underline">True</property>
+              </object>
+            </child>
+          </object>
+        </child>
       </object>
     </child>
   </object>
@@ -72,7 +110,6 @@ Author: Michael Oswald
                 <property name="height_request">65</property>
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="pixbuf">AurisLogo_small.png</property>
                 <property name="icon_size">6</property>
               </object>
               <packing>
