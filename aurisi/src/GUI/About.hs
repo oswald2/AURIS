@@ -40,7 +40,7 @@ createAboutDialog = do
       := ("AURIS: an open source mission control system.\n\n" :: Text)
     , aboutDialogAuthors
       := ["Michael Oswald (michael.oswald@onikudaki.net)" :: Text,
-      "Paolo Varonelli", "Matthias Putz", "Mauro Berg", "Adam RK", "Jan van Brüggen"]
+      "Paolo Varonelli", "Matthias Putz", "Max Taldykin", "Adam RK", "Jan van Brüggen"]
     , aboutDialogLicense := license
     , aboutDialogWrapLicense := True
     , aboutDialogLogo := logo
