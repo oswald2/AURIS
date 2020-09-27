@@ -95,7 +95,7 @@ library
 
 
   default-extensions:
-        AutoDeriveTypeable
+        
         BangPatterns
         BinaryLiterals
         ConstraintKinds

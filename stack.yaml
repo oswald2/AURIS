@@ -17,7 +17,7 @@
 #
 # resolver: ./custom-snapshot.yaml
 # resolver: https://example.com/snapshots/2018-01-01.yaml
-resolver: lts-14.27
+resolver: lts-16.14
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -38,7 +38,9 @@ packages:
 - mcs-interface
 - gui-base
 - auris-tm-displays
+- auris-control-displays
 - aurisi
+- Chart-gi-cairo
 
 # Dependency packages to be pulled from upstream that are not in the resolver.
 # These entries can reference officially published versions as well as
@@ -59,18 +61,14 @@ extra-deps:
 - selda-0.5.1.0@sha256:b942ecc9ff7959c922da92d13fcfe70a0823eafa32086663f3cc60138ce7d3bf,2997
 - timers-updatable-0.2.0.2
 - direct-sqlite-2.3.26
-# - git: https://github.com/deech/fltkhs.git
-#   commit: 71af56f7194946a495e0d9d6457470f97988f754
-- fltkhs-0.8.0.2
-- git: https://github.com/oswald2/Chart-fltkhs
-  commit: 38076d9e8af12f14b84b44db028d4213690845f8
+#- cairo-0.13.8.1@sha256:1938aaeb5d3504678d995774dfe870f6b66cbd43d336b692fa8779b23b2b67a9,4075
+#- gtk2hs-buildtools-0.13.8.0@sha256:132f38155fc677430a47ea750918973161c876fb6f281d342ac2f07eb99229ce,5238
+- Chart-cairo-1.9.3@sha256:f484a7194ca08ed67f02aa626e2f8f4d1a9b50624e0d50e3ced62958f7481cca,925
+- gi-cairo-connector-0.0.1@sha256:b909fcfcb3c19fceb93ea309381c059020e9b9ae8d1fc39aad94962e112fc289,1166
+- gi-cairo-render-0.0.1@sha256:ff2ccc309c021c2c023fa0d380375ef36cff2df93e0c78ed733f052dd1aa9782,3502
 
 # Override default flag values for local packages and extra-deps
-flags:
-   fltkhs:
-     bundled: true
-   # fltkhs:
-   #   opengl: true
+# flags:
 
 ghc-options: 
   "$targets": -freverse-errors 

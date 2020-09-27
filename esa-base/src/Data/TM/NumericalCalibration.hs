@@ -24,7 +24,7 @@ module Data.TM.NumericalCalibration
   )
 where
 
-import           RIO
+import           RIO                     hiding ( (.~) )
 import qualified RIO.Vector                    as V
 import           RIO.Vector.Partial             ( (!) )
 

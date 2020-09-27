@@ -17,7 +17,7 @@
 #
 # resolver: ./custom-snapshot.yaml
 # resolver: https://example.com/snapshots/2018-01-01.yaml
-resolver: lts-15.14
+resolver: lts-16.14
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -58,15 +58,11 @@ extra-deps:
 - selda-sqlite-0.1.7.1
 - timers-updatable-0.2.0.2
 - direct-sqlite-2.3.26
-- git: https://github.com/deech/fltkhs.git
-  commit: 71af56f7194946a495e0d9d6457470f97988f754
 - git: https://github.com/oswald2/Chart-fltkhs
   commit: 38076d9e8af12f14b84b44db028d4213690845f8
 
 # Override default flag values for local packages and extra-deps
 flags:
-  fltkhs:
-    bundled: true
   esa-base:
     optimize: true
   esa-mib:

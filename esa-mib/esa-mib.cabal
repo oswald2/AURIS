@@ -95,7 +95,7 @@ library
   -- LANGUAGE extensions used by modules in this package.
   -- other-extensions:
   default-extensions:
-        AutoDeriveTypeable
+        
         BangPatterns
         BinaryLiterals
         ConstraintKinds
@@ -185,7 +185,7 @@ executable LoadMIBTest
     hs-source-dirs: test
     ghc-options: -Wall -O2 -funbox-strict-fields -rtsopts
     default-extensions:
-        AutoDeriveTypeable
+        
         BangPatterns
         BinaryLiterals
         ConstraintKinds

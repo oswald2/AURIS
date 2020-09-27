@@ -10,7 +10,7 @@ import           RIO
 
 import           Data.TM.Parameter
 
-import           GUI.Graph
+import           GUI.GraphWidget
 
 import           GUI.NameDescrTable             ( TableValue )
 
@@ -22,7 +22,7 @@ data ParamDisplay =
 
 paramDispInsertValues :: ParamDisplay -> Vector TMParameter -> IO ()
 paramDispInsertValues (GraphDisplay gw) values =
-  graphInsertParamValue gw values
+  graphWidgetInsertParamValue gw values
 paramDispInsertValues ANDDisplay _values = return ()
 
 

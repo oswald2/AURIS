@@ -6,7 +6,7 @@ description:
 license : BSD3
 license-file : LICENSE
 author : Michael Oswald
-build-type: Custom
+build-type: Simple
 maintainer: michael.oswald@onikudaki.net
 homepage:
 category: UI,Graphics
@@ -16,12 +16,6 @@ cabal-version: >=2.0
 source-repository head
   type: git
   location: http://github.com/oswald2/AURIS
-
-custom-setup
-  setup-depends:
-      Cabal >=2.2.0.0 && <4
-    , base >=4.4
-    , filepath
 
 Flag FastCompile
    Description: Turn off optimizations for faster compilation
@@ -50,19 +44,15 @@ library
     GUI.TMPacketTab
     GUI.TMFrameTab
     GUI.TMParamTab
-    GUI.Graph
+    GUI.Chart
+    GUI.GraphWidget
     GUI.ParamDisplay
-    Model.PUSPacketModel
-    Model.TMPacketModel
-    Model.TMPParamModel
-    Model.TMFrameModel
 
 
 
   Hs-Source-Dirs: src/
   Build-Depends:
     base == 4.*,
-    fltkhs >= 0.8.0.2,
     text >= 1.2.2.0,
     rio,
     lens,
@@ -72,18 +62,25 @@ library
     gui-base,
     text-short,
     Chart,
-    Chart-fltkhs,
-    Chart-diagrams,
+    Chart-gi-cairo,
+    -- Chart-diagrams,
     colour,
     data-default-class,
     multiset,
     thyme,
     time,
-    pretty-show
+    pretty-show,
+    gi-gtk,
+    gi-gtk-hs,
+    gi-gobject,
+    gi-cairo,
+    gi-cairo-connector,
+    gi-cairo-render,
+    haskell-gi-base
 
 
   default-extensions:
-        AutoDeriveTypeable
+        
         BangPatterns
         BinaryLiterals
         ConstraintKinds
@@ -111,6 +108,7 @@ library
         NamedFieldPuns
         NoImplicitPrelude
         OverloadedStrings
+        OverloadedLabels
         PartialTypeSignatures
         PatternGuards
         PolyKinds
@@ -141,13 +139,4 @@ library
                      -funbox-strict-fields
 
 
-  if impl(ghc >= 7.10) && flag(FastCompile)
-     ghc-Options: -fno-specialise -fmax-simplifier-iterations=0 -fsimplifier-phases=0
-
-  if os(windows)
-    ghc-Options: -optl-mwindows
-    ghc-Options: -pgml g++ "-optl-Wl,--allow-multiple-definition" "-optl-Wl,--whole-archive" "-optl-Wl,-Bstatic" "-optl-Wl,-lfltkc" "-optl-Wl,-Bdynamic" "-optl-Wl,--no-whole-archive"
-  if os(darwin)
-   ghc-Options: "-optl-Wl,-lfltkc"
-  if !os(darwin) && !os(windows)
-   ghc-Options: -pgml g++ "-optl-Wl,--allow-multiple-definition" "-optl-Wl,--whole-archive" "-optl-Wl,-Bstatic" "-optl-Wl,-lfltkc" "-optl-Wl,-Bdynamic" "-optl-Wl,--no-whole-archive"
+  

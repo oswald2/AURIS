@@ -73,7 +73,7 @@ module Data.PUS.PUSDfh
 where
 
 
-import           RIO                     hiding ( Builder )
+import           RIO                     hiding ( Builder, (.~))
 
 import           Control.Lens                   ( makeLenses
                                                 , (.~)

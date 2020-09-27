@@ -1,0 +1,33 @@
+Name: Chart-gi-cairo
+Version: 0.1.0.0
+License: BSD3
+License-file: LICENSE
+Copyright: Tim Docker, 2006-2014
+Author: Tim Docker <tim@dockerz.net>
+Maintainer: Tim Docker <tim@dockerz.net>
+Homepage: https://github.com/timbod7/haskell-chart/wiki
+Synopsis: Cairo backend for Charts 
+Description: Cairo backend for Charts (for gi-cairo and gi-cairo-connector and gi-cairo-renderer)
+Category: Graphics
+Cabal-Version: >= 1.6
+Build-Type: Simple
+
+library
+  Build-depends: base >= 3 && < 5
+               , old-locale
+               , time, mtl, array
+               , gi-cairo 
+               , gi-cairo-connector
+               , gi-cairo-render
+               , colour 
+               , data-default-class 
+               , operational 
+               , lens 
+               , Chart 
+
+  Exposed-modules:
+        Graphics.Rendering.Chart.Backend.GI.Cairo
+
+-- source-repository head
+--   type:     git
+--   location: https://github.com/timbod7/haskell-chart

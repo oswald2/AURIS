@@ -8,7 +8,7 @@ module Data.PUS.TMPacketProcessing
 where
 
 
-import           RIO
+import           RIO hiding ((.~))
 import qualified RIO.ByteString                as B
 import qualified RIO.Vector                    as V
 import qualified RIO.Text                      as T

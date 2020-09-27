@@ -105,7 +105,9 @@ module Protocol.NCTRS
 where
 
 
-import           RIO                     hiding ( Builder )
+import           RIO                     hiding ( Builder
+                                                , (.~)
+                                                )
 import           Prelude                        ( toEnum )
 
 import qualified RIO.ByteString                as B

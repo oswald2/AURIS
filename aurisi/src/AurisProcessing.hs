@@ -44,7 +44,7 @@ runProcessing cfg missionSpecific mibPath interface mainWindow coreQueue = do
   let logOptions =
         setLogMinLevel (convLogLevel (aurisLogLevel cfg)) defLogOptions
   withLogFunc logOptions $ \logFunc -> do
-    let logf = logFunc <> messageAreaLogFunc mainWindow
+    let logf = logFunc <> messageAreaLogFunc (mainWindow ^. mwMessageDisplay)
     state <- newGlobalState (aurisPusConfig cfg)
                             missionSpecific
                             logf

@@ -10,8 +10,6 @@ module AurisInterface
 where
 
 import           RIO
---import qualified RIO.Text                      as T
---import qualified Data.Text.IO                  as T
 import           Interface.Interface
 import           Interface.Events
 import           Interface.CoreProcessor
@@ -24,7 +22,7 @@ import           GUI.MainWindow
 import           GUI.MainWindowActions
 import           GUI.Utils
 
---import qualified Graphics.UI.FLTK.LowLevel.FL  as FL
+import           Data.GI.Gtk.Threading
 
 
 
@@ -40,11 +38,11 @@ eventProcessorThread mainWindow queue = forever $ do
 
 eventProcessor :: MainWindow -> IfEvent -> IO ()
 eventProcessor g (EventPUS (EVTelemetry (EVTMPacketDecoded pkt))) = do
-  withFLLock (mwAddTMPacket g pkt)
+  postGUIASync (mwAddTMPacket g pkt)
 eventProcessor g (EventPUS (EVTelemetry (EVTMFrameReceived frame))) = do
-  withFLLock (mwAddTMFrame g frame)
+  postGUIASync (mwAddTMFrame g frame)
 eventProcessor g (EventPUS (EVTelemetry (EVTMParameters params))) = do
-  withFLLock (mwAddTMParameters g params)
+  postGUIASync (mwAddTMParameters g params)
 eventProcessor g (EventPUS (EVTelemetry (EVTMFrameGap old new))) = do
   let txt =
         utf8BuilderToText
@@ -52,14 +50,14 @@ eventProcessor g (EventPUS (EVTelemetry (EVTMFrameGap old new))) = do
           <> display old
           <> ", new VC FC: "
           <> display new
-  withFLLock (mwLogWarn g txt)
+  mwLogWarn g txt
 eventProcessor g (EventPUS (EVTelemetry (EVTMRestartingVC vcid))) = do
   let txt = utf8BuilderToText $ "Restarting Virtual Channel " <> display vcid
-  withFLLock (mwLogWarn g txt)
+  mwLogWarn g txt
 eventProcessor g (EventPUS (EVTelemetry (EVTMRejectSpillOver _))) = do
-  withFLLock (mwLogWarn g "TM Packet Reconstruction: Rejected Spillover")
+  mwLogWarn g "TM Packet Reconstruction: Rejected Spillover"
 eventProcessor g (EventPUS (EVTelemetry (EVTMGarbledSpillOver _))) = do
-  withFLLock (mwLogWarn g "TM Packet Reconstruction: Rejected Spillover")
+  mwLogWarn g "TM Packet Reconstruction: Rejected Spillover"
 eventProcessor g (EventPUS (EVTelemetry (EVTMRejectedSpillOverPkt pkt))) = do
   let txt =
         utf8BuilderToText
@@ -71,40 +69,34 @@ eventProcessor g (EventPUS (EVTelemetry (EVTMRejectedSpillOverPkt pkt))) = do
           <> display (pkt ^. pusDfh . to pusSubType)
           <> " SSC="
           <> display (pkt ^. pusHdr . pusHdrSSC)
-  withFLLock (mwLogWarn g txt)
+  mwLogWarn g txt
 
 
 
-eventProcessor g (EventPUS (EVAlarms EVNctrsTmConnected)) = do
-  withFLLock (mwNCTRSConnection g True)
-eventProcessor g (EventPUS (EVAlarms EVNctrsTmDisconnected)) = do
-  withFLLock (mwNCTRSConnection g False)
-eventProcessor g (EventPUS (EVAlarms EVCncTmConnected)) = do
-  withFLLock (mwCnCConnection g True)
-eventProcessor g (EventPUS (EVAlarms EVCncTmDisconnected)) = do
-  withFLLock (mwCnCConnection g False)
+eventProcessor g (EventPUS (EVAlarms (EVEConnection i l c))) = 
+  postGUIASync (mwSetConnectionState g i l c)
 eventProcessor g (EventPUS (EVAlarms (EVPacketInfo txt))) = do
-  withFLLock (mwLogInfo g txt)
+  postGUIASync (mwLogInfo g txt)
 eventProcessor g (EventPUS (EVAlarms (EVPacketWarn txt))) = do
-  withFLLock (mwLogWarn g txt)
+  postGUIASync (mwLogWarn g txt)
 eventProcessor g (EventPUS (EVAlarms (EVPacketAlarm txt))) = do
-  withFLLock (mwLogAlarm g txt)
+  postGUIASync (mwLogAlarm g txt)
 eventProcessor g (EventPUS (EVAlarms (EVIllegalTCFrame txt))) = do
-  withFLLock (mwLogWarn g txt)
+  postGUIASync (mwLogWarn g txt)
 eventProcessor g (EventPUS (EVAlarms (EVIllegalTMFrame txt))) = do
-  withFLLock (mwLogWarn g txt)
+  postGUIASync (mwLogWarn g txt)
 eventProcessor g (EventPUS (EVAlarms (EVNCDUParseError txt))) = do
-  withFLLock (mwLogWarn g txt)
+  postGUIASync (mwLogWarn g txt)
 eventProcessor g (EventPUS (EVAlarms (EVEDENParseError txt))) = do
-  withFLLock (mwLogWarn g txt)
+  postGUIASync (mwLogWarn g txt)
 eventProcessor g (EventPUS (EVAlarms (EVIllegalPUSPacket txt))) = do
-  withFLLock (mwLogWarn g txt)
+  postGUIASync (mwLogWarn g txt)
 eventProcessor g (EventPUS (EVAlarms (EVIllegalAction txt))) = do
-  withFLLock (mwLogWarn g txt)
+  postGUIASync (mwLogWarn g txt)
 eventProcessor g (EventPUS (EVAlarms (EVMIBLoadError txt))) = do
-  withFLLock (mwLogAlarm g txt)
+  postGUIASync (mwLogAlarm g txt)
 eventProcessor g (EventPUS (EVAlarms (EVMIBLoaded _))) = do
-  withFLLock (mwLogInfo g "MIB loaded successfully")
+  postGUIASync (mwLogInfo g "MIB loaded successfully")
 eventProcessor _ _ = pure ()
 
 

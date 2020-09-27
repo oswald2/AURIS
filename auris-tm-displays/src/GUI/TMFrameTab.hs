@@ -2,8 +2,7 @@
   TemplateHaskell
 #-}
 module GUI.TMFrameTab
-  ( CLCWFluid(..)
-  , TMFrameTabFluid(..)
+  ( CLCWStatus(..)
   , TMFrameTab(..)
   , createTMFTab
   , tmfTabAddRow
@@ -12,20 +11,16 @@ module GUI.TMFrameTab
 where
 
 import           RIO
-import qualified RIO.Vector                    as V
 import qualified RIO.Text                      as T
--- import qualified Data.Text.Short               as ST
-import qualified Data.Sequence                 as S
 import           Control.Lens                   ( makeLenses )
 
-import           Graphics.UI.FLTK.LowLevel.FLTKHS
-
-import           Model.TMFrameModel
-import           Model.ScrollingTableModel
+import           GI.Gtk                        as Gtk
 
 import           GUI.TMFrameTable
-import           GUI.ScrollingTable
-import           GUI.Colors
+--import           GUI.Colors
+import           GUI.Utils
+import           GUI.StatusEntry
+import           GUI.TextView
 
 import           Data.PUS.ExtractedDU
 import           Data.PUS.TMFrame
@@ -36,85 +31,42 @@ import           General.PUSTypes
 
 
 
-data CLCWFluid = CLCWFluid {
-  _clcwfVCID :: Ref Output
-  , _clcwfBitLock :: Ref Box
-  , _clcwfNoRF :: Ref Box
-  , _clcwfLockout :: Ref Box
-  , _clcwfWait :: Ref Box
-  , _clcwfRetransmit :: Ref Box
-  , _clcwfReportVal :: Ref Output
-  , _clcwfFarmB :: Ref Output
-  , _clcwfGroup :: Ref Group
+data CLCWStatus = CLCWStatus {
+  _clcwfVCID :: Entry
+  , _clcwfBitLock :: StatusEntry
+  , _clcwfNoRF :: StatusEntry
+  , _clcwfLockout :: StatusEntry
+  , _clcwfWait :: StatusEntry
+  , _clcwfRetransmit :: StatusEntry
+  , _clcwfReportVal :: Entry
+  , _clcwfFarmB :: Entry
   }
-makeLenses ''CLCWFluid
-
-data TMFrameTabFluid = TMFrameTabFluid {
-  _tmffTabGroup :: Ref Group
-  , _tmffHeaderGroup :: Ref Group
-  , _tmffAddButton :: Ref Button
-  , _tmffFrameTable :: Ref Group
-  , _tmffFrameDetails :: Ref Group
-  , _tmffGroupFrameDetails :: Ref Group
-  , _tmffOutputSCID :: Ref Output
-  , _tmffOutputVCID :: Ref Output
-  , _tmffOutputOCF :: Ref Output
-  , _tmffOutputVCFC :: Ref Output
-  , _tmffOutputMCFC :: Ref Output
-  , _tmffOutputFHP :: Ref Output
-  , _tmffOutputSeg :: Ref Output
-  , _tmffOutputDFH :: Ref Output
-  , _tmffOutputOrder :: Ref Output
-  , _tmffOutputSync :: Ref Output
-  , _tmffOutputSource :: Ref Output
-  , _tmffOutputGap :: Ref Output
-  , _tmffOutputQuality :: Ref Output
-  , _tmffGroupFrameDump :: Ref Group
-  , _tmffDumpDisplay :: Ref TextDisplay
-  , _tmffCLCW :: CLCWFluid
-  }
-
+makeLenses ''CLCWStatus
 
 data TMFrameTab = TMFrameTab {
-  _tmfTabGroup :: Ref Group
-  , _tmfHeaderGroup :: Ref Group
-  , _tmfAddButton :: Ref Button
-  , _tmfFrameTable :: Ref TableRow
-  , _tmfFrameModel :: TMFrameModel
-  , _tmfFrameDetails :: Ref Group
-  , _tmfGroupFrameDetails :: Ref Group
-  , _tmfOutputSCID :: Ref Output
-  , _tmfOutputVCID :: Ref Output
-  , _tmfOutputOCF :: Ref Output
-  , _tmfOutputVCFC :: Ref Output
-  , _tmfOutputMCFC :: Ref Output
-  , _tmfOutputFHP :: Ref Output
-  , _tmfOutputSeg :: Ref Output
-  , _tmfOutputDFH :: Ref Output
-  , _tmfOutputOrder :: Ref Output
-  , _tmfOutputSync :: Ref Output
-  , _tmfOutputSource :: Ref Output
-  , _tmfOutputGap :: Ref Output
-  , _tmfOutputQuality :: Ref Output
-  , _tmfCLCW :: CLCWFluid
-  , _tmfDump :: Ref TextDisplay
-  , _tmfDumpBuffer :: Ref TextBuffer
+  _tmfFrameTable :: TMFrameTable
+  , _tmfOutputSCID :: Entry
+  , _tmfOutputVCID :: Entry
+  , _tmfOutputOCF :: Entry
+  , _tmfOutputVCFC :: Entry
+  , _tmfOutputMCFC :: Entry
+  , _tmfOutputFHP :: Entry
+  , _tmfOutputSeg :: Entry
+  , _tmfOutputDFH :: Entry
+  , _tmfOutputOrder :: Entry
+  , _tmfOutputSync :: Entry
+  , _tmfOutputSource :: Entry
+  , _tmfOutputGap :: StatusEntry
+  , _tmfOutputQuality :: StatusEntry
+  , _tmfCLCW :: CLCWStatus
+  , _tmfDump :: TextView
   }
 makeLenses ''TMFrameTab
 
 
 tmfTabAddRow :: TMFrameTab -> ExtractedDU TMFrame -> IO ()
 tmfTabAddRow tab frame = do
-  addRow (tab ^. tmfFrameTable) (tab ^. tmfFrameModel) frame
-  (TableCoordinate (Row row') _, _) <- getSelection (tab ^. tmfFrameTable)
-  when (row' /= -1) $ do
-    sel' <- getRowSelected (tab ^. tmfFrameTable) (Row row')
-    case sel' of
-      Left  _  -> return ()
-      Right is -> when is $ do
-        f' <- queryTableModel (tab ^. tmfFrameModel) (V.!? row')
-        forM_ f' (tmfTabDetailsSetValues tab)
-
+  tmFrameTableAddRow (tab ^. tmfFrameTable) frame
 
 txtNoBitlock :: Text
 txtNoBitlock = "NO BITLOCK"
@@ -139,169 +91,158 @@ txtNoWait = "NO WAIT"
 
 txtRetransmit :: Text
 txtRetransmit = "RETRANSMIT"
+
 txtNoRetransmit :: Text
 txtNoRetransmit = "NO RETRANSMIT"
 
 
 
-initCLCW :: CLCWFluid -> IO ()
-initCLCW CLCWFluid {..} = do
-  mcsGroupSetColor _clcwfGroup
+initCLCW :: Gtk.Builder -> IO CLCWStatus
+initCLCW builder = do
+  bitlock    <- getObject builder "entryCLCWBitlock" Entry
+  noRF       <- getObject builder "entryCLCWNoRf" Entry
+  lockout    <- getObject builder "entryCLCWLockout" Entry
+  waitf      <- getObject builder "entryCLCWWait" Entry
+  retransmit <- getObject builder "entryCLCWRetransmit" Entry
+  vcid       <- getObject builder "entryCLCWVcId" Entry
+  reportVal  <- getObject builder "entryCLCWReportValue" Entry
+  farmB      <- getObject builder "entryCLCWFarmBCounter" Entry
 
-  mcsOutputSetColor _clcwfVCID
-  mcsOutputSetColor _clcwfReportVal
-  mcsOutputSetColor _clcwfFarmB
+  bitlock'   <- statusEntrySetupCSS bitlock
+  statusEntrySetState bitlock' ESError txtNoBitlock
+  noRF' <- statusEntrySetupCSS noRF
+  statusEntrySetState noRF' ESError txtNoRF
+  lockout' <- statusEntrySetupCSS lockout
+  statusEntrySetState lockout' ESError txtLockout
+  waitf' <- statusEntrySetupCSS waitf
+  statusEntrySetState waitf' ESGreen txtNoWait
+  retransmit' <- statusEntrySetupCSS retransmit
+  statusEntrySetState retransmit' ESGreen txtNoRetransmit
 
-  mcsBoxAlarm _clcwfBitLock txtNoBitlock
-  mcsBoxAlarm _clcwfNoRF    txtNoRF
-  mcsBoxAlarm _clcwfLockout txtLockout
-  mcsBoxAlarm _clcwfWait    txtWait
-  mcsBoxWarn _clcwfRetransmit txtRetransmit
-
-
-
-
-createTMFTab :: TMFrameTabFluid -> IO TMFrameTab
-createTMFTab TMFrameTabFluid {..} = do
-  model <- tableModelNew
-  table <- setupTable _tmffFrameTable model GUI.TMFrameTable.colDefinitions
-
-  mcsGroupSetColor _tmffTabGroup
-  mcsGroupSetColor _tmffHeaderGroup
-  mcsGroupSetColor _tmffFrameDetails
-  mcsGroupSetColor _tmffGroupFrameDetails
-  mcsGroupSetColor _tmffGroupFrameDump
-
-  mcsTextDisplaySetColor _tmffDumpDisplay
-  buf <- textBufferNew Nothing Nothing
-  setBuffer _tmffDumpDisplay (Just buf)
+  let g = CLCWStatus { _clcwfVCID       = vcid
+                     , _clcwfBitLock    = bitlock'
+                     , _clcwfNoRF       = noRF'
+                     , _clcwfLockout    = lockout'
+                     , _clcwfWait       = waitf'
+                     , _clcwfRetransmit = retransmit'
+                     , _clcwfReportVal  = reportVal
+                     , _clcwfFarmB      = farmB
+                     }
+  return g
 
 
-  mcsOutputSetColor _tmffOutputSCID
-  mcsOutputSetColor _tmffOutputVCID
-  mcsOutputSetColor _tmffOutputOCF
-  mcsOutputSetColor _tmffOutputVCFC
-  mcsOutputSetColor _tmffOutputMCFC
-  mcsOutputSetColor _tmffOutputFHP
-  mcsOutputSetColor _tmffOutputSeg
-  mcsOutputSetColor _tmffOutputDFH
-  mcsOutputSetColor _tmffOutputOrder
-  mcsOutputSetColor _tmffOutputSync
-  mcsOutputSetColor _tmffOutputSource
-  mcsOutputSetColor _tmffOutputGap
-  mcsOutputSetColor _tmffOutputQuality
+createTMFTab :: Gtk.Builder -> IO TMFrameTab
+createTMFTab builder = do
+  clcwDisp   <- initCLCW builder
+  frameTable <- createTMFrameTable builder
 
-  initCLCW _tmffCLCW
+  content    <- getObject builder "textviewFrameContent" TextView
+  textViewSetMonospace content True 
 
-  pure TMFrameTab { _tmfTabGroup          = _tmffTabGroup
-                  , _tmfHeaderGroup       = _tmffHeaderGroup
-                  , _tmfAddButton         = _tmffAddButton
-                  , _tmfFrameTable        = table
-                  , _tmfFrameModel        = model
-                  , _tmfFrameDetails      = _tmffFrameDetails
-                  , _tmfGroupFrameDetails = _tmffGroupFrameDetails
-                  , _tmfOutputSCID        = _tmffOutputSCID
-                  , _tmfOutputVCID        = _tmffOutputVCID
-                  , _tmfOutputOCF         = _tmffOutputOCF
-                  , _tmfOutputVCFC        = _tmffOutputVCFC
-                  , _tmfOutputMCFC        = _tmffOutputMCFC
-                  , _tmfOutputFHP         = _tmffOutputFHP
-                  , _tmfOutputSeg         = _tmffOutputSeg
-                  , _tmfOutputDFH         = _tmffOutputDFH
-                  , _tmfOutputOrder       = _tmffOutputOrder
-                  , _tmfOutputSync        = _tmffOutputSync
-                  , _tmfOutputSource      = _tmffOutputSource
-                  , _tmfOutputGap         = _tmffOutputGap
-                  , _tmfOutputQuality     = _tmffOutputQuality
-                  , _tmfCLCW              = _tmffCLCW
-                  , _tmfDump              = _tmffDumpDisplay
-                  , _tmfDumpBuffer        = buf
+  scid <- getObject builder "entryTMFrameSCID" Entry 
+  vcid <- getObject builder "entryTMFrameVCID" Entry 
+  ocf <- getObject builder "entryTMFrameOCF" Entry 
+  dfh <- getObject builder "entryTMFrameDFH" Entry 
+  sync <- getObject builder "entryTMFrameSync" Entry 
+  order <- getObject builder "entryTMFrameOrder" Entry 
+  vcfc <- getObject builder "entryTMFrameVCFC" Entry 
+  mcfc <- getObject builder "entryTMFrameMCFC" Entry 
+  source <- getObject builder "entryTMFrameSource" Entry 
+  gap' <- getObject builder "entryTMFrameGap" Entry 
+  seg <- getObject builder "entryTMFrameSegmentation" Entry 
+  fhp <- getObject builder "entryTMFrameFHP" Entry 
+  qual' <- getObject builder "entryTMFrameQuality" Entry 
+
+  gap <- statusEntrySetupCSS gap' 
+  qual <- statusEntrySetupCSS qual'
+
+  let g = TMFrameTab { _tmfFrameTable = frameTable
+                  , _tmfOutputSCID = scid 
+                  , _tmfOutputVCID = vcid 
+                  , _tmfOutputOCF = ocf
+                  , _tmfOutputVCFC = vcfc 
+                  , _tmfOutputMCFC = mcfc
+                  , _tmfOutputFHP = fhp 
+                  , _tmfOutputSeg = seg
+                  , _tmfOutputDFH = dfh 
+                  , _tmfOutputOrder = order 
+                  , _tmfOutputSync = sync 
+                  , _tmfOutputSource = source 
+                  , _tmfOutputGap = gap 
+                  , _tmfOutputQuality = qual
+                  , _tmfCLCW       = clcwDisp
+                  , _tmfDump       = content
                   }
+  tmFrameTableSetCallback (g ^. tmfFrameTable) (tmfTabDetailsSetValues g)
+  return g 
 
 
 tmfTabDetailsSetValues :: TMFrameTab -> ExtractedDU TMFrame -> IO ()
 tmfTabDetailsSetValues g frame = do
   let frameHdr = frame ^. epDU . tmFrameHdr
-  void $ setValue (g ^. tmfOutputSCID) (textDisplay (frameHdr ^. tmFrameScID))
-  void $ setValue (g ^. tmfOutputVCID) (textDisplay (frameHdr ^. tmFrameVcID))
-  void $ setValue (g ^. tmfOutputOCF)
+  void $ entrySetText (g ^. tmfOutputSCID) (textDisplay (frameHdr ^. tmFrameScID))
+  void $ entrySetText (g ^. tmfOutputVCID) (textDisplay (frameHdr ^. tmFrameVcID))
+  void $ entrySetText (g ^. tmfOutputOCF)
                   (if frameHdr ^. tmFrameOpControl then "Y" else "N")
-  void $ setValue (g ^. tmfOutputMCFC) (textDisplay (frameHdr ^. tmFrameMCFC))
-  void $ setValue (g ^. tmfOutputVCFC) (textDisplay (frameHdr ^. tmFrameVCFC))
-  void $ setValue (g ^. tmfOutputFHP) (displayFHP (frame ^. epDU))
-  void $ setValue (g ^. tmfOutputSeg) (T.pack (show (frameHdr ^. tmFrameSegID)))
-  void $ setValue (g ^. tmfOutputDFH)
+  void $ entrySetText (g ^. tmfOutputMCFC) (textDisplay (frameHdr ^. tmFrameMCFC))
+  void $ entrySetText (g ^. tmfOutputVCFC) (textDisplay (frameHdr ^. tmFrameVCFC))
+  void $ entrySetText (g ^. tmfOutputFHP) (displayFHP (frame ^. epDU))
+  void $ entrySetText (g ^. tmfOutputSeg) (T.pack (show (frameHdr ^. tmFrameSegID)))
+  void $ entrySetText (g ^. tmfOutputDFH)
                   (if frameHdr ^. tmFrameDfh then "Y" else "N")
-  void $ setValue (g ^. tmfOutputOrder)
+  void $ entrySetText (g ^. tmfOutputOrder)
                   (if frameHdr ^. tmFrameOrder then "REVERSE" else "FORWARD")
-  void $ setValue (g ^. tmfOutputSync)
+  void $ entrySetText (g ^. tmfOutputSync)
                   (if frameHdr ^. tmFrameSync then "ASYNC" else "SYNC")
-  void $ setValue (g ^. tmfOutputSource) (textDisplay (frame ^. epSource))
+  void $ entrySetText (g ^. tmfOutputSource) (textDisplay (frame ^. epSource))
 
   case frame ^. epGap of
-    Nothing -> do
-      mcsOutputSetColor (g ^. tmfOutputGap)
-      void $ setValue (g ^. tmfOutputGap) ""
-    Just (low, _high) -> do
-      setColor (g ^. tmfOutputGap) mcsYellow
-      setTextcolor (g ^. tmfOutputGap) mcsBlack
-      void $ setValue (g ^. tmfOutputGap) (textDisplay low)
+    Nothing -> statusEntrySetState (g ^. tmfOutputGap) ESGreen "" 
+    Just gap -> do
+      statusEntrySetState (g ^. tmfOutputGap) ESWarn (T.pack (show gap))
 
   if toBool (frame ^. epQuality)
-    then do
-      mcsOutputSetColor (g ^. tmfOutputQuality)
-      void $ setValue (g ^. tmfOutputQuality) (textDisplay (frame ^. epQuality))
-    else do
-      setColor (g ^. tmfOutputQuality) mcsYellow
-      setTextcolor (g ^. tmfOutputQuality) mcsBlack
-      void $ setValue (g ^. tmfOutputQuality) (textDisplay (frame ^. epQuality))
+    then statusEntrySetState (g ^. tmfOutputQuality) ESGreen (textDisplay (frame ^. epQuality))
+    else statusEntrySetState (g ^. tmfOutputQuality) ESWarn (textDisplay (frame ^. epQuality))
 
-
-  setText (g ^. tmfDumpBuffer) (hexdumpBS (frame ^. epDU . tmFrameData))
+  textViewSetText (g ^. tmfDump) (hexdumpBS (frame ^. epDU . tmFrameData))
 
   -- also set the CLCW values
   case frame ^. epDU . tmFrameOCF of
     Nothing -> return ()
     Just c  -> setCLCWValues g (unpackValues c)
-
+  return ()
 
 setCLCWValues :: TMFrameTab -> CLCW -> IO ()
 setCLCWValues window clcw = do
   let cl = window ^. tmfCLCW
 
-  void $ setValue (cl ^. clcwfVCID) (textDisplay (clcw ^. clcwVcID))
-  void $ setValue (cl ^. clcwfReportVal) (textDisplay (clcw ^. clcwReportVal))
-  void $ setValue (cl ^. clcwfFarmB) (textDisplay (clcw ^. clcwBCounter))
+  entrySetText (cl ^. clcwfVCID)      (textDisplay (clcw ^. clcwVcID))
+  entrySetText (cl ^. clcwfReportVal) (textDisplay (clcw ^. clcwReportVal))
+  entrySetText (cl ^. clcwfFarmB)     (textDisplay (clcw ^. clcwBCounter))
 
   if clcw ^. clcwNoRF
-    then mcsBoxAlarm (cl ^. clcwfNoRF) txtNoRF
-    else mcsBoxGreen (cl ^. clcwfNoRF) txtOkRF
+    then statusEntrySetState (cl ^. clcwfNoRF) ESError txtNoRF
+    else statusEntrySetState (cl ^. clcwfNoRF) ESGreen txtOkRF
 
   if clcw ^. clcwNoBitLock
-    then mcsBoxAlarm (cl ^. clcwfBitLock) txtNoBitlock
-    else mcsBoxGreen (cl ^. clcwfBitLock) txtBitlock
+    then statusEntrySetState (cl ^. clcwfBitLock) ESError txtNoBitlock
+    else statusEntrySetState (cl ^. clcwfBitLock) ESGreen txtBitlock
 
   if clcw ^. clcwLockout
-    then mcsBoxAlarm (cl ^. clcwfLockout) txtLockout
-    else mcsBoxGreen (cl ^. clcwfLockout) txtNoLockout
+    then statusEntrySetState (cl ^. clcwfLockout) ESError txtLockout
+    else statusEntrySetState (cl ^. clcwfLockout) ESGreen txtNoLockout
 
   if clcw ^. clcwWait
-    then mcsBoxAlarm (cl ^. clcwfWait) txtWait
-    else mcsBoxGreen (cl ^. clcwfWait) txtNoWait
+    then statusEntrySetState (cl ^. clcwfWait) ESError txtWait
+    else statusEntrySetState (cl ^. clcwfWait) ESGreen txtNoWait
 
   if clcw ^. clcwRetrans
-    then mcsBoxWarn (cl ^. clcwfRetransmit) txtRetransmit
-    else mcsBoxGreen (cl ^. clcwfRetransmit) txtNoRetransmit
-
+    then statusEntrySetState (cl ^. clcwfRetransmit) ESWarn txtRetransmit
+    else statusEntrySetState (cl ^. clcwfRetransmit) ESGreen txtNoRetransmit
 
 
 setupCallbacks :: TMFrameTab -> IO ()
-setupCallbacks window = do
-  GUI.ScrollingTable.setupCallback (window ^. tmfFrameTable)
-                                   (doubleClickTMF window)
+setupCallbacks g = do
+  return ()
 
-
-doubleClickTMF :: TMFrameTab -> Row -> IO ()
-doubleClickTMF window (Row row') = do
-  res <- queryTableModel (window ^. tmfFrameModel) $ \s -> s V.!? row'
-  forM_ res (tmfTabDetailsSetValues window)

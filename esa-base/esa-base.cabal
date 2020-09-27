@@ -96,7 +96,7 @@ library
   -- LANGUAGE extensions used by modules in this package.
   -- other-extensions:
   default-extensions:
-        AutoDeriveTypeable
+        
         BangPatterns
         BinaryLiterals
         ConstraintKinds

@@ -18,6 +18,7 @@ module Data.PUS.Config
   , CltuBlockSize(..)
   , NctrsConfig(..)
   , CncConfig(..)
+  , EDENConnType(..)
   , EDENConfig(..)
   , cltuBlockSizeAsWord8
   , defaultConfig
@@ -74,10 +75,25 @@ instance FromJSON CncConfig
 instance ToJSON CncConfig where
   toEncoding = genericToEncoding defaultOptions
 
+-- | Determines the type of EDEN interface: 'SCOE' for testing,
+-- 'Space' for a space craft link
+data EDENConnType = SCOE | Space 
+  deriving (Eq, Ord, Enum, Generic)
 
+instance FromJSON EDENConnType
+instance ToJSON EDENConnType where
+  toEncoding = genericToEncoding defaultOptions
+
+
+-- | Configuration for an EDEN connection. 
 data EDENConfig = EDENConfig {
+    -- | A numerical ID, which needs to be unique for this C&C connection
     cfgEdenID :: Word16
+    -- | The type of the connection
+    , cfgEdenType :: EDENConnType
+    -- | The host where to connect to 
     , cfgEdenHost :: Text
+    -- | The port where to connect to 
     , cfgEdenPort :: Word16
     }
     deriving (Eq, Generic)
@@ -149,7 +165,7 @@ cltuBlockSizeAsWord8 CltuBS_8 = 8
 
 defaultEdenConfig :: EDENConfig
 defaultEdenConfig =
-  EDENConfig { cfgEdenID = 1, cfgEdenHost = "localhost", cfgEdenPort = 40300 }
+  EDENConfig { cfgEdenID = 1, cfgEdenType = SCOE, cfgEdenHost = "localhost", cfgEdenPort = 40300 }
 
 
 defaultNctrsConfig :: NctrsConfig

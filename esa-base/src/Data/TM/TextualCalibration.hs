@@ -31,7 +31,7 @@ module Data.TM.TextualCalibration
   )
 where
 
-import           RIO
+import           RIO                     hiding ( (.~) )
 import qualified RIO.Vector                    as V
 
 import           Control.Lens                   ( makeLenses

@@ -4,32 +4,27 @@
     , NoImplicitPrelude
 #-}
 module GUI.Utils
-    ( withFLLock
-    , maximizeWindow
-    )
+  ( getObject
+  )
 where
 
 
 import           RIO
-
-import           Graphics.UI.FLTK.LowLevel.FLTKHS
-import qualified Graphics.UI.FLTK.LowLevel.FL  as FL
-
+import qualified RIO.Text                      as T
+import           GI.Gtk                        as Gtk
 
 
-withFLLock :: IO a -> IO a
-withFLLock action = bracket
-    FL.lock
-    (const $ do
-        FL.unlock
-        FL.awake
-    )
-    (const action)
+getObject :: GObject o => Gtk.Builder -> Text -> (ManagedPtr o -> o) -> IO o
+getObject builder obj gtkConstr = do
+  o <- builderGetObject builder obj
+  case o of
+    Nothing ->
+      error $ "GTK: could not find " <> T.unpack obj <> " in Glade file!"
+    Just oo -> do
+      w <- castTo gtkConstr oo
+      case w of
+        Nothing     -> error $ "GTK: cannot cast widget" <> T.unpack obj
+        Just widget -> return widget
 
 
-maximizeWindow :: Ref Window -> IO ()
-maximizeWindow window = do
-  --rect <- screenWorkBounds (Just (ScreenNumber 0))
-    rect <- FL.screenWorkArea (Just (ScreenNumber 0))
-    resize window rect
 

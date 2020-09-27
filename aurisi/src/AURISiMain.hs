@@ -2,6 +2,7 @@
   TemplateHaskell
   , DataKinds
   , TypeOperators
+  , OverloadedLabels
 #-}
 module Main where
 
@@ -9,14 +10,10 @@ import           RIO
 import qualified RIO.Text                      as T
 import qualified Data.Text.IO                  as T
 
-import           Graphics.UI.FLTK.LowLevel.FLTKHS
-import qualified Graphics.UI.FLTK.LowLevel.FL  as FL
-
-import           AURISi
-
 import           GUI.MainWindow
 import           GUI.MainWindowCallbacks
 import           GUI.About
+import           GUI.Theme
 
 import           Options.Generic
 
@@ -28,19 +25,20 @@ import           AurisMissionSpecific
 import           GHC.Conc
 import           System.Directory               ( doesFileExist )
 
+import qualified GI.GLib.Functions             as GI
+import qualified GI.GLib.Constants             as GI
+import qualified GI.Gtk                        as Gtk
+import qualified Data.GI.Gtk.Threading         as Gtk
+
+import           Version
 
 
-
-
-
-
-ui :: IO MainWindow
-ui = do
-  window      <- makeWindow
-  aboutWindow <- makeAboutWindow
-  mainWindow  <- createMainWindow window aboutWindow
-  showWidget (_mwWindow mainWindow)
-  pure mainWindow
+ui :: AurisConfig -> IO MainWindow
+ui cfg = do
+  window <- createMainWindow cfg 
+  Gtk.onWidgetDestroy (_mwWindow window) Gtk.mainQuit
+  Gtk.widgetShowAll (_mwWindow window)
+  pure window
 
 
 
@@ -103,11 +101,11 @@ main = do
               Right c -> pure c
 
         -- need to call it once in main before the GUI is started
-        void FL.lock
-
+        Gtk.init Nothing
+        Gtk.setCurrentThreadAsGUIThread
         -- create the main window
-        mainWindow <- ui
-
+        mainWindow <- ui cfg 
+        setTheme
         mwSetMission mainWindow (aurisMission cfg)
 
         -- setup the interface
@@ -118,15 +116,18 @@ main = do
         setupCallbacks mainWindow interface
 
         -- determine the mission-specific functionality
-        missionSpecific           <- getMissionSpecific cfg
+        missionSpecific   <- getMissionSpecific cfg
         -- start the processing chains
-        _processingThread         <- async $ runProcessing cfg
-                                                           missionSpecific
-                                                           (importmib opts)
-                                                           interface
-                                                           mainWindow
-                                                           coreQueue
-        -- run the FLTK GUI
-        FL.run >> FL.flush
+
+        _processingThread <- async $ runProcessing cfg
+                                                   missionSpecific
+                                                   (importmib opts)
+                                                   interface
+                                                   mainWindow
+                                                   coreQueue
+
+        GI.timeoutAddSeconds GI.PRIORITY_DEFAULT 1 (mwTimerLabelCB mainWindow)
+        Gtk.main
+
 
 

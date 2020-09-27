@@ -50,7 +50,8 @@ runTMNctrsChain cfg pktQueue = do
 
   runGeneralTCPReconnectClient
     (clientSettings (fromIntegral (cfgNctrsPortTM cfg))
-      (encodeUtf8 (cfgNctrsHost cfg)))
+                    (encodeUtf8 (cfgNctrsHost cfg))
+    )
     200000
     (tmClient chain)
 
@@ -58,10 +59,17 @@ runTMNctrsChain cfg pktQueue = do
  where
   tmClient chain app = do
     env <- ask
-    liftIO $ raiseEvent env (EVAlarms EVNctrsTmConnected)
+    liftIO $ raiseEvent
+      env
+      (EVAlarms (EVEConnection (IfNctrs (cfgNctrsID cfg)) ConnTM Connected))
     res <- try $ void $ runConduitRes (appSource app .| chain)
 
-    liftIO (raiseEvent env (EVAlarms EVNctrsTmDisconnected))
+    liftIO
+      (raiseEvent
+        env
+        (EVAlarms (EVEConnection (IfNctrs (cfgNctrsID cfg)) ConnTM Disconnected)
+        )
+      )
     case res of
       Left (e :: SomeException) -> do
         logError $ display @Text "NCTRS Interface Exception: " <> displayShow e
@@ -82,8 +90,9 @@ runTMCnCChain cfg missionSpecific pktQueue = do
         .| sinkTBQueue pktQueue
 
   runGeneralTCPReconnectClient
-    (clientSettings (fromIntegral (cfgCncPortTM cfg)) 
-      (encodeUtf8 (cfgCncHost cfg)))
+    (clientSettings (fromIntegral (cfgCncPortTM cfg))
+                    (encodeUtf8 (cfgCncHost cfg))
+    )
     200000
     (tmClient chain)
 
@@ -91,10 +100,16 @@ runTMCnCChain cfg missionSpecific pktQueue = do
  where
   tmClient chain app = do
     env <- ask
-    liftIO $ raiseEvent env (EVAlarms EVCncTmConnected)
+    liftIO $ raiseEvent
+      env
+      (EVAlarms (EVEConnection (IfCnc (cfgCncID cfg)) ConnTM Connected))
     res <- try $ void $ runConduitRes (appSource app .| chain)
 
-    liftIO (raiseEvent env (EVAlarms EVCncTmDisconnected))
+    liftIO
+      (raiseEvent
+        env
+        (EVAlarms (EVEConnection (IfCnc (cfgCncID cfg)) ConnTM Disconnected))
+      )
     case res of
       Left (e :: SomeException) -> do
         logError $ display @Text "CnC Interface Exception: " <> displayShow e
@@ -126,10 +141,18 @@ runTMEdenChain cfg missionSpecific pktQueue = do
  where
   tmClient chain app = do
     env <- ask
-    liftIO $ raiseEvent env (EVAlarms EVEdenConnected)
+    liftIO $ raiseEvent
+      env
+      (EVAlarms (EVEConnection (IfEden (cfgEdenID cfg)) ConnSingle Connected))
     res <- try $ void $ runConduitRes (appSource app .| chain)
 
-    liftIO (raiseEvent env (EVAlarms EVEdenDisconnected))
+    liftIO
+      (raiseEvent
+        env
+        (EVAlarms
+          (EVEConnection (IfEden (cfgEdenID cfg)) ConnSingle Disconnected)
+        )
+      )
     case res of
       Left (e :: SomeException) -> do
         logError $ display @Text "EDEN Interface Exception: " <> displayShow e

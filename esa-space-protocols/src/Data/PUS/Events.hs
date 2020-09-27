@@ -42,6 +42,8 @@ import           Data.TM.Parameter
 
 import           Data.DataModel
 
+import           Protocol.ProtocolInterfaces
+
 
 -- | The events themselves
 data Event = EVCommanding EventCommanding
@@ -92,12 +94,7 @@ data EventAlarm =
     | EVEDENParseError Text
     | EVIllegalPUSPacket Text
     | EVIllegalAction Text
-    | EVNctrsTmConnected
-    | EVNctrsTmDisconnected
-    | EVCncTmConnected
-    | EVCncTmDisconnected
-    | EVEdenConnected
-    | EVEdenDisconnected
+    | EVEConnection ProtocolInterface ConnType ConnectionState
     | EVPacketInfo Text
     | EVPacketWarn Text
     | EVPacketAlarm Text

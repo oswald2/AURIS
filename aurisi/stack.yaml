@@ -1,7 +1,6 @@
 flags: {}
-resolver: lts-14.27
+resolver: lts-16.14
 extra-deps:
-- fltkhs-0.8.0.2
 - attoparsec-data-1.0.4.1
 - hw-prim-bits-0.1.0.4
 - attoparsec-time-1

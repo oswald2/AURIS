@@ -1,43 +1,36 @@
 {-# LANGUAGE
   TemplateHaskell
+  , ForeignFunctionInterface
 #-}
 module GUI.Logo
-  ( aurisLogo
-  , aurisLogoBig
-  , initLogo
+  ( setLogo
+  , getLogoPixbuf
   )
 where
 
 
 import           RIO
-import qualified RIO.Text                      as T
-import qualified Data.Text.IO                  as T
-import qualified RIO.ByteString                as B
-import           Graphics.UI.FLTK.LowLevel.FLTKHS
+--import qualified Data.Text.IO                  as T
+import           GI.Gtk                        as Gtk
+import           GI.GdkPixbuf.Objects.Pixbuf
+import           GI.GdkPixbuf.Enums
 
-import           Data.FileEmbed
-
-import           GUI.Colors
+import           GUI.LogoXPM
 
 
-aurisLogo :: ByteString
-aurisLogo = $(makeRelativeToProject "src/AurisLogo.svg" >>= embedFile)
---aurisLogo = B.empty
+setLogo :: Image -> Int32 -> Int32 -> IO ()
+setLogo img width height = do
+  pixbuf <- pixbufNewFromXpmData aurisLogoXPM
+  res    <- pixbufScaleSimple pixbuf width height InterpTypeHyper
+  case res of
+    Just p  -> imageSetFromPixbuf img (Just p)
+    Nothing -> error "Could not scale logo!"
 
-aurisLogoBig :: ByteString
-aurisLogoBig = $(makeRelativeToProject "src/AurisLogoBig.svg" >>= embedFile)
---aurisLogoBig = B.empty
 
-
-initLogo :: Ref Box -> ByteString -> IO ()
-initLogo box logoSVG = do
-  logo <- svgImageNew logoSVG
-  case logo of
-    Left err -> do
-      T.putStrLn $ "Could not load logo: " <> T.pack (show err)
-      exitFailure
-    Right svg -> do
-      setColor box mcsWhite
-      (Rectangle _ size) <- getRectangle box 
-      scale svg size (Just True) Nothing 
-      setImage box (Just svg)
+getLogoPixbuf :: Int32 -> Int32 -> IO Pixbuf
+getLogoPixbuf width height = do
+  pixbuf <- pixbufNewFromXpmData aurisLogoXPM
+  res    <- pixbufScaleSimple pixbuf width height InterpTypeHyper
+  case res of
+    Just p  -> return p
+    Nothing -> error "Could not scale logo!"

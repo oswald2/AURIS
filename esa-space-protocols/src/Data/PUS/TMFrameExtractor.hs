@@ -30,7 +30,7 @@ module Data.PUS.TMFrameExtractor
   )
 where
 
-import           RIO hiding (view, (^.))
+import           RIO hiding (view, (^.), (.~))
 import qualified RIO.ByteString                as B
 import qualified Data.IntMap.Strict            as M
 import qualified RIO.Text                      as T
