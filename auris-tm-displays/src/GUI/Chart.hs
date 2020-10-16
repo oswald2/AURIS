@@ -6,6 +6,8 @@ module GUI.Chart
   ( Graph(..)
   , graphGetParameterNames
   , graphInsertParamValue
+  , graphAddParameter
+  , graphRemoveParameter
   , graphName 
   , graphParameters
   , graphData 
@@ -30,6 +32,7 @@ import           RIO hiding ((.~))
 import           RIO.List                       ( cycle )
 import qualified RIO.Map                       as M
 import qualified RIO.HashSet                   as HS
+import qualified RIO.Text as T
 import qualified Data.Text.Short               as ST
 
 
@@ -65,15 +68,19 @@ data PlotVal = PlotVal {
   , _plotValLineType :: !Ch.LineStyle
   , _plotValPointStyle :: !Ch.PointStyle
   , _plotValValues :: MultiSet GraphVal
-}
+} 
 makeLenses ''PlotVal
+
+instance Show PlotVal where 
+  show x = "PlotVal {_plotValName = " <> show (x ^. plotValName) <> ", plotValValues = " 
+    <> show (x ^. plotValValues) <> "}"
 
 
 data TimeScaleSettings = TimeScaleSettings {
   _tssInterval :: !TI.NominalDiffTime
   , _tssOldMin :: !TI.UTCTime
   , _tssOldMax :: !TI.UTCTime
-}
+} deriving Show
 
 timeScaleSettings :: TI.UTCTime -> TimeScaleSettings
 timeScaleSettings now =
@@ -214,7 +221,7 @@ data Graph = Graph {
   , _graphParameters :: HashSet ShortText
   , _graphData :: Map ShortText PlotVal
   , _graphTimeAxisSettings :: TimeScaleSettings
-  }
+  } deriving (Show)
 makeLenses ''Graph
 
 graphGetParameterNames :: Graph -> [ShortText]
@@ -227,11 +234,33 @@ emptyGraph name = Graph name HS.empty M.empty defaultTimeScaleSettings
 graphInsertParamValue :: Graph -> TMParameter -> Graph
 graphInsertParamValue g@Graph {..} param =
   let paramName = param ^. pName
-  in  case M.lookup paramName _graphData of
+  in  trace "graphInsertParamValue" $ case M.lookup paramName _graphData of
         Nothing -> g
         Just plotVal ->
           let val = (toUTCTime (param ^. pTime), toDouble (param ^. pValue))
               newSet     = MS.insert val (plotVal ^. plotValValues)
               newPlotVal = plotVal & plotValValues .~ newSet
               newMap     = M.insert paramName newPlotVal _graphData
-          in  g & graphData .~ newMap
+              newGraph   = g & graphData .~ newMap
+          in  trace ("after insert:" <> T.pack (show newGraph)) newGraph
+
+
+graphAddParameter :: Graph -> (ShortText, Ch.LineStyle, Ch.PointStyle) -> Graph
+graphAddParameter graph (name, lineStyle, pointStyle) =
+  let newSet   = HS.insert name (graph ^. graphParameters)
+      newGraph = graph & graphParameters .~ newSet & graphData .~ newData
+      -- if we already have the parameter inserted, use the old values
+      newData  = M.insertWith combine
+                              name
+                              (PlotVal name lineStyle pointStyle MS.empty)
+                              (graph ^. graphData)
+      combine _ old = old
+  in  
+    trace ("graphAddParameter: newData: " <> T.pack (show newData)) newGraph
+
+graphRemoveParameter :: Graph -> ShortText -> Graph
+graphRemoveParameter graph name = 
+    let newSet   = HS.delete name (graph ^. graphParameters)
+        newData  = M.delete name (graph ^. graphData)
+        newGraph = graph & graphParameters .~ newSet & graphData .~ newData
+    in newGraph

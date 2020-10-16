@@ -9,6 +9,9 @@ module GUI.GraphWidget
   , emptyGraph
   , graphWidgetAddParameter
   , graphWidgetAddParameters
+  , graphWidgetRemoveParameter
+  , graphWidgetSetChartName
+  , graphWidgetGetParamNames
   , addParamFromSelector
   , plotValName
   , plotValLineType
@@ -19,6 +22,7 @@ module GUI.GraphWidget
   , graphData
   , gwParamSelection
   , gwGraph
+  , gwParent
   )
 where
 
@@ -27,32 +31,32 @@ import           RIO hiding ((.~))
 import qualified RIO.Map                       as M
 import qualified RIO.Vector                    as V
 import qualified RIO.HashSet                   as HS
-import           RIO.List                       ( cycle )
+--import           RIO.List                       ( cycle )
 import qualified RIO.Text                      as T
 --import           Data.Text.Short                ( ShortText )
 import qualified Data.Text.Short               as ST
-import qualified Data.Text.IO                  as T
+--import qualified Data.Text.IO                  as T
 --import           Control.Lens                   ( makeLenses )
 
 
-import           Data.MultiSet                  ( MultiSet )
-import qualified Data.MultiSet                 as MS
+--import           Data.MultiSet                  ( MultiSet )
+--import qualified Data.MultiSet                 as MS
 import           Data.Text.Short                ( ShortText )
 
-import qualified Data.Time.Clock               as TI
-import           Data.Time.Calendar
+--import qualified Data.Time.Clock               as TI
+--import           Data.Time.Calendar
 
-import Data.Colour.SRGB
+--import Data.Colour.SRGB
 
 import           Data.TM.Parameter
-import           Data.TM.Value
+--import           Data.TM.Value
 
-import           General.Time
+--import           General.Time
 
 
 import qualified GI.Gtk as Gtk
 import qualified GI.Cairo as GI
-import qualified Data.GI.Base.Attributes as GI
+--import qualified Data.GI.Base.Attributes as GI
 
 import           Graphics.Rendering.Chart.Backend.GI.Cairo
 import           Graphics.Rendering.Chart as Ch
@@ -62,7 +66,7 @@ import           Graphics.Rendering.Chart.Easy as Ch
 import           GUI.NameDescrTable
 import           GUI.Chart
 
-import Foreign.Ptr
+--import Foreign.Ptr
 import GI.Cairo.Render.Connector
 
 
@@ -255,17 +259,17 @@ graphWidgetAddParameter gw name lineStyle pointStyle = do
   return hs
 
 
-graphRemoveParameter' :: TVar Graph -> ShortText -> IO (HashSet ShortText)
-graphRemoveParameter' var name = do
+
+graphWidgetRemoveParameter :: GraphWidget -> ShortText -> IO ()
+graphWidgetRemoveParameter gw name = do 
   atomically $ do
-    graph <- readTVar var
+    graph <- readTVar (gw ^. gwGraph)
 
     let newSet   = HS.delete name (graph ^. graphParameters)
         newData  = M.delete name (graph ^. graphData)
         newGraph = graph & graphParameters .~ newSet & graphData .~ newData
 
-    writeTVar var newGraph
-    return newSet
+    writeTVar (gw ^. gwGraph) newGraph
 
 
 
@@ -276,40 +280,22 @@ graphWidgetAddParameters
   -> [(ShortText, Ch.LineStyle, Ch.PointStyle)]
   -> IO (HashSet ShortText)
 graphWidgetAddParameters gw params = do 
-  res <- graphAddParameters' (gw ^. gwGraph) params 
+  res <- graphAddParameters (gw ^. gwGraph) params 
   redrawGraph gw
   return res
 
-
-graphAddParameters'
+graphAddParameters
   :: TVar Graph
   -> [(ShortText, Ch.LineStyle, Ch.PointStyle)]
   -> IO (HashSet ShortText)
-graphAddParameters' var ls = do
+graphAddParameters var ls = do
   atomically $ do
     graph <- readTVar var
 
-    let newGraph = foldl' insertInGraph graph ls
+    let newGraph = foldl' graphAddParameter graph ls
 
     writeTVar var newGraph
     return (newGraph ^. graphParameters)
-
-
-
-insertInGraph :: Graph -> (ShortText, Ch.LineStyle, Ch.PointStyle) -> Graph
-insertInGraph graph (name, lineStyle, pointStyle) =
-  let newSet   = HS.insert name (graph ^. graphParameters)
-      newGraph = graph & graphParameters .~ newSet & graphData .~ newData
-      -- if we already have the parameter inserted, use the old values
-      newData  = M.insertWith combine
-                              name
-                              (PlotVal name lineStyle pointStyle MS.empty)
-                              (graph ^. graphData)
-      combine _ old = old
-  in  newGraph
-
-
-
 
 
 
@@ -323,30 +309,6 @@ chart Graph {..} = toRenderable layout
       .~ T.unpack _graphName
       &  layout_plots
       .~ plots
-
-
--- drawChart :: TVar Graph -> FlOffscreen -> Ref Widget -> IO ()
--- drawChart _graphVar _offscreen _widget = do
---   return ()
-  -- rectangle' <- getRectangle widget
-  -- graph      <- readTVarIO graphVar
-  -- withFlClip rectangle' $ void $ renderToWidgetOffscreen widget
-  --                                                        offscreen
-  --                                                        (chart graph)
-
-
--- updateCanvas :: Renderable a -> Gtk.DrawingArea  -> IO Bool
--- updateCanvas chart canvas = do
-
-    -- win <- Gtk.widgetGetDrawWindow canvas
-    -- (width, height) <- G.widgetGetSize canvas
-    -- regio <- Gtk.regionRectangle $ GE.Rectangle 0 0 width height
-    -- let sz = (fromIntegral width,fromIntegral height)
-    -- Gtk.drawWindowBeginPaintRegion win regio
-    -- Gtk.renderWithDrawable win $ runBackend (defaultEnv bitmapAlignmentFns) (render chart sz) 
-    -- Gtk.drawWindowEndPaint win
-    -- return True
-
 
 drawingFunction :: GraphWidget -> GI.Context -> IO Bool 
 drawingFunction w ctx = do 

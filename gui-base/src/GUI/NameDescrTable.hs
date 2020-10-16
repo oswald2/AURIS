@@ -33,6 +33,7 @@ makeLenses ''TableValue
 data NameDescrTable = NameDescrTable {
   _nmdtView :: !TreeView 
   , _nmdtModel :: !(SeqStore TableValue)
+  , _nmdtFilterModel :: !TreeModelFilter
   , _nmdtMenu :: TVar (Maybe Menu)
   }
 makeLenses ''NameDescrTable
@@ -106,7 +107,7 @@ createNameDescrTable mainBox values = do
 
   menu <- newTVarIO Nothing 
 
-  let g = NameDescrTable tv model menu 
+  let g = NameDescrTable tv model filterModel menu 
 
   void $ Gtk.on tv #buttonPressEvent (buttonCB g)
 
