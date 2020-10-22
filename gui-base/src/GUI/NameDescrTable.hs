@@ -159,11 +159,13 @@ getSelectedItems :: NameDescrTable -> IO [TableValue]
 getSelectedItems tbl = do
   let tv = tbl ^. nmdtView
       model = tbl ^. nmdtModel
+      filterModel = tbl ^. nmdtFilterModel
 
   sel <- treeViewGetSelection tv 
   (paths, _) <- treeSelectionGetSelectedRows sel 
 
-  idxs <- traverse treePathGetIndices paths 
+  childPaths <- catMaybes <$> traverse (treeModelFilterConvertPathToChildPath filterModel) paths
+  idxs <- traverse treePathGetIndices childPaths
   traverse (seqStoreGetValue model) ((concat . catMaybes) idxs)
 
 -- | gets the currently selected items in the table and returns a 'Vector' of 
