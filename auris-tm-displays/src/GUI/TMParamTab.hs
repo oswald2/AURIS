@@ -15,11 +15,11 @@ where
 
 import           RIO                     hiding ( (^.), (.~))
 import qualified RIO.Vector                    as V
-import qualified RIO.Map                       as M
-import qualified Data.Text.IO                  as T
+--import qualified RIO.Map                       as M
+--import qualified Data.Text.IO                  as T
 import qualified Data.Text.Short               as ST
-import           Data.Colour
-import           Data.Default.Class
+--import           Data.Colour
+--import           Data.Default.Class
 
 import           Control.Lens
 
@@ -27,19 +27,19 @@ import           GI.Gtk                        as Gtk
 
 
 -- import           Graphics.UI.FLTK.LowLevel.FLTKHS
-import           Graphics.Rendering.Chart.Backend.Types
-import qualified Graphics.Rendering.Chart.Easy as Ch
+--import           Graphics.Rendering.Chart.Backend.Types
+--import qualified Graphics.Rendering.Chart.Easy as Ch
 
-import           General.Time
+--import           General.Time
 
 import           Data.TM.Parameter
-import           Data.TM.Value
-import           Data.TM.Validity
+--import           Data.TM.Value
+--import           Data.TM.Validity
 import           Data.TM.TMParameterDef
 
-import           Data.Display.Graphical
+--import           Data.Display.Graphical
 
-import           GUI.Colors
+--import           GUI.Colors
 import           GUI.GraphWidget
 import           GUI.ParamDisplay
 import           GUI.NameDescrTable

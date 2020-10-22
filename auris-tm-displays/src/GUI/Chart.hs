@@ -234,7 +234,7 @@ emptyGraph name = Graph name HS.empty M.empty defaultTimeScaleSettings
 graphInsertParamValue :: Graph -> TMParameter -> Graph
 graphInsertParamValue g@Graph {..} param =
   let paramName = param ^. pName
-  in  trace "graphInsertParamValue" $ case M.lookup paramName _graphData of
+  in case M.lookup paramName _graphData of
         Nothing -> g
         Just plotVal ->
           let val = (toUTCTime (param ^. pTime), toDouble (param ^. pValue))
@@ -242,7 +242,7 @@ graphInsertParamValue g@Graph {..} param =
               newPlotVal = plotVal & plotValValues .~ newSet
               newMap     = M.insert paramName newPlotVal _graphData
               newGraph   = g & graphData .~ newMap
-          in  trace ("after insert:" <> T.pack (show newGraph)) newGraph
+          in newGraph
 
 
 graphAddParameter :: Graph -> (ShortText, Ch.LineStyle, Ch.PointStyle) -> Graph
@@ -255,8 +255,7 @@ graphAddParameter graph (name, lineStyle, pointStyle) =
                               (PlotVal name lineStyle pointStyle MS.empty)
                               (graph ^. graphData)
       combine _ old = old
-  in  
-    trace ("graphAddParameter: newData: " <> T.pack (show newData)) newGraph
+  in newGraph
 
 graphRemoveParameter :: Graph -> ShortText -> Graph
 graphRemoveParameter graph name = 
