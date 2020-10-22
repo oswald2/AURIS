@@ -32,15 +32,16 @@ import           GI.Gtk                        as Gtk
 
 --import           General.Time
 
-import           Data.TM.Parameter
+import Data.TM.Parameter ( TMParameter )
 --import           Data.TM.Value
 --import           Data.TM.Validity
-import           Data.TM.TMParameterDef
+import Data.TM.TMParameterDef
+    ( TMParameterDef, fpDescription, fpName )
 
 --import           Data.Display.Graphical
 
 --import           GUI.Colors
-import           GUI.GraphWidget
+import GUI.GraphWidget ( setupGraphWidget )
 import           GUI.ParamDisplay
 import           GUI.NameDescrTable
 import           GUI.Utils

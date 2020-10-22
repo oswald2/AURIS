@@ -114,7 +114,7 @@ library
         InstanceSigs
         KindSignatures
         LambdaCase
-        MonadFailDesugaring
+        
         MultiParamTypeClasses
         MultiWayIf
         NamedFieldPuns
