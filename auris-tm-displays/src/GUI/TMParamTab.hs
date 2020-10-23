@@ -99,7 +99,7 @@ createTMParamTab builder = do
   itemAddParamsD3 <- getObject builder "menuItemAddDisplay3" MenuItem 
   itemAddParamsD4 <- getObject builder "menuItemAddDisplay4" MenuItem 
 
-  graphWidget <- setupGraphWidget singleBox "Display 1" paramSel
+  graphWidget <- setupGraphWidget builder singleBox "Display 1" paramSel
 
   ref     <- newTVarIO (emptyParDisplays & parDisp1 ?~ GraphDisplay graphWidget)
 

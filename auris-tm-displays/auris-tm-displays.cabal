@@ -76,6 +76,7 @@ library
     gi-cairo,
     gi-cairo-connector,
     gi-cairo-render,
+    gi-gdk,
     haskell-gi-base
 
 

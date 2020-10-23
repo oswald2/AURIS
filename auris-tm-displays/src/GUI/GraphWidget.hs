@@ -28,10 +28,10 @@ where
 
 
 import           RIO hiding ((.~))
+import RIO.Partial (toEnum)
 import qualified RIO.Map                       as M
 import qualified RIO.Vector                    as V
 import qualified RIO.HashSet                   as HS
---import           RIO.List                       ( cycle )
 import qualified RIO.Text                      as T
 --import           Data.Text.Short                ( ShortText )
 import qualified Data.Text.Short               as ST
@@ -39,24 +39,15 @@ import qualified Data.Text.Short               as ST
 --import           Control.Lens                   ( makeLenses )
 
 
---import           Data.MultiSet                  ( MultiSet )
---import qualified Data.MultiSet                 as MS
 import           Data.Text.Short                ( ShortText )
 
---import qualified Data.Time.Clock               as TI
---import           Data.Time.Calendar
-
---import Data.Colour.SRGB
-
 import           Data.TM.Parameter
---import           Data.TM.Value
-
---import           General.Time
 
 
 import qualified GI.Gtk as Gtk
 import qualified GI.Cairo as GI
---import qualified Data.GI.Base.Attributes as GI
+import qualified GI.Gdk.Structs.EventButton as GI 
+import qualified GI.Gdk.Flags as GI
 
 import           Graphics.Rendering.Chart.Backend.GI.Cairo
 import           Graphics.Rendering.Chart as Ch
@@ -66,10 +57,27 @@ import           Graphics.Rendering.Chart.Easy as Ch
 import           GUI.NameDescrTable
 import           GUI.Chart
 
---import Foreign.Ptr
 import GI.Cairo.Render.Connector
+import           GUI.Utils
 
 
+
+data GraphProperties = GraphProperties {
+  _gpTitle :: !Text 
+  }
+makeLenses ''GraphProperties 
+
+defaultProperties :: GraphProperties
+defaultProperties = GraphProperties {
+  _gpTitle = "Graph"
+  }
+
+
+data GraphPropertiesDialog = GraphPropertiesDialog {
+  _gpdDialog :: !Gtk.Dialog
+  , _gpdTitle :: !Gtk.Entry
+}
+makeLenses ''GraphPropertiesDialog
 
 
 
@@ -79,6 +87,7 @@ data GraphWidget = GraphWidget {
   , _gwParamSelection :: !NameDescrTable
   , _gwGraph :: TVar Graph
   , _gwPickFn :: TVar (Maybe (PickFn ()))
+  , _gwPropertiesDialog :: !GraphPropertiesDialog
 }
 makeLenses ''GraphWidget
 
@@ -93,76 +102,42 @@ graphWidgetSetChartName w name = do
 
 
 
-setupGraphWidget :: Gtk.Box -> Text -> NameDescrTable -> IO GraphWidget
-setupGraphWidget parent title paramSelector = do
+setupGraphWidget :: Gtk.Builder -> Gtk.Box -> Text -> NameDescrTable -> IO GraphWidget
+setupGraphWidget builder parent title paramSelector = do
   let graph = emptyGraph title
   var       <- newTVarIO graph
   var2      <- newTVarIO Nothing 
   da <- Gtk.drawingAreaNew 
+  Gtk.widgetAddEvents da [GI.EventMaskButtonPressMask]
   Gtk.boxPackStart parent da True True 0
+
+  dialog <- setupPropertiesDialog builder defaultProperties
+
+  menu <- getObject builder "chartPropertiesMenu" Gtk.Menu 
 
   let g = GraphWidget { _gwParent         = parent
                       , _gwDrawingArea    = da
                       , _gwParamSelection = paramSelector
                       , _gwGraph          = var
                       , _gwPickFn         = var2 
+                      , _gwPropertiesDialog = dialog 
                       }
 
   void $ GI.on da #draw (drawingFunction g)
+
+  void $ GI.on da #buttonPressEvent $ \ev -> do 
+    bt <- GI.getEventButtonButton ev 
+    case bt of 
+      3 -> do 
+        menu <- createPopupMenu g
+        Gtk.menuPopupAtPointer menu Nothing
+        return True 
+      _ -> return False 
+
+
+
   return g
 
-
-
--- handleMouse
---   :: TVar Graph
---   -> NameDescrTable
---   -> Ref Widget
---   -> Event
---   -> IO (Either UnknownEvent ())
--- handleMouse var paramSelector widget Push = do
---   res <- FL.eventButton3
---   if res
---     then do
---       paramNames <- graphWidgetGetParamNames var
---       let menuEntries =
---             [ MenuEntry
---                 "Add Parameter..."
---                 (Just (KeyFormat "^p"))
---                 (Just (addParamFromSelection var paramSelector widget))
---                 (MenuItemFlags [MenuItemNormal])
---               , MenuEntry "Set Graph Title"
---                           Nothing
---                           (Just (handleSetTitle var widget))
---                           (MenuItemFlags [MenuItemNormal])
---               , MenuEntry "Print to File"
---                           Nothing
---                           (Just (handlePrintToFile var))
---                           (MenuItemFlags [MenuItemNormal])
---               ]
---               ++ map param paramNames
---           param x = MenuEntry
---             ("Remove Parameter/" <> ST.toText x)
---             Nothing
---             (Just (handleRemoveParam var widget (ST.toText x)))
---             (MenuItemFlags [MenuItemNormal])
-
-
---       void $ popupMenu menuEntries
---       return (Right ())
---     else handleWidgetBase (safeCast widget) Push
--- handleMouse _ _ widget Release = do
---   res <- FL.eventButton3
---   if res then return (Right ()) else handleWidgetBase (safeCast widget) Release
--- handleMouse _ _ widget event = handleWidgetBase (safeCast widget) event
-
-
-
-
--- handleSetTitle :: TVar Graph -> Ref Widget -> Ref MenuItem -> IO ()
--- handleSetTitle var widget _ = do
---   res <- flInput "Set Chart Name: " Nothing
---   forM_ res (graphWidgetSetChartName var)
---   -- redraw widget
 
 
 -- handleRemoveParam :: TVar Graph -> Ref Widget -> Text -> Ref MenuItem -> IO ()
@@ -198,6 +173,7 @@ numParameters var = do
   graph <- readTVarIO var
   return (HS.size (graph ^. graphParameters))
 
+ 
 
 -- addParamFromSelection
 --   :: TVar Graph -> NameDescrTable -> Ref Widget -> Ref MenuItem -> IO ()
@@ -270,6 +246,7 @@ graphWidgetRemoveParameter gw name = do
         newGraph = graph & graphParameters .~ newSet & graphData .~ newData
 
     writeTVar (gw ^. gwGraph) newGraph
+  redrawGraph gw
 
 
 
@@ -321,3 +298,88 @@ drawingFunction w ctx = do
   pickFn <- renderWithContext rndr ctx 
   atomically $ writeTVar (w ^. gwPickFn) (Just pickFn)
   return True
+
+
+
+
+createPopupMenu :: GraphWidget -> IO Gtk.Menu
+createPopupMenu gw = do 
+  graph <- readTVarIO (gw ^. gwGraph)
+  let names = ST.toText <$> graphGetParameterNames graph 
+
+  menu <- Gtk.menuNew 
+  item <- Gtk.menuItemNewWithLabel "Properties..."
+  Gtk.menuShellAppend menu item 
+  void $ GI.on item #activate (showPropertiesDialog gw)
+
+  sep <- Gtk.separatorMenuItemNew
+  Gtk.menuShellAppend menu item 
+
+  removeMenu <- Gtk.menuNew 
+  removeItem <- Gtk.menuItemNewWithLabel "Remove Parameter..."
+  Gtk.menuShellAppend menu removeItem   
+  Gtk.menuItemSetSubmenu removeItem (Just removeMenu)
+
+  let menuItemAdd nm = do 
+        it <- Gtk.menuItemNewWithLabel nm 
+        Gtk.menuShellAppend removeMenu it
+        void $ GI.on it #activate (graphWidgetRemoveParameter gw (ST.fromText nm))
+
+  forM_ names menuItemAdd 
+  Gtk.widgetShowAll menu
+  return menu
+
+
+showPropertiesDialog :: GraphWidget -> IO () 
+showPropertiesDialog g = do 
+  let diag = g ^. gwPropertiesDialog
+  resp <- Gtk.dialogRun (diag ^. gpdDialog)
+  Gtk.widgetHide (diag  ^. gpdDialog)
+  case toEnum (fromIntegral resp) of 
+    Gtk.ResponseTypeOk -> do 
+      props <- getProperties diag
+      applyProperties g props
+      return () 
+    _ -> return () 
+
+
+applyProperties :: GraphWidget -> GraphProperties -> IO () 
+applyProperties gw gp = do 
+  atomically $ do 
+    graph <- readTVar (gw ^. gwGraph)
+    let !newGraph = graph & graphName .~ (gp ^. gpTitle)
+    writeTVar (gw ^. gwGraph) newGraph
+  return () 
+
+
+setupPropertiesDialog :: Gtk.Builder -> GraphProperties -> IO GraphPropertiesDialog
+setupPropertiesDialog builder props = do 
+  
+  window <- getObject builder "mainWindow" Gtk.Window
+  diag <- getObject builder "graphPropertiesDialog" Gtk.Dialog
+  Gtk.windowSetTransientFor diag (Just window)
+  
+  title <- getObject builder "graphTitleEntry" Gtk.Entry
+  
+  void $ Gtk.dialogAddButton diag "Cancel" (fromIntegral (fromEnum Gtk.ResponseTypeCancel))
+  void $ Gtk.dialogAddButton diag "OK" (fromIntegral (fromEnum Gtk.ResponseTypeOk))
+
+  Gtk.entrySetText title (props ^. gpTitle)
+
+  let g = GraphPropertiesDialog {
+        _gpdDialog = diag 
+        , _gpdTitle = title 
+        }
+  
+  return g 
+
+
+getProperties :: GraphPropertiesDialog -> IO GraphProperties 
+getProperties g = do 
+  title <- Gtk.entryGetText (g ^. gpdTitle)
+
+  let !p = GraphProperties { 
+            _gpTitle = title
+          }
+
+  return p
