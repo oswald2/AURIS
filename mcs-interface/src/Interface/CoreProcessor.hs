@@ -17,7 +17,8 @@ import           Data.PUS.Events
 data InterfaceAction =
   Quit
   | ImportMIB FilePath FilePath
-  deriving (Show, Generic)
+  | LogMsg LogSource LogLevel Utf8Builder
+  deriving (Generic)
 
 
 runCoreThread
@@ -29,7 +30,7 @@ runCoreThread
      )
   => TBQueue InterfaceAction
   -> m ()
-runCoreThread queue = do 
+runCoreThread queue = do
   logDebug "Starting CoreThread..."
   loop True
  where
@@ -56,7 +57,7 @@ processMsg
   -> m ()
 processMsg Quit                           = return ()
 processMsg (ImportMIB path serializePath) = importMIB path serializePath
-
+processMsg (LogMsg source level msg     ) = logGeneric source level msg
 
 
 importMIB

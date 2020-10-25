@@ -6,6 +6,7 @@ module GUI.Chart
   ( Graph(..)
   , graphGetParameterNames
   , graphInsertParamValue
+  , graphClearValues 
   , graphAddParameter
   , graphRemoveParameter
   , graphName 
@@ -244,6 +245,9 @@ graphInsertParamValue g@Graph {..} param =
               newGraph   = g & graphData .~ newMap
           in newGraph
 
+
+graphClearValues :: Graph -> Graph 
+graphClearValues g = g & graphData .~ M.empty 
 
 graphAddParameter :: Graph -> (ShortText, Ch.LineStyle, Ch.PointStyle) -> Graph
 graphAddParameter graph (name, lineStyle, pointStyle) =

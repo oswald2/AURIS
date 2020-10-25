@@ -53,6 +53,7 @@ import           Interface.CoreProcessor
 data ActionTable = ActionTable {
     actionQuit :: IO ()
     , actionImportMIB :: FilePath -> FilePath -> IO ()
+    , actionLogMessage :: LogSource -> LogLevel -> Utf8Builder -> IO ()
     , actionSendTCRequest :: TCRequest -> IO ()
     }
 
@@ -76,6 +77,7 @@ actionTable :: TBQueue InterfaceAction -> ActionTable
 actionTable queue = ActionTable
   { actionQuit          = pure ()
   , actionImportMIB     = \p s -> callAction queue (ImportMIB p s)
+  , actionLogMessage    = \s l msg -> callAction queue (LogMsg s l msg)
   , actionSendTCRequest = \_tc -> pure ()
   }
 

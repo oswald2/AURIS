@@ -6,12 +6,15 @@ module GUI.GraphWidget
   ( GraphWidget
   , setupGraphWidget
   , graphWidgetInsertParamValue
+  , graphWidgetClearValues
   , emptyGraph
   , graphWidgetAddParameter
   , graphWidgetAddParameters
   , graphWidgetRemoveParameter
   , graphWidgetSetChartName
   , graphWidgetGetParamNames
+  , graphWidgetSaveToSVG
+  , graphWidgetSaveToSVGAction
   , addParamFromSelector
   , plotValName
   , plotValLineType
@@ -82,7 +85,8 @@ makeLenses ''GraphPropertiesDialog
 
 
 data GraphWidget = GraphWidget {
-  _gwParent :: !Gtk.Box
+  _gwWindow :: !Gtk.Window
+  , _gwParent :: !Gtk.Box
   , _gwDrawingArea :: !Gtk.DrawingArea
   , _gwParamSelection :: !NameDescrTable
   , _gwGraph :: TVar Graph
@@ -111,11 +115,12 @@ setupGraphWidget builder parent title paramSelector = do
   Gtk.widgetAddEvents da [GI.EventMaskButtonPressMask]
   Gtk.boxPackStart parent da True True 0
 
+  window <- getObject builder "mainWindow" Gtk.Window
+
   dialog <- setupPropertiesDialog builder defaultProperties
 
-  menu <- getObject builder "chartPropertiesMenu" Gtk.Menu 
-
-  let g = GraphWidget { _gwParent         = parent
+  let g = GraphWidget { _gwWindow         = window 
+                      , _gwParent         = parent
                       , _gwDrawingArea    = da
                       , _gwParamSelection = paramSelector
                       , _gwGraph          = var
@@ -129,8 +134,8 @@ setupGraphWidget builder parent title paramSelector = do
     bt <- GI.getEventButtonButton ev 
     case bt of 
       3 -> do 
-        menu <- createPopupMenu g
-        Gtk.menuPopupAtPointer menu Nothing
+        m <- createPopupMenu g
+        Gtk.menuPopupAtPointer m Nothing
         return True 
       _ -> return False 
 
@@ -146,27 +151,34 @@ setupGraphWidget builder parent title paramSelector = do
 --   redraw widget
 
 
--- handlePrintToFile :: TVar Graph -> Ref MenuItem -> IO ()
--- handlePrintToFile gw _ = do
---   graph   <- readTVarIO gw
---   chooser <- nativeFileChooserNew (Just BrowseSaveFile)
---   setTitle chooser "Save Chart..."
---   setFilter chooser "SVG\t*.svg"
---   setOptions chooser [SaveasConfirm, NewFolder, Preview, UseFilterExt]
---   setPresetFile chooser $ graph ^. graphName <> ".svg"
---   res <- showWidget chooser
---   case res of
---     NativeFileChooserPicked -> do
---       name' <- getFilename chooser
---       case name' of
---         Just name -> do
+graphWidgetSaveToSVGAction :: GraphWidget -> IO () 
+graphWidgetSaveToSVGAction gw = do 
+  fc <- Gtk.fileChooserNativeNew 
+      (Just "Save SVG...")
+      (Just (gw ^. gwWindow))
+      Gtk.FileChooserActionSave
+      Nothing
+      Nothing
 
---           let options = def & fo_format .~ SVG
+  filt <- Gtk.fileFilterNew 
+  Gtk.fileFilterAddPattern filt "*.svg"
 
---           void $ renderableToFile options (T.unpack name) (chart graph)
---         _ -> return ()
---     _ -> return ()
+  Gtk.fileChooserAddFilter fc filt
+  Gtk.fileChooserSetDoOverwriteConfirmation fc True 
+  Gtk.nativeDialogSetTitle fc "Save SVG..."
+  Gtk.nativeDialogSetTransientFor fc (Just (gw ^. gwWindow))
+  res <- Gtk.nativeDialogRun fc
+  case toEnum (fromIntegral res) of 
+    Gtk.ResponseTypeAccept -> do 
+      fileName <- Gtk.fileChooserGetFilename fc 
+      forM_ fileName (graphWidgetSaveToSVG gw)
+    _ -> return () 
 
+graphWidgetSaveToSVG :: GraphWidget -> FilePath -> IO () 
+graphWidgetSaveToSVG gw fn = do 
+  graph <- readTVarIO (gw ^. gwGraph)
+  let options = def & fo_format .~ SVG
+  void $ renderableToFile options fn (chart graph)
 
 numParameters :: TVar Graph -> IO Int
 numParameters var = do
@@ -174,22 +186,6 @@ numParameters var = do
   return (HS.size (graph ^. graphParameters))
 
  
-
--- addParamFromSelection
---   :: TVar Graph -> NameDescrTable -> Ref Widget -> Ref MenuItem -> IO ()
--- addParamFromSelection var paramSelector widget _item = do
---   selItems <- getSelectedItems paramSelector
---   num      <- numParameters var
-
---   let vec    = drop (num - 1) chartStyles
---       values = zipWith (\x (l, p) -> (ST.fromText (_tableValName x), l, p))
---                        selItems
---                        vec
-
---   void $ graphAddParameters' var values
---   redraw widget
-
-
 
 addParamFromSelector :: GraphWidget -> RIO.Vector TableValue -> IO ()
 addParamFromSelector graphWidget table = do
@@ -220,6 +216,15 @@ graphWidgetInsertParamValue gw params = do
     let newGraph = V.foldl graphInsertParamValue graph params
     writeTVar (gw ^. gwGraph) newGraph
   redrawGraph gw
+
+
+graphWidgetClearValues :: GraphWidget -> IO () 
+graphWidgetClearValues gw = do 
+  atomically $ do 
+    graph <- readTVar (gw ^. gwGraph)
+    writeTVar (gw ^. gwGraph) (graphClearValues graph)
+  redrawGraph gw 
+
 
 -- | Add a parameter to the chart. The chart then accepts parameter values 
 -- for the parameters within it's '_graphParameters' field.
@@ -312,8 +317,16 @@ createPopupMenu gw = do
   Gtk.menuShellAppend menu item 
   void $ GI.on item #activate (showPropertiesDialog gw)
 
+  item2 <- Gtk.menuItemNewWithLabel "Clear Graph..."
+  Gtk.menuShellAppend menu item2 
+  void $ GI.on item2 #activate (graphWidgetClearValues gw)
+
+  item3 <- Gtk.menuItemNewWithLabel "Save to SVG..."
+  Gtk.menuShellAppend menu item3 
+  void $ GI.on item3 #activate (graphWidgetSaveToSVGAction gw)
+
   sep <- Gtk.separatorMenuItemNew
-  Gtk.menuShellAppend menu item 
+  Gtk.menuShellAppend menu sep
 
   removeMenu <- Gtk.menuNew 
   removeItem <- Gtk.menuItemNewWithLabel "Remove Parameter..."
