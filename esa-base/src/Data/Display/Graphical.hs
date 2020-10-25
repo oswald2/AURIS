@@ -1,3 +1,4 @@
+{-# LANGUAGE TemplateHaskell #-}
 module Data.Display.Graphical
   ( PrintRaw(..)
   , Symbol(..)
@@ -5,10 +6,30 @@ module Data.Display.Graphical
   , GRDParameter(..)
   , GRD(..)
   , GRDColour(..)
+  , grdpName
+  , grdpRaw
+  , grdpPlotColor
+  , grdpSymbol
+  , grdpLineType
+  , grdName
+  , grdHeader
+  , grdScroll
+  , grdHardCopy
+  , grdDays
+  , grdHours
+  , grdMinutes
+  , grdAxesColor
+  , grdXTick
+  , grdYTick
+  , grdXGrid
+  , grdYGrid
+  , grdParams
   )
 where
 
 import           RIO
+
+import           Control.Lens                   ( makeLenses )
 
 import           Data.Text.Short                ( ShortText )
 import           Data.Colour
@@ -39,9 +60,9 @@ data Symbol =
   deriving (Eq, Ord, Enum, Show, Generic)
 
 instance Serialise Symbol
-instance FromJSON Symbol 
-instance ToJSON Symbol where 
-  toEncoding = genericToEncoding defaultOptions 
+instance FromJSON Symbol
+instance ToJSON Symbol where
+  toEncoding = genericToEncoding defaultOptions
 
 
 data LineType =
@@ -54,9 +75,9 @@ data LineType =
   deriving (Eq, Ord, Enum, Show, Generic)
 
 instance Serialise LineType
-instance FromJSON LineType 
-instance ToJSON LineType where 
-  toEncoding = genericToEncoding defaultOptions 
+instance FromJSON LineType
+instance ToJSON LineType where
+  toEncoding = genericToEncoding defaultOptions
 
 
 newtype GRDColour = GRDColour (AlphaColour Double)
@@ -68,7 +89,7 @@ data EncColor = EncColor !Double !Double !Double !Double
   deriving Generic
 
 instance Serialise EncColor
-instance FromJSON EncColor 
+instance FromJSON EncColor
 instance ToJSON EncColor where
   toEncoding = genericToEncoding defaultOptions
 
@@ -90,21 +111,19 @@ toEncColor (GRDColour c) =
 
 {-# INLINABLE fromEncColor #-}
 fromEncColor :: EncColor -> GRDColour
-fromEncColor (EncColor red green blue alpha) = 
-   let c = sRGB red green blue 
-   in
-   GRDColour (withOpacity c alpha)
+fromEncColor (EncColor red green blue alpha) =
+  let c = sRGB red green blue in GRDColour (withOpacity c alpha)
 
 
 instance Serialise GRDColour where
   encode = S.encode . toEncColor
   decode = fromEncColor <$> S.decode
 
-instance FromJSON GRDColour where 
+instance FromJSON GRDColour where
   parseJSON x = fromEncColor <$> parseJSON x
 
-instance ToJSON GRDColour where 
-  toJSON = toJSON . toEncColor 
+instance ToJSON GRDColour where
+  toJSON     = toJSON . toEncColor
   toEncoding = toEncoding . toEncColor
 
 data GRDParameter = GRDParameter {
@@ -114,9 +133,10 @@ data GRDParameter = GRDParameter {
   , _grdpSymbol :: !Symbol
   , _grdpLineType :: !LineType
   } deriving (Show, Generic)
+makeLenses ''GRDParameter
 
 instance Serialise GRDParameter
-instance FromJSON GRDParameter 
+instance FromJSON GRDParameter
 instance ToJSON GRDParameter where
   toEncoding = genericToEncoding defaultOptions
 
@@ -136,9 +156,9 @@ data GRD = GRD {
     , _grdYGrid :: !Int
     , _grdParams :: Vector GRDParameter
   } deriving (Show, Generic)
-
+makeLenses ''GRD
 
 instance Serialise GRD
-instance FromJSON GRD 
+instance FromJSON GRD
 instance ToJSON GRD where
   toEncoding = genericToEncoding defaultOptions

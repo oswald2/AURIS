@@ -68,6 +68,7 @@ data PlotVal = PlotVal {
   _plotValName :: !ShortText
   , _plotValLineType :: !Ch.LineStyle
   , _plotValPointStyle :: !Ch.PointStyle
+  , _plotValUsePointStyle :: !Bool
   , _plotValValues :: MultiSet GraphVal
 } 
 makeLenses ''PlotVal
@@ -117,24 +118,41 @@ chartColors = cycle
   , opaque hotpink
   ]
 
+pointShapes :: [PointShape]
+pointShapes = cycle 
+ [
+   PointShapeCross
+   , PointShapePlus
+   , PointShapeStar
+   , PointShapeCircle 
+   , PointShapePolygon 3 True 
+   , PointShapePolygon 4 True 
+   , PointShapePolygon 5 True 
+   , PointShapePolygon 6 True 
+ ]
+
 
 chartStyles :: [(Ch.LineStyle, Ch.PointStyle)]
-chartStyles = map (\x -> (def & line_color .~ x, def)) chartColors
+chartStyles = zipWith func chartColors pointShapes
+  where 
+    lineFunc x = def & line_color .~ x 
+    pointFunc x p = def & point_color .~ x  & point_shape .~ p
+    func x p = (lineFunc x, pointFunc x p)
 
 
 plotValToPlot :: PlotVal -> Plot TI.UTCTime Double
 plotValToPlot PlotVal {..} =
-  toPlot
-    $  plot_lines_values
-    .~ [values]
-    $  plot_lines_style
-    .~ _plotValLineType
-    -- $  plot_points_style .~ _plotValPointStyle
-    $  plot_lines_title
-    .~ ST.unpack _plotValName
-    $  def
+  let lin = def & plot_lines_title  .~ ST.unpack _plotValName
+                & plot_lines_values .~ [values]
+                & plot_lines_style  .~ _plotValLineType
+
+      pnt = def & plot_points_style .~ _plotValPointStyle 
+                & plot_points_values .~ values 
+  in if _plotValUsePointStyle 
+    then joinPlot (toPlot lin) (toPlot pnt)
+    else toPlot lin 
   where 
-    values = MS.toList $ _plotValValues
+    values = MS.toList _plotValValues
 
 
 titleStyle :: FontStyle
@@ -256,7 +274,7 @@ graphAddParameter graph (name, lineStyle, pointStyle) =
       -- if we already have the parameter inserted, use the old values
       newData  = M.insertWith combine
                               name
-                              (PlotVal name lineStyle pointStyle MS.empty)
+                              (PlotVal name lineStyle pointStyle False MS.empty)
                               (graph ^. graphData)
       combine _ old = old
   in newGraph

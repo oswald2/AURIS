@@ -81,7 +81,6 @@ library
 
 
   default-extensions:
-        
         BangPatterns
         BinaryLiterals
         ConstraintKinds

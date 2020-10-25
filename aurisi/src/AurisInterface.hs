@@ -20,9 +20,9 @@ import           Data.PUS.PUSDfh
 
 import           GUI.MainWindow
 import           GUI.MainWindowActions
-import           GUI.Utils
+--import           GUI.Utils
 
-import           Data.GI.Gtk.Threading
+import           Data.GI.Gtk.Threading          ( postGUIASync )
 
 
 
@@ -73,7 +73,7 @@ eventProcessor g (EventPUS (EVTelemetry (EVTMRejectedSpillOverPkt pkt))) = do
 
 
 
-eventProcessor g (EventPUS (EVAlarms (EVEConnection i l c))) = 
+eventProcessor g (EventPUS (EVAlarms (EVEConnection i l c))) =
   postGUIASync (mwSetConnectionState g i l c)
 eventProcessor g (EventPUS (EVAlarms (EVPacketInfo txt))) = do
   postGUIASync (mwLogInfo g txt)

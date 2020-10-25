@@ -8,40 +8,30 @@ module GUI.TMParamTab
   , createTMParamTab
   , addParameterValues
   , addParameterDefinitions
-  --, addGRDs
-  --, callOnDisplay
+  , addGrdDefinitions
+  , parTabRemoveDisplay
   )
 where
 
-import           RIO                     hiding ( (^.), (.~))
+import           RIO                     hiding ( (^.)
+                                                , (.~)
+                                                )
 import qualified RIO.Vector                    as V
---import qualified RIO.Map                       as M
---import qualified Data.Text.IO                  as T
 import qualified Data.Text.Short               as ST
---import           Data.Colour
---import           Data.Default.Class
+
+import           Data.Display.Graphical
 
 import           Control.Lens
 
 import           GI.Gtk                        as Gtk
 
+import           Data.TM.Parameter              ( TMParameter )
+import           Data.TM.TMParameterDef         ( TMParameterDef
+                                                , fpDescription
+                                                , fpName
+                                                )
 
--- import           Graphics.UI.FLTK.LowLevel.FLTKHS
---import           Graphics.Rendering.Chart.Backend.Types
---import qualified Graphics.Rendering.Chart.Easy as Ch
-
---import           General.Time
-
-import Data.TM.Parameter ( TMParameter )
---import           Data.TM.Value
---import           Data.TM.Validity
-import Data.TM.TMParameterDef
-    ( TMParameterDef, fpDescription, fpName )
-
---import           Data.Display.Graphical
-
---import           GUI.Colors
-import GUI.GraphWidget ( setupGraphWidget )
+import           GUI.GraphWidget                ( setupGraphWidget )
 import           GUI.ParamDisplay
 import           GUI.NameDescrTable
 import           GUI.Utils
@@ -66,16 +56,27 @@ data DisplaySel =
   | Display4
   deriving (Eq, Ord, Enum, Show)
 
+removeDisplay :: ParDisplays -> DisplaySel -> ParDisplays 
+removeDisplay disp Display1 = disp & parDisp1 .~ Nothing 
+removeDisplay disp Display2 = disp & parDisp2 .~ Nothing 
+removeDisplay disp Display3 = disp & parDisp3 .~ Nothing 
+removeDisplay disp Display4 = disp & parDisp4 .~ Nothing 
+
+
 
 
 data TMParamTab = TMParamTab {
   _tmParamDisplaysTab :: !Notebook
   , _tmParamDisplaySelector :: !Notebook
-  , _tmParamDisplaySwitcher :: !Notebook 
-  , _tmParamSingleBox :: !Box 
-  , _tmParamBrowserBox :: !Box 
+  , _tmParamDisplaySwitcher :: !Notebook
+  , _tmParamSingleBox :: !Box
+  , _tmParamBrowserBox :: !Box
+  , _tmParamBrowserAndBox :: !Box
+  , _tmParamBrowserGrdBox :: !Box
+  , _tmParamBrowserScdBox :: !Box
   , _tmParamDisplays :: TVar ParDisplays
   , _tmParamSelector :: !NameDescrTable
+  , _tmParamGrdSelector :: !NameDescrTable
 }
 makeLenses ''TMParamTab
 
@@ -83,81 +84,60 @@ makeLenses ''TMParamTab
 createTMParamTab :: Gtk.Builder -> IO TMParamTab
 createTMParamTab builder = do
 
-  dispNB    <- getObject builder "notebookDisplays" Notebook
+  dispNB          <- getObject builder "notebookDisplays" Notebook
 
-  dispSel   <- getObject builder "notebookDisplaySelector" Notebook
-  switcher  <- getObject builder "notebookTMDisplays" Notebook
+  dispSel         <- getObject builder "notebookDisplaySelector" Notebook
+  switcher        <- getObject builder "notebookTMDisplays" Notebook
 
-  singleBox <- getObject builder "boxSingle" Box 
-  browserBox <- getObject builder "boxTMParameterBrowser" Box
+  btRemoveSingle  <- getObject builder "buttonSingleRemove" Button
 
-  paramSel  <- createNameDescrTable browserBox []
+  singleBox       <- getObject builder "boxSingle" Box
+  browserBox      <- getObject builder "boxTMParameterBrowser" Box
 
-  popupMenu <- getObject builder "popupTMParameters" Menu 
-  itemAddParamsD1 <- getObject builder "menuItemAddDisplay1" MenuItem 
-  itemAddParamsD2 <- getObject builder "menuItemAddDisplay2" MenuItem 
-  itemAddParamsD3 <- getObject builder "menuItemAddDisplay3" MenuItem 
-  itemAddParamsD4 <- getObject builder "menuItemAddDisplay4" MenuItem 
+  andBox          <- getObject builder "andBox" Box
+  grdBox          <- getObject builder "grdBox" Box
+  scdBox          <- getObject builder "scdBox" Box
 
-  graphWidget <- setupGraphWidget builder singleBox "Display 1" paramSel
+  paramSel        <- createNameDescrTable browserBox MultiSelection []
 
-  ref     <- newTVarIO (emptyParDisplays & parDisp1 ?~ GraphDisplay graphWidget)
+  grdSel          <- createNameDescrTable grdBox SingleSelection []
+
+  popupMenu       <- getObject builder "popupTMParameters" Menu
+  itemAddParamsD1 <- getObject builder "menuItemAddDisplay1" MenuItem
+  itemAddParamsD2 <- getObject builder "menuItemAddDisplay2" MenuItem
+  itemAddParamsD3 <- getObject builder "menuItemAddDisplay3" MenuItem
+  itemAddParamsD4 <- getObject builder "menuItemAddDisplay4" MenuItem
+
+  graphWidget     <- setupGraphWidget builder singleBox "Display 1" paramSel
+
+  ref <- newTVarIO (emptyParDisplays & parDisp1 ?~ GraphDisplay graphWidget)
 
   let gui = TMParamTab { _tmParamDisplaysTab     = dispNB
                        , _tmParamDisplaySelector = dispSel
                        , _tmParamDisplaySwitcher = switcher
                        , _tmParamSingleBox       = singleBox
+                       , _tmParamBrowserAndBox   = andBox
+                       , _tmParamBrowserGrdBox   = grdBox
+                       , _tmParamBrowserScdBox   = scdBox
                        , _tmParamSelector        = paramSel
-                       , _tmParamDisplays        = ref 
-                       , _tmParamBrowserBox      = browserBox 
+                       , _tmParamDisplays        = ref
+                       , _tmParamBrowserBox      = browserBox
+                       , _tmParamGrdSelector     = grdSel
                        }
-
-  -- -- now add a parameter to watch 
-  -- -- let lineStyle = def & line_color .~ opaque Ch.blue & line_width .~ 1.0
-
-  -- -- void $ graphAddParameter graphWidget "S2KTEST" lineStyle def
-
-  -- -- let setValues var widget = do
-  -- --       now <- getCurrentTime
-  -- --       let values = V.fromList
-  -- --             [ TMParameter "S2KTEST"
-  -- --                           now
-  -- --                           (TMValue (TMValDouble 3.14) clearValidity)
-  -- --                           Nothing
-  -- --             , TMParameter "S2KTEST"
-  -- --                           (now <+> oneSecond)
-  -- --                           (TMValue (TMValDouble 2.7) clearValidity)
-  -- --                           Nothing
-  -- --             , TMParameter "S2KTEST"
-  -- --                           (now <+> fromDouble 2 True)
-  -- --                           (TMValue (TMValDouble 1.6) clearValidity)
-  -- --                           Nothing
-  -- --             , TMParameter "S2KTEST"
-  -- --                           (now <+> fromDouble 3 True)
-  -- --                           (TMValue (TMValDouble 5.1) clearValidity)
-  -- --                           Nothing
-  -- --             , TMParameter "S2KTEST"
-  -- --                           (now <+> fromDouble 4 True)
-  -- --                           (TMValue (TMValDouble 4.0) clearValidity)
-  -- --                           Nothing
-  -- --             ]
-
-  -- --       graphInsertParamValue var values
-  -- --       redraw _tmParDisplayGroup
-
-  -- -- setCallback (gui ^. tmParamDispSwitcher . tmParSwSingle) (setValues graphWidget)
 
   let setValues g dispSelector = do
         items <- getSelectedItemsVector (g ^. tmParamSelector)
         disps <- readTVarIO (g ^. tmParamDisplays)
-        case disps ^. dispSelector of 
-          Just d -> paramDispAddParameterDef d items
+        case disps ^. dispSelector of
+          Just d  -> paramDispAddParameterDef d items
           Nothing -> return ()
- 
+
   void $ Gtk.on itemAddParamsD1 #activate (setValues gui parDisp1)
   void $ Gtk.on itemAddParamsD2 #activate (setValues gui parDisp2)
   void $ Gtk.on itemAddParamsD3 #activate (setValues gui parDisp3)
   void $ Gtk.on itemAddParamsD4 #activate (setValues gui parDisp4)
+
+  void $ Gtk.on btRemoveSingle #clicked (parTabRemoveDisplay gui Display1)
 
   setPopupMenu paramSel popupMenu
 
@@ -178,6 +158,13 @@ addParameterDefinitions gui params = do
   setTableFromModel browser (V.map ins params)
 
 
+addGrdDefinitions :: TMParamTab -> Map ST.ShortText GRD -> IO ()
+addGrdDefinitions gui grdMap = do
+  let value x = TableValue { _tableValName  = ST.toText (x ^. grdName)
+                                , _tableValDescr = ST.toText (x ^. grdHeader)
+                                }
+      values = map value $ toList grdMap
+  setTableFromModel (gui ^. tmParamGrdSelector) (V.fromList values)
 
 
 -- | New parameter values have arrived, add them to the available displays
@@ -191,50 +178,15 @@ addParameterValues gui values = do
   maybe (return ()) (`paramDispInsertValues` values) (displays ^. parDisp4)
 
 
--- addGRDs :: TMParamTab -> Map ST.ShortText GRD -> IO ()
--- addGRDs gui grdMap = do
---   let browser = gui ^. tmParamBrowserGRD
---   mapM_ (add browser . ST.toText) (M.keys grdMap)
-
-
--- determineSize :: TMParamTab -> GraphSelector -> IO (Vector Rectangle)
--- determineSize TMParamTab {..} GSSingle =
---   V.singleton <$> getRectangle _tmParamDisplayGroup
--- determineSize TMParamTab {..} GSHorizontal = do
---   Rectangle (Position (X x) (Y y)) (Size (Width w) (Height h)) <- getRectangle
---     _tmParamDisplayGroup
-
---   let rect1 = Rectangle (Position (X x) (Y y)) (Size (Width w) (Height m))
---       rect2 =
---         Rectangle (Position (X x) (Y (y + m))) (Size (Width w) (Height (h - m)))
---       m = h `quot` 2
-
---   return $ V.fromList [rect1, rect2]
--- determineSize TMParamTab {..} GSVertical = do
---   Rectangle (Position (X x) (Y y)) (Size (Width w) (Height h)) <- getRectangle
---     _tmParamDisplayGroup
-
---   let rect1 = Rectangle (Position (X x) (Y y)) (Size (Width m) (Height h))
---       rect2 =
---         Rectangle (Position (X (x + m)) (Y y)) (Size (Width (w - m)) (Height h))
---       m = w `quot` 2
---   return $ V.fromList [rect1, rect2]
-
--- determineSize TMParamTab {..} GSFour = do
---   Rectangle (Position (X x) (Y y)) (Size (Width w) (Height h)) <- getRectangle
---     _tmParamDisplayGroup
-
---   let rect1 = Rectangle (Position (X x) (Y y)) (Size (Width m) (Height n))
---       rect2 =
---         Rectangle (Position (X (x + m)) (Y y)) (Size (Width (w - m)) (Height n))
---       rect3 =
---         Rectangle (Position (X x) (Y (y + n))) (Size (Width m) (Height (h - n)))
---       rect4 = Rectangle (Position (X (x + m)) (Y (y + n)))
---                         (Size (Width (w - m)) (Height (h - n)))
---       m = w `quot` 2
---       n = h `quot` 2
---   return $ V.fromList [rect1, rect2, rect3, rect4]
-
-
-
-
+parTabRemoveDisplay :: TMParamTab -> DisplaySel -> IO ()
+parTabRemoveDisplay gui dispSel = do 
+  join $ atomically $ do 
+    displays <- readTVar (gui ^. tmParamDisplays)
+    let action = destroy displays dispSel 
+    writeTVar (gui ^. tmParamDisplays) (removeDisplay displays dispSel)
+    return action 
+  where 
+    destroy disp Display1 = maybe (return ()) paramDispDestroy (disp ^. parDisp1)
+    destroy disp Display2 = maybe (return ()) paramDispDestroy (disp ^. parDisp2)
+    destroy disp Display3 = maybe (return ()) paramDispDestroy (disp ^. parDisp3)
+    destroy disp Display4 = maybe (return ()) paramDispDestroy (disp ^. parDisp4)

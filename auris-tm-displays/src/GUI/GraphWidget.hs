@@ -15,6 +15,7 @@ module GUI.GraphWidget
   , graphWidgetGetParamNames
   , graphWidgetSaveToSVG
   , graphWidgetSaveToSVGAction
+  , graphWidgetDestroy
   , addParamFromSelector
   , plotValName
   , plotValLineType
@@ -36,11 +37,7 @@ import qualified RIO.Map                       as M
 import qualified RIO.Vector                    as V
 import qualified RIO.HashSet                   as HS
 import qualified RIO.Text                      as T
---import           Data.Text.Short                ( ShortText )
 import qualified Data.Text.Short               as ST
---import qualified Data.Text.IO                  as T
---import           Control.Lens                   ( makeLenses )
-
 
 import           Data.Text.Short                ( ShortText )
 
@@ -104,7 +101,8 @@ graphWidgetSetChartName w name = do
   let f x = x & graphName .~ name
   atomically $ modifyTVar (w ^. gwGraph) f
 
-
+graphWidgetDestroy :: GraphWidget -> IO () 
+graphWidgetDestroy gw = Gtk.widgetDestroy (gw ^. gwDrawingArea)
 
 setupGraphWidget :: Gtk.Builder -> Gtk.Box -> Text -> NameDescrTable -> IO GraphWidget
 setupGraphWidget builder parent title paramSelector = do
@@ -143,12 +141,6 @@ setupGraphWidget builder parent title paramSelector = do
 
   return g
 
-
-
--- handleRemoveParam :: TVar Graph -> Ref Widget -> Text -> Ref MenuItem -> IO ()
--- handleRemoveParam var widget param _ = do
---   void $ graphRemoveParameter' var (ST.fromText param)
---   redraw widget
 
 
 graphWidgetSaveToSVGAction :: GraphWidget -> IO () 
@@ -210,7 +202,6 @@ redrawGraph gw = do
 -- this function is a bit slow and could be optimized.
 graphWidgetInsertParamValue :: GraphWidget -> RIO.Vector TMParameter -> IO ()
 graphWidgetInsertParamValue gw params = do
-  --T.putStrLn $ "graphWidgetInsertParamValue: " <> T.pack (show params)
   atomically $ do
     graph <- readTVar (gw ^. gwGraph)
     let newGraph = V.foldl graphInsertParamValue graph params

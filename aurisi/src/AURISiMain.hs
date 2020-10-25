@@ -12,7 +12,7 @@ import qualified Data.Text.IO                  as T
 
 import           GUI.MainWindow
 import           GUI.MainWindowCallbacks
-import           GUI.About
+--import           GUI.About
 import           GUI.Theme
 
 import           Options.Generic
@@ -36,7 +36,7 @@ import           Version
 ui :: AurisConfig -> IO MainWindow
 ui cfg = do
   window <- createMainWindow cfg 
-  Gtk.onWidgetDestroy (_mwWindow window) Gtk.mainQuit
+  void $ Gtk.onWidgetDestroy (_mwWindow window) Gtk.mainQuit
   Gtk.widgetShowAll (_mwWindow window)
   pure window
 
@@ -101,7 +101,7 @@ main = do
               Right c -> pure c
 
         -- need to call it once in main before the GUI is started
-        Gtk.init Nothing
+        void $ Gtk.init Nothing
         Gtk.setCurrentThreadAsGUIThread
         -- create the main window
         mainWindow <- ui cfg 
@@ -126,7 +126,7 @@ main = do
                                                    mainWindow
                                                    coreQueue
 
-        GI.timeoutAddSeconds GI.PRIORITY_DEFAULT 1 (mwTimerLabelCB mainWindow)
+        void $ GI.timeoutAddSeconds GI.PRIORITY_DEFAULT 1 (mwTimerLabelCB mainWindow)
         Gtk.main
 
 

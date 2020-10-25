@@ -3,6 +3,7 @@
 #-}
 module GUI.NameDescrTable
   ( TableValue(..)
+  , Selection(..)
   , NameDescrTable
   , createNameDescrTable
   , getSelectedItems
@@ -24,6 +25,9 @@ import           GI.Gdk.Structs.EventButton
 
 
 
+data Selection = SingleSelection | MultiSelection 
+  deriving (Eq, Ord, Enum, Show, Read)
+
 data TableValue = TableValue {
   _tableValName :: !Text
   , _tableValDescr :: !Text
@@ -43,8 +47,8 @@ makeLenses ''NameDescrTable
 -- given list of 'TableValue'. The table is a 'TreeView' with a 
 -- filter model. At the bottom, a 'Entry' is added to enter the 
 -- filter values. 
-createNameDescrTable :: Box -> [TableValue] -> IO NameDescrTable
-createNameDescrTable mainBox values = do 
+createNameDescrTable :: Box -> Selection -> [TableValue] -> IO NameDescrTable
+createNameDescrTable mainBox sel values = do 
   model <- seqStoreNew values 
 
   --treeViewSetModel tv (Just model)
@@ -80,8 +84,13 @@ createNameDescrTable mainBox values = do
 
   selection <- treeViewGetSelection tv 
 
-  treeSelectionSetMode selection SelectionModeMultiple
-  treeViewSetRubberBanding tv True
+  case sel of 
+    MultiSelection -> do 
+      treeSelectionSetMode selection SelectionModeMultiple
+      treeViewSetRubberBanding tv True
+    SingleSelection -> do 
+      treeSelectionSetMode selection SelectionModeSingle
+      treeViewSetRubberBanding tv False
 
   col1 <- treeViewColumnNew
   col2 <- treeViewColumnNew

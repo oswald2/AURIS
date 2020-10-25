@@ -41,7 +41,7 @@ import           GUI.TMPacketTab
 import           GUI.TMFrameTab
 import           GUI.TMParamTab
 import           GUI.ConnectionTab
-import           GUI.ConnectionStatus
+--import           GUI.ConnectionStatus
 --import           GUI.GraphWidget
 --import           GUI.Colors
 import           GUI.Utils
@@ -115,10 +115,9 @@ mwInitialiseDataModel window model = do
       s p1 p2 = compare (p1 ^. fpName) (p2 ^. fpName)
   mwAddTMParameterDefinitions window paramDefs
 
---   -- also add the displays 
---   addGRDs (window ^. mwTMParamTab) (model ^. dmGRDs)
+  -- also add the displas 
+  addGrdDefinitions (window ^. mwTMParamTab) (model ^. dmGRDs)
 
---   return ()
 
 gladeFile :: Text
 gladeFile =

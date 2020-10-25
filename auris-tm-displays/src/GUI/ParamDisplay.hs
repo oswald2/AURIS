@@ -2,6 +2,7 @@ module GUI.ParamDisplay
   ( ParamDisplay(..)
   , paramDispInsertValues
   , paramDispAddParameterDef
+  , paramDispDestroy
   )
 where
 
@@ -31,3 +32,7 @@ paramDispAddParameterDef (GraphDisplay gw) values =
   addParamFromSelector gw values
 paramDispAddParameterDef ANDDisplay _values = return ()
 
+
+paramDispDestroy :: ParamDisplay -> IO () 
+paramDispDestroy (GraphDisplay gw) = graphWidgetDestroy gw 
+paramDispDestroy ANDDisplay = return () 
