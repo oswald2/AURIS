@@ -48,7 +48,7 @@ import           Data.Colour.SRGB
 
 import           Graphics.Rendering.Chart as Ch
 import           Graphics.Rendering.Chart.Easy as Ch
-                                         hiding ( (^.) )
+                                         hiding ( (^.), (%~))
 
 import           General.Time 
 
@@ -265,7 +265,11 @@ graphInsertParamValue g@Graph {..} param =
 
 
 graphClearValues :: Graph -> Graph 
-graphClearValues g = g & graphData .~ M.empty 
+graphClearValues g = 
+  let dat = M.toList (g ^. graphData)
+      new = map (\(x, y) -> (x, y & plotValValues .~ MS.empty)) dat 
+  in g & graphData .~ M.fromList new 
+
 
 graphAddParameter :: Graph -> (ShortText, Ch.LineStyle, Ch.PointStyle) -> Graph
 graphAddParameter graph (name, lineStyle, pointStyle) =

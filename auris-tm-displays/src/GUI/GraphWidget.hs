@@ -5,6 +5,7 @@
 module GUI.GraphWidget
   ( GraphWidget
   , setupGraphWidget
+  , setupGraphPropertiesDialog
   , graphWidgetInsertParamValue
   , graphWidgetClearValues
   , emptyGraph
@@ -16,6 +17,8 @@ module GUI.GraphWidget
   , graphWidgetSaveToSVG
   , graphWidgetSaveToSVGAction
   , graphWidgetDestroy
+  , graphWidgetShow
+  , graphWidgetHide
   , addParamFromSelector
   , plotValName
   , plotValLineType
@@ -27,6 +30,9 @@ module GUI.GraphWidget
   , gwParamSelection
   , gwGraph
   , gwParent
+  , GraphPropertiesDialog
+  , defaultGraphProperties
+  , GraphProperties(..)
   )
 where
 
@@ -67,11 +73,20 @@ data GraphProperties = GraphProperties {
   }
 makeLenses ''GraphProperties 
 
-defaultProperties :: GraphProperties
-defaultProperties = GraphProperties {
+defaultGraphProperties :: GraphProperties
+defaultGraphProperties = GraphProperties {
   _gpTitle = "Graph"
   }
 
+applyGraphProperties :: Graph -> GraphProperties -> Graph 
+applyGraphProperties g props = 
+  g & graphName .~ (props ^. gpTitle)
+
+graphToProperties :: Graph -> GraphProperties 
+graphToProperties g = 
+  GraphProperties {
+    _gpTitle = g ^. graphName 
+  }
 
 data GraphPropertiesDialog = GraphPropertiesDialog {
   _gpdDialog :: !Gtk.Dialog
@@ -101,21 +116,28 @@ graphWidgetSetChartName w name = do
   let f x = x & graphName .~ name
   atomically $ modifyTVar (w ^. gwGraph) f
 
+
+graphWidgetShow :: GraphWidget -> IO () 
+graphWidgetShow gw = do 
+  Gtk.widgetShow (gw ^. gwDrawingArea)
+
+graphWidgetHide :: GraphWidget -> IO () 
+graphWidgetHide gw = do 
+  Gtk.widgetHide (gw ^. gwDrawingArea)
+
+
+
 graphWidgetDestroy :: GraphWidget -> IO () 
 graphWidgetDestroy gw = Gtk.widgetDestroy (gw ^. gwDrawingArea)
 
-setupGraphWidget :: Gtk.Builder -> Gtk.Box -> Text -> NameDescrTable -> IO GraphWidget
-setupGraphWidget builder parent title paramSelector = do
+setupGraphWidget :: Gtk.Window -> Gtk.Box -> Text -> NameDescrTable -> GraphPropertiesDialog -> IO GraphWidget
+setupGraphWidget window parent title paramSelector dialog = do
   let graph = emptyGraph title
   var       <- newTVarIO graph
   var2      <- newTVarIO Nothing 
   da <- Gtk.drawingAreaNew 
   Gtk.widgetAddEvents da [GI.EventMaskButtonPressMask]
   Gtk.boxPackStart parent da True True 0
-
-  window <- getObject builder "mainWindow" Gtk.Window
-
-  dialog <- setupPropertiesDialog builder defaultProperties
 
   let g = GraphWidget { _gwWindow         = window 
                       , _gwParent         = parent
@@ -136,8 +158,6 @@ setupGraphWidget builder parent title paramSelector = do
         Gtk.menuPopupAtPointer m Nothing
         return True 
       _ -> return False 
-
-
 
   return g
 
@@ -337,12 +357,16 @@ createPopupMenu gw = do
 showPropertiesDialog :: GraphWidget -> IO () 
 showPropertiesDialog g = do 
   let diag = g ^. gwPropertiesDialog
+
+  props <- graphToProperties <$> readTVarIO (g ^. gwGraph)
+  setProperties diag props
+
   resp <- Gtk.dialogRun (diag ^. gpdDialog)
   Gtk.widgetHide (diag  ^. gpdDialog)
   case toEnum (fromIntegral resp) of 
     Gtk.ResponseTypeOk -> do 
-      props <- getProperties diag
-      applyProperties g props
+      newProps <- getProperties diag
+      applyProperties g newProps
       return () 
     _ -> return () 
 
@@ -351,13 +375,13 @@ applyProperties :: GraphWidget -> GraphProperties -> IO ()
 applyProperties gw gp = do 
   atomically $ do 
     graph <- readTVar (gw ^. gwGraph)
-    let !newGraph = graph & graphName .~ (gp ^. gpTitle)
+    let !newGraph = applyGraphProperties graph gp
     writeTVar (gw ^. gwGraph) newGraph
   return () 
 
 
-setupPropertiesDialog :: Gtk.Builder -> GraphProperties -> IO GraphPropertiesDialog
-setupPropertiesDialog builder props = do 
+setupGraphPropertiesDialog :: Gtk.Builder -> GraphProperties -> IO GraphPropertiesDialog
+setupGraphPropertiesDialog builder props = do 
   
   window <- getObject builder "mainWindow" Gtk.Window
   diag <- getObject builder "graphPropertiesDialog" Gtk.Dialog
@@ -377,6 +401,10 @@ setupPropertiesDialog builder props = do
   
   return g 
 
+
+setProperties :: GraphPropertiesDialog -> GraphProperties -> IO ()
+setProperties g props = do 
+  Gtk.entrySetText (g ^. gpdTitle) (props ^. gpTitle)
 
 getProperties :: GraphPropertiesDialog -> IO GraphProperties 
 getProperties g = do 

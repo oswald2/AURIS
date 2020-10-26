@@ -11,7 +11,6 @@ module GUI.MainWindow
   , createMainWindow
   , mwAddTMPacket
   , mwAddTMFrame
-  , mwSetTMParameters
   , mwAddTMParameters
   , mwAddTMParameterDefinitions
   , mwSetMission
@@ -30,10 +29,8 @@ where
 import           RIO
 import qualified RIO.Text                      as T
 import qualified Data.Text.Encoding            as T
---import qualified Data.Text.IO                  as T
 import qualified RIO.Vector                    as V
 import           RIO.List                       ( sortBy )
---import           RIO.Partial                    ( fromJust )
 import           Control.Lens                   ( makeLenses )
 
 import qualified Data.HashTable.ST.Basic       as HT
@@ -42,9 +39,6 @@ import           GUI.TMPacketTab
 import           GUI.TMFrameTab
 import           GUI.TMParamTab
 import           GUI.ConnectionTab
---import           GUI.ConnectionStatus
---import           GUI.GraphWidget
---import           GUI.Colors
 import           GUI.Utils
 import           GUI.Logo
 import           GUI.MessageDisplay
@@ -64,7 +58,6 @@ import           Data.TM.TMParameterDef
 import           General.Time
 
 import           GI.Gtk                        as Gtk
---import           GI.GObject.Objects.Object      ( Object )
 import           Data.FileEmbed
 
 import           AurisConfig
@@ -89,10 +82,6 @@ makeLenses ''MainWindow
 mwAddTMPacket :: MainWindow -> TMPacket -> IO ()
 mwAddTMPacket window pkt = do
   tmpTabAddRow (window ^. mwTMPTab) pkt
-
-mwSetTMParameters :: MainWindow -> TMPacket -> IO ()
-mwSetTMParameters _window _pkt = return ()
---   tmpTabDetailSetValues (window ^. mwTMPTab) pkt
 
 mwAddTMFrame :: MainWindow -> ExtractedDU TMFrame -> IO ()
 mwAddTMFrame window = tmfTabAddRow (window ^. mwFrameTab)

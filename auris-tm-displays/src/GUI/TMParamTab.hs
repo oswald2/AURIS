@@ -10,6 +10,7 @@ module GUI.TMParamTab
   , addParameterDefinitions
   , addGrdDefinitions
   , parTabRemoveDisplay
+  , parTabAddNewEmptyDisplay
   )
 where
 
@@ -24,14 +25,14 @@ import           Data.Display.Graphical
 import           Control.Lens
 
 import           GI.Gtk                        as Gtk
-
+import           GI.Gdk.Enums                  as Gdk 
 import           Data.TM.Parameter              ( TMParameter )
 import           Data.TM.TMParameterDef         ( TMParameterDef
                                                 , fpDescription
                                                 , fpName
                                                 )
 
-import           GUI.GraphWidget                ( setupGraphWidget )
+import           GUI.GraphWidget                
 import           GUI.ParamDisplay
 import           GUI.NameDescrTable
 import           GUI.Utils
@@ -63,10 +64,12 @@ removeDisplay disp Display3 = disp & parDisp3 .~ Nothing
 removeDisplay disp Display4 = disp & parDisp4 .~ Nothing 
 
 
-
+data DisplayType = DispTypeAND | DispTypeGRD | DispTypeSCD
+  deriving (Eq, Ord, Enum, Show)
 
 data TMParamTab = TMParamTab {
-  _tmParamDisplaysTab :: !Notebook
+  _tmParamMainWindow :: !Window
+  , _tmParamDisplaysTab :: !Notebook
   , _tmParamDisplaySelector :: !Notebook
   , _tmParamDisplaySwitcher :: !Notebook
   , _tmParamSingleBox :: !Box
@@ -77,6 +80,7 @@ data TMParamTab = TMParamTab {
   , _tmParamDisplays :: TVar ParDisplays
   , _tmParamSelector :: !NameDescrTable
   , _tmParamGrdSelector :: !NameDescrTable
+  , _tmParamGraphPropertiesDialog :: !GraphPropertiesDialog 
 }
 makeLenses ''TMParamTab
 
@@ -84,12 +88,14 @@ makeLenses ''TMParamTab
 createTMParamTab :: Gtk.Builder -> IO TMParamTab
 createTMParamTab builder = do
 
+  window          <- getObject builder "mainWindow" Window
   dispNB          <- getObject builder "notebookDisplays" Notebook
 
   dispSel         <- getObject builder "notebookDisplaySelector" Notebook
   switcher        <- getObject builder "notebookTMDisplays" Notebook
 
   btRemoveSingle  <- getObject builder "buttonSingleRemove" Button
+  btNewSingle     <- getObject builder "buttonSingleNew" Button
 
   singleBox       <- getObject builder "boxSingle" Box
   browserBox      <- getObject builder "boxTMParameterBrowser" Box
@@ -108,11 +114,14 @@ createTMParamTab builder = do
   itemAddParamsD3 <- getObject builder "menuItemAddDisplay3" MenuItem
   itemAddParamsD4 <- getObject builder "menuItemAddDisplay4" MenuItem
 
-  graphWidget     <- setupGraphWidget builder singleBox "Display 1" paramSel
+  -- graphWidget     <- setupGraphWidget window singleBox "Display 1" paramSel
 
-  ref <- newTVarIO (emptyParDisplays & parDisp1 ?~ GraphDisplay graphWidget)
+  propDialog <- setupGraphPropertiesDialog builder defaultGraphProperties
 
-  let gui = TMParamTab { _tmParamDisplaysTab     = dispNB
+  ref <- newTVarIO emptyParDisplays
+
+  let gui = TMParamTab { _tmParamMainWindow     = window  
+                       , _tmParamDisplaysTab     = dispNB
                        , _tmParamDisplaySelector = dispSel
                        , _tmParamDisplaySwitcher = switcher
                        , _tmParamSingleBox       = singleBox
@@ -123,6 +132,7 @@ createTMParamTab builder = do
                        , _tmParamDisplays        = ref
                        , _tmParamBrowserBox      = browserBox
                        , _tmParamGrdSelector     = grdSel
+                       , _tmParamGraphPropertiesDialog = propDialog
                        }
 
   let setValues g dispSelector = do
@@ -139,9 +149,32 @@ createTMParamTab builder = do
 
   void $ Gtk.on btRemoveSingle #clicked (parTabRemoveDisplay gui Display1)
 
+  -- set the popup menu for creating a new empty display for the single page
+  menu <- createSingleNewMenu gui
+  void $ Gtk.on btNewSingle #clicked $ do 
+    Gtk.widgetShowAll menu 
+    Gtk.menuPopupAtWidget menu btNewSingle GravitySouthWest GravityNorthWest Nothing
+
+  -- set the popup menu for the parameter selection browser
   setPopupMenu paramSel popupMenu
 
   return gui
+  where 
+    createSingleNewMenu gui = do 
+      menu <- Gtk.menuNew 
+      andItem <- Gtk.menuItemNewWithLabel "AND"
+      grdItem <- Gtk.menuItemNewWithLabel "GRD"
+      scdItem <- Gtk.menuItemNewWithLabel "SCD"
+
+      traverse_ (Gtk.menuShellAppend menu) [andItem, grdItem, scdItem]
+
+      void $ Gtk.on andItem #activate $ parTabReplaceDisplay gui Display1 DispTypeAND
+      void $ Gtk.on grdItem #activate $ parTabReplaceDisplay gui Display1 DispTypeGRD
+      void $ Gtk.on scdItem #activate $ parTabReplaceDisplay gui Display1 DispTypeSCD
+
+      return menu 
+
+
 
 
 
@@ -190,3 +223,25 @@ parTabRemoveDisplay gui dispSel = do
     destroy disp Display2 = maybe (return ()) paramDispDestroy (disp ^. parDisp2)
     destroy disp Display3 = maybe (return ()) paramDispDestroy (disp ^. parDisp3)
     destroy disp Display4 = maybe (return ()) paramDispDestroy (disp ^. parDisp4)
+
+
+
+parTabAddNewEmptyDisplay :: TMParamTab -> DisplaySel -> DisplayType -> IO () 
+parTabAddNewEmptyDisplay gui Display1 DispTypeGRD = do 
+  graphWidget     <- setupGraphWidget (gui ^. tmParamMainWindow) 
+    (gui ^. tmParamSingleBox) 
+    "Display 1" 
+    (gui ^. tmParamSelector) 
+    (gui ^. tmParamGraphPropertiesDialog)
+  graphWidgetShow graphWidget
+  atomically $ do 
+    displays <- readTVar (gui ^. tmParamDisplays)
+    let !newDisps = displays & parDisp1 ?~ GraphDisplay graphWidget
+    writeTVar (gui ^. tmParamDisplays) newDisps
+parTabAddNewEmptyDisplay _gui _ _ = return ()
+
+
+parTabReplaceDisplay :: TMParamTab -> DisplaySel -> DisplayType -> IO () 
+parTabReplaceDisplay gui dispSel dispType = do
+  parTabRemoveDisplay gui dispSel 
+  parTabAddNewEmptyDisplay gui dispSel dispType 
