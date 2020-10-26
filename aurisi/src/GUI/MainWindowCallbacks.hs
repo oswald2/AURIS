@@ -7,45 +7,53 @@
 #-}
 module GUI.MainWindowCallbacks
   ( GUI.MainWindowCallbacks.setupCallbacks
+  , importMIB
   )
 where
 
 
 import           RIO
---import qualified RIO.Text                      as T
--- import qualified Data.Text.IO                  as T
---import qualified RIO.Vector                    as V
---import qualified Data.Sequence                 as S
+import           RIO.Partial                    ( toEnum )
+
+import qualified GI.Gtk                        as Gtk
 
 import           GUI.MainWindow
---import           GUI.ScrollingTable
---import           GUI.TMPacketTab
 import           GUI.TMFrameTab
---import           GUI.About
-
---import           General.APID
---import           General.PUSTypes
---import           Data.PUS.TMPacket
---import           Data.TM.TMPacketDef
 
 import           Interface.Interface
 
---import           AurisConfig
+import           System.Directory
+import           System.FilePath
 
---import           System.Directory
---import           System.FilePath
-
---import           General.Time
-
+import           AurisConfig
 
 
 setupCallbacks :: MainWindow -> Interface -> IO ()
 setupCallbacks window interface = do
   GUI.TMFrameTab.setupCallbacks (window ^. mwFrameTab)
+  void $ Gtk.on (window ^. mwMenuItemImportMIB) #activate $ importMIB window interface 
 
 
-importMIB :: Interface -> IO ()
-importMIB _interface = return ()
+
+importMIB :: MainWindow -> Interface -> IO ()
+importMIB gui interface = do
+  fc <- Gtk.fileChooserNativeNew (Just "Import MIB, select directory...")
+                                 (Just (gui ^. mwWindow))
+                                 Gtk.FileChooserActionSelectFolder
+                                 Nothing
+                                 Nothing
+
+  res <- Gtk.nativeDialogRun fc
+  case toEnum (fromIntegral res) of
+    Gtk.ResponseTypeAccept -> do
+      fileName <- Gtk.fileChooserGetFilename fc
+      forM_ fileName $ \fn -> do
+        home <- liftIO getHomeDirectory
+        let serializedPath = home </> configPath </> defaultMIBFile
+        callInterface interface actionImportMIB fn serializedPath
+    _ -> return ()
+
+
   -- chooser <- nativeFileChooserNew (Just BrowseDirectory)
   -- setTitle chooser "Import MIB, select directory..."
   -- result <- showWidget chooser

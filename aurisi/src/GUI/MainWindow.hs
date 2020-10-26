@@ -23,6 +23,7 @@ module GUI.MainWindow
   , mwWindow
   , mwProgress
   , mwConnTab
+  , mwMenuItemImportMIB
   )
 where
 
@@ -71,15 +72,16 @@ import           AurisConfig
 
 
 data MainWindow = MainWindow {
-    _mwWindow :: Gtk.Window
-    , _mwProgress :: Gtk.ProgressBar
-    , _mwMessageDisplay :: MessageDisplay
-    , _mwTMPTab :: TMPacketTab
-    , _mwTMParamTab :: TMParamTab
-    , _mwMission :: Gtk.Label
-    , _mwFrameTab :: TMFrameTab
-    , _mwConnTab :: ConnectionTab
-    , _mwTimeLabel :: Label
+    _mwWindow :: !Gtk.Window
+    , _mwProgress :: !Gtk.ProgressBar
+    , _mwMessageDisplay :: !MessageDisplay
+    , _mwTMPTab :: !TMPacketTab
+    , _mwTMParamTab :: !TMParamTab
+    , _mwMission :: !Gtk.Label
+    , _mwFrameTab :: !TMFrameTab
+    , _mwConnTab :: !ConnectionTab
+    , _mwTimeLabel :: !Label
+    , _mwMenuItemImportMIB :: !Gtk.MenuItem
     }
 makeLenses ''MainWindow
 
@@ -129,33 +131,37 @@ createMainWindow :: AurisConfig -> IO MainWindow
 createMainWindow cfg = do
   builder <- builderNewFromString gladeFile (fromIntegral (T.length gladeFile))
 
-  window       <- getObject builder "mainWindow" Window
-  missionLabel <- getObject builder "labelMission" Label
-  progressBar  <- getObject builder "progressBar" ProgressBar
-  aboutItem    <- getObject builder "menuitemAbout" MenuItem
-  logo         <- getObject builder "logo" Image
-  timeLabel    <- getObject builder "labelTime" Label
+  window            <- getObject builder "mainWindow" Window
+  missionLabel      <- getObject builder "labelMission" Label
+  progressBar       <- getObject builder "progressBar" ProgressBar
+  aboutItem         <- getObject builder "menuitemAbout" MenuItem
+  logo              <- getObject builder "logo" Image
+  timeLabel         <- getObject builder "labelTime" Label
+
+  menuItemQuit      <- getObject builder "menuItemQuit" MenuItem
+  menuItemImportMIB <- getObject builder "menuItemImportMIB" MenuItem
 
   -- create the tabs in the notebook
-  tmfTab       <- createTMFTab builder
-  tmpTab       <- createTMPTab builder
-  paramTab     <- createTMParamTab builder
-  connTab      <- createConnectionTab (aurisPusConfig cfg) builder
+  tmfTab            <- createTMFTab builder
+  tmpTab            <- createTMPTab builder
+  paramTab          <- createTMParamTab builder
+  connTab           <- createConnectionTab (aurisPusConfig cfg) builder
 
   -- create the message display
-  msgDisp      <- createMessageDisplay builder
+  msgDisp           <- createMessageDisplay builder
 
   setLogo logo 65 65
 
-  let gui = MainWindow { _mwWindow         = window
-                       , _mwMission        = missionLabel
-                       , _mwProgress       = progressBar
-                       , _mwMessageDisplay = msgDisp
-                       , _mwFrameTab       = tmfTab
-                       , _mwTMPTab         = tmpTab
-                       , _mwTimeLabel      = timeLabel
-                       , _mwTMParamTab     = paramTab
-                       , _mwConnTab        = connTab
+  let gui = MainWindow { _mwWindow            = window
+                       , _mwMission           = missionLabel
+                       , _mwProgress          = progressBar
+                       , _mwMessageDisplay    = msgDisp
+                       , _mwFrameTab          = tmfTab
+                       , _mwTMPTab            = tmpTab
+                       , _mwTimeLabel         = timeLabel
+                       , _mwTMParamTab        = paramTab
+                       , _mwConnTab           = connTab
+                       , _mwMenuItemImportMIB = menuItemImportMIB
                        }
 
   void $ Gtk.on aboutItem #activate $ do
@@ -163,6 +169,9 @@ createMainWindow cfg = do
     void $ dialogRun diag
     widgetHide diag
 
+  void $ Gtk.on menuItemQuit #activate $ do
+    widgetDestroy window
+    mainQuit
 
   return gui
 
