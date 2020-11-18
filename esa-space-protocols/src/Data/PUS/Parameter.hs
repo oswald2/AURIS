@@ -41,7 +41,7 @@ module Data.PUS.Parameter
   , getExtParamUNL
   , laterParam
   , encodeParameters
-  --, encodeExtParameters
+  , toSizedParamList
   , setExtParameter
   , expandGroups
                                  
@@ -150,7 +150,10 @@ data ParameterList =
     deriving (Show, Read, Generic)
 
 instance NFData ParameterList
-
+instance Serialise ParameterList
+instance FromJSON ParameterList
+instance ToJSON ParameterList where 
+  toEncoding = genericToEncoding defaultOptions
 
 -- | A parameter list, that also tracks it's size in bits.
 data SizedParameterList = SizedParameterList {
@@ -188,18 +191,6 @@ data ExtParameterList = ExtEmpty
     deriving (Eq, Show, Read, Generic)
 
 instance NFData ExtParameterList
-
-
--- data SizedExtParameterList = SizedExtParameterList {
---     _seplSize :: BitSize
---     , _seplParams :: [ExtParameter]
---     }
---     deriving (Generic, NFData)
-
--- toSizedExtParamList :: ExtParameterList -> SizedExtParameterList
--- toSizedExtParamList ps =
---   let expanded = expandGroups ps
---   in  force $ SizedExtParameterList (bitSize expanded) expanded
 
 -- | Ok, this is an orphan instance, but we need 'Read'. Maybe we
 -- can drop it later

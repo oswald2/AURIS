@@ -42,12 +42,10 @@ module General.PUSTypes
   , TransmissionMode(..)
   , transmissionModeBuilder
   , transmissionModeParser
-  , PUSType
+  , PUSType(..)
   , mkPUSType
-  , getPUSTypeVal
-  , PUSSubType
+  , PUSSubType(..)
   , mkPUSSubType
-  , getPUSSubTypeVal
   , pusTypeBuilder
   , pusSubTypeBuilder
   , pusTypeParser
@@ -56,7 +54,7 @@ module General.PUSTypes
   , getSSC
   , mkSSC
   , nextSSC
-  , SourceID
+  , SourceID(..)
   , mkSourceID
   , sourceIDBuilder
   , sourceIDParser
@@ -344,7 +342,7 @@ instance Display SSC where
   display (SSC x) = display x
 
 newtype SourceID = SourceID { getSourceID :: Word8 }
-    deriving (Eq, Ord, Show, Read, Generic)
+    deriving (Eq, Ord, Num, Show, Read, Generic)
 
 mkSourceID :: Word8 -> SourceID
 mkSourceID = SourceID

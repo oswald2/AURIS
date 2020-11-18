@@ -45,15 +45,13 @@ import           RIO.List.Partial               ( head
 import           Control.Lens                   ( makeLenses )
 
 import           ByteString.StrictBuilder
-import           Data.Binary
 import           Data.Aeson
 import           Codec.Serialise
 import           Data.Bits
 import           Data.ByteString.Base64.Type
 import           Data.Attoparsec.ByteString     ( Parser )
 import qualified Data.Attoparsec.ByteString    as A
-import           Data.List.NonEmpty             ( NonEmpty(..)
-                                                , (<|)
+import           Data.List.NonEmpty             ( (<|)
                                                 )
 import qualified Data.List.NonEmpty            as L
 
@@ -99,10 +97,9 @@ data EncodedSegment = EncodedSegment {
         , _encSegFlag :: !SegmentationFlags
         , _encSeqSegNr :: !Word32
         , _encSegRequest :: !TCRequest
-    } deriving (Eq, Show, Read, Generic)
+    } deriving (Show, Read, Generic)
 makeLenses ''EncodedSegment
 
-instance Binary EncodedSegment
 instance Serialise EncodedSegment
 
 instance ToJSON EncodedSegment where

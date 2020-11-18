@@ -86,22 +86,22 @@ import           GHC.Conc.Sync
 --     (B.pack [0 .. 10])
 
 
--- | Currently, this request is only a dummy to be able to fill out the 
--- TC request field of the 'EncodedTCRequest'
-rqst1 :: TCRequest
-rqst1 = TCRequest 0 (IfNctrs 1) (mkSCID 533) (mkVCID 1) (TCCommand 0 BD)
+-- | Generate a TC Request wehre the parameter n is the number of 'Parameter' values
+rqst :: Int -> TCRequest
+rqst n = TCRequest 0 (IfNctrs 1) (mkSCID 533) (mkVCID 1) (TCCommand 0 BD (APID 256) (mkPUSType 2) (mkPUSSubType 10) (mkSourceID 10) (List params Empty))
+    where params = RIO.replicate n (Parameter "X" (ValUInt3 0b101))
 
 
 -- | Generate a TC Packet where the parameter n is the number of 'Parameter'
-tcPacket :: Int -> TCPacket
-tcPacket n =
-    TCPacket (APID 256) (mkPUSType 2) (mkPUSSubType 10) (mkSourceID 10)
-        $ toSizedParamList (List params Empty)
-    where params = RIO.replicate n (Parameter "X" (ValUInt3 0b101))
+-- tcPacket :: Int -> TCPacket
+-- tcPacket n =
+--     TCPacket (APID 256) (mkPUSType 2) (mkPUSSubType 10) (mkSourceID 10)
+--         $ toSizedParamList (List params Empty)
+--     where params = RIO.replicate n (Parameter "X" (ValUInt3 0b101))
 
 packets :: Int -> [EncodedTCRequest]
 packets n =
-    RIO.replicate n (EncodedTCRequest (Just (tcPacket (256 `div` 3))) rqst1)
+    RIO.map encodeTCRequest $ RIO.replicate n (rqst (256 `div` 3))
 
 
 

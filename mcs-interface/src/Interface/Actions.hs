@@ -29,7 +29,6 @@ where
 
 import           RIO
 
-import           Data.Binary
 import           Data.Aeson
 import           Codec.Serialise
 
@@ -47,7 +46,6 @@ data Action where
     ActionSendTCRequest ::TCRequest -> Action
     deriving (Read, Show, Generic)
 
-instance Binary Action
 instance Serialise Action
 instance FromJSON Action
 instance ToJSON Action

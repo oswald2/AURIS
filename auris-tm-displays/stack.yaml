@@ -1,5 +1,5 @@
 flags: {}
-resolver: lts-16.19
+resolver: lts-16.22
 extra-deps:
 allow-newer: true
 
