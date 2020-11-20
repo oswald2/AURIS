@@ -39,7 +39,6 @@ import           Data.PUS.TCPacket
 
 import           Protocol.NCTRS
 import           Protocol.ProtocolInterfaces
-import           Protocol.Switcher
 
 import           GHC.Conc.Sync
 

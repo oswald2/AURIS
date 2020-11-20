@@ -18,7 +18,6 @@ module Protocol.ProtocolInterfaces
         , isNctrs
         , isCnc
         , isEden
-        , isEdenScoe
     )
 where
 
@@ -61,7 +60,6 @@ data ProtocolInterface =
     IfNctrs Word16
     | IfCnc Word16
     | IfEden Word16
-    | IfEdenScoe Word16
     deriving (Eq, Ord, Show, Read, Generic)
 
 
@@ -77,8 +75,6 @@ instance Display ProtocolInterface where
   display (IfNctrs x) = display @Text "NCTRS " <> display x
   display (IfCnc x) = display @Text "C&C " <> display x 
   display (IfEden x) = display @Text "EDEN " <> display x
-  display (IfEdenScoe x) = display @Text "EDEN (SCOE) " <> display x
-
 
 isNctrs :: ProtocolInterface -> Bool 
 isNctrs (IfNctrs _) = True 
@@ -91,11 +87,6 @@ isCnc _ = False
 isEden :: ProtocolInterface -> Bool 
 isEden (IfEden _) = True 
 isEden _ = False 
-
-isEdenScoe :: ProtocolInterface -> Bool 
-isEdenScoe (IfEdenScoe _) = True 
-isEdenScoe _ = False 
-
 
 -- | This is a simple data type wrapper around another
 -- type. It just adds a field with a 'ProtocolInterface' value to specify

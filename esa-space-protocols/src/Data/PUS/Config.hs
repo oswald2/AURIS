@@ -18,7 +18,6 @@ module Data.PUS.Config
   , CltuBlockSize(..)
   , NctrsConfig(..)
   , CncConfig(..)
-  , EDENConnType(..)
   , EDENConfig(..)
   , cltuBlockSizeAsWord8
   , defaultConfig
@@ -26,6 +25,7 @@ module Data.PUS.Config
   , writeConfigJSON
     -- , loadConfigString
   , loadConfigJSON
+  , getInterfaces
   )
 where
 
@@ -42,6 +42,8 @@ import           Closed
 import           General.PUSTypes
 
 import           General.Time
+
+import           Protocol.ProtocolInterfaces
 
 
 data NctrsConfig = NctrsConfig {
@@ -75,22 +77,11 @@ instance FromJSON CncConfig
 instance ToJSON CncConfig where
   toEncoding = genericToEncoding defaultOptions
 
--- | Determines the type of EDEN interface: 'SCOE' for testing,
--- 'Space' for a space craft link
-data EDENConnType = SCOE | Space 
-  deriving (Eq, Ord, Enum, Generic)
-
-instance FromJSON EDENConnType
-instance ToJSON EDENConnType where
-  toEncoding = genericToEncoding defaultOptions
-
 
 -- | Configuration for an EDEN connection. 
 data EDENConfig = EDENConfig {
     -- | A numerical ID, which needs to be unique for this C&C connection
     cfgEdenID :: Word16
-    -- | The type of the connection
-    , cfgEdenType :: EDENConnType
     -- | The host where to connect to 
     , cfgEdenHost :: Text
     -- | The port where to connect to 
@@ -164,8 +155,10 @@ cltuBlockSizeAsWord8 CltuBS_8 = 8
 
 
 defaultEdenConfig :: EDENConfig
-defaultEdenConfig =
-  EDENConfig { cfgEdenID = 1, cfgEdenType = SCOE, cfgEdenHost = "localhost", cfgEdenPort = 40300 }
+defaultEdenConfig = EDENConfig { cfgEdenID   = 1
+                               , cfgEdenHost = "localhost"
+                               , cfgEdenPort = 40300
+                               }
 
 
 defaultNctrsConfig :: NctrsConfig
@@ -202,6 +195,15 @@ defaultConfig = Config { cfgCltuBlockSize        = CltuBS_8
                        , cfgCnC                  = [defaultCncConfig]
                        , cfgEDEN                 = [defaultEdenConfig]
                        }
+
+
+getInterfaces :: Config -> [ProtocolInterface]
+getInterfaces conf = getNctrs ++ getCnc ++ getEden
+  where 
+    getNctrs = RIO.map (IfNctrs . cfgNctrsID) (cfgNCTRS conf)
+    getCnc = RIO.map (IfCnc . cfgCncID) (cfgCnC conf)
+    getEden = RIO.map (IfEden . cfgEdenID) (cfgEDEN conf)
+
 
 -- | write the config as a serialized string to a file. Uses the Show class for serizalization
 -- writeConfigString :: MonadIO m => Config -> FilePath -> m ()

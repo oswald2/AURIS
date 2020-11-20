@@ -449,7 +449,7 @@ pusPktParserPayload missionSpecific comm hdr = do
         PUSTM -> dfhParser (missionSpecific ^. pmsTMDataFieldHeader)
         PUSTC -> dfhParser defaultCnCTCHeader
       else return PUSEmptyHeader
-    | isEden comm || isEdenScoe comm -> if hdr ^. pusHdrDfhFlag
+    | isEden comm -> if hdr ^. pusHdrDfhFlag
       then case hdr ^. pusHdrType of
         PUSTM -> dfhParser (missionSpecific ^. pmsTMDataFieldHeader)
         PUSTC -> dfhParser (missionSpecific ^. pmsTCDataFieldHeader)

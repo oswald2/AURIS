@@ -74,9 +74,7 @@ createConnectionTab config builder = do
 
     convEden :: ConnMap -> EDENConfig -> IO ConnMap
     convEden hm cfg = do
-      let (id1, txt) = case cfgEdenType cfg of 
-                    SCOE -> (IfEdenScoe (cfgEdenID cfg), "EDEN SCOE")
-                    Space -> (IfEden (cfgEdenID cfg), "EDEN")
+      let (id1, txt) = (IfEden (cfgEdenID cfg), "EDEN")
 
       n1 <- newConnectionStatus id1 txt (cfgEdenHost cfg) (cfgEdenPort cfg)
 

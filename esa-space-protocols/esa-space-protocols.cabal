@@ -78,13 +78,12 @@ library
         Data.PUS.MissionSpecific.Definitions
         Data.PUS.Value
         Data.PUS.NcduToTMFrame
-        Data.PUS.ProtocolSwitcher
         Protocol.NCTRS
         Protocol.EDEN
         Protocol.EDENProcessor
         Protocol.CnC
         Protocol.ProtocolInterfaces
-        Protocol.Switcher
+        Protocol.ProtocolSwitcher
         Application.Chains
         Application.DataModel
 

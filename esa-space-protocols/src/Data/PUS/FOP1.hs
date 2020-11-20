@@ -50,7 +50,7 @@ import           Data.PUS.Segment
 import           Data.PUS.Events
 import           Data.PUS.TCRequest
 
-import           Protocol.Switcher
+import           Protocol.ProtocolSwitcher
 import           Protocol.ProtocolInterfaces
 
 
