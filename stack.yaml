@@ -51,6 +51,8 @@ packages:
 # - git: https://github.com/commercialhaskell/stack.git
 #   commit: e7b331f14bcffb8367cd58fbfc8b40ec7642100a
 #
+allow-newer: true 
+
 extra-deps:
 - attoparsec-data-1.0.4.1
 - closed-0.2.0.1
@@ -61,10 +63,18 @@ extra-deps:
 - selda-0.5.1.0@sha256:b942ecc9ff7959c922da92d13fcfe70a0823eafa32086663f3cc60138ce7d3bf,2997
 - timers-updatable-0.2.0.2
 - direct-sqlite-2.3.26
-#- cairo-0.13.8.1@sha256:1938aaeb5d3504678d995774dfe870f6b66cbd43d336b692fa8779b23b2b67a9,4075
-#- gtk2hs-buildtools-0.13.8.0@sha256:132f38155fc677430a47ea750918973161c876fb6f281d342ac2f07eb99229ce,5238
 - Chart-cairo-1.9.3@sha256:f484a7194ca08ed67f02aa626e2f8f4d1a9b50624e0d50e3ced62958f7481cca,925
-
+- haskell-gi-base-0.24.4
+- haskell-gi-0.24.5
+- gi-glib-2.0.24
+- gi-pango-1.0.23
+- gi-harfbuzz-0.0.3
+- gi-gtk-3.0.36
+- gi-gtk-hs-0.3.9
+- gi-atk-2.0.21
+- gi-cairo-render-0.1.0
+- gi-cairo-connector-0.1.0
+- gi-gobject-2.0.24
 
 # Override default flag values for local packages and extra-deps
 # flags:

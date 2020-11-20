@@ -5,34 +5,36 @@
     , RecordWildCards
 #-}
 module Data.PUS.TCRequest
-    ( TCRequest(..)
-    , TCRequestBody(..)
-    , tcReqRequestID
-    , tcReqMAPID
-    , tcReqSCID
-    , tcReqVCID
-    , tcReqTransMode
-    , tcReqPayload
-    , tcReqDirective
-    , tcReqGetTransmissionMode
-    , tcReqTransmissionMode
-    , tcReqDestination
-    )
+  ( TCRequest(..)
+  , TCRequestBody(..)
+  , tcReqRequestID
+  , tcReqMAPID
+  , tcReqSCID
+  , tcReqVCID
+  , tcReqTransMode
+  , tcReqPayload
+  , tcReqDirective
+  , tcReqGetTransmissionMode
+  , tcReqTransmissionMode
+  , tcReqDestination
+  , tcReqPacket
+  )
 where
 
 import           RIO
 
-import           Control.Lens                   ( makeLenses, makePrisms )
+import           Control.Lens                   ( makeLenses
+                                                , makePrisms
+                                                )
 
 --import           Data.Binary
 import           Data.Aeson
 import           Codec.Serialise
 
 import           General.PUSTypes
-import           General.APID 
 
 import           Data.PUS.TCDirective
-import           Data.PUS.Parameter
+import           Data.PUS.TCPacket
 
 import           Protocol.ProtocolInterfaces
 
@@ -42,11 +44,7 @@ data TCRequestBody =
     TCCommand {
         _tcReqMAPID :: MAPID
         , _tcReqTransMode :: TransmissionMode
-        , _tcReqAPID :: APID 
-        , _tcReqType :: PUSType
-        , _tcReqSubType :: PUSSubType 
-        , _tcReqSourceID :: SourceID
-        , _tcReqParameters :: ParameterList
+        , _tcReqPacket :: TCPacket
         }
     | TCDir {
         _tcReqDirective :: TCDirective
@@ -58,7 +56,7 @@ makePrisms  ''TCRequestBody
 instance Serialise TCRequestBody
 instance FromJSON TCRequestBody
 instance ToJSON TCRequestBody where
-    toEncoding = genericToEncoding defaultOptions
+  toEncoding = genericToEncoding defaultOptions
 
 data TCRequest = TCRequest {
     _tcReqRequestID :: RequestID
@@ -72,20 +70,20 @@ makeLenses ''TCRequest
 
 tcReqGetTransmissionMode :: TCRequest -> TransmissionMode
 tcReqGetTransmissionMode req = case _tcReqPayload req of
-    TCCommand {..} -> _tcReqTransMode
-    TCDir{}        -> AD
+  TCCommand {..} -> _tcReqTransMode
+  TCDir{}        -> AD
 
 tcReqTransmissionMode :: Getting r TCRequest TransmissionMode
 tcReqTransmissionMode = to tcReqGetTransmissionMode
 
 instance ProtocolDestination TCRequest where
-    destination x = x ^. tcReqDestination
+  destination x = x ^. tcReqDestination
 
 
 instance Serialise TCRequest
 instance FromJSON TCRequest
 instance ToJSON TCRequest where
-    toEncoding = genericToEncoding defaultOptions
+  toEncoding = genericToEncoding defaultOptions
 
 
 

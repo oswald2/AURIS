@@ -21,7 +21,6 @@ import           Data.Conduit.Attoparsec
 import qualified Data.ByteString.Char8         as BCS
 import           Data.Attoparsec.ByteString.Char8
                                                as A
-import           Data.Semigroup                 ( (<>) )
 
 import qualified Data.Vector                   as V
 import           Data.Char

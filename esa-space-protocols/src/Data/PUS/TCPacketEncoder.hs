@@ -25,7 +25,6 @@ import           Control.Lens                   ( makeLenses
 import           Data.Conduit
 
 import           Data.PUS.TCRequest
-import           Data.PUS.TCRequestEncoder
 import           Data.PUS.TCPacket
 import           Data.PUS.PUSPacket
 import           Data.PUS.SegmentationFlags
@@ -52,7 +51,7 @@ encodeTCPacket pkt missionSpecific =
             .~ (_tcpType pkt, _tcpSubType pkt)
             &  dfhSourceID
             .~ _tcpSourceID pkt
-      payload = encodeParameters (_tcpParams pkt)
+      payload = encodeParameters (toSizedParamList (_tcpParams pkt))
   in  PUSPacket hdr dfh Nothing payload
 
 
@@ -60,14 +59,13 @@ encodeTCPacket pkt missionSpecific =
 tcPktEncoderC
   :: Monad m
   => PUSMissionSpecific
-  -> ConduitT EncodedTCRequest EncodedTCPacket m ()
+  -> ConduitT TCRequest EncodedTCPacket m ()
 tcPktEncoderC missionSpecific = awaitForever $ \request -> do
-  let req = request ^. encTcReqRqst
-  case request ^. encTcReqContent of
-    Just tc -> do
-      let enc = encodeTCPacket tc missionSpecific
-      yield $ EncodedTCPacket (Just enc) req
-    Nothing -> yield $ EncodedTCPacket Nothing req
+  case request ^. tcReqPayload of 
+    TCCommand {..} -> do 
+      let enc = encodeTCPacket _tcReqPacket missionSpecific
+      yield $ EncodedTCPacket (Just enc) request
+    TCDir {} -> yield $ EncodedTCPacket Nothing request 
 
 
 

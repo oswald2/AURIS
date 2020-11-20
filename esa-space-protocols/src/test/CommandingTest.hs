@@ -29,7 +29,6 @@ import           Data.PUS.PUSPacketEncoder
 import           Data.PUS.SegmentEncoder
 import           General.APID
 import           Data.PUS.TCRequest
-import           Data.PUS.TCRequestEncoder
 import           Data.PUS.TCPacketEncoder
 import           Data.PUS.TCPacket
 import           Data.PUS.Parameter
@@ -88,8 +87,22 @@ import           GHC.Conc.Sync
 
 -- | Generate a TC Request wehre the parameter n is the number of 'Parameter' values
 rqst :: Int -> TCRequest
-rqst n = TCRequest 0 (IfNctrs 1) (mkSCID 533) (mkVCID 1) (TCCommand 0 BD (APID 256) (mkPUSType 2) (mkPUSSubType 10) (mkSourceID 10) (List params Empty))
-    where params = RIO.replicate n (Parameter "X" (ValUInt3 0b101))
+rqst n = TCRequest
+  0
+  (IfNctrs 1)
+  (mkSCID 533)
+  (mkVCID 1)
+  (TCCommand
+    0
+    BD
+    (TCPacket (APID 256)
+              (mkPUSType 2)
+              (mkPUSSubType 10)
+              (mkSourceID 10)
+              (List params Empty)
+    )
+  )
+  where params = RIO.replicate n (Parameter "X" (ValUInt3 0b101))
 
 
 -- | Generate a TC Packet where the parameter n is the number of 'Parameter'
@@ -99,9 +112,8 @@ rqst n = TCRequest 0 (IfNctrs 1) (mkSCID 533) (mkVCID 1) (TCCommand 0 BD (APID 2
 --         $ toSizedParamList (List params Empty)
 --     where params = RIO.replicate n (Parameter "X" (ValUInt3 0b101))
 
-packets :: Int -> [EncodedTCRequest]
-packets n =
-    RIO.map encodeTCRequest $ RIO.replicate n (rqst (256 `div` 3))
+packets :: Int -> [TCRequest]
+packets n = RIO.replicate n (rqst (256 `div` 3))
 
 
 
@@ -109,32 +121,33 @@ packets n =
 
 main :: IO ()
 main = do
-    np <- getNumProcessors
-    setNumCapabilities np
+  np <- getNumProcessors
+  setNumCapabilities np
 
-    defLogOptions <- logOptionsHandle stdout True
-    let logOptions = setLogMinLevel LevelError defLogOptions
-    withLogFunc logOptions $ \logFunc -> do
-        state <- newGlobalState
-            defaultConfig
-            (defaultMissionSpecific defaultConfig)
-            logFunc
-            (\ev -> T.putStrLn ("Event: " <> T.pack (show ev)))
+  defLogOptions <- logOptionsHandle stdout True
+  let logOptions = setLogMinLevel LevelError defLogOptions
+  withLogFunc logOptions $ \logFunc -> do
+    state <- newGlobalState
+      defaultConfig
+      (defaultMissionSpecific defaultConfig)
+      logFunc
+      (\ev -> T.putStrLn ("Event: " <> T.pack (show ev)))
 
-        runRIO state $ do
-            let chain =
-                    sourceList (packets 1000)
-                        .| tcPktEncoderC (defaultMissionSpecific defaultConfig)
-                        .| tcPktToEncPUSC
-                        .| tcSegmentEncoderC
-                        .| tcSegmentToTransferFrame
-                        .| tcFrameEncodeC
-                        .| tcFrameToCltuC
-                        .| cltuEncodeRandomizedC
-                        .| cltuToNcduC
-                        .| encodeTcNcduC
+    runRIO state $ do
+      let chain =
+            sourceList (packets 1000)
+              .| tcPktEncoderC (defaultMissionSpecific defaultConfig)
+              .| tcPktToEncPUSC
+              .| tcSegmentEncoderC
+              .| tcSegmentToTransferFrame
+              .| tcFrameEncodeC
+              .| tcFrameToCltuC
+              .| cltuEncodeRandomizedC
+              .| cltuToNcduC
+              .| encodeTcNcduC
 
-            runGeneralTCPClient (clientSettings 32111 "localhost") $ \app ->
-                concurrently_ (runConduitRes (chain .| appSink app))
-                    (runConduitRes (appSource app .| receiveTcNcduC .| C.print))
+      runGeneralTCPClient (clientSettings 32111 "localhost") $ \app ->
+        concurrently_
+          (runConduitRes (chain .| appSink app))
+          (runConduitRes (appSource app .| receiveTcNcduC .| C.print))
 
