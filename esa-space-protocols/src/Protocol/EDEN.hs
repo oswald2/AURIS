@@ -57,6 +57,7 @@ module Protocol.EDEN
   , edenField3
   , edenDataFieldLength
   , edenDataField
+  , edenEmptyField1
   )
 where
 
@@ -222,6 +223,8 @@ data EdenMessage = EdenMessage {
 makeLenses ''EdenMessage
 
 
+edenEmptyField1 :: C.ByteString
+edenEmptyField1 = C.replicate 16 ' '
 
 
 

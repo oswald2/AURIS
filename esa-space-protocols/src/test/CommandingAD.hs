@@ -55,7 +55,7 @@ rqst1 = TCRequest
   (IfNctrs 1)
   (mkSCID 533)
   (mkVCID 1)
-  (TCCommand 0 BD (TCPacket (APID 1024) (PUSType 128) (PUSSubType 1) (SourceID 0) Empty))
+  (TCCommand 0 BD Space (TCPacket (APID 1024) (PUSType 128) (PUSSubType 1) (SourceID 0) Empty))
 
 pusPackets = RIO.map (\i -> (pkt1 i, rqst1)) [1 .. 1000]
 

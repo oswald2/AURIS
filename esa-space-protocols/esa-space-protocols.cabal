@@ -81,6 +81,7 @@ library
         Protocol.NCTRS
         Protocol.EDEN
         Protocol.EDENProcessor
+        Protocol.EDENEncoder
         Protocol.CnC
         Protocol.ProtocolInterfaces
         Protocol.ProtocolSwitcher

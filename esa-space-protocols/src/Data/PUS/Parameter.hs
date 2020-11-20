@@ -44,15 +44,11 @@ module Data.PUS.Parameter
   , toSizedParamList
   , setExtParameter
   , expandGroups
-                                 
   , ParameterList(..)
   , ExtParameterList(..)
   , SizedParameterList
   , splSize
   , splParams
-  --, SizedExtParameterList
-  , toSizedParamList
-  --, toSizedExtParamList
   , appendN
   , appendExtN
   , prependN

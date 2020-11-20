@@ -95,6 +95,7 @@ rqst n = TCRequest
   (TCCommand
     0
     BD
+    Space
     (TCPacket (APID 256)
               (mkPUSType 2)
               (mkPUSSubType 10)

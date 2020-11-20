@@ -7,6 +7,7 @@
 module Data.PUS.TCRequest
   ( TCRequest(..)
   , TCRequestBody(..)
+  , CommandType(..)
   , tcReqRequestID
   , tcReqMAPID
   , tcReqSCID
@@ -18,6 +19,9 @@ module Data.PUS.TCRequest
   , tcReqTransmissionMode
   , tcReqDestination
   , tcReqPacket
+  , tcCmdType
+  , _TCCommand
+  , _TCDir
   )
 where
 
@@ -40,10 +44,20 @@ import           Protocol.ProtocolInterfaces
 
 
 
+data CommandType = Space | SCOE 
+    deriving (Eq, Ord, Enum, Show, Read, Generic)
+
+instance Serialise CommandType
+instance FromJSON CommandType
+instance ToJSON CommandType where
+  toEncoding = genericToEncoding defaultOptions
+
+
 data TCRequestBody =
     TCCommand {
         _tcReqMAPID :: MAPID
         , _tcReqTransMode :: TransmissionMode
+        , _tcCmdType :: CommandType
         , _tcReqPacket :: TCPacket
         }
     | TCDir {
