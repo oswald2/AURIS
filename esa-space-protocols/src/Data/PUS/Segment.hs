@@ -132,7 +132,7 @@ instance FromJSON EncodedSegment where
             .:  "encSegRequest"
 
 instance ProtocolDestination EncodedSegment where
-    destination encSeg = encSeg ^. encSegRequest . tcReqDestination
+    destination encSeg = destination (encSeg ^. encSegRequest)
 
 segIsDirective :: EncodedSegment -> Bool
 segIsDirective seg = case seg ^. encSegRequest . tcReqPayload of

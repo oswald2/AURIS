@@ -89,13 +89,12 @@ import           GHC.Conc.Sync
 rqst :: Int -> TCRequest
 rqst n = TCRequest
   0
-  (IfNctrs 1)
   (mkSCID 533)
   (mkVCID 1)
   (TCCommand
     0
     BD
-    Space
+    (DestNctrs (IfNctrs 1))
     (TCPacket (APID 256)
               (mkPUSType 2)
               (mkPUSSubType 10)

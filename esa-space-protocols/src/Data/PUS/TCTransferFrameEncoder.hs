@@ -24,11 +24,12 @@ import           Data.PUS.TCRequest
 
 tcFrameToCltuC
     :: (MonadIO m, MonadReader env m, HasLogFunc env)
-    => ConduitT EncodedTCFrame CLTU m ()
+    => ConduitT EncodedTCFrame CLTUInput m ()
 tcFrameToCltuC = awaitForever $ \frame -> do
     let new = cltuNew (frame ^. encTcFrameData)
+        encCltu = CLTUInput new (frame ^. encTcFrameRequest)
     logDebug $ "New CLTU: " <> displayShow new
-    yield new
+    yield encCltu
 
 
 tcSegmentToTransferFrame

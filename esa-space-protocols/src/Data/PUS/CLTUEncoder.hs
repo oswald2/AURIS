@@ -36,7 +36,7 @@ import General.PUSTypes
 -- here
 cltuToNcduC :: (MonadIO m, MonadReader env m, HasLogFunc env) =>
     ConduitT EncodedCLTU NcduTcDu m ()
-cltuToNcduC = awaitForever $ \(EncodedCLTU cltu) -> do
+cltuToNcduC = awaitForever $ \(EncodedCLTU cltu _) -> do
     let hdr = NcduTcHeader 0 NCDU_TC_CLTU_TYPE (mkSCID 0)
         cltuhdr = NcduTcCltuHeader BD 0 (mkVCID 0) (mkMAPID 0) 0 0 0 0 0 0
         dat = NcduTcDuCltuData cltuhdr cltu

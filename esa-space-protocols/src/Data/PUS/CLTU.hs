@@ -17,6 +17,7 @@ basically an array of values which are xor'ed with the CLTU block data so that t
 #-}
 module Data.PUS.CLTU
     ( CLTU
+    , CLTUInput(..)
     , EncodedCLTU(..)
     , cltuNew
     , cltuPayLoad
@@ -54,6 +55,7 @@ import           Data.List                     as L
 import           Data.PUS.Config
 import           Data.PUS.CLTUTable
 import           Data.PUS.Randomizer
+import Data.PUS.TCRequest
 
 import qualified TextShow                      as TS
 import           TextShow.Data.Integral
@@ -70,13 +72,20 @@ import           Data.Conduit.Attoparsec
 
 
 -- The CLTU itself
-data CLTU = CLTU {
+newtype CLTU = CLTU {
     -- | returns the actual binary payload data (mostly a TC transfer frame)
     cltuPayLoad :: BS.ByteString
 }
 
+
+data CLTUInput = CLTUInput {
+    _cltuInpCLTU :: !CLTU
+    , _cltuInpRequest :: !TCRequest 
+    }
+
 data EncodedCLTU = EncodedCLTU {
     cltuEncoded :: BS.ByteString
+    , cltuRequest :: !TCRequest 
 }
 
 -- | The PUS Standard explicitly states, that filling bytes (0x55) may be
@@ -93,7 +102,7 @@ instance Show CLTU where
 
 
 showEncodedCLTU :: Config -> EncodedCLTU -> Text
-showEncodedCLTU cfg (EncodedCLTU bs) = TL.toStrict . TB.toLazyText $ result
+showEncodedCLTU cfg (EncodedCLTU bs _) = TL.toStrict . TB.toLazyText $ result
   where
     header  = TB.fromText (hexdumpLineBS (BS.take 2 bs))
     chunksb = chunkedByBS
@@ -224,21 +233,23 @@ cltuDecodeRandomizedC = do
 
 
 -- | A conduit for encoding a CLTU in a ByteString for transmission
-cltuEncodeC :: (MonadIO m, MonadReader env m , HasConfig env, HasLogFunc env) => ConduitT CLTU EncodedCLTU m ()
-cltuEncodeC = awaitForever $ \cltu -> do
+cltuEncodeC :: (MonadIO m, MonadReader env m , HasConfig env, HasLogFunc env) => ConduitT CLTUInput EncodedCLTU m ()
+cltuEncodeC = awaitForever $ \(CLTUInput cltu rqst) -> do
         cfg <- view getConfig
-        let enc = EncodedCLTU $ encode cfg cltu
+        let encCltu = encode cfg cltu 
+            enc = EncodedCLTU encCltu rqst 
         logDebug $ "Encoded CLTU: " <> display (showEncodedCLTU cfg enc)
         yield enc
 
 
 
 -- | A conduit for encoding a CLTU in a ByteString for transmission
-cltuEncodeRandomizedC :: (MonadIO m, MonadReader env m , HasConfig env, HasLogFunc env) => ConduitT CLTU EncodedCLTU m ()
+cltuEncodeRandomizedC :: (MonadIO m, MonadReader env m , HasConfig env, HasLogFunc env) => ConduitT CLTUInput EncodedCLTU m ()
 cltuEncodeRandomizedC =
-    awaitForever $ \cltu -> do
+    awaitForever $ \(CLTUInput cltu rqst) -> do
         cfg <- view getConfig
-        let enc = EncodedCLTU $ encodeRandomized cfg cltu
+        let encCltu = encodeRandomized cfg cltu
+            enc = EncodedCLTU encCltu rqst
         logDebug $ "Encoded Randomized CLTU: " <> display (showEncodedCLTU cfg enc)
         yield enc
 

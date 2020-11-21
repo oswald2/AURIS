@@ -50,7 +50,7 @@ runProcessing cfg missionSpecific mibPath interface mainWindow coreQueue = do
                             logf
                             (ifRaiseEvent interface . EventPUS)
 
-    runRIO state $ do
+    void $ runRIO state $ do
       -- first, try to load a data model or import a MIB
       logInfo "Loading Data Model..."
 
@@ -76,7 +76,6 @@ runProcessing cfg missionSpecific mibPath interface mainWindow coreQueue = do
       void $ async $ runCoreThread coreQueue
 
       runTMChain nctrsCfg cncCfg edenCfg missionSpecific
-    pure ()
 
 
 

@@ -2,7 +2,7 @@ module Application.Chains
   ( runTMChain
   , runTMNctrsChain
   , runTMCnCChain
-  , runTMEdenChain
+  , runEdenChain
   , NctrsID(..)
   , CncID(..)
   , EdenID(..)
@@ -10,7 +10,7 @@ module Application.Chains
 where
 
 import           RIO
-
+import qualified RIO.HashMap                   as HM
 import           Conduit
 import           Data.Conduit.Network
 import           Data.Conduit.TQueue
@@ -30,6 +30,8 @@ import           Protocol.CnC
 import           Protocol.EDEN
 import           Protocol.EDENProcessor
 import           Protocol.ProtocolInterfaces
+import           Protocol.ProtocolSwitcher
+import           Protocol.EDENEncoder
 
 import           Control.PUS.Classes
 
@@ -117,34 +119,32 @@ runTMCnCChain cfg missionSpecific pktQueue = do
       Right _ -> return ()
 
 
-runTMEdenChain
+runEdenChain
   :: EDENConfig
   -> PUSMissionSpecific
   -> TBQueue ExtractedPacket
+  -> ProtocolQueue
   -> RIO GlobalState ()
-runTMEdenChain cfg missionSpecific pktQueue = do
-  logDebug "runTMEdenChain entering"
+runEdenChain cfg missionSpecific pktQueue edenQueue = do
+  logDebug "runEdenChain entering"
 
-  let chain =
-        receiveEdenMessageC
-          .| edenMessageProcessorC missionSpecific (IfEden (cfgEdenID cfg))
-          .| sinkTBQueue pktQueue
 
-  runGeneralTCPReconnectClient
+  void $ runGeneralTCPReconnectClient
     (clientSettings (fromIntegral (cfgEdenPort cfg))
                     (encodeUtf8 (cfgEdenHost cfg))
     )
     200000
-    (tmClient chain)
+    edenClient
 
-  logDebug "runTMEdenChain leaving"
+  logDebug "runEdenChain leaving"
  where
-  tmClient chain app = do
+  edenClient app = do
     env <- ask
     liftIO $ raiseEvent
       env
       (EVAlarms (EVEConnection (IfEden (cfgEdenID cfg)) ConnSingle Connected))
-    res <- try $ void $ runConduitRes (appSource app .| chain)
+
+    res <- try $ race_ (tmChain app) (tcChain app)
 
     liftIO
       (raiseEvent
@@ -159,6 +159,23 @@ runTMEdenChain cfg missionSpecific pktQueue = do
         throwM e
       Right _ -> return ()
 
+  tmChain app = do
+    let chain =
+          appSource app
+            .| receiveEdenMessageC
+            .| edenMessageProcessorC missionSpecific (IfEden (cfgEdenID cfg))
+            .| sinkTBQueue pktQueue
+    runConduitRes chain
+
+  tcChain app = do
+    let chain =
+          receiveQueueMsg edenQueue
+            .| createEdenMsgC
+            .| encodeEdenMessageC
+            .| appSink app
+    runConduitRes chain
+
+
 
 
 runTMChain
@@ -166,7 +183,7 @@ runTMChain
   -> [CncConfig]
   -> [EDENConfig]
   -> PUSMissionSpecific
-  -> RIO GlobalState ()
+  -> RIO GlobalState InterfaceSwitcherMap
 runTMChain nctrsCfg cncCfg edenCfg missionSpecific = do
   logDebug "runTMCain entering"
   pktQueue <- newTBQueueIO 5000
@@ -178,19 +195,25 @@ runTMChain nctrsCfg cncCfg edenCfg missionSpecific = do
           .| raiseTMParameterC
           .| sinkNull
 
+  let edenIf (switcherMap, ts) x = do
+        (queue, newSm) <- createInterfaceChannel switcherMap
+                                                 (IfEden (cfgEdenID x))
+        return (newSm, ts <> conc (runEdenChain x missionSpecific pktQueue queue))
 
-  let processingThread = conc $ runConduitRes chain
-      nctrsTMThread cfg = conc $ runTMNctrsChain cfg pktQueue
-      cncTMThread cfg = conc $ runTMCnCChain cfg missionSpecific pktQueue
-      edenThread cfg = conc $ runTMEdenChain cfg missionSpecific pktQueue
+  (switcherMap, edenThreads) <- foldM edenIf (HM.empty, mempty) edenCfg
 
-      threads =
-        processingThread
-          :  fmap nctrsTMThread nctrsCfg
-          <> fmap cncTMThread   cncCfg
-          <> fmap edenThread    edenCfg
+  let
+    processingThread = conc $ runConduitRes chain
+    nctrsTMThread conf = conc $ runTMNctrsChain conf pktQueue
+    cncTMThread conf = conc $ runTMCnCChain conf missionSpecific pktQueue
+
+    threads =
+      processingThread
+        :  fmap nctrsTMThread nctrsCfg
+        <> fmap cncTMThread  cncCfg
+        <> [edenThreads]
 
   runConc $ mconcat threads
 
   logDebug "runTMCain leaving"
-
+  return switcherMap

@@ -1,8 +1,11 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Protocol.EDENEncoder
-  ( EdenState(..)
+  ( EdenState
   , defaultEdenState
-  , packetToEDEN
+  , createEdenMsgC
+  , edenStateOrigin
+  , edenRqstID 
+
   )
 where
 
@@ -10,15 +13,28 @@ where
 import           RIO
 import qualified RIO.ByteString                as B
 
+import Conduit as C
+
 import           Control.Lens                   ( makeLenses )
 
-import           Data.PUS.PUSPacketEncoder
-import           Data.PUS.TCRequest
+import Data.PUS.PUSPacketEncoder
+    ( encPktEncoded, encPktRequest, EncodedPUSPacket )
+import Data.PUS.TCRequest
+    ( TCRequestBody(TCDir, TCCommand, _tcReqPacket, _tcDestination,
+                    _tcReqTransMode, _tcReqMAPID, _tcDirDestination, _tcDirDirective),
+      TCRequest,
+      tcReqPayload,
+      tcReqVCID,
+      tcReqIsSpace )
+import Data.PUS.TCFrameTypes
+    ( encTcFrameData, encTcFrameRequest, EncodedTCFrame )
+import Data.PUS.CLTU ( EncodedCLTU(cltuRequest, cltuEncoded) )
 
 import           Protocol.EDEN
+import Protocol.ProtocolSwitcher ( QueueMsg(..) )
 
-import           General.Time
-import           General.PUSTypes
+import General.Time ( SunTime, edenTime, getCurrentTime )
+import General.PUSTypes ( VCID(getVCID), mkMAPID, MAPID(getMAPID) )
 
 
 
@@ -30,10 +46,28 @@ data EdenState = EdenState {
   }
 makeLenses ''EdenState
 
-
+-- | The default state of the EDEN pipeline
 defaultEdenState :: EdenState
 defaultEdenState =
   EdenState { _edenStateOrigin = EdenOriginCCS, _edenRqstID = 0 }
+
+
+-- | Conduit for converting a 'QueueMsg' into a 'EdenMessage' for further encoding. This can 
+-- be done on 3 protocol layers: packet, frame and CLTU level. The 'QueueMsg' determines which 
+-- protocol level is used.
+createEdenMsgC :: (MonadIO m) => ConduitT QueueMsg EdenMessage m () 
+createEdenMsgC = do 
+  var <- newTVarIO defaultEdenState
+  awaitForever $ \case 
+    EQPacket pkt -> do 
+      res <- packetToEDEN var pkt 
+      forM_ res yield
+    EQFrame frame -> do 
+      res <- frameToEDEN var frame 
+      forM_ res yield
+    EQCLTU cltu -> do 
+      res <- cltuToEDEN var cltu 
+      forM_ res yield
 
 
 packetToEDEN
@@ -45,16 +79,41 @@ packetToEDEN var encPkt = do
       now <- liftIO getCurrentTime
       atomically $ do
         st <- readTVar var
-        let edenMessage = createMessage now st encPkt binPkt
+        let edenMessage = createMessage now st (encPkt ^. encPktRequest) EdenTcPacket binPkt
             newSt       = st & over edenRqstID (+1)
         writeTVar var newSt
         return (Just edenMessage)
 
 
+frameToEDEN
+  :: (MonadIO m) => TVar EdenState -> EncodedTCFrame -> m (Maybe EdenMessage)
+frameToEDEN var encFrame = do
+  now <- liftIO getCurrentTime
+  atomically $ do
+    st <- readTVar var
+    let edenMessage = createMessage now st (encFrame ^. encTcFrameRequest) EdenTcFrame (encFrame ^. encTcFrameData)
+        newSt       = st & over edenRqstID (+1)
+    writeTVar var newSt
+    return (Just edenMessage)
+
+
+cltuToEDEN
+  :: (MonadIO m) => TVar EdenState -> EncodedCLTU -> m (Maybe EdenMessage)
+cltuToEDEN var encCltu = do
+  now <- liftIO getCurrentTime
+  atomically $ do
+    st <- readTVar var
+    let edenMessage = createMessage now st (cltuRequest encCltu) EdenTcCltu (cltuEncoded encCltu)
+        newSt       = st & over edenRqstID (+1)
+    writeTVar var newSt
+    return (Just edenMessage)
+
+
+
 
 createMessage
-  :: SunTime -> EdenState -> EncodedPUSPacket -> ByteString -> EdenMessage
-createMessage now st encPkt binPkt =
+  :: SunTime -> EdenState -> TCRequest -> EdenTCType -> ByteString -> EdenMessage
+createMessage now st rqst protLevel binPkt =
   let
     msg = EdenMessage { _edenType            = EdenTCType
                       , _edenSubType         = detSubType
@@ -64,12 +123,12 @@ createMessage now st encPkt binPkt =
                       , _edenDataFieldLength = 0
                       , _edenDataField       = dataField
                       }
-    rqst                = encPkt ^. encPktRequest
 
     (detSubType, mapid) = case rqst ^. tcReqPayload of
-      TCCommand {..} -> case _tcCmdType of
-        Space -> (EdenSpace, _tcReqMAPID)
-        SCOE  -> (EdenSCOE, _tcReqMAPID)
+      TCCommand {..} -> 
+        if rqst ^. tcReqIsSpace 
+          then (EdenSpace, _tcReqMAPID)
+          else (EdenSCOE, _tcReqMAPID)
       TCDir {..} -> (EdenSpace, mkMAPID 0)
 
     dataField = case detSubType of
@@ -81,7 +140,7 @@ createMessage now st encPkt binPkt =
     spaceDataField = EdenTcSecHeader
       { _edenSecStructure     = 0
       , _edenSecChannel       = getVCID (rqst ^. tcReqVCID)
-      , _edenSecTCType        = EdenTcPacket
+      , _edenSecTCType        = protLevel
       , _edenSecTCID          = _edenRqstID st
       , _edenSecTCOrigin      = _edenStateOrigin st
       , _edenSecTime          = edenTime now
