@@ -5,9 +5,9 @@
         "cfgCnC": [
             {
                 "cfgCncHasCRC": true,
-                "cfgCncPortTM": 10000,
+                "cfgCncPortTM": 33333,
                 "cfgCncHost": "localhost",
-                "cfgCncPortTC": 11000,
+                "cfgCncPortTC": 22222,
                 "cfgCncID": 1
             }
         ],
@@ -31,10 +31,10 @@
         },
         "cfgNCTRS": [
             {
-                "cfgNctrsPortTC": 20009,
+                "cfgNctrsPortTC": 32111,
                 "cfgNctrsID": 1,
                 "cfgNctrsHost": "localhost",
-                "cfgNctrsPortADM": 20010,
+                "cfgNctrsPortADM": 32110,
                 "cfgNctrsPortTM": 2502
             }
         ],

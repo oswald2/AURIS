@@ -10,14 +10,16 @@ import           RIO
 import           Application.DataModel
 
 import           Control.PUS.Classes
-import           Data.PUS.Events
 
+import           Data.PUS.Events
+import           Data.PUS.TCRequest
 
 
 data InterfaceAction =
   Quit
   | ImportMIB FilePath FilePath
   | LogMsg LogSource LogLevel Utf8Builder
+  | SendTCRequest TCRequest
   deriving (Generic)
 
 
@@ -27,23 +29,23 @@ runCoreThread
      , HasRaiseEvent env
      , HasDataModel env
      , HasLogFunc env
+     , HasTCRqstQueue env
      )
   => TBQueue InterfaceAction
   -> m ()
 runCoreThread queue = do
   logDebug "Starting CoreThread..."
-  loop True
+  loop
  where
-  loop False = do
-    logInfo "Terminating!"
-    return ()
-  loop True = do
+  loop = do
     msg <- atomically $ readTBQueue queue
     case msg of
-      Quit -> loop False
+      Quit -> do 
+        logInfo "Terminating!"
+        return () 
       _    -> do
         processMsg msg
-        loop True
+        loop
 
 
 processMsg
@@ -52,12 +54,17 @@ processMsg
      , HasRaiseEvent env
      , HasDataModel env
      , HasLogFunc env
+     , HasTCRqstQueue env
      )
   => InterfaceAction
   -> m ()
 processMsg Quit                           = return ()
 processMsg (ImportMIB path serializePath) = importMIB path serializePath
 processMsg (LogMsg source level msg     ) = logGeneric source level msg
+processMsg (SendTCRequest rqst          ) = do 
+  q <- view getRqstQueue
+  atomically $ writeTBQueue q rqst
+
 
 
 importMIB
