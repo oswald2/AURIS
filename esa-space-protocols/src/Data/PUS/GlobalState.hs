@@ -35,6 +35,7 @@ module Data.PUS.GlobalState
   , glsRaiseEvent
   , glsMissionSpecific
   , glsDataModel
+  , glsTCRequestQueue
   , newGlobalState
   , nextADCount
   )
@@ -48,17 +49,21 @@ import qualified RIO.HashMap                   as HM
 
 import           UnliftIO.STM                   ( )
 
-import           Data.DataModel
+import Data.DataModel ( DataModel, empty )
 
 import           Data.PUS.Config
-import           Data.PUS.PUSState
-import           Data.PUS.Events
+import Data.PUS.PUSState ( defaultPUSState, nextADCnt, PUSState )
+import Data.PUS.Events ( Event )
 import           Data.PUS.COP1Types
+import Data.PUS.MissionSpecific.Definitions ( PUSMissionSpecific )
+import Data.PUS.TCRequest ( TCRequest )
 
 import           General.PUSTypes
 import           General.Time
 
-import           Data.PUS.MissionSpecific.Definitions
+
+
+
 
 -- | The AppState is just a type alias
 type AppState = TVar PUSState
@@ -70,6 +75,10 @@ type CorrelationVar = TVar CorrelationCoefficients
 type FOP1State = TVar FOPState
 
 type COP1State = HashMap VCID FOP1State
+
+
+rqstQueueSize :: Natural
+rqstQueueSize = 1000 
 
 -- | The 'GlobalState' contains the configuration, several TVars to
 -- transient state and some functions which must be provided by the
@@ -85,6 +94,7 @@ data GlobalState = GlobalState {
 
     , glsRaiseEvent :: Event -> IO ()
     , glsLogFunc :: !LogFunc
+    , glsTCRequestQueue :: TBQueue TCRequest
 }
 
 -- | Constructor for the global state. Takes a configuration, a
@@ -104,6 +114,7 @@ newGlobalState cfg missionSpecific logErr raiseEvent = do
   let vcids = cfgVCIDs cfg
   fopTVars <- mapM (newTVarIO . initialFOPState) vcids
   let fop1 = HM.fromList $ zip vcids fopTVars
+  rqstQueue <- newTBQueueIO rqstQueueSize
 
   let state = GlobalState { glsConfig          = cfg
                           , glsState           = tv
@@ -113,6 +124,7 @@ newGlobalState cfg missionSpecific logErr raiseEvent = do
                           , glsLogFunc         = logErr
                           , glsDataModel       = dmodel
                           , glsMissionSpecific = missionSpecific
+                          , glsTCRequestQueue  = rqstQueue 
                           }
   pure state
 

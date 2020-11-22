@@ -5,6 +5,7 @@
 #-}
 module Protocol.CnC
   ( receiveCnCC
+  , sendTCCncC
   , scoeCommandC
   , SCOECommand(..)
   , generateAckData
@@ -26,6 +27,7 @@ import qualified Data.Vector                   as V
 import           Data.Char
 
 import           Data.PUS.PUSPacket
+import           Data.PUS.PUSPacketEncoder
 import           Data.PUS.ExtractedDU
 import           Data.PUS.ExtractedPUSPacket
 import           Data.PUS.MissionSpecific.Definitions
@@ -39,7 +41,7 @@ import           Control.PUS.Classes
 
 
 
--- if we have SCOE packet, and it has a secondary header, it is a binary
+-- if we have a SCOE packet, and it has a secondary header, it is a binary
 -- TC, else an ASCII one.
 isASCIICc :: ProtocolPacket PUSPacket -> Bool
 isASCIICc (ProtocolPacket (IfCnc _) pusPkt) =
@@ -96,6 +98,8 @@ receiveCnCC missionSpecific interf = do
     else Just (fromIntegral oldSSC, fromIntegral ssc)
 
 
+sendTCCncC :: (Monad m) => ConduitT EncodedPUSPacket ByteString m () 
+sendTCCncC = awaitForever $ \encPkt -> forM_ (encPkt ^. encPktEncoded) yield
 
 
 scoeCommandC

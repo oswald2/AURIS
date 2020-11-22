@@ -10,6 +10,8 @@ module Data.PUS.TCRequest
   , CommandType(..)
   , Destination(..)
   , ProtocolLevel(..)
+  , DirectiveProtocolLevel(..)
+  , DirectiveDestination(..)
   , tcReqRequestID
   , tcReqMAPID
   , tcReqSCID
@@ -70,6 +72,17 @@ instance FromJSON ProtocolLevel
 instance ToJSON ProtocolLevel where
   toEncoding = genericToEncoding defaultOptions
 
+
+data DirectiveProtocolLevel = 
+  DirProtLevelFrame 
+  | DirProtLevelCltu
+    deriving (Eq, Ord, Enum, Show, Read, Generic)
+
+instance Serialise DirectiveProtocolLevel
+instance FromJSON DirectiveProtocolLevel
+instance ToJSON DirectiveProtocolLevel where
+  toEncoding = genericToEncoding defaultOptions
+
 -- | Determines if the 'TCRequest' is a spacecraft command or a command destined 
 -- for a SCOE. Space commands are encoded slightly different in most protocols.
 -- Also, the 'ProtocolLevel' is given here to specify the encoding of the command
@@ -89,7 +102,7 @@ instance ToJSON CommandType where
 -- (and protocol level) can be specified as EDEN is quite flexible and can handle 
 -- full spacecraft as well as SCOE management.
 data Destination = 
-  DestNctrs ProtocolInterface 
+  DestNctrs ProtocolInterface
   | DestCnc ProtocolInterface 
   | DestEden ProtocolInterface CommandType 
   deriving (Eq, Show, Read, Generic)
@@ -104,7 +117,7 @@ instance ToJSON Destination where
 -- 'TCRequest' destination ('Destination'). 
 data DirectiveDestination = 
   DirDestNctrs ProtocolInterface 
-  | DirDestEden ProtocolInterface 
+  | DirDestEden ProtocolInterface DirectiveProtocolLevel
   deriving (Eq, Show, Read, Generic)
 
 instance Serialise DirectiveDestination
@@ -177,7 +190,7 @@ instance ProtocolDestination Destination where
 
 instance ProtocolDestination DirectiveDestination where 
   destination (DirDestNctrs x) = x 
-  destination (DirDestEden x) = x
+  destination (DirDestEden x _) = x
 
 
 instance ProtocolDestination TCRequest where

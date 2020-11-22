@@ -24,6 +24,7 @@ module Control.PUS.Classes
   , HasCorrelationState(..)
   , HasMissionSpecific(..)
   , HasDataModel(..)
+  , HasTCRqstQueue(..)
   , getDataModel
   , setDataModel
   , HasRaiseEvent(..)
@@ -44,6 +45,9 @@ import           General.PUSTypes
 import           Data.PUS.GlobalState
 import           Data.PUS.MissionSpecific.Definitions
                                                 ( PUSMissionSpecific )
+import           Data.PUS.TCRequest
+
+
 
 -- | This class specifies how to get a configuration
 class HasConfig env where
@@ -71,6 +75,11 @@ class HasCorrelationState env where
 class HasDataModel env where
     getDataModelVar :: Getter env (TVar DataModel)
 
+-- | class for injecting TC Requests into the system
+class HasTCRqstQueue env where 
+  getRqstQueue :: Getter env (TBQueue TCRequest)
+
+
 getDataModel :: (MonadIO m) => HasDataModel env => env -> m DataModel
 getDataModel env = do 
     liftIO $ readTVarIO (env ^. getDataModelVar)
@@ -93,7 +102,8 @@ class (HasConfig env,
     HasCorrelationState env,
     HasLogFunc env,
     HasDataModel env,
-    HasRaiseEvent env) => HasGlobalState env
+    HasRaiseEvent env,
+    HasTCRqstQueue env) => HasGlobalState env
 
 
 
@@ -118,6 +128,10 @@ instance HasDataModel GlobalState where
 
 instance HasRaiseEvent GlobalState where
   raiseEvent = glsRaiseEvent
+
+instance HasTCRqstQueue GlobalState where 
+  getRqstQueue = to glsTCRequestQueue
+
 
 instance HasGlobalState GlobalState
 

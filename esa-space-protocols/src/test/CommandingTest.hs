@@ -19,7 +19,8 @@ import qualified Data.Conduit.Combinators      as C
 import           Data.Conduit.Network
 
 import           Data.PUS.TCTransferFrame
-import           Data.PUS.TCTransferFrameEncoder
+import Data.PUS.TCTransferFrameEncoder
+    ( tcFrameToCltuC, tcSegmentToTransferFrame )
 import           Data.PUS.CLTU
 import           Data.PUS.CLTUEncoder
 import           Data.PUS.GlobalState

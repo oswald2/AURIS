@@ -67,15 +67,13 @@ runProcessing cfg missionSpecific mibPath interface mainWindow coreQueue = do
       logInfo "Initialising User Interface with Data Model..."
       liftIO $ mwInitialiseDataModel mainWindow model
 
-      logInfo "Starting TM Chain..."
-      let pusCfg   = aurisPusConfig cfg
-          nctrsCfg = cfgNCTRS pusCfg
-          cncCfg   = cfgCnC pusCfg
-          edenCfg  = cfgEDEN pusCfg
+      logInfo "Starting TM and TC chains..."
 
       void $ async $ runCoreThread coreQueue
 
-      runTMChain nctrsCfg cncCfg edenCfg missionSpecific
+      -- run all processing chains (TM and TC) as well as the 
+      -- interface threads 
+      runChains missionSpecific
 
 
 
