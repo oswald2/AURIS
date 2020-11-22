@@ -18,6 +18,7 @@ module Data.PUS.TMPacket
   , tmpSSC
   , tmpParams
   , tmpEvent
+  , tmpSource
   )
 where
 
@@ -38,6 +39,7 @@ import           Data.PUS.Config
 --import           General.Types
 import           General.Time
 
+import Protocol.ProtocolInterfaces ( ProtocolInterface )
 
 data TMPacket = TMPacket {
     _tmpSPID :: !SPID
@@ -53,6 +55,7 @@ data TMPacket = TMPacket {
     , _tmpVCID :: !VCID
     , _tmpSSC :: !SSC
     , _tmpEvent :: !PIDEvent
+    , _tmpSource :: !ProtocolInterface
     , _tmpParams :: Vector TMParameter
     } deriving (Show, Generic)
 makeLenses ''TMPacket

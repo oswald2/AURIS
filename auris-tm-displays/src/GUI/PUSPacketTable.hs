@@ -81,6 +81,7 @@ createPUSPacketTable builder = do
     , ( "SSC", 60 
       , \pkt -> [#text := textDisplay (pkt ^. epDU . pusHdr . pusHdrSSC)]
       )
+    , ("Source", 60, \pkt -> [#text := textDisplay (pkt ^. epSource)])
     , ("Data", 600, \pkt -> [#text := hexdumpLineBS (pkt ^. epDU . pusData)])
     ]
 

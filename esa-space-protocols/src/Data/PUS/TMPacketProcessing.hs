@@ -132,6 +132,7 @@ packetProcessorC = awaitForever $ \pkt@(ExtractedPacket oct pusPkt) -> do
                     , _tmpVCID = pusPkt ^. epVCID
                     , _tmpSSC = pusPkt ^. epDU . pusHdr . pusHdrSSC
                     , _tmpEvent = PIDNo
+                    , _tmpSource = pusPkt ^. epSource
                     , _tmpParams = V.singleton param
                     }
 
@@ -213,6 +214,7 @@ processPacket pktDef (TMPacketKey _apid _t _st pi1 pi2) pkt@(ExtractedPacket _ p
       , _tmpVCID = pusDU ^. epVCID
       , _tmpSSC = pusDU ^. epDU . pusHdr . pusHdrSSC
       , _tmpEvent = _tmpdEvent pktDef
+      , _tmpSource = pusDU ^. epSource
       , _tmpParams = params
       }
 
