@@ -49,7 +49,7 @@ import           Data.PUS.CLTU ( cltuEncodeRandomizedC )
 import           Data.PUS.CLTUEncoder 
 
 
-import           Protocol.NCTRS                 ( receiveTmNcduC, encodeTcNcduC)
+import           Protocol.NCTRS                 ( receiveTmNcduC, encodeTcNcduC, receiveAdminNcduC)
 import           Protocol.CnC                   ( receiveCnCC, sendTCCncC)
 import           Protocol.EDEN                  ( encodeEdenMessageC
                                                 , receiveEdenMessageC
@@ -149,6 +149,43 @@ runTCNctrsChain cfg cltuQueue = do
         logError $ display @Text "NCTRS Interface Exception: " <> displayShow e
         throwM e
       Right _ -> return ()
+
+
+runAdminNctrsChain :: NctrsConfig -> RIO GlobalState ()
+runAdminNctrsChain cfg = do
+  logDebug "runAdminNctrsChain entering"
+
+  let chain =
+        receiveAdminNcduC .| printC
+
+  runGeneralTCPReconnectClient
+    (clientSettings (fromIntegral (cfgNctrsPortADM cfg))
+                    (encodeUtf8 (cfgNctrsHost cfg))
+    )
+    200000
+    (tmClient chain)
+
+  logDebug "runAdminNctrsChain leaving"
+ where
+  tmClient chain app = do
+    env <- ask
+    liftIO $ raiseEvent
+      env
+      (EVAlarms (EVEConnection (IfNctrs (cfgNctrsID cfg)) ConnAdmin Connected))
+    res <- try $ void $ runConduitRes (appSource app .| chain)
+
+    liftIO
+      (raiseEvent
+        env
+        (EVAlarms (EVEConnection (IfNctrs (cfgNctrsID cfg)) ConnAdmin Disconnected)
+        )
+      )
+    case res of
+      Left (e :: SomeException) -> do
+        logError $ display @Text "NCTRS Interface Exception: " <> displayShow e
+        throwM e
+      Right _ -> return ()
+
 
 
 
@@ -389,8 +426,9 @@ runChains missionSpecific = do
 
   let tmThreads = conc $ runTMChain missionSpecific pktQueue
       tcThreads = conc $ runTCChain missionSpecific switcherMap 
+      adminThreads = mconcat $ map (conc . runAdminNctrsChain) (cfgNCTRS cfg)
 
-  runConc (tmThreads <> tcThreads <> interfaceThreads)
+  runConc (tmThreads <> tcThreads <> interfaceThreads <> adminThreads)
 
   where 
     edenIf pktQueue (switcherMap, ts) x = do
