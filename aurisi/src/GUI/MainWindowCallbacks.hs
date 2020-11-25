@@ -19,6 +19,7 @@ import qualified GI.Gtk                        as Gtk
 
 import           GUI.MainWindow
 import           GUI.TMFrameTab
+import           GUI.TCTab 
 
 import           Interface.Interface
 
@@ -31,6 +32,7 @@ import           AurisConfig
 setupCallbacks :: MainWindow -> Interface -> IO ()
 setupCallbacks window interface = do
   GUI.TMFrameTab.setupCallbacks (window ^. mwFrameTab)
+  GUI.TCTab.setupCallbacks (window ^. mwTCTab) interface
   void $ Gtk.on (window ^. mwMenuItemImportMIB) #activate $ importMIB window interface 
 
 

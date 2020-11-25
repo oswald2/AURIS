@@ -38,6 +38,7 @@ packages:
 - mcs-interface
 - gui-base
 - auris-tm-displays
+- auris-tc-displays
 - auris-control-displays
 - aurisi
 - Chart-gi-cairo

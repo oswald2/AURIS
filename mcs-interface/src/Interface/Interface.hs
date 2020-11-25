@@ -78,7 +78,7 @@ actionTable queue = ActionTable
   { actionQuit          = pure ()
   , actionImportMIB     = \p s -> callAction queue (ImportMIB p s)
   , actionLogMessage    = \s l msg -> callAction queue (LogMsg s l msg)
-  , actionSendTCRequest = \_tc -> pure ()
+  , actionSendTCRequest = \tc -> callAction queue (SendTCRequest tc)
   }
 
 

@@ -1,5 +1,7 @@
 module GUI.TextView
   ( textViewSetText
+  , textViewClear
+  , textViewGetText
   )
 where
 
@@ -13,3 +15,18 @@ textViewSetText :: TextView -> Text -> IO ()
 textViewSetText tv txt = do
   buf <- textViewGetBuffer tv
   textBufferSetText buf txt (fromIntegral (T.length txt))
+
+
+textViewGetText :: TextView -> IO Text
+textViewGetText tv = do 
+  buffer       <- textViewGetBuffer tv
+  (start, end) <- textBufferGetBounds buffer
+  textBufferGetText buffer start end False
+
+
+
+textViewClear :: TextView -> IO ()
+textViewClear tv = do 
+  buffer <- textViewGetBuffer tv
+  (start, end) <- textBufferGetBounds buffer 
+  textBufferDelete buffer start end 

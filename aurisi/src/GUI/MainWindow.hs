@@ -22,6 +22,7 @@ module GUI.MainWindow
   , mwWindow
   , mwProgress
   , mwConnTab
+  , mwTCTab 
   , mwMenuItemImportMIB
   )
 where
@@ -39,6 +40,7 @@ import           GUI.TMPacketTab
 import           GUI.TMFrameTab
 import           GUI.TMParamTab
 import           GUI.ConnectionTab
+import           GUI.TCTab
 import           GUI.Utils
 import           GUI.Logo
 import           GUI.MessageDisplay
@@ -73,6 +75,7 @@ data MainWindow = MainWindow {
     , _mwMission :: !Gtk.Label
     , _mwFrameTab :: !TMFrameTab
     , _mwConnTab :: !ConnectionTab
+    , _mwTCTab :: !TCTab
     , _mwTimeLabel :: !Label
     , _mwMenuItemImportMIB :: !Gtk.MenuItem
     }
@@ -135,6 +138,7 @@ createMainWindow cfg = do
   tmpTab            <- createTMPTab builder
   paramTab          <- createTMParamTab builder
   connTab           <- createConnectionTab (aurisPusConfig cfg) builder
+  tcTab             <- createTCTab window builder 
 
   -- create the message display
   msgDisp           <- createMessageDisplay builder
@@ -150,6 +154,7 @@ createMainWindow cfg = do
                        , _mwTimeLabel         = timeLabel
                        , _mwTMParamTab        = paramTab
                        , _mwConnTab           = connTab
+                       , _mwTCTab             = tcTab 
                        , _mwMenuItemImportMIB = menuItemImportMIB
                        }
 
