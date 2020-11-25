@@ -372,6 +372,7 @@ runTCChain missionSpecific switcherMap = do
 
   let rqstChain =
         sourceTBQueue rqstQueue
+          .| concatC
           .| tcPktEncoderC missionSpecific
           .| tcPktToEncPUSC
           .| switchProtocolPktC switcherMap frameQueue

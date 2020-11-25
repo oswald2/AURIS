@@ -94,7 +94,7 @@ data GlobalState = GlobalState {
 
     , glsRaiseEvent :: Event -> IO ()
     , glsLogFunc :: !LogFunc
-    , glsTCRequestQueue :: TBQueue TCRequest
+    , glsTCRequestQueue :: TBQueue [TCRequest]
 }
 
 -- | Constructor for the global state. Takes a configuration, a

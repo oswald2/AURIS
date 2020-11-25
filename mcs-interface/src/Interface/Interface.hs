@@ -55,6 +55,7 @@ data ActionTable = ActionTable {
     , actionImportMIB :: FilePath -> FilePath -> IO ()
     , actionLogMessage :: LogSource -> LogLevel -> Utf8Builder -> IO ()
     , actionSendTCRequest :: TCRequest -> IO ()
+    , actionSendTCGroup :: [TCRequest] -> IO ()
     }
 
 -- | Data type for the event handler.
@@ -78,7 +79,8 @@ actionTable queue = ActionTable
   { actionQuit          = pure ()
   , actionImportMIB     = \p s -> callAction queue (ImportMIB p s)
   , actionLogMessage    = \s l msg -> callAction queue (LogMsg s l msg)
-  , actionSendTCRequest = \tc -> callAction queue (SendTCRequest tc)
+  , actionSendTCRequest = callAction queue . SendTCRequest
+  , actionSendTCGroup   = callAction queue . SendTCGroup
   }
 
 

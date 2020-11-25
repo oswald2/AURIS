@@ -77,7 +77,7 @@ class HasDataModel env where
 
 -- | class for injecting TC Requests into the system
 class HasTCRqstQueue env where 
-  getRqstQueue :: Getter env (TBQueue TCRequest)
+  getRqstQueue :: Getter env (TBQueue [TCRequest])
 
 
 getDataModel :: (MonadIO m) => HasDataModel env => env -> m DataModel

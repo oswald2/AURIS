@@ -20,6 +20,7 @@ data InterfaceAction =
   | ImportMIB FilePath FilePath
   | LogMsg LogSource LogLevel Utf8Builder
   | SendTCRequest TCRequest
+  | SendTCGroup [TCRequest]
   deriving (Generic)
 
 
@@ -63,8 +64,10 @@ processMsg (ImportMIB path serializePath) = importMIB path serializePath
 processMsg (LogMsg source level msg     ) = logGeneric source level msg
 processMsg (SendTCRequest rqst          ) = do 
   q <- view getRqstQueue
-  atomically $ writeTBQueue q rqst
-
+  atomically $ writeTBQueue q [rqst]
+processMsg (SendTCGroup group) = do 
+  q <- view getRqstQueue
+  atomically $ writeTBQueue q group 
 
 
 importMIB
