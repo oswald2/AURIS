@@ -67,12 +67,6 @@ newtype CncID = CncID Word16
 newtype EdenID = EdenID Word16
 
 
-frameQueueSize :: Natural
-frameQueueSize = 1000
-
-cltuQueueSize :: Natural
-cltuQueueSize = 1000
-
 tmPacketQueueSize :: Natural
 tmPacketQueueSize = 5000
 
@@ -367,40 +361,25 @@ runTCChain missionSpecific switcherMap = do
 
   rqstQueue  <- view getRqstQueue
 
-  frameQueue <- newTBQueueIO frameQueueSize
-  cltuQueue <- newTBQueueIO cltuQueueSize
-
   let rqstChain =
         sourceTBQueue rqstQueue
           .| concatC
           .| tcPktEncoderC missionSpecific
           .| tcPktToEncPUSC
-          .| switchProtocolPktC switcherMap frameQueue
-
+          .| switchProtocolPktC switcherMap 
   -- TODO: This chain is currently only BD mode! AD mode needs to be implemented
-  let frameChain =
-        sourceTBQueue frameQueue
           .| tcSegmentEncoderC
           .| tcSegmentToTransferFrame
           .| tcFrameEncodeC
-          .| switchProtocolFrameC switcherMap cltuQueue
-
-  void $ async $ runConduitRes frameChain
-
-  let cltuChain = 
-        sourceTBQueue cltuQueue
-        .| tcFrameToCltuC
-        .| cltuEncodeRandomizedC
-        .| switchProtocolCltuC switcherMap
+          .| switchProtocolFrameC switcherMap
+          .| tcFrameToCltuC
+          .| cltuEncodeRandomizedC
+          .| switchProtocolCltuC switcherMap
 
   let rqstThread = conc $ runConduitRes rqstChain
-      frameThread = conc $ runConduitRes frameChain
-      cltuThread = conc $ runConduitRes cltuChain
-
-      threads = rqstThread <> frameThread <> cltuThread
-  
+ 
   -- start all threads and wait until they are all finished
-  runConc threads
+  runConc rqstThread
 
   logDebug "runTCChain leaving"
 

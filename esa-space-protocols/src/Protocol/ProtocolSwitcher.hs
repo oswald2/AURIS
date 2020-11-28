@@ -76,31 +76,30 @@ createInterfaceChannel sm interf = do
 switchProtocolPktC
   :: (MonadIO m, MonadReader env m, HasLogFunc env)
   => InterfaceSwitcherMap
-  -> FrameQueue
-  -> ConduitT EncodedPUSPacket Void m ()
-switchProtocolPktC sm frameQueue =  awaitForever $ \pkt -> do
+  -> ConduitT EncodedPUSPacket EncodedPUSPacket m ()
+switchProtocolPktC sm =  awaitForever $ \pkt -> do
   case pkt ^. encPktRequest . tcReqPayload of 
     tc@TCCommand {} -> switchCommand pkt tc 
     TCDir {} -> do
       -- TC Directives work an TC Frame level, so the only available options are 
       -- sending as TC Frames or CLTUs. Therefore, we forward the encoding down to 
       -- the frame level
-      atomically $ writeTBQueue frameQueue pkt 
+      yield pkt 
 
   where 
     -- currently, we assume that NCTRS only encodes CLTUs. As Frames and Packets 
     -- are also supported by the NCTRS protocol, this must be changed here for 
     -- the routing to the correct TBQueue
     switchCommand pkt TCCommand { _tcDestination = DestNctrs _ } = 
-      atomically $ writeTBQueue frameQueue pkt 
+      yield pkt 
     -- in case of an EDEN protocol, but frame format, first delegate to encode into 
     -- TC Frames before sending to the EDEN interface 
     switchCommand pkt TCCommand { _tcDestination = DestEden _ (Space ProtLevelFrame) } = 
-      atomically $ writeTBQueue frameQueue pkt 
+      yield pkt 
     -- in case of an EDEN protocol, but CLTU format, first delegate to encode into 
     -- TC Frames and then CLTUs before sending to the EDEN interface 
     switchCommand pkt TCCommand { _tcDestination = DestEden _ (Space ProtLevelCltu) } = 
-      atomically $ writeTBQueue frameQueue pkt 
+      yield pkt 
     -- in all other cases, just forward the packet to the correct interface in packet
     -- format
     switchCommand pkt _ = do
@@ -119,9 +118,8 @@ switchProtocolPktC sm frameQueue =  awaitForever $ \pkt -> do
 switchProtocolFrameC
   :: (MonadIO m, MonadReader env m, HasLogFunc env)
   => InterfaceSwitcherMap
-  -> CLTUQueue
-  -> ConduitT EncodedTCFrame Void m ()
-switchProtocolFrameC sm cltuQueue = awaitForever $ \frame -> do
+  -> ConduitT EncodedTCFrame EncodedTCFrame m ()
+switchProtocolFrameC sm = awaitForever $ \frame -> do
   case frame ^. encTcFrameRequest . tcReqPayload of 
     tc@TCCommand {} -> switchCommand frame tc 
     dir@TCDir {} -> switchDirective frame dir
@@ -131,14 +129,12 @@ switchProtocolFrameC sm cltuQueue = awaitForever $ \frame -> do
     switchCommand frame TCCommand { _tcDestination = DestEden dest (Space ProtLevelFrame) } = 
       sendFrameToEDEN dest frame 
     -- in all other cases, forward to the CLTU processing
-    switchCommand frame _ = 
-      atomically $ writeTBQueue cltuQueue frame 
+    switchCommand frame _ = yield frame 
 
     -- incase of EDEN protocol usage with TC Frames, forward to the EDEN interface
     switchDirective frame TCDir { _tcDirDestination = DirDestEden dest DirProtLevelFrame } = do 
       sendFrameToEDEN dest frame 
-    switchDirective frame _ =     
-      atomically $ writeTBQueue cltuQueue frame 
+    switchDirective frame _ = yield frame 
 
     sendFrameToEDEN dest frame = 
       case HM.lookup dest sm of
