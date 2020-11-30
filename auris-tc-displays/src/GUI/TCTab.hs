@@ -52,7 +52,7 @@ createTCTab window builder = do
 
   void $ Gtk.on btClear #clicked $ textViewClear textView
   void $ Gtk.on btInsert #clicked $ do
-    let rqst = TCRequest
+    let rqst = [SendRqst $ TCRequest
           0
           (mkSCID 533)
           (mkVCID 1)
@@ -66,7 +66,7 @@ createTCTab window builder = do
                       (mkSourceID 10)
                       (List params Empty)
             )
-          )
+          )]
         params = RIO.replicate 10 (Parameter "X" (ValUInt3 0b101))
 
     textViewSetText textView (T.pack (show rqst))
@@ -74,12 +74,26 @@ createTCTab window builder = do
   return g
 
 
+data TCAction = 
+  SendRqst TCRequest 
+  | SendGroup [TCRequest]
+  | RepeatN Int [TCAction]
+  deriving (Read, Show, Generic)
+
+instance NFData TCAction
+
 
 setupCallbacks :: TCTab -> Interface -> IO ()
 setupCallbacks gui interface = do 
   void $ Gtk.on (_tcTabButtonSend gui) #clicked $ do 
     text <- textViewGetText (_tcTabTextView gui)
-    case readMaybe (T.unpack text) of 
-      Nothing -> return () 
-      Just rqst -> do 
-        callInterface interface actionSendTCRequest rqst 
+    forM_ (readMaybe (T.unpack text) :: Maybe [TCAction]) (mapM (processAction interface))
+
+
+processAction :: Interface -> TCAction -> IO () 
+processAction interface (SendRqst rqst) = callInterface interface actionSendTCRequest rqst
+processAction interface (SendGroup group) = callInterface interface actionSendTCGroup group
+processAction interface (RepeatN n group) = do
+  let actions = concat $ replicate n (force group)
+  mapM_ (processAction interface) actions
+  

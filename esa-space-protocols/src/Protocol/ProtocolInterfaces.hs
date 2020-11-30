@@ -63,6 +63,7 @@ data ProtocolInterface =
     deriving (Eq, Ord, Show, Read, Generic)
 
 
+instance NFData ProtocolInterface
 instance Hashable ProtocolInterface
 instance Binary ProtocolInterface
 instance Serialise ProtocolInterface

@@ -67,6 +67,7 @@ data ProtocolLevel =
   | ProtLevelCltu
     deriving (Eq, Ord, Enum, Show, Read, Generic)
 
+instance NFData ProtocolLevel
 instance Serialise ProtocolLevel
 instance FromJSON ProtocolLevel
 instance ToJSON ProtocolLevel where
@@ -78,6 +79,7 @@ data DirectiveProtocolLevel =
   | DirProtLevelCltu
     deriving (Eq, Ord, Enum, Show, Read, Generic)
 
+instance NFData DirectiveProtocolLevel
 instance Serialise DirectiveProtocolLevel
 instance FromJSON DirectiveProtocolLevel
 instance ToJSON DirectiveProtocolLevel where
@@ -92,6 +94,7 @@ data CommandType =
   | SCOE
     deriving (Eq, Ord, Show, Read, Generic)
 
+instance NFData CommandType
 instance Serialise CommandType
 instance FromJSON CommandType
 instance ToJSON CommandType where
@@ -107,6 +110,7 @@ data Destination =
   | DestEden ProtocolInterface CommandType 
   deriving (Eq, Show, Read, Generic)
 
+instance NFData Destination
 instance Serialise Destination
 instance FromJSON Destination
 instance ToJSON Destination where
@@ -120,6 +124,7 @@ data DirectiveDestination =
   | DirDestEden ProtocolInterface DirectiveProtocolLevel
   deriving (Eq, Show, Read, Generic)
 
+instance NFData DirectiveDestination
 instance Serialise DirectiveDestination
 instance FromJSON DirectiveDestination
 instance ToJSON DirectiveDestination where
@@ -143,7 +148,7 @@ data TCRequestBody =
 makeLenses ''TCRequestBody
 makePrisms  ''TCRequestBody
 
-
+instance NFData TCRequestBody
 instance Serialise TCRequestBody
 instance FromJSON TCRequestBody
 instance ToJSON TCRequestBody where
@@ -161,6 +166,9 @@ data TCRequest = TCRequest {
     }
     deriving (Show, Read, Generic)
 makeLenses ''TCRequest
+
+instance NFData TCRequest
+
 
 -- | Get the transmission mode. 
 tcReqGetTransmissionMode :: TCRequest -> TransmissionMode

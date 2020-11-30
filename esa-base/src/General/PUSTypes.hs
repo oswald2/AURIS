@@ -89,6 +89,7 @@ newtype VCID = VCID { getVCID :: Word8 }
 mkVCID :: Word8 -> VCID
 mkVCID = VCID
 
+instance NFData VCID
 instance Binary VCID
 instance Serialise VCID
 instance FromJSON VCID
@@ -116,6 +117,7 @@ newtype SCID = SCID { getSCID :: Word16 }
 mkSCID :: Word16 -> SCID
 mkSCID = SCID
 
+instance NFData SCID 
 instance Binary SCID
 instance Serialise SCID
 instance FromJSON SCID
@@ -144,6 +146,7 @@ newtype MAPID = MAPID { getMAPID :: Word8 }
 mkMAPID :: Word8 -> MAPID
 mkMAPID x = MAPID (x .&. 0x3F)
 
+instance NFData MAPID
 instance Binary MAPID
 instance Serialise MAPID
 instance FromJSON MAPID
@@ -234,6 +237,7 @@ newtype RequestID = RequestID { getRqstID :: Int64 }
 mkRqstID :: Int64 -> RequestID
 mkRqstID = RequestID
 
+instance NFData RequestID
 instance Binary RequestID
 instance Serialise RequestID
 instance FromJSON RequestID
@@ -245,6 +249,8 @@ instance ToJSON RequestID where
 data TransmissionMode = AD | BD
     deriving (Eq, Ord, Enum, Show, Read, Generic)
 
+
+instance NFData TransmissionMode
 instance Binary TransmissionMode
 instance Serialise TransmissionMode
 instance FromJSON TransmissionMode
@@ -305,13 +311,15 @@ pusTypeParser = PUSType <$> A.anyWord8
 pusSubTypeParser :: Parser PUSSubType
 pusSubTypeParser = PUSSubType <$> A.anyWord8
 
-
+instance NFData PUSType 
 instance Hashable PUSType
 instance Serialise PUSType
 instance FromJSON PUSType
 instance ToJSON PUSType where
   toEncoding = genericToEncoding defaultOptions
 
+
+instance NFData PUSSubType
 instance Hashable PUSSubType
 instance Serialise PUSSubType
 instance FromJSON PUSSubType
@@ -331,6 +339,7 @@ mkSSC = SSC
 nextSSC :: SSC -> SSC
 nextSSC (SSC x) = SSC (x + 1)
 
+instance NFData SSC
 instance Binary SSC
 instance Serialise SSC
 instance FromJSON SSC

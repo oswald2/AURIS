@@ -50,6 +50,7 @@ newtype APID = APID { getAPID :: Word16 }
 newtype PID = PID { getPID :: Word8 }
     deriving (Read, Show, Eq, Ord, Num, Generic)
 
+instance NFData APID 
 instance Hashable APID
 instance Binary APID
 instance Serialise APID
@@ -58,6 +59,7 @@ instance ToJSON APID where
     toEncoding = genericToEncoding defaultOptions
 
 
+instance NFData PID
 instance Hashable PID
 instance Binary PID
 instance Serialise PID
@@ -73,6 +75,7 @@ data APIDorPID =
     | IsPID Word8
     deriving (Read, Show, Eq, Generic)
 
+instance NFData APIDorPID
 instance Hashable APIDorPID
 instance Binary APIDorPID
 instance Serialise APIDorPID

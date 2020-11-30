@@ -32,6 +32,7 @@ data TCDirective =
     | DNop
     deriving (Eq, Show, Read, Generic)
 
+instance NFData TCDirective
 instance Binary TCDirective
 instance Serialise TCDirective
 instance FromJSON TCDirective
