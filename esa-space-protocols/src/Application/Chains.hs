@@ -33,24 +33,31 @@ import           Data.PUS.TMPacketProcessing    ( packetProcessorC
                                                 , raiseTMPacketC
                                                 , raiseTMParameterC
                                                 )
-import           Data.PUS.NcduToTMFrame ( ncduToTMFrameC )         
+import           Data.PUS.NcduToTMFrame         ( ncduToTMFrameC )
 import           Data.PUS.Events                ( Event(EVAlarms)
                                                 , EventAlarm(EVEConnection)
                                                 )
 import           Data.PUS.ExtractedPUSPacket    ( ExtractedPacket )
 import           Data.PUS.TCPacketEncoder       ( tcPktEncoderC )
 import           Data.PUS.PUSPacketEncoder      ( tcPktToEncPUSC )
-import           Data.PUS.TCTransferFrame ( tcFrameEncodeC ) 
+import           Data.PUS.TCTransferFrame       ( tcFrameEncodeC )
 import           Data.PUS.TCTransferFrameEncoder
-    ( tcFrameToCltuC, tcSegmentToTransferFrame )
-                                                
-import           Data.PUS.SegmentEncoder ( tcSegmentEncoderC )
-import           Data.PUS.CLTU ( cltuEncodeRandomizedC )
-import           Data.PUS.CLTUEncoder 
+                                                ( tcFrameToCltuC
+                                                , tcSegmentToTransferFrame
+                                                )
 
+import           Data.PUS.SegmentEncoder        ( tcSegmentEncoderC )
+import           Data.PUS.CLTU                  ( cltuEncodeRandomizedC )
+import           Data.PUS.CLTUEncoder
+import           Data.PUS.SSCCounter
 
-import           Protocol.NCTRS                 ( receiveTmNcduC, encodeTcNcduC, receiveAdminNcduC)
-import           Protocol.CnC                   ( receiveCnCC, sendTCCncC)
+import           Protocol.NCTRS                 ( receiveTmNcduC
+                                                , encodeTcNcduC
+                                                , receiveAdminNcduC
+                                                )
+import           Protocol.CnC                   ( receiveCnCC
+                                                , sendTCCncC
+                                                )
 import           Protocol.EDEN                  ( encodeEdenMessageC
                                                 , receiveEdenMessageC
                                                 )
@@ -149,8 +156,7 @@ runAdminNctrsChain :: NctrsConfig -> RIO GlobalState ()
 runAdminNctrsChain cfg = do
   logDebug "runAdminNctrsChain entering"
 
-  let chain =
-        receiveAdminNcduC .| printC
+  let chain = receiveAdminNcduC .| printC
 
   runGeneralTCPReconnectClient
     (clientSettings (fromIntegral (cfgNctrsPortADM cfg))
@@ -171,7 +177,8 @@ runAdminNctrsChain cfg = do
     liftIO
       (raiseEvent
         env
-        (EVAlarms (EVEConnection (IfNctrs (cfgNctrsID cfg)) ConnAdmin Disconnected)
+        (EVAlarms
+          (EVEConnection (IfNctrs (cfgNctrsID cfg)) ConnAdmin Disconnected)
         )
       )
     case res of
@@ -226,7 +233,7 @@ runTCCnCChain :: CncConfig -> ProtocolQueue -> RIO GlobalState ()
 runTCCnCChain cfg duQueue = do
   logDebug "runTCCnCChain entering"
 
-  let chain = receivePktChannelC duQueue .| sendTCCncC 
+  let chain = receivePktChannelC duQueue .| sendTCCncC
 
   runGeneralTCPReconnectClient
     (clientSettings (fromIntegral (cfgCncPortTC cfg))
@@ -247,8 +254,7 @@ runTCCnCChain cfg duQueue = do
     liftIO
       (raiseEvent
         env
-        (EVAlarms (EVEConnection (IfCnc (cfgCncID cfg)) ConnTC Disconnected)
-        )
+        (EVAlarms (EVEConnection (IfCnc (cfgCncID cfg)) ConnTC Disconnected))
       )
     case res of
       Left (e :: SomeException) -> do
@@ -321,15 +327,13 @@ runEdenChain cfg missionSpecific pktQueue edenQueue = do
 
 
 runTMChain
-  :: PUSMissionSpecific
-  -> TBQueue ExtractedPacket
-  -> RIO GlobalState ()
+  :: PUSMissionSpecific -> TBQueue ExtractedPacket -> RIO GlobalState ()
 runTMChain missionSpecific pktQueue = do
   logDebug "runTMCain entering"
 
-  cfg <- view getConfig 
-  let nctrsCfg = cfgNCTRS cfg 
-      cncCfg = cfgCnC cfg 
+  cfg <- view getConfig
+  let nctrsCfg = cfgNCTRS cfg
+      cncCfg   = cfgCnC cfg
 
   let chain =
         sourceTBQueue pktQueue
@@ -338,14 +342,13 @@ runTMChain missionSpecific pktQueue = do
           .| raiseTMParameterC
           .| sinkNull
 
-  let processingThread = conc $ runConduitRes chain
-      nctrsTMThread conf = conc $ runTMNctrsChain conf pktQueue
-      cncTMThread conf = conc $ runTMCnCChain conf missionSpecific pktQueue
+  let
+    processingThread = conc $ runConduitRes chain
+    nctrsTMThread conf = conc $ runTMNctrsChain conf pktQueue
+    cncTMThread conf = conc $ runTMCnCChain conf missionSpecific pktQueue
 
-      threads =
-        processingThread
-          :  fmap nctrsTMThread nctrsCfg
-          <> fmap cncTMThread   cncCfg
+    threads =
+      processingThread : fmap nctrsTMThread nctrsCfg <> fmap cncTMThread cncCfg
 
   -- run all threads and wait until all are finished
   runConc $ mconcat threads
@@ -359,14 +362,14 @@ runTCChain :: PUSMissionSpecific -> InterfaceSwitcherMap -> RIO GlobalState ()
 runTCChain missionSpecific switcherMap = do
   logDebug "runTCChain entering"
 
-  rqstQueue  <- view getRqstQueue
+  rqstQueue <- view getRqstQueue
 
   let rqstChain =
         sourceTBQueue rqstQueue
           .| concatC
           .| tcPktEncoderC missionSpecific
-          .| tcPktToEncPUSC
-          .| switchProtocolPktC switcherMap 
+          .| tcPktToEncPUSC initialSSCCounterMap
+          .| switchProtocolPktC switcherMap
   -- TODO: This chain is currently only BD mode! AD mode needs to be implemented
           .| tcSegmentEncoderC
           .| tcSegmentToTransferFrame
@@ -377,7 +380,7 @@ runTCChain missionSpecific switcherMap = do
           .| switchProtocolCltuC switcherMap
 
   let rqstThread = conc $ runConduitRes rqstChain
- 
+
   -- start all threads and wait until they are all finished
   runConc rqstThread
 
@@ -387,39 +390,40 @@ runTCChain missionSpecific switcherMap = do
 
 -- | This is the main function to start the processing chains. Runs the TM 
 -- and TC interfaces and processing chains in several threads
-runChains 
-  :: PUSMissionSpecific
-  -> RIO GlobalState ()
-runChains missionSpecific = do 
-  cfg <- view getConfig 
+runChains :: PUSMissionSpecific -> RIO GlobalState ()
+runChains missionSpecific = do
+  cfg                         <- view getConfig
 
-  pktQueue <- newTBQueueIO tmPacketQueueSize
+  pktQueue                    <- newTBQueueIO tmPacketQueueSize
 
   -- create the EDEN interface threads and the switcher map 
-  (switcherMap1, edenThreads) <- foldM (edenIf pktQueue) (HM.empty, mempty) (cfgEDEN cfg)
+  (switcherMap1, edenThreads) <- foldM (edenIf pktQueue)
+                                       (HM.empty, mempty)
+                                       (cfgEDEN cfg)
 
   -- create the interface threads and switcher map for the NCTRS interfaces
-  (switcherMap2, nctrsThreads) <- foldM nctrsIf (switcherMap1, edenThreads) (cfgNCTRS cfg)
+  (switcherMap2, nctrsThreads) <- foldM nctrsIf
+                                        (switcherMap1, edenThreads)
+                                        (cfgNCTRS cfg)
 
   -- create the interface threads and switcher map for the C&C interfaces
-  (switcherMap, interfaceThreads) <- foldM cncIf (switcherMap2, nctrsThreads) (cfgCnC cfg)
+  (switcherMap, interfaceThreads) <- foldM cncIf
+                                           (switcherMap2, nctrsThreads)
+                                           (cfgCnC cfg)
 
-  let tmThreads = conc $ runTMChain missionSpecific pktQueue
-      tcThreads = conc $ runTCChain missionSpecific switcherMap 
+  let tmThreads    = conc $ runTMChain missionSpecific pktQueue
+      tcThreads    = conc $ runTCChain missionSpecific switcherMap
       adminThreads = mconcat $ map (conc . runAdminNctrsChain) (cfgNCTRS cfg)
 
   runConc (tmThreads <> tcThreads <> interfaceThreads <> adminThreads)
 
-  where 
-    edenIf pktQueue (switcherMap, ts) x = do
-      (queue, newSm) <- createInterfaceChannel switcherMap
-                                               (IfEden (cfgEdenID x))
-      return (newSm, ts <> conc (runEdenChain x missionSpecific pktQueue queue))
-    nctrsIf (sm, ts) x = do
-      (queue, newSm) <- createInterfaceChannel sm
-                                               (IfNctrs (cfgNctrsID x))
-      return (newSm, ts <> conc (runTCNctrsChain x queue))
-    cncIf (sm, ts) x = do
-      (queue, newSm) <- createInterfaceChannel sm
-                                               (IfCnc (cfgCncID x))
-      return (newSm, ts <> conc (runTCCnCChain x queue))
+ where
+  edenIf pktQueue (switcherMap, ts) x = do
+    (queue, newSm) <- createInterfaceChannel switcherMap (IfEden (cfgEdenID x))
+    return (newSm, ts <> conc (runEdenChain x missionSpecific pktQueue queue))
+  nctrsIf (sm, ts) x = do
+    (queue, newSm) <- createInterfaceChannel sm (IfNctrs (cfgNctrsID x))
+    return (newSm, ts <> conc (runTCNctrsChain x queue))
+  cncIf (sm, ts) x = do
+    (queue, newSm) <- createInterfaceChannel sm (IfCnc (cfgCncID x))
+    return (newSm, ts <> conc (runTCCnCChain x queue))

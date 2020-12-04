@@ -17,7 +17,7 @@
 #
 # resolver: ./custom-snapshot.yaml
 # resolver: https://example.com/snapshots/2018-01-01.yaml
-resolver: lts-16.22
+resolver: lts-16.23
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -29,6 +29,7 @@ resolver: lts-16.22
 #   - auto-update
 #   - wai
 packages:
+- hashtables-mo
 - esa-base
 - esa-mib
 - esa-space-protocols
@@ -37,8 +38,10 @@ packages:
 - mcs-interface
 - gui-base
 - auris-tm-displays
+- auris-tc-displays
+- auris-control-displays
 - aurisi
-- hashtables-mo
+- Chart-gi-cairo
 
 # Dependency packages to be pulled from upstream that are not in the resolver.
 # These entries can reference officially published versions as well as
@@ -49,6 +52,8 @@ packages:
 # - git: https://github.com/commercialhaskell/stack.git
 #   commit: e7b331f14bcffb8367cd58fbfc8b40ec7642100a
 #
+allow-newer: true 
+
 extra-deps:
 - attoparsec-data-1.0.4.1
 - closed-0.2.0.1
@@ -56,11 +61,21 @@ extra-deps:
 - bytestring-to-vector-0.3.0.1
 - hw-prim-bits-0.1.0.4
 - selda-sqlite-0.1.7.1
+- selda-0.5.1.0@sha256:b942ecc9ff7959c922da92d13fcfe70a0823eafa32086663f3cc60138ce7d3bf,2997
 - timers-updatable-0.2.0.2
 - direct-sqlite-2.3.26
-- git: https://github.com/oswald2/Chart-fltkhs
-  commit: 38076d9e8af12f14b84b44db028d4213690845f8
-
+- Chart-cairo-1.9.3@sha256:f484a7194ca08ed67f02aa626e2f8f4d1a9b50624e0d50e3ced62958f7481cca,925
+- haskell-gi-base-0.24.4
+- haskell-gi-0.24.5
+- gi-glib-2.0.24
+- gi-pango-1.0.23
+- gi-harfbuzz-0.0.3
+- gi-gtk-3.0.36
+- gi-gtk-hs-0.3.9
+- gi-atk-2.0.21
+- gi-cairo-render-0.1.0
+- gi-cairo-connector-0.1.0
+- gi-gobject-2.0.24
 
 
 # Override default flag values for local packages and extra-deps
@@ -110,3 +125,9 @@ ghc-options:
 #
 # Allow a newer minor version of GHC than the snapshot specifies
 # compiler-check: newer-minor
+
+# if you want to profile, add SCC cost centres by hand for the functions you 
+# want to profile and then compile with:
+# stack build --profile --ghc-options="-fno-prof-auto"
+apply-ghc-options: everything
+rebuild-ghc-options: true

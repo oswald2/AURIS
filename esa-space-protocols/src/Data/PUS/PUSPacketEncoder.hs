@@ -27,6 +27,8 @@ import           Data.PUS.PUSPacket
 --import           Data.PUS.Segment
 import           Data.PUS.TCPacketEncoder
 import           Data.PUS.TCRequest
+import           Data.PUS.SSCCounter
+
 
 
 data EncodedPUSPacket = EncodedPUSPacket {
@@ -44,14 +46,24 @@ pusPacketEncoderC = awaitForever $ \(pkt, rqst) -> do
     yield (EncodedPUSPacket (Just enc) rqst)
 
 
-tcPktToEncPUSC :: Monad m => ConduitT EncodedTCPacket EncodedPUSPacket m ()
-tcPktToEncPUSC = awaitForever $ \encTC -> do
-    let request = encTC ^. encTcRequest
-    case encTC ^. encTcPUSContent of
-        Just pkt -> do
-            let enc = encodePUSPacket pkt
-            yield (EncodedPUSPacket (Just enc) request)
-        Nothing -> yield (EncodedPUSPacket Nothing request)
+tcPktToEncPUSC :: MonadIO m => SSCCounterMap -> ConduitT EncodedTCPacket EncodedPUSPacket m ()
+tcPktToEncPUSC hm = do
+    x <- await 
+    case x of 
+        Nothing -> return () 
+        Just encTC -> do
+            let request = encTC ^. encTcRequest
+            case encTC ^. encTcPUSContent of
+                Just pkt -> do
+                    -- first, update the SSC
+                    (newHM, ssc) <- lift $ getNextSSC hm (pkt ^. pusHdr . pusHdrAPID)
+                    let enc = encodePUSPacket newPkt
+                        newPkt = pkt & pusHdr . pusHdrSSC .~ ssc
+                    yield (EncodedPUSPacket (Just enc) request)
+                    tcPktToEncPUSC newHM
+                Nothing -> do 
+                    yield (EncodedPUSPacket Nothing request)
+                    tcPktToEncPUSC hm
 
 
 

@@ -34,7 +34,6 @@ import           RIO
 
 import           Data.Aeson
 import           Data.ByteString.Lazy          as B
-import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 
 import           Closed
