@@ -32,7 +32,7 @@ import           Data.PUS.PUSDfh
 import           Data.PUS.Parameter
 import           Data.PUS.MissionSpecific.Definitions
 
-
+import           General.PUSTypes
 
 data EncodedTCPacket = EncodedTCPacket {
     _encTcPUSContent :: Maybe PUSPacket
@@ -57,15 +57,27 @@ encodeTCPacket pkt missionSpecific =
 
 
 tcPktEncoderC
-  :: Monad m
+  :: MonadIO m
   => PUSMissionSpecific
   -> ConduitT TCRequest EncodedTCPacket m ()
-tcPktEncoderC missionSpecific = awaitForever $ \request -> do
-  case request ^. tcReqPayload of 
-    TCCommand {..} -> do 
-      let enc = encodeTCPacket _tcReqPacket missionSpecific
-      yield $ EncodedTCPacket (Just enc) request
-    TCDir {} -> yield $ EncodedTCPacket Nothing request 
+tcPktEncoderC missionSpecific = do
+  rqstID <- liftIO loadRqstID 
+  proc rqstID 
+  void $ liftIO $ saveRqstID rqstID 
+  where 
+    proc rqstID = do 
+      x <- await
+      case x of
+        Nothing      -> return ()
+        Just request -> do
+          let newRqst   = request & tcReqRequestID .~ rqstID
+              newRqstID = nextRqstID rqstID
+          case newRqst ^. tcReqPayload of
+            TCCommand {..} -> do
+              let enc = encodeTCPacket _tcReqPacket missionSpecific
+              yield $ EncodedTCPacket (Just enc) newRqst
+            TCDir{} -> yield $ EncodedTCPacket Nothing newRqst
+          proc newRqstID 
 
 
 

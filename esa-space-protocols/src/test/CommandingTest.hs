@@ -35,6 +35,7 @@ import           Data.PUS.TCPacket
 import           Data.PUS.Parameter
 import           Data.PUS.Value
 import           Data.PUS.MissionSpecific.Definitions
+import           Data.PUS.Counter
 
 import           Protocol.NCTRS
 import           Protocol.ProtocolInterfaces
@@ -138,7 +139,7 @@ main = do
       let chain =
             sourceList (packets 1000)
               .| tcPktEncoderC (defaultMissionSpecific defaultConfig)
-              .| tcPktToEncPUSC
+              .| tcPktToEncPUSC initialSSCCounterMap
               .| tcSegmentEncoderC
               .| tcSegmentToTransferFrame
               .| tcFrameEncodeC

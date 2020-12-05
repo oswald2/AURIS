@@ -1,4 +1,4 @@
-module Data.PUS.SSCCounter
+module Data.PUS.Counter
   ( SSCCounter
   , SSCCounterMap
   , initialSSCCounterMap
@@ -11,7 +11,7 @@ where
 import           RIO
 import qualified RIO.HashMap                   as HM
 
-import General.PUSTypes ( mkSSC, nextSSC, SSC )
+import General.PUSTypes 
 import General.APID ( APID )
 
 
@@ -46,4 +46,6 @@ getNextSSC hm apid = do
     Just ctr -> do 
       ssc <- getNext ctr 
       return (hm, ssc)
+
+
 

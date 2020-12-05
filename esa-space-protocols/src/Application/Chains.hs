@@ -49,7 +49,7 @@ import           Data.PUS.TCTransferFrameEncoder
 import           Data.PUS.SegmentEncoder        ( tcSegmentEncoderC )
 import           Data.PUS.CLTU                  ( cltuEncodeRandomizedC )
 import           Data.PUS.CLTUEncoder
-import           Data.PUS.SSCCounter
+import           Data.PUS.Counter
 
 import           Protocol.NCTRS                 ( receiveTmNcduC
                                                 , encodeTcNcduC

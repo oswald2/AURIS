@@ -27,7 +27,7 @@ import           Data.PUS.PUSPacket
 --import           Data.PUS.Segment
 import           Data.PUS.TCPacketEncoder
 import           Data.PUS.TCRequest
-import           Data.PUS.SSCCounter
+import           Data.PUS.Counter
 
 
 

@@ -39,6 +39,9 @@ module General.PUSTypes
   , RequestID
   , getRqstID
   , mkRqstID
+  , nextRqstID
+  , saveRqstID
+  , loadRqstID
   , TransmissionMode(..)
   , transmissionModeBuilder
   , transmissionModeParser
@@ -69,6 +72,7 @@ where
 
 import           RIO                     hiding ( Builder )
 import qualified RIO.Text                      as T
+import qualified RIO.ByteString.Lazy           as BL
 import           Codec.Serialise
 import           Data.Binary
 import           Data.Aeson
@@ -77,7 +81,8 @@ import           Data.Attoparsec.ByteString     ( Parser )
 import qualified Data.Attoparsec.ByteString    as A
 import qualified Data.Attoparsec.Binary        as A
 import           Data.Bits
-
+import           System.Directory
+import           System.FilePath
 import           Formatting
 
 
@@ -117,7 +122,7 @@ newtype SCID = SCID { getSCID :: Word16 }
 mkSCID :: Word16 -> SCID
 mkSCID = SCID
 
-instance NFData SCID 
+instance NFData SCID
 instance Binary SCID
 instance Serialise SCID
 instance FromJSON SCID
@@ -184,23 +189,23 @@ data Initialized = Initialized
 data Good = Good
 
 instance FlagDisplay Ready where
-  displayFlag True = "READY"
+  displayFlag True  = "READY"
   displayFlag False = "NOT READY"
 
 instance FlagDisplay Enable where
-  displayFlag True = "ENABLED"
+  displayFlag True  = "ENABLED"
   displayFlag False = "DISABLED"
 
 instance FlagDisplay OnOff where
-  displayFlag True = "ON"
+  displayFlag True  = "ON"
   displayFlag False = "OFF"
 
 instance FlagDisplay Initialized where
-  displayFlag True = "INIT"
+  displayFlag True  = "INIT"
   displayFlag False = "UNINIT"
 
 instance FlagDisplay Good where
-  displayFlag True = "GOOD"
+  displayFlag True  = "GOOD"
   displayFlag False = "BAD"
 
 
@@ -230,12 +235,15 @@ toBool :: Flag t -> Bool
 toBool (MkFlag b) = b
 
 -- | The Request ID type
-newtype RequestID = RequestID { getRqstID :: Int64 }
+newtype RequestID = RequestID { getRqstID :: Word32 }
     deriving (Eq, Ord, Num, Show, Read, Generic)
 
 -- | Smart constructor for the 'RequestID'
-mkRqstID :: Int64 -> RequestID
+mkRqstID :: Word32 -> RequestID
 mkRqstID = RequestID
+
+nextRqstID :: RequestID -> RequestID
+nextRqstID (RequestID x) = RequestID (x + 1)
 
 instance NFData RequestID
 instance Binary RequestID
@@ -243,6 +251,28 @@ instance Serialise RequestID
 instance FromJSON RequestID
 instance ToJSON RequestID where
   toEncoding = genericToEncoding defaultOptions
+
+saveRqstID :: RequestID -> IO ()
+saveRqstID rqstID = do
+  home <- getHomeDirectory
+  let path = home </> ".config/AURIS"
+      file = path </> "RequestID.raw"
+  createDirectoryIfMissing True path
+  writeFileBinary file (BL.toStrict (serialise rqstID))
+
+loadRqstID :: IO RequestID
+loadRqstID = do
+  home <- getHomeDirectory
+  let path = home </> ".config/AURIS"
+      file = path </> "RequestID.raw"
+  exist <- doesFileExist file
+  if exist
+    then do
+      res <- deserialiseOrFail . BL.fromStrict <$> readFileBinary file
+      case res of
+        Left _ -> return (mkRqstID 0)
+        Right i   -> return i
+    else return (mkRqstID 0)
 
 
 -- | The Transmission Mode. Can be AD or BD
@@ -311,7 +341,7 @@ pusTypeParser = PUSType <$> A.anyWord8
 pusSubTypeParser :: Parser PUSSubType
 pusSubTypeParser = PUSSubType <$> A.anyWord8
 
-instance NFData PUSType 
+instance NFData PUSType
 instance Hashable PUSType
 instance Serialise PUSType
 instance FromJSON PUSType

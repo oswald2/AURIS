@@ -70,6 +70,7 @@ library
     GUI.TextView
     GUI.Definitions
     GUI.ConnectionStatus
+    GUI.MessageDialogs
 
   -- Modules included in this library but not exported.
   -- other-modules:
