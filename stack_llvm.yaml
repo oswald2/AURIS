@@ -17,7 +17,7 @@
 #
 # resolver: ./custom-snapshot.yaml
 # resolver: https://example.com/snapshots/2018-01-01.yaml
-resolver: lts-16.23
+resolver: nightly-2020-12-04
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -60,22 +60,9 @@ extra-deps:
 - attoparsec-time-1
 - bytestring-to-vector-0.3.0.1
 - hw-prim-bits-0.1.0.4
-- selda-sqlite-0.1.7.1
-- selda-0.5.1.0@sha256:b942ecc9ff7959c922da92d13fcfe70a0823eafa32086663f3cc60138ce7d3bf,2997
 - timers-updatable-0.2.0.2
 - direct-sqlite-2.3.26
 - Chart-cairo-1.9.3@sha256:f484a7194ca08ed67f02aa626e2f8f4d1a9b50624e0d50e3ced62958f7481cca,925
-- haskell-gi-base-0.24.4
-- haskell-gi-0.24.5
-- gi-glib-2.0.24
-- gi-pango-1.0.23
-- gi-harfbuzz-0.0.3
-- gi-gtk-3.0.36
-- gi-gtk-hs-0.3.9
-- gi-atk-2.0.21
-- gi-cairo-render-0.1.0
-- gi-cairo-connector-0.1.0
-- gi-gobject-2.0.24
 
 
 # Override default flag values for local packages and extra-deps
@@ -90,6 +77,10 @@ flags:
     llvm: true
   auris-tm-displays:
     llvm: true
+  auris-tc-displays:
+    llvm: true 
+  auris-control-displays:
+    llvm: true
   aurisi:
     llvm: true
   gui-base:
@@ -99,7 +90,6 @@ flags:
   hashtables-mo:
     unsafe-tricks: true
     sse42: true
-
 
 ghc-options: 
   "$targets": -freverse-errors 
