@@ -124,3 +124,7 @@
 3	25	31	0	0	121	packet for Supercommutated II	0	-1	16	Y	60000	Y	1	N	
 0	0	0	0	0	1000006		0	-1	0	N		Y	0	N	
 0	0	1047	0	0	1000004		0	-1	0	N		Y	0	N	
+1	1	1540	0	0	154001	DH_PID_TC_Acceptance_Success	0	-1	16	Y		Y	1	N	
+1	2	1540	0	0	154002	DH_PID_TC_Acceptance_Failure_APID	0	-1	16	Y		Y	1	N	
+1	7	1540	0	0	154003	DH_PID_TC_Execution_Completion_Success	0	-1	16	Y		Y	1	N	
+1	8	1540	0	0	154004	DH_PID_TC_Execution_Completion_Failure_1	0	-1	16	Y		Y	1	N	
