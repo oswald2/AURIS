@@ -33,10 +33,12 @@ edenMessageProcessorC missionSpecific interf = worker HM.empty
     x <- await
     case x of
       Just eden -> do
-        newCounters <- handleEdenMessage missionSpecific interf counters eden
-        worker newCounters
-        worker counters
-
+        res <- handleEdenMessage missionSpecific interf counters eden
+        case res of 
+          Left err -> do 
+            logDebug $ display @Text "Error on reception of EDEN message, cancelling connection: " <> display err
+            return () 
+          Right newCounters -> worker newCounters
       Nothing -> return ()
 
 
@@ -46,7 +48,7 @@ handleEdenMessage
   -> ProtocolInterface
   -> HashMap VCID Word8
   -> EdenMessage
-  -> ConduitT EdenMessage ExtractedPacket m (HashMap VCID Word8)
+  -> ConduitT EdenMessage ExtractedPacket m (Either Text (HashMap VCID Word8))
 handleEdenMessage missionSpecific interf counters eden@EdenMessage { _edenType = EdenTMType }
   = do
     case eden ^. edenDataField of
@@ -60,11 +62,11 @@ handleEdenMessage missionSpecific interf counters eden@EdenMessage { _edenType =
             logDebug msg
             liftIO $ raiseEvent env $ EVAlarms $ EVPacketAlarm
               (utf8BuilderToText msg)
-            return counters
+            return (Left (utf8BuilderToText msg))
           Right (pkt, newCounters) -> do
             yield pkt
-            return newCounters
-      _ -> return counters
+            return (Right newCounters)
+      _ -> return (Right counters)
 handleEdenMessage _missionSpecific _interf counters eden@EdenMessage { _edenType = EdenTCAType }
   = do
     let status = eden ^. edenField2
@@ -72,15 +74,15 @@ handleEdenMessage _missionSpecific _interf counters eden@EdenMessage { _edenType
     logDebug $ display @Text "TC-A: RqstID: " <> display tcID <> if status == 0
       then display @Text " OK"
       else display @Text " Error: " <> display status
-    return counters 
+    return (Right counters)
 handleEdenMessage _missionSpecific _interf counters eden@EdenMessage { _edenType = EdenTCEType }
   = do 
     logDebug $ display @Text "TC Echo:\n" <> displayShow eden 
-    return counters 
+    return (Right counters)
 handleEdenMessage _missionSpecific _interf counters eden = do 
   logDebug $ display @Text "EDEN Message: Type: " <> displayShow (eden ^. edenType) 
     <> display @Text " SubType: " <> displayShow (eden ^. edenSubType)
-  return counters
+  return (Right counters)
 
 
 handleEdenPacket
