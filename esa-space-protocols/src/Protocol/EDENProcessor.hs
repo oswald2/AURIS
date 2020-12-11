@@ -20,6 +20,7 @@ import           Protocol.EDEN
 import           Protocol.ProtocolInterfaces
 
 import           General.PUSTypes
+import           General.Hexdump
 
 
 edenMessageProcessorC
@@ -36,7 +37,7 @@ edenMessageProcessorC missionSpecific interf = worker HM.empty
         res <- handleEdenMessage missionSpecific interf counters eden
         case res of 
           Left err -> do 
-            logDebug $ display @Text "Error on reception of EDEN message, cancelling connection: " <> display err
+            logError $ display @Text "Error on reception of EDEN message, cancelling connection: " <> display err
             return () 
           Right newCounters -> worker newCounters
       Nothing -> return ()
@@ -53,13 +54,14 @@ handleEdenMessage missionSpecific interf counters eden@EdenMessage { _edenType =
   = do
     case eden ^. edenDataField of
       -- handle TM via EDEN
-      dat@EdenTM {} -> do
+      dat@EdenTM {..} -> do
+        logDebug $ "Received TM Data: " <> display (hexdumpBS _edenTmData)
         case handleEdenPacket missionSpecific interf dat counters of
           Left err -> do
             env <- ask
             let msg =
-                  display @Text "Error decoding EDEN PUS Packet: " <> display err
-            logDebug msg
+                  display @Text "Error decoding EDEN PUS Packet: " <> display err <> display @Text " " <> displayShow eden
+            logError msg
             liftIO $ raiseEvent env $ EVAlarms $ EVPacketAlarm
               (utf8BuilderToText msg)
             return (Left (utf8BuilderToText msg))

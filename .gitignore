@@ -36,3 +36,4 @@ stack_llvm.yaml.lock
 result
 aurisi/src/MainWindow.glade~
 aurisi/src/AurisLogo.xpm
+auris.log
