@@ -14,6 +14,7 @@ import           GUI.MainWindow
 import           GUI.MainWindowCallbacks
 --import           GUI.About
 import           GUI.Theme
+import           GUI.Definitions
 
 import           Options.Generic
 
@@ -22,7 +23,7 @@ import           AurisProcessing
 import           AurisConfig
 import           AurisMissionSpecific
 
-import           GHC.Conc
+import GHC.Conc ( setNumCapabilities, getNumProcessors )
 import           System.Directory               ( doesFileExist )
 
 import qualified GI.GLib.Functions             as GI
@@ -35,7 +36,7 @@ import           Version
 
 ui :: AurisConfig -> IO MainWindow
 ui cfg = do
-  window <- createMainWindow cfg 
+  window <- createMainWindow cfg
   void $ Gtk.onWidgetDestroy (_mwWindow window) Gtk.mainQuit
   Gtk.widgetShowAll (_mwWindow window)
   pure window
@@ -45,13 +46,14 @@ ui cfg = do
 
 
 
-data Options w = Options {
-    version :: w ::: Bool <?> "Print version information"
-    , config :: w ::: Maybe String <?> "Specify a config file"
-    , writeconfig :: w ::: Bool <?> "Write the default config to a file"
-    , importmib :: w ::: Maybe FilePath <?> "Specifies a MIB directory. An import is done and the binary version of the MIB is stored for faster loading"
-    }
-    deriving (Generic)
+data Options w = Options
+  { version     :: w ::: Bool <?> "Print version information"
+  , config      :: w ::: Maybe String <?> "Specify a config file"
+  , writeconfig :: w ::: Bool <?> "Write the default config to a file"
+  , importmib
+      :: w ::: Maybe FilePath <?> "Specifies a MIB directory. An import is done and the binary version of the MIB is stored for faster loading"
+  }
+  deriving Generic
 
 instance ParseRecord (Options Wrapped)
 deriving instance Show (Options Unwrapped)
@@ -103,8 +105,14 @@ main = do
         -- need to call it once in main before the GUI is started
         void $ Gtk.init Nothing
         Gtk.setCurrentThreadAsGUIThread
+
+        -- For some reason, on some systems the entries are displayed far too large
+        -- (height too big, too much internal padding). This causes some displays not 
+        -- to fit. So we globally set the min-width property for the entries.
+        setEntryStyle
+
         -- create the main window
-        mainWindow <- ui cfg 
+        mainWindow <- ui cfg
         setTheme
         mwSetMission mainWindow (aurisMission cfg)
 
@@ -126,7 +134,9 @@ main = do
                                                    mainWindow
                                                    coreQueue
 
-        void $ GI.timeoutAddSeconds GI.PRIORITY_DEFAULT 1 (mwTimerLabelCB mainWindow)
+        void $ GI.timeoutAddSeconds GI.PRIORITY_DEFAULT
+                                    1
+                                    (mwTimerLabelCB mainWindow)
         Gtk.main
 
 

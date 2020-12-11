@@ -17,7 +17,8 @@ newtype StatusEntry = StatusEntry Entry
 
 css :: ByteString
 css =
-    "#error-entry {\
+    "entry { min-height: 0px; }\
+    \#error-entry {\
       \   background-color: #ff0000;\
       \   color: white;\
       \}\
