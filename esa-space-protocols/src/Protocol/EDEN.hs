@@ -43,6 +43,10 @@ module Protocol.EDEN
   , edenTmSecTime
   , edenTmSecMCFC
   , edenTmSecVCFC
+  , edenTmScoeStructure
+  , edenTmSecScoeTime
+  , edenTmSecScoeHeader
+  , edenTmScoeData
   , edenRawData
   , edenSpaceSecHeader
   , edenSpaceData
@@ -58,8 +62,7 @@ module Protocol.EDEN
   , edenDataFieldLength
   , edenDataField
   , edenEmptyField1
-  )
-where
+  ) where
 
 import           RIO                     hiding ( Builder )
 import qualified RIO.Text                      as T
@@ -88,7 +91,7 @@ import           General.SizeOf
 
 import           General.Hexdump
 import           General.Padding
-import           General.Time
+import           General.Types
 
 
 data EdenType =
@@ -147,27 +150,29 @@ data EdenTCSequenceFlags = EdenSegContinuation
 
 
 
-data EdenTcSecHeader = EdenTcSecHeader {
-    _edenSecStructure :: !Word8,
-    _edenSecChannel :: !Word8,
-    _edenSecTCType :: !EdenTCType,
-    _edenSecTCID :: !Word32,
-    _edenSecTCOrigin :: !EdenTCOrigin,
-    _edenSecTime :: !C.ByteString,
-    _edenSecMapID :: !Word8,
-    _edenSecTCEchoStatus :: !Word8,
-    _edenSecSequenceFlags :: !EdenTCSequenceFlags
-    } deriving (Read, Show, Generic)
+data EdenTcSecHeader = EdenTcSecHeader
+  { _edenSecStructure     :: !Word8
+  , _edenSecChannel       :: !Word8
+  , _edenSecTCType        :: !EdenTCType
+  , _edenSecTCID          :: !Word32
+  , _edenSecTCOrigin      :: !EdenTCOrigin
+  , _edenSecTime          :: !C.ByteString
+  , _edenSecMapID         :: !Word8
+  , _edenSecTCEchoStatus  :: !Word8
+  , _edenSecSequenceFlags :: !EdenTCSequenceFlags
+  }
+  deriving (Read, Show, Generic)
 makeLenses ''EdenTcSecHeader
 
 
-data EdenTcSecSCOEHeader = EdenTcSecSCOEHeader {
-    _edenSecScoeStructure :: !Word8,
-    _edenSecScoeTCID :: !Word32,
-    _edenSecScoeTCOrigin :: !EdenTCOrigin,
-    _edenSecScoeTime :: !C.ByteString,
-    _edenSecScoeTCEchoStatus :: !Word8
-    } deriving (Read, Show, Generic)
+data EdenTcSecSCOEHeader = EdenTcSecSCOEHeader
+  { _edenSecScoeStructure    :: !Word8
+  , _edenSecScoeTCID         :: !Word32
+  , _edenSecScoeTCOrigin     :: !EdenTCOrigin
+  , _edenSecScoeTime         :: !C.ByteString
+  , _edenSecScoeTCEchoStatus :: !Word8
+  }
+  deriving (Read, Show, Generic)
 makeLenses ''EdenTcSecSCOEHeader
 
 
@@ -178,48 +183,60 @@ data EdenTmStructureType =
   deriving (Eq, Ord, Enum, Read, Show, Generic)
 
 
-data EdenTmSecHeader = EdenTmSecHeader {
-    _edenTmStructure :: !EdenTmStructureType,
-    _edenTmSecChannel :: !Word8,
-    _edenTmSecDataQuality :: !Word8,
-    _edenTmSecCLCW :: !CLCW,
-    _edenTmSecTime :: !SunTime,
-    _edenTmSecMCFC :: !Word8,
-    _edenTmSecVCFC :: !Word8
-    } deriving (Read, Show, Generic)
+data EdenTmSecHeader = EdenTmSecHeader
+  { _edenTmStructure      :: !EdenTmStructureType
+  , _edenTmSecChannel     :: !Word8
+  , _edenTmSecDataQuality :: !Word8
+  , _edenTmSecCLCW        :: !CLCW
+  , _edenTmSecTime        :: !C.ByteString
+  , _edenTmSecMCFC        :: !Word8
+  , _edenTmSecVCFC        :: !Word8
+  }
+  deriving (Read, Show, Generic)
 makeLenses ''EdenTmSecHeader
 
+data EdenTmSecSCOEHeader = EdenTmSecSCOEHeader
+  { _edenTmScoeStructure :: !EdenTmStructureType
+  , _edenTmSecScoeTime   :: !C.ByteString
+  }
+  deriving (Read, Show, Generic)
+makeLenses ''EdenTmSecSCOEHeader
 
 
 data EdenData =
     EdenRawData {
-        _edenRawData :: B.ByteString
+        _edenRawData :: HexBytes
     }
     | EdenSpaceTC {
         _edenSpaceSecHeader :: EdenTcSecHeader,
-        _edenSpaceData :: B.ByteString
+        _edenSpaceData :: HexBytes
     }
     | EdenSCOETC {
         _edenSCOESecHeader :: EdenTcSecSCOEHeader,
-        _edenScoeData :: B.ByteString
+        _edenScoeData :: HexBytes
     }
     | EdenTM {
         _edenTmSecHeader :: EdenTmSecHeader,
-        _edenTmData :: B.ByteString
+        _edenTmData :: HexBytes
+    }
+    | EdenSCOETM {
+        _edenTmSecScoeHeader :: EdenTmSecSCOEHeader,
+        _edenTmScoeData :: HexBytes
     } deriving (Show, Read)
 makeLenses ''EdenData
 
 
 -- | Eden Message structure used for the EDEN protocol
-data EdenMessage = EdenMessage {
-    _edenType :: !EdenType,
-    _edenSubType :: !EdenSubType,
-    _edenField1 :: !C.ByteString,
-    _edenField2 :: !Word32,
-    _edenField3 :: !Word32,
-    _edenDataFieldLength :: !Word32,
-    _edenDataField :: EdenData
-} deriving (Show, Read)
+data EdenMessage = EdenMessage
+  { _edenType            :: !EdenType
+  , _edenSubType         :: !EdenSubType
+  , _edenField1          :: !C.ByteString
+  , _edenField2          :: !Word32
+  , _edenField3          :: !Word32
+  , _edenDataFieldLength :: !Word32
+  , _edenDataField       :: EdenData
+  }
+  deriving (Show, Read)
 makeLenses ''EdenMessage
 
 
@@ -238,21 +255,22 @@ instance FixedSize EdenTcSecSCOEHeader where
 instance FixedSize EdenTmSecHeader where
   fixedSizeOf = 36
 
-instance SizeOf EdenData where
-  sizeof (EdenRawData x     ) = B.length x
-  sizeof (EdenSpaceTC _hdr x) = fixedSizeOf @EdenTcSecHeader + B.length x
-  sizeof (EdenSCOETC  _hdr x) = fixedSizeOf @EdenTcSecSCOEHeader + B.length x
-  sizeof (EdenTM      _hdr x) = fixedSizeOf @EdenTmSecHeader + B.length x
+instance FixedSize EdenTmSecSCOEHeader where
+  fixedSizeOf = 36
 
+
+instance SizeOf EdenData where
+  sizeof (EdenRawData x     ) = hexLength x
+  sizeof (EdenSpaceTC _hdr x) = fixedSizeOf @EdenTcSecHeader + hexLength x
+  sizeof (EdenSCOETC  _hdr x) = fixedSizeOf @EdenTcSecSCOEHeader + hexLength x
+  sizeof (EdenTM _hdr x) =
+    fixedSizeOf @EdenTmSecHeader + hexLength x
+  sizeof (EdenSCOETM _hdr x) =
+    fixedSizeOf @EdenTmSecSCOEHeader + hexLength x
 
 
 edenHdrLen :: Int
 edenHdrLen = 42
-
--- | Constructor function for an EDEN message
---createMsg :: C.ByteString -> C.ByteString -> C.ByteString -> Word32 -> Word32 -> B.ByteString -> EdenMessage
---createMsg t st f1 f2 f3 = EdenMessage t st f1 f2 f3 0
-
 
 -- | instance declaration for Show
 instance Display EdenMessage where
@@ -273,13 +291,15 @@ instance Display EdenMessage where
       <> displayShow (_edenDataField x)
 
 instance Display EdenData where
-  display (EdenRawData x) = "Raw Data: " <> displayBytesUtf8 x
-  display (EdenSpaceTC hdr x) =
+  display (EdenRawData (HexBytes x)) = "Raw Data: " <> displayBytesUtf8 x
+  display (EdenSpaceTC hdr (HexBytes x)) =
     "Space TC: " <> display hdr <> "\n  Data:\n" <> display (hexdumpBS x)
-  display (EdenSCOETC hdr x) =
+  display (EdenSCOETC hdr (HexBytes x)) =
     "SCOE TC: " <> display hdr <> "\n  Data:\n" <> display (hexdumpBS x)
-  display (EdenTM hdr x) =
+  display (EdenTM hdr (HexBytes x)) =
     "TM: " <> display hdr <> "\n  Data:\n" <> display (hexdumpBS x)
+  display (EdenSCOETM hdr (HexBytes x)) =
+    "TM SCOE: " <> display hdr <> "\n  Data:\n" <> display (hexdumpBS x)
 
 
 
@@ -292,11 +312,16 @@ instance Display EdenTmSecHeader where
       <> "\n  CLCW              : "
       <> displayShow (_edenTmSecCLCW x)
       <> "\n  Time              : "
-      <> displayBytesUtf8 (edenTime (_edenTmSecTime x))
+      <> displayBytesUtf8 (_edenTmSecTime x)
       <> "\n  Master Channel FC : "
       <> displayShow (_edenTmSecMCFC x)
       <> "\n  Virtual Channel FC: "
       <> displayShow (_edenTmSecVCFC x)
+
+instance Display EdenTmSecSCOEHeader where
+  display x = "TM Secondary SCOE Header:\n  Time: "
+    <> displayBytesUtf8 (_edenTmSecScoeTime x)
+
 
 instance Display EdenTcSecHeader where
   display x =
@@ -413,12 +438,18 @@ edenTmSecHeaderBuilder x =
     <> word8 0
     <> clcwBuilder (_edenTmSecCLCW x)
     <> word16BE 0
-    <> bytes (edenTime (_edenTmSecTime x))
+    <> bytes (_edenTmSecTime x)
     <> word8 (_edenTmSecMCFC x)
     <> word8 (_edenTmSecVCFC x)
     <> word16BE 0
 
-
+edenTmSecScoeHeaderBuilder :: EdenTmSecSCOEHeader -> Builder
+edenTmSecScoeHeaderBuilder x =
+  edenTmStructureBuilder (_edenTmScoeStructure x)
+    <> bytes filler
+    <> bytes (_edenTmSecScoeTime x)
+    <> word32BE 0
+  where filler = B.replicate 9 0
 
 
 edenTypeBuilder :: EdenType -> Builder
@@ -513,7 +544,9 @@ receiveEdenMessageC = conduitParserEither edenMessageParser .| sink
       st <- ask
       liftIO $ raiseEvent st $ EVAlarms
         (EVEDENParseError (T.pack (errorMessage err)))
-    Right (_, tc') -> yield tc'
+    Right (_, tc) -> do
+      logDebug $ "receiveEdenMessageC: received: " <> display tc
+      yield tc
 
 
 
@@ -543,16 +576,16 @@ edenMessageParser = do
       EdenSCOE  -> edenScoeDataParser (fromIntegral len)
       _         -> edenRawDataParser (fromIntegral len)
     | t == EdenTCAType -> edenRawDataParser (fromIntegral len)
-    | t == EdenTMDType -> if
-      | st == EdenSCOE -> edenScoeDataParser (fromIntegral len)
-      | otherwise      -> edenRawDataParser (fromIntegral len)
+    | t == EdenTMDType -> if st == EdenSCOE
+      then edenScoeDataParser (fromIntegral len)
+      else edenRawDataParser (fromIntegral len)
     | t == EdenTMType -> case st of
       EdenSpace -> edenTmDataParser (fromIntegral len)
-      EdenSCOE  -> edenTmDataParser (fromIntegral len)
+      EdenSCOE  -> edenTmScoeDataParser (fromIntegral len)
       _         -> edenRawDataParser (fromIntegral len)
-    | t == EdenTMDType -> if
-      | st == EdenSCOE -> edenTmDataParser (fromIntegral len)
-      | otherwise      -> edenRawDataParser (fromIntegral len)
+    | t == EdenTMDType -> if st == EdenSCOE
+      then edenTmDataParser (fromIntegral len)
+      else edenRawDataParser (fromIntegral len)
     | otherwise -> edenRawDataParser (fromIntegral len)
   return $ EdenMessage t st f1 f2 f3 len dat
 
@@ -569,26 +602,41 @@ edenMessageBuilder x =
   where dataField = _edenDataField x
 
 edenDataBuilder :: EdenData -> Builder
-edenDataBuilder (EdenRawData x    ) = bytes x
-edenDataBuilder (EdenSpaceTC hdr x) = edenTcSecHeaderBuilder hdr <> bytes x
-edenDataBuilder (EdenSCOETC  hdr x) = edenTcSecSCOEHeaderBuilder hdr <> bytes x
-edenDataBuilder (EdenTM      hdr x) = edenTmSecHeaderBuilder hdr <> bytes x
+edenDataBuilder (EdenRawData (HexBytes x)) = bytes x
+edenDataBuilder (EdenSpaceTC hdr (HexBytes x)) = edenTcSecHeaderBuilder hdr <> bytes x
+edenDataBuilder (EdenSCOETC hdr (HexBytes x)) = edenTcSecSCOEHeaderBuilder hdr <> bytes x
+edenDataBuilder (EdenTM hdr (HexBytes x)) = edenTmSecHeaderBuilder hdr <> bytes x
+edenDataBuilder (EdenSCOETM hdr (HexBytes x)) =
+  edenTmSecScoeHeaderBuilder hdr <> bytes x
 
 
 edenRawDataParser :: Int -> Parser EdenData
-edenRawDataParser len = EdenRawData <$> A.take len
+edenRawDataParser len = EdenRawData . HexBytes <$> A.take len
 
 edenSpaceDataParser :: Int -> Parser EdenData
-edenSpaceDataParser len = EdenSpaceTC <$> edenSpaceSecHeaderParser <*> A.take
-  (len - fixedSizeOf @EdenTcSecHeader)
+edenSpaceDataParser len =
+  EdenSpaceTC
+    <$> edenSpaceSecHeaderParser
+    <*> (HexBytes <$> A.take (len - fixedSizeOf @EdenTcSecHeader))
 
 edenScoeDataParser :: Int -> Parser EdenData
-edenScoeDataParser len = EdenSCOETC <$> edenScoeSecHeaderParser <*> A.take
-  (len - fixedSizeOf @EdenTcSecSCOEHeader)
+edenScoeDataParser len =
+  EdenSCOETC
+    <$> edenScoeSecHeaderParser
+    <*> (HexBytes <$> A.take (len - fixedSizeOf @EdenTcSecSCOEHeader))
 
 edenTmDataParser :: Int -> Parser EdenData
-edenTmDataParser len = EdenTM <$> edenTmSecHeaderParser <*> A.take
-  (len - fixedSizeOf @EdenTmSecHeader)
+edenTmDataParser len =
+  EdenTM
+    <$> edenTmSecHeaderParser
+    <*> (HexBytes <$> A.take (len - fixedSizeOf @EdenTmSecHeader))
+
+edenTmScoeDataParser :: Int -> Parser EdenData
+edenTmScoeDataParser len =
+  EdenSCOETM
+    <$> edenTmSecScoeHeaderParser
+    <*> (HexBytes <$> A.take (len - fixedSizeOf @EdenTmSecSCOEHeader))
+
 
 edenSpaceSecHeaderParser :: Parser EdenTcSecHeader
 edenSpaceSecHeaderParser = do
@@ -629,11 +677,20 @@ edenTmSecHeaderParser = do
   _    <- A.anyWord8
   clcw <- unpackValues <$> A.anyWord32be
   _    <- A.anyWord16be
-  tim  <- edenTimeParser
+  tim  <- A.take 22
   mc   <- A.anyWord8
   vc   <- A.anyWord8
   _    <- A.anyWord16be
   return $ EdenTmSecHeader str chan qual clcw tim mc vc
+
+edenTmSecScoeHeaderParser :: Parser EdenTmSecSCOEHeader
+edenTmSecScoeHeaderParser = do
+  str <- edenTmStructureTypeParser
+  _   <- A.take 9
+  tim <- A.take 22
+  _   <- A.take 4
+  return $ EdenTmSecSCOEHeader str tim
+
 
 
 edenTmStructureTypeParser :: Parser EdenTmStructureType

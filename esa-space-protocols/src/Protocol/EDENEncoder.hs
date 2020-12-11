@@ -26,7 +26,9 @@ import           Protocol.EDEN
 import           Protocol.ProtocolSwitcher ( QueueMsg(..) )
 
 import           General.Time ( SunTime, edenTime, getCurrentTime )
-import           General.PUSTypes 
+import General.PUSTypes
+    ( VCID(getVCID), mkMAPID, MAPID(getMAPID), RequestID(getRqstID) ) 
+import           General.Types
 
 
 
@@ -114,10 +116,10 @@ createMessage now st rqst protLevel binPkt =
       TCDir {} -> (EdenSpace, mkMAPID 0)
 
     dataField = case detSubType of
-      EdenSpace -> EdenSpaceTC spaceDataField binPkt
-      EdenSCOE  -> EdenSCOETC scoeDataField binPkt
+      EdenSpace -> EdenSpaceTC spaceDataField (HexBytes binPkt)
+      EdenSCOE  -> EdenSCOETC scoeDataField (HexBytes binPkt)
       _         -> trace "EDEN TC unit with unsupported type"
-                         (EdenSCOETC scoeDataField B.empty)
+                         (EdenSCOETC scoeDataField (HexBytes B.empty))
 
     spaceDataField = EdenTcSecHeader
       { _edenSecStructure     = 0

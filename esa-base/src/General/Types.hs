@@ -43,26 +43,48 @@ module General.Types
   , encodeHashTable
   , decodeHashTable
   , HexBytes(..)
-  )
-where
+  , hexLength
+  ) where
 
 
 import           RIO
 import           Data.Binary
 import qualified RIO.ByteString                as B
-import           Data.Aeson
+import qualified RIO.Text                      as T
+import           Data.Aeson                     ( withText
+                                                , defaultOptions
+                                                , genericToEncoding
+                                                , FromJSON(..)
+                                                , FromJSONKey(fromJSONKey)
+                                                , FromJSONKeyFunction
+                                                  ( FromJSONKeyText
+                                                  )
+                                                , Value(String)
+                                                , ToJSON(toJSON, toEncoding)
+                                                , ToJSONKey(toJSONKey)
+                                                , ToJSONKeyFunction
+                                                  ( ToJSONKeyText
+                                                  )
+                                                )
 import qualified Data.Aeson.Encoding           as E
 import qualified Data.Aeson.Types              as E
-import           Data.Bits
+import           Data.Bits                      ( Bits
+                                                  ( (.|.)
+                                                  , (.&.)
+                                                  , shiftR
+                                                  , shiftL
+                                                  )
+                                                )
 import           Data.Text.Short                ( ShortText )
 import qualified Data.Text.Short               as ST
 import           Data.HashTable.ST.Basic        ( IHashTable )
-import           Data.HashTable.ST.Basic       as HT
+import qualified Data.HashTable.ST.Basic       as HT
 import           Data.Attoparsec.Text           ( Parser )
 import qualified Data.Attoparsec.Text          as A
 import           Data.Char                      ( ord
                                                 , isHexDigit
                                                 )
+import           Text.Read                      ( Read(..) )
 
 import           Codec.Serialise               as S
 import           Codec.Serialise.Encoding      as SE
@@ -115,7 +137,7 @@ newtype BitOffset = BitOffset Int
 
 instance Serialise BitOffset
 instance FromJSON BitOffset
-instance ToJSON BitOffset where 
+instance ToJSON BitOffset where
   toEncoding = genericToEncoding defaultOptions
 
 instance Display BitOffset where
@@ -135,12 +157,12 @@ splitBitOffset (BitOffset x) = (x `shiftR` 3, x .&. 0x07)
 
 -- | a general offset, which contains a byte offset and a bit offset
 data Offset = Offset ByteOffset BitOffset
-    deriving (Eq, Show, Read, Generic)
+  deriving (Eq, Show, Read, Generic)
 
 instance NFData Offset
 instance Serialise Offset
 instance FromJSON Offset
-instance ToJSON Offset where 
+instance ToJSON Offset where
   toEncoding = genericToEncoding defaultOptions
 
 
@@ -389,6 +411,8 @@ instance (Eq k, Hashable k, FromJSON k, FromJSON v) => FromJSON (IHashTable k v)
 -- into a hex-coded string value
 newtype HexBytes = HexBytes { unHexBytes :: ByteString }
 
+hexLength :: HexBytes -> Int 
+hexLength (HexBytes x) = B.length x
 
 parseHexLine :: Parser HexBytes
 parseHexLine = do
@@ -420,7 +444,14 @@ instance FromJSON HexBytes where
   parseJSON invalid = E.prependFailure "parsing HexBytes failed, "
                                        (E.typeMismatch "String" invalid)
 
-
-
 instance Display HexBytes where
   display (HexBytes str) = display $ hexdumpLineNoSpace str
+
+instance Show HexBytes where
+  show (HexBytes b) = T.unpack $ hexdumpLineNoSpace b
+
+instance Read HexBytes where
+  readsPrec _ str = case A.parse parseHexLine (T.pack str) of
+    A.Fail{}      -> []
+    A.Partial _   -> []
+    A.Done rest x -> [(x, T.unpack rest)]
