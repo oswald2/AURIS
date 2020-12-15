@@ -224,23 +224,26 @@ runTMCnCChain cfg missionSpecific pktQueue = do
       )
     case res of
       Left (e :: SomeException) -> do
-        logError $ display @Text "CnC Interface Exception: " <> displayShow e
+        logError $ display @Text "CnC TM Interface Exception: " <> displayShow e
         throwM e
       Right _ -> return ()
 
 
-runTCCnCChain :: CncConfig -> ProtocolQueue -> RIO GlobalState ()
-runTCCnCChain cfg duQueue = do
+runTCCnCChain :: CncConfig -> PUSMissionSpecific -> ProtocolQueue -> RIO GlobalState ()
+runTCCnCChain cfg missionSpecific duQueue = do
   logDebug "runTCCnCChain entering"
 
   let chain = receivePktChannelC duQueue .| sendTCCncC
+      ackChain = receiveCnCC missionSpecific (IfCnc (cfgCncID cfg)) .| printC
+
+  logDebug $ "C&C TC: connecting to: " <> display (cfgCncHost cfg) <> " " <> display (cfgCncPortTC cfg)
 
   runGeneralTCPReconnectClient
     (clientSettings (fromIntegral (cfgCncPortTC cfg))
                     (encodeUtf8 (cfgCncHost cfg))
     )
     200000
-    (tcClient chain)
+    (\app -> race_ (tcClient chain app) (tcAckClient ackChain app))
 
   logDebug "runTCCnCChain leaving"
  where
@@ -258,7 +261,22 @@ runTCCnCChain cfg duQueue = do
       )
     case res of
       Left (e :: SomeException) -> do
-        logError $ display @Text "C&C Interface Exception: " <> displayShow e
+        logError $ display @Text "C&C TC Interface Exception: " <> displayShow e
+        throwM e
+      Right _ -> return ()
+  tcAckClient chain app = do
+    env <- ask
+
+    res <- try $ void $ runConduitRes (appSource app .| chain )
+
+    liftIO
+      (raiseEvent
+        env
+        (EVAlarms (EVEConnection (IfCnc (cfgCncID cfg)) ConnTC Disconnected))
+      )
+    case res of
+      Left (e :: SomeException) -> do
+        logError $ display @Text "C&C TC Interface Exception: " <> displayShow e
         throwM e
       Right _ -> return ()
 
@@ -426,4 +444,4 @@ runChains missionSpecific = do
     return (newSm, ts <> conc (runTCNctrsChain x queue))
   cncIf (sm, ts) x = do
     (queue, newSm) <- createInterfaceChannel sm (IfCnc (cfgCncID x))
-    return (newSm, ts <> conc (runTCCnCChain x queue))
+    return (newSm, ts <> conc (runTCCnCChain x missionSpecific queue))

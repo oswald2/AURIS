@@ -29,8 +29,12 @@
         "cfgSCID": {
             "getSCID": 0
         },
+        "cfgNCTRS": [
+        ],
         "cfgMaxTMFrameLen": 1115,
         "cfgCltuBlockSize": "CltuBS_8",
+        "cfgEDEN": [
+        ],
         "cfgTMSegLength": "TMSegment65536",
         "cfgTMFrameHasCRC": true
     },

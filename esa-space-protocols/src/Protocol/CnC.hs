@@ -9,8 +9,7 @@ module Protocol.CnC
   , scoeCommandC
   , SCOECommand(..)
   , generateAckData
-  )
-where
+  ) where
 
 import           RIO
 import qualified RIO.ByteString                as BS
@@ -37,6 +36,7 @@ import           Protocol.ProtocolInterfaces
 
 import           General.Time
 import           General.PUSTypes
+import           General.Hexdump
 import           Control.PUS.Classes
 
 
@@ -53,7 +53,7 @@ isASCIICc _ = False
 receiveCnCC
   :: (MonadIO m, MonadReader env m, HasLogFunc env, HasRaiseEvent env)
   => PUSMissionSpecific
-  -> ProtocolInterface 
+  -> ProtocolInterface
   -> ConduitT ByteString ExtractedPacket m ()
 receiveCnCC missionSpecific interf = do
   conduitParserEither (match (pusPktParser missionSpecific interf))
@@ -98,8 +98,12 @@ receiveCnCC missionSpecific interf = do
     else Just (fromIntegral oldSSC, fromIntegral ssc)
 
 
-sendTCCncC :: (Monad m) => ConduitT EncodedPUSPacket ByteString m () 
-sendTCCncC = awaitForever $ \encPkt -> forM_ (encPkt ^. encPktEncoded) yield
+sendTCCncC :: (MonadIO m, MonadReader env m, HasLogFunc env) => ConduitT EncodedPUSPacket ByteString m ()
+sendTCCncC = awaitForever $ \encPkt -> do
+  case encPkt ^. encPktEncoded of
+    Just pkt -> do
+      logDebug $ display @Text "Encoded C&C:\n" <> display (hexdumpBS pkt)
+    Nothing -> return ()
 
 
 scoeCommandC
@@ -133,10 +137,11 @@ extractCommand cpkt@(ProtocolPacket (IfCnc _) pusPkt) = if isASCIICc cpkt
 extractCommand _ = Nothing
 
 
-data SCOECommand = SCOECommand {
-        sccCommand :: ByteString,
-        sccArgs :: V.Vector ByteString
-    } deriving (Show, Read)
+data SCOECommand = SCOECommand
+  { sccCommand :: ByteString
+  , sccArgs    :: V.Vector ByteString
+  }
+  deriving (Show, Read)
 
 
 scoeCommandParser :: Parser SCOECommand
