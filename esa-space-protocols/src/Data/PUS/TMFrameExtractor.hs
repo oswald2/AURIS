@@ -231,7 +231,7 @@ checkFrameCountC pIf = go Nothing
                     , _epERT     = frame' ^. tmstTime
                     , _epGap     = Nothing
                     , _epSource  = pIf
-                    , _epVCID    = frame ^. tmFrameHdr . tmFrameVcID
+                    , _epVCID    = IsVCID (frame ^. tmFrameHdr . tmFrameVcID)
                     , _epDU      = frame
                     }
               --traceM "Yield no gap"
@@ -254,7 +254,7 @@ checkFrameCountC pIf = go Nothing
                     , _epERT     = frame' ^. tmstTime
                     , _epGap     = Just (fromIntegral lastFC, fromIntegral vcfc)
                     , _epSource  = pIf
-                    , _epVCID    = frame ^. tmFrameHdr . tmFrameVcID
+                    , _epVCID    = IsVCID (frame ^. tmFrameHdr . tmFrameVcID)
                     , _epDU      = frame
                     }
                 --traceM "Yield gap!"
@@ -480,7 +480,7 @@ processFinishedPacket
   -> SunTime
   -> PUSHeader
   -> ByteString
-  -> VCID
+  -> EduVCID
   -> ByteString
   -> ConduitT w ExtractedPacket m ()
 processFinishedPacket missionSpecific pIf ert hdr hdrBin vcid body = do
@@ -572,7 +572,7 @@ processLastSegment
   -> ProtocolInterface
   -> TMSegmentLen
   -> SunTime
-  -> VCID
+  -> EduVCID
   -> PktStore
   -> PktKey
   -> PacketPart

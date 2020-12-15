@@ -418,7 +418,7 @@ instance SizeOf NcduTcData where
     B.length _ncduTcPktData + fixedSizeOf @NcduTcPktHeader
   sizeof NcduTcDuCltuData {..} =
     B.length _ncduTcCltuData + fixedSizeOf @NcduTcCltuHeader
-  sizeof NcduTcDuCltuRespData {..} = fixedSizeOf @NcduTcCltuResponse
+  sizeof NcduTcDuCltuRespData {} = fixedSizeOf @NcduTcCltuResponse
 
 -- | The complete NCDU for TCs, consisting of header and data
 data NcduTcDu = NcduTcDu {

@@ -91,6 +91,24 @@ handleEdenMessage missionSpecific interf counters eden@EdenMessage { _edenType =
           Right (pkt, newCounters) -> do
             yield pkt
             return (Right newCounters)
+      dat@EdenSCOETM {..} -> do
+        logDebug $ "Received TM Data: " <> display
+          (hexdumpBS (unHexBytes _edenTmScoeData))
+        case handleEdenPacket missionSpecific interf dat counters of
+          Left err -> do
+            env <- ask
+            let msg =
+                  display ("Error decoding EDEN PUS Packet: " :: Text)
+                    <> display err
+                    <> display (" " :: Text)
+                    <> displayShow eden
+            logError msg
+            liftIO $ raiseEvent env $ EVAlarms $ EVPacketAlarm
+              (utf8BuilderToText msg)
+            return (Left (utf8BuilderToText msg))
+          Right (pkt, newCounters) -> do
+            yield pkt
+            return (Right newCounters)
       _ -> return (Right counters)
 handleEdenMessage _missionSpecific _interf counters eden@EdenMessage { _edenType = EdenTCAType }
   = do
@@ -133,7 +151,7 @@ handleEdenPacket missionSpecific interf EdenTM {..} counters = do
                               , _epERT     = time
                               , _epGap     = gap
                               , _epSource  = interf
-                              , _epVCID    = vcid
+                              , _epVCID    = IsVCID vcid
                               , _epDU      = packet ^. protContent
                               }
             time =
@@ -152,5 +170,29 @@ handleEdenPacket missionSpecific interf EdenTM {..} counters = do
                 then Nothing
                 else Just (fromIntegral oldVCFC, fromIntegral vcfc)
         in  Right (extracted, newMap)
+handleEdenPacket missionSpecific interf EdenSCOETM {..} counters = do
+  case
+      parseOnly (match (pusPktParser missionSpecific interf))
+                (unHexBytes _edenTmScoeData)
+    of
+      Left err -> Left (T.pack err)
+      Right (oct, packet) ->
+        let epu = ExtractedDU { _epQuality = toFlag Good True
+                              , _epERT     = time
+                              , _epGap     = gap
+                              , _epSource  = interf
+                              , _epVCID    = vcid
+                              , _epDU      = packet ^. protContent
+                              }
+            time =
+              case
+                  A.parseOnly edenTimeParser (_edenTmSecScoeHeader ^. edenTmSecScoeTime)
+                of
+                  Left  _ -> nullTime
+                  Right t -> t
+            extracted = ExtractedPacket oct epu
+            vcid      = IsSCOE
+            gap       = Nothing
+        in  Right (extracted, counters)
 handleEdenPacket _missionSpecific _ _ _counters = undefined
 

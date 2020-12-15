@@ -66,7 +66,7 @@ createTMPacketTable builder = do
     , ("T"              , 30, \pkt -> [#text := textDisplay (pkt ^. tmpType)])
     , ("ST"             , 30, \pkt -> [#text := textDisplay (pkt ^. tmpSubType)])
     , ("SSC"            , 60, \pkt -> [#text := textDisplay (pkt ^. tmpSSC)])
-    , ("VC"             , 30, \pkt -> [#text := textDisplay (pkt ^. tmpVCID)])
+    , ("VC"             , 40, \pkt -> [#text := textDisplay (pkt ^. tmpVCID)])
     , ("Source"         , 60, \pkt -> [#text := textDisplay (pkt ^. tmpSource)])
     ]
 

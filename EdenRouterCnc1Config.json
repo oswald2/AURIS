@@ -1,0 +1,40 @@
+{
+    "aurisMIB": null,
+    "aurisMission": "DEFAULT",
+    "aurisPusConfig": {
+        "cfgCnC": [
+            {
+                "cfgCncHasCRC": true,
+                "cfgCncPortTM": 10000,
+                "cfgCncHost": "localhost",
+                "cfgCncPortTC": 11000,
+                "cfgCncID": 1
+            }
+        ],
+        "cfgUnknownSPID": 5071,
+        "cfgEpoch": "UnixTime",
+        "cfgInterfacePort": 55555,
+        "cfgRandomizerStartValue": 255,
+        "cfgVCIDs": [
+            {
+                "getVCID": 0
+            },
+            {
+                "getVCID": 1
+            }
+        ],
+        "cfgLeapSeconds": {
+            "fromLeaps": 17
+        },
+        "cfgSCID": {
+            "getSCID": 0
+        },
+        "cfgMaxTMFrameLen": 1115,
+        "cfgCltuBlockSize": "CltuBS_8",
+        "cfgTMSegLength": "TMSegment65536",
+        "cfgTMFrameHasCRC": true
+    },
+    "aurisLogLevel": {
+        "tag": "LogLevelDebug"
+    }
+}

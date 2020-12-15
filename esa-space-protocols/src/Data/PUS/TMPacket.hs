@@ -52,7 +52,7 @@ data TMPacket = TMPacket {
     , _tmpPI2 :: !Word32
     , _tmpERT :: !SunTime
     , _tmpTimeStamp :: !SunTime
-    , _tmpVCID :: !VCID
+    , _tmpVCID :: !EduVCID
     , _tmpSSC :: !SSC
     , _tmpEvent :: !PIDEvent
     , _tmpSource :: !ProtocolInterface

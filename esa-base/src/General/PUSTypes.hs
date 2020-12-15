@@ -14,6 +14,7 @@ This module is a collection of various simple PUS types
 -}
 module General.PUSTypes
   ( VCID(..)
+  , EduVCID(..)
   , mkVCID
   , vcidBuilder
   , vcidParser
@@ -461,3 +462,19 @@ instance ToJSON PFC where
 
 instance Display PFC where
   textDisplay = T.pack . show
+
+
+data EduVCID = 
+  IsVCID !VCID
+  | IsSCOE 
+  deriving (Eq, Show, Generic)
+
+
+instance Serialise EduVCID
+instance FromJSON EduVCID
+instance ToJSON EduVCID where
+  toEncoding = genericToEncoding defaultOptions
+
+instance Display EduVCID where
+  display (IsVCID vcid) = display vcid
+  display IsSCOE = display @Text "SCOE"

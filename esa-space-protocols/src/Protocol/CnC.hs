@@ -80,7 +80,7 @@ receiveCnCC missionSpecific interf = do
                                   , _epERT     = ert
                                   , _epGap     = determineGap lastSSC newSSC
                                   , _epSource  = interf
-                                  , _epVCID    = VCID 0
+                                  , _epVCID    = IsSCOE
                                   , _epDU      = pkt
                                   }
                 newSSC = pkt ^. pusHdr . pusHdrSSC
