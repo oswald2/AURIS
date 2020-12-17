@@ -215,6 +215,7 @@ runTMCnCChain cfg missionSpecific pktQueue = do
     liftIO $ raiseEvent
       env
       (EVAlarms (EVEConnection (IfCnc (cfgCncID cfg)) ConnTM Connected))
+    
     res <- try $ void $ runConduitRes (appSource app .| chain)
 
     liftIO
@@ -224,7 +225,7 @@ runTMCnCChain cfg missionSpecific pktQueue = do
       )
     case res of
       Left (e :: SomeException) -> do
-        logError $ display @Text "CnC TM Interface Exception: " <> displayShow e
+        logError $ display @Text "C&C TM Interface Exception: " <> displayShow e
         throwM e
       Right _ -> return ()
 
@@ -252,6 +253,7 @@ runTCCnCChain cfg missionSpecific duQueue = do
     liftIO $ raiseEvent
       env
       (EVAlarms (EVEConnection (IfCnc (cfgCncID cfg)) ConnTC Connected))
+
     res <- try $ void $ runConduitRes (chain .| appSink app)
 
     liftIO
@@ -266,6 +268,7 @@ runTCCnCChain cfg missionSpecific duQueue = do
       Right _ -> return ()
   tcAckClient chain app = do
     env <- ask
+    logDebug "C&C TC Ack reader thread started"
 
     res <- try $ void $ runConduitRes (appSource app .| chain )
 
@@ -279,6 +282,7 @@ runTCCnCChain cfg missionSpecific duQueue = do
         logError $ display @Text "C&C TC Interface Exception: " <> displayShow e
         throwM e
       Right _ -> return ()
+    logDebug "C&C TC Ack reader thread leaves"
 
 
 

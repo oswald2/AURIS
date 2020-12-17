@@ -103,16 +103,14 @@ sendTCCncC = awaitForever $ \encPkt -> do
   case encPkt ^. encPktEncoded of
     Just pkt -> do
       logDebug $ display @Text "Encoded C&C:\n" <> display (hexdumpBS pkt)
+      yield pkt
     Nothing -> return ()
 
 
 scoeCommandC
   :: (Monad m) => ConduitT (ProtocolPacket PUSPacket) SCOECommand m ()
 scoeCommandC = awaitForever $ \pusPkt -> do
-  case extractCommand pusPkt of
-    Just scoeCmd -> yield scoeCmd
-    Nothing      -> scoeCommandC
-
+  maybe scoeCommandC yield (extractCommand pusPkt)
 
 
 
