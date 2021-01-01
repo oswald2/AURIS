@@ -6,10 +6,9 @@
     , NoImplicitPrelude
 #-}
 module Data.PUS.SegmentEncoder
-    ( Data.PUS.Segment.EncodedSegment
-    , tcSegmentEncoderC
-    )
-where
+  ( Data.PUS.Segment.EncodedSegment
+  , tcSegmentEncoderC
+  ) where
 
 
 import           RIO
@@ -26,13 +25,14 @@ import           General.PUSTypes
 
 tcSegmentEncoderC :: Monad m => ConduitT EncodedPUSPacket EncodedSegment m ()
 tcSegmentEncoderC = awaitForever $ \pkt -> do
-    let rqst  = pkt ^. encPktRequest
-        mapid = case rqst ^. tcReqPayload of
-            TCCommand {..} -> _tcReqMAPID
-            TCDir{}        -> mkMAPID 0
-        segs = case pkt ^. encPktEncoded of
-            Just dat -> mkTCSegments mapid dat
-            Nothing  -> mkTCSegments mapid B.empty
-        encSegs = encodeSegments rqst segs
-    yieldMany (L.toList encSegs)
+  let rqst  = pkt ^. encPktRequest
+      mapid = case rqst ^. tcReqPayload of
+        TCCommand {..}  -> _tcReqMAPID
+        TCDir{}         -> mkMAPID 0
+        TCScoeCommand{} -> mkMAPID 0
+      segs = case pkt ^. encPktEncoded of
+        Just dat -> mkTCSegments mapid dat
+        Nothing  -> mkTCSegments mapid B.empty
+      encSegs = encodeSegments rqst segs
+  yieldMany (L.toList encSegs)
 

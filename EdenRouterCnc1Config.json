@@ -9,6 +9,13 @@
                 "cfgCncHost": "localhost",
                 "cfgCncPortTC": 11000,
                 "cfgCncID": 1
+            },
+            {
+                "cfgCncHasCRC": true,
+                "cfgCncPortTM": 10001,
+                "cfgCncHost": "localhost",
+                "cfgCncPortTC": 11001,
+                "cfgCncID": 2
             }
         ],
         "cfgUnknownSPID": 5071,

@@ -85,6 +85,7 @@ switchProtocolPktC sm =  awaitForever $ \pkt -> do
       -- sending as TC Frames or CLTUs. Therefore, we forward the encoding down to 
       -- the frame level
       yield pkt 
+    TCScoeCommand {} -> genSwitchCommand pkt 
 
   where 
     -- currently, we assume that NCTRS only encodes CLTUs. As Frames and Packets 
@@ -102,7 +103,9 @@ switchProtocolPktC sm =  awaitForever $ \pkt -> do
       yield pkt 
     -- in all other cases, just forward the packet to the correct interface in packet
     -- format
-    switchCommand pkt _ = do
+    switchCommand pkt _ = genSwitchCommand pkt 
+
+    genSwitchCommand pkt = do 
       let dest = destination (pkt ^. encPktRequest)
       case HM.lookup dest sm of
         Just entry -> atomically $ writeTBQueue entry (EQPacket pkt)
@@ -123,6 +126,9 @@ switchProtocolFrameC sm = awaitForever $ \frame -> do
   case frame ^. encTcFrameRequest . tcReqPayload of 
     tc@TCCommand {} -> switchCommand frame tc 
     dir@TCDir {} -> switchDirective frame dir
+    -- SCOE commands cannot be sent as Frames and should already
+    -- have been sent to other routes. Therefore, we remote it 
+    TCScoeCommand {} -> return () 
 
   where 
     -- incase of EDEN protocol usage with TC Frames, forward to the EDEN interface

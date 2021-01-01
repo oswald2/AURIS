@@ -64,6 +64,7 @@ library
         Data.PUS.SegmentEncoder
         Data.PUS.SegmentationFlags
         Data.PUS.TCDirective
+        Data.PUS.TCCnc
         Data.PUS.Parameter
         Data.PUS.EncTime
         Data.PUS.TMFrame

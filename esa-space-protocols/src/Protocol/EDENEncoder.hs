@@ -114,6 +114,8 @@ createMessage now st rqst protLevel binPkt =
           then (EdenSpace, _tcReqMAPID)
           else (EdenSCOE, _tcReqMAPID)
       TCDir {} -> (EdenSpace, mkMAPID 0)
+      TCScoeCommand {} -> 
+        (EdenSCOE, mkMAPID 0)
 
     dataField = case detSubType of
       EdenSpace -> EdenSpaceTC spaceDataField (HexBytes binPkt)
