@@ -19,6 +19,7 @@ import           Data.PUS.TCRequest
 import           Data.PUS.TCPacket
 import           Data.PUS.Parameter
 import           Data.PUS.Value
+import           Data.PUS.TCCnc
 
 import           General.PUSTypes
 import           General.APID
@@ -28,29 +29,32 @@ import           Protocol.ProtocolInterfaces
 
 
 data TCTab = TCTab
-  { _tcTabWindow         :: !Window
-  , _tcTabTextView       :: !TextView
-  , _tcTabButtonInsert   :: !Button
-  , _tcTabButtonInsertCc :: !Button
-  , _tcTabButtonClear    :: !Button
-  , _tcTabButtonSend     :: !Button
+  { _tcTabWindow             :: !Window
+  , _tcTabTextView           :: !TextView
+  , _tcTabButtonInsert       :: !Button
+  , _tcTabButtonInsertCc     :: !Button
+  , _tcTabButtonInsertScoeCc :: !Button
+  , _tcTabButtonClear        :: !Button
+  , _tcTabButtonSend         :: !Button
   }
 
 
 createTCTab :: Window -> Gtk.Builder -> IO TCTab
 createTCTab window builder = do
-  textView   <- getObject builder "textViewTC" TextView
-  btInsert   <- getObject builder "buttonTCInsertTemplate" Button
-  btCcInsert <- getObject builder "buttonTCInsertCncTemplate" Button
-  btClear    <- getObject builder "buttonTCClear" Button
-  btSend     <- getObject builder "buttonTCSend" Button
+  textView       <- getObject builder "textViewTC" TextView
+  btInsert       <- getObject builder "buttonTCInsertTemplate" Button
+  btCcInsert     <- getObject builder "buttonTCInsertCncTemplate" Button
+  btCcScoeInsert <- getObject builder "buttonScoeTC" Button
+  btClear        <- getObject builder "buttonTCClear" Button
+  btSend         <- getObject builder "buttonTCSend" Button
 
-  let g = TCTab { _tcTabWindow         = window
-                , _tcTabTextView       = textView
-                , _tcTabButtonInsert   = btInsert
-                , _tcTabButtonClear    = btClear
-                , _tcTabButtonSend     = btSend
-                , _tcTabButtonInsertCc = btCcInsert
+  let g = TCTab { _tcTabWindow             = window
+                , _tcTabTextView           = textView
+                , _tcTabButtonInsert       = btInsert
+                , _tcTabButtonClear        = btClear
+                , _tcTabButtonSend         = btSend
+                , _tcTabButtonInsertCc     = btCcInsert
+                , _tcTabButtonInsertScoeCc = btCcScoeInsert
                 }
 
   _ <- Gtk.on btClear #clicked $ textViewClear textView
@@ -99,6 +103,23 @@ createTCTab window builder = do
               ]
           ]
         params = RIO.replicate 10 (Parameter "X" (ValUInt3 0b101))
+    textViewSetText textView (T.pack (ppShow rqst))
+  _ <- Gtk.on btCcScoeInsert #clicked $ do
+    let rqst =
+          [ RepeatN
+              1
+              [ SendRqst $ TCRequest
+                  0
+                  (mkSCID 533)
+                  (mkVCID 1)
+                  (TCScoeCommand
+                    (ScoeDestCnc (IfCnc 1))
+                    (TCScoe (APID 1540)
+                            "TRANSFER LOCAL"
+                    )
+                  )
+              ]
+          ]
     textViewSetText textView (T.pack (ppShow rqst))
 
   return g

@@ -37,10 +37,10 @@ module Data.PUS.PUSPacket
   , pusPktIdleAPID
   , pusPktTimePktAPID
   , pusPktIsIdle
+  , pusEncodeCRC
   , headPacket
   , chunkPackets
-  )
-where
+  ) where
 
 
 import           RIO                     hiding ( Builder
@@ -98,17 +98,18 @@ instance ToJSON PUSPacketType where
 
 
 
-data PUSHeader = PUSHeader {
-    _pusHdrPktID :: !Word16,
-    _pusHdrTcVersion :: !Word8,
-    _pusHdrType ::  !PUSPacketType,
-    _pusHdrDfhFlag :: !Bool,
-    _pusHdrAPID :: !APID,
-    _pusHdrSeqFlags :: !SegmentationFlags,
-    _pusHdrSSC :: !SSC,
-    _pusHdrSeqCtrl :: !Word16,
-    _pusHdrTcLength :: !Word16
-    } deriving(Show, Read, Generic)
+data PUSHeader = PUSHeader
+  { _pusHdrPktID     :: !Word16
+  , _pusHdrTcVersion :: !Word8
+  , _pusHdrType      :: !PUSPacketType
+  , _pusHdrDfhFlag   :: !Bool
+  , _pusHdrAPID      :: !APID
+  , _pusHdrSeqFlags  :: !SegmentationFlags
+  , _pusHdrSSC       :: !SSC
+  , _pusHdrSeqCtrl   :: !Word16
+  , _pusHdrTcLength  :: !Word16
+  }
+  deriving (Show, Read, Generic)
 
 makeLenses ''PUSHeader
 
@@ -144,12 +145,14 @@ instance FixedSize PUSHeader where
   fixedSizeOf = 6
 
 
-data PUSPacket = PUSPacket {
-    _pusHdr :: !PUSHeader,
-    _pusDfh :: !DataFieldHeader,
-    _pusPIs :: Maybe (TMPIVal, TMPIVal),
-    _pusData :: !ByteString
-    } deriving (Eq, Show, Generic)
+data PUSPacket = PUSPacket
+  { _pusHdr       :: !PUSHeader
+  , _pusDfh       :: !DataFieldHeader
+  , _pusPIs       :: Maybe (TMPIVal, TMPIVal)
+  , _pusData      :: !ByteString
+  , _pusEncodeCRC :: !Bool
+  }
+  deriving (Eq, Show, Generic)
 makeLenses ''PUSPacket
 
 instance Serialise PUSPacket
@@ -164,6 +167,8 @@ instance FromJSON PUSPacket where
       <*> v
       .:  "pusPIs"
       <*> (getByteString64 <$> v .: "pusData")
+      <*> v
+      .:  "pusEncodeCRC"
 
 
 instance ToJSON PUSPacket where
@@ -172,6 +177,7 @@ instance ToJSON PUSPacket where
     , "pusDfh" .= _pusDfh r
     , "pusPIs" .= _pusPIs r
     , "pusData" .= makeByteString64 (_pusData r)
+    , "pusEncodeCRC" .= _pusEncodeCRC r
     ]
   toEncoding r = pairs
     (  "pusHdr"
@@ -182,6 +188,8 @@ instance ToJSON PUSPacket where
     .= _pusPIs r
     <> "pusData"
     .= makeByteString64 (_pusData r)
+    <> "pusEncodeCRC"
+    .= _pusEncodeCRC r
     )
 
 
@@ -203,8 +211,9 @@ pusPktIsIdle pkt = pkt ^. pusHdr . pusHdrAPID == pusPktIdleAPID
 -- | encodes a packet and sets the PI1/2 values for correct identification
 {-# INLINABLE encodePUSPacket #-}
 encodePUSPacket :: PUSPacket -> ByteString
-encodePUSPacket pkt =
-  let !encPkt = encodePktWithoutCRC pkt True in crcEncodeAndAppendBS encPkt
+encodePUSPacket pkt = if _pusEncodeCRC pkt
+  then crcEncodeAndAppendBS (encodePktWithoutCRC pkt True)
+  else encodePktWithoutCRC pkt False
 
 -- | encodes a packet and sets the PI1/2 values for correct identification
 {-# INLINABLE encodePUSPktChoice #-}
@@ -250,7 +259,7 @@ pusPktCalcLen :: PUSPacket -> Bool -> Word16
 pusPktCalcLen pkt useCRC =
   let newLen = dfhLen + B.length (_pusData pkt) + if useCRC then crcLen else 0
       dfhLen =
-          if pkt ^. pusHdr . pusHdrDfhFlag then dfhLength (_pusDfh pkt) else 0
+        if pkt ^. pusHdr . pusHdrDfhFlag then dfhLength (_pusDfh pkt) else 0
   in  fromIntegral (newLen - 1)
 
 
@@ -438,22 +447,31 @@ pusPktParserPayload
   -> PUSHeader
   -> Parser (ProtocolPacket PUSPacket)
 pusPktParserPayload missionSpecific comm hdr = do
-  dfh <- if
+  (dfh, hasCRC) <- if
     | isNctrs comm -> if hdr ^. pusHdrDfhFlag
       then case hdr ^. pusHdrType of
-        PUSTM -> dfhParser (missionSpecific ^. pmsTMDataFieldHeader)
-        PUSTC -> dfhParser (missionSpecific ^. pmsTCDataFieldHeader)
-      else return PUSEmptyHeader
+        PUSTM ->
+          (, True) <$> dfhParser (missionSpecific ^. pmsTMDataFieldHeader)
+        PUSTC ->
+          (, True) <$> dfhParser (missionSpecific ^. pmsTCDataFieldHeader)
+      else return (PUSEmptyHeader, True)
     | isCnc comm -> if hdr ^. pusHdrDfhFlag
       then case hdr ^. pusHdrType of
-        PUSTM -> dfhParser (missionSpecific ^. pmsTMDataFieldHeader)
-        PUSTC -> dfhParser defaultCnCTCHeader
-      else return PUSEmptyHeader
+        PUSTM ->
+          (, True) <$> dfhParser (missionSpecific ^. pmsTMDataFieldHeader)
+        PUSTC -> (, True) <$> dfhParser defaultCnCTCHeader
+      else if hdr ^. pusHdrTcVersion == 3
+        then return (PUSEmptyHeader, False)
+        else return (PUSEmptyHeader, True)
     | isEden comm -> if hdr ^. pusHdrDfhFlag
       then case hdr ^. pusHdrType of
-        PUSTM -> dfhParser (missionSpecific ^. pmsTMDataFieldHeader)
-        PUSTC -> dfhParser (missionSpecific ^. pmsTCDataFieldHeader)
-      else return PUSEmptyHeader
+        PUSTM ->
+          (, True) <$> dfhParser (missionSpecific ^. pmsTMDataFieldHeader)
+        PUSTC ->
+          (, True) <$> dfhParser (missionSpecific ^. pmsTCDataFieldHeader)
+      else if hdr ^. pusHdrTcVersion == 3
+        then return (PUSEmptyHeader, False)
+        else return (PUSEmptyHeader, True)
     | otherwise -> fail $ "Unknown protocol type: " <> show comm
 
   --traceShowM dfh
@@ -477,4 +495,4 @@ pusPktParserPayload missionSpecific comm hdr = do
 
   --traceM (hexdumpBS pl)
 
-  return (ProtocolPacket comm (PUSPacket hdr dfh Nothing pl))
+  return (ProtocolPacket comm (PUSPacket hdr dfh Nothing pl hasCRC))

@@ -49,6 +49,7 @@ pkt1 ssc = PUSPacket
   (PUSTCStdHeader 3 25 (mkSourceID 0) True True False True)
   Nothing
   (B.pack [0 .. 10])
+  True
 
 rqst1 = TCRequest
   0

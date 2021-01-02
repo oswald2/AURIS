@@ -12,6 +12,7 @@ module Data.PUS.TCRequest
   , ProtocolLevel(..)
   , DirectiveProtocolLevel(..)
   , DirectiveDestination(..)
+  , ScoeDestination(..)
   , tcReqRequestID
   , tcReqMAPID
   , tcReqSCID

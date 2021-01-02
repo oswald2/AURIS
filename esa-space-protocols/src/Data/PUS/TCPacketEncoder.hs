@@ -52,7 +52,7 @@ encodeTCPacket pkt missionSpecific =
           &  dfhSourceID
           .~ _tcpSourceID pkt
       payload = encodeParameters (toSizedParamList (_tcpParams pkt))
-  in  PUSPacket hdr dfh Nothing payload
+  in  PUSPacket hdr dfh Nothing payload True
 
 encodeScoeTCPacket :: TCScoe -> PUSMissionSpecific -> PUSPacket
 encodeScoeTCPacket pkt _missionSpecific =
@@ -61,7 +61,9 @@ encodeScoeTCPacket pkt _missionSpecific =
   let hdr     = PUSHeader 0 3 PUSTC False (_tccAPID pkt) SegmentStandalone 0 0 0
       dfh     = PUSEmptyHeader
       payload = encodeUtf8 (_tccParams pkt)
-  in  PUSPacket hdr dfh Nothing payload
+  in  
+    -- We don't encode a CRC normally for C&C protocol packets
+    PUSPacket hdr dfh Nothing payload False
 
 
 
