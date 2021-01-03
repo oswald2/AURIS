@@ -6,6 +6,8 @@
 module Protocol.CnC
   ( receiveCnCC
   , sendTCCncC
+  , cncToTMPacket
+  , cncProcessAcks
   , scoeCommandC
   , SCOECommand(..)
   , generateAckData
@@ -54,13 +56,12 @@ receiveCnCC
   :: (MonadIO m, MonadReader env m, HasLogFunc env, HasRaiseEvent env)
   => PUSMissionSpecific
   -> ProtocolInterface
-  -> ConduitT ByteString ExtractedPacket m ()
+  -> ConduitT ByteString (ByteString, ProtocolPacket PUSPacket) m ()
 receiveCnCC missionSpecific interf = do
   conduitParserEither (match (pusPktParser missionSpecific interf))
-    .| sink Nothing
+    .| sink
  where
-  sink lastSSC = do
-    logDebug "receiveCnCC: awaiting..."
+  sink = do
     x <- await
     case x of
       Nothing -> return ()
@@ -74,31 +75,66 @@ receiveCnCC missionSpecific interf = do
               env
               (EVAlarms (EVPacketAlarm (utf8BuilderToText msg)))
             return ()
-          Right (_, (byts, protPkt)) -> do
-            ert <- liftIO getCurrentTime
-            let epd = ExtractedDU { _epQuality = toFlag Good True
-                                  , _epERT     = ert
-                                  , _epGap     = determineGap lastSSC newSSC
-                                  , _epSource  = interf
-                                  , _epVCID    = IsSCOE
-                                  , _epDU      = pkt
-                                  }
-                newSSC = pkt ^. pusHdr . pusHdrSSC
-                pkt    = protPkt ^. protContent
-                newPkt = ExtractedPacket byts epd
+          Right (_, res) -> do
+            yield res
+            sink
 
-            logDebug $ "CnC TM: received packet: " <> displayShow epd
 
-            yield newPkt
-            sink (Just newSSC)
+cncProcessAcks :: (Monad m) => ConduitT (ByteString, ProtocolPacket PUSPacket) Void m () 
+cncProcessAcks = awaitForever $ \(byts, protPkt) -> do 
+  let pkt    = protPkt ^. protContent
+  if pkt ^. pusHdr . pusHdrTcVersion == 3 && pkt ^. pusHdr . pusHdrDfhFlag == False 
+    then
+      -- we have most probably an ACK packet
+      -- TODO process the acknowledgements 
+      return () 
+    else 
+      -- we have a different packet, just log it. We should only be used on the return of the TC link
+      return () 
 
+
+cncToTMPacket
+  :: (MonadIO m, MonadReader env m, HasLogFunc env)
+  => ProtocolInterface
+  -> Maybe SSC
+  -> ConduitT
+       (ByteString, ProtocolPacket PUSPacket)
+       ExtractedPacket
+       m
+       ()
+cncToTMPacket interf lastSSC = do
+  x <- await
+  case x of
+    Nothing              -> return ()
+    Just (byts, protPkt) -> do
+      ert <- liftIO getCurrentTime
+      let epd = ExtractedDU { _epQuality = toFlag Good True
+                            , _epERT     = ert
+                            , _epGap     = determineGap lastSSC newSSC
+                            , _epSource  = interf
+                            , _epVCID    = IsSCOE
+                            , _epDU      = pkt
+                            }
+          newSSC = pkt ^. pusHdr . pusHdrSSC
+          pkt    = protPkt ^. protContent
+          newPkt = ExtractedPacket byts epd
+
+      logDebug $ "CnC TM: received packet: " <> displayShow epd
+
+      yield newPkt
+      cncToTMPacket interf (Just newSSC)
+
+ where
   determineGap Nothing       _   = Nothing
   determineGap (Just oldSSC) ssc = if oldSSC + 1 == ssc
     then Nothing
     else Just (fromIntegral oldSSC, fromIntegral ssc)
 
 
-sendTCCncC :: (MonadIO m, MonadReader env m, HasLogFunc env) => ConduitT EncodedPUSPacket ByteString m ()
+
+sendTCCncC
+  :: (MonadIO m, MonadReader env m, HasLogFunc env)
+  => ConduitT EncodedPUSPacket ByteString m ()
 sendTCCncC = awaitForever $ \encPkt -> do
   case encPkt ^. encPktEncoded of
     Just pkt -> do
@@ -124,43 +160,141 @@ scoeCommandC = awaitForever $ \pusPkt -> do
 -- sendTM sock pl _leaps = do
 --   sendAll sock pl
 
-
+{-# INLINABLE extractCommand #-}
 extractCommand :: ProtocolPacket PUSPacket -> Maybe SCOECommand
-extractCommand cpkt@(ProtocolPacket (IfCnc _) pusPkt) = if isASCIICc cpkt
-  then case parse scoeCommandParser (pusPkt ^. pusData) of
+extractCommand cpkt@(ProtocolPacket (IfCnc _) pusPkt) =
+  if isASCIICc cpkt then parseCncContent (_pusData pusPkt) else Nothing
+extractCommand _ = Nothing
+
+{-# INLINABLE parseCncContent #-}
+parseCncContent :: BCS.ByteString -> Maybe SCOECommand
+parseCncContent cont = case parse scoeCommandParser cont of
+  Fail{}    -> Nothing
+  Partial c -> case c BCS.empty of
     Fail{}     -> Nothing
     Partial _  -> Nothing
     Done _ res -> Just res
-  else Nothing
-extractCommand _ = Nothing
+  Done _ res -> Just res
 
 
 data SCOECommand = SCOECommand
-  { sccCommand :: ByteString
-  , sccArgs    :: V.Vector ByteString
+  { sccCommand :: !BS.ByteString
+  , sccArgs    :: V.Vector BS.ByteString
   }
-  deriving (Show, Read)
+  deriving (Eq, Show, Read)
 
-
+{-# INLINABLE scoeCommandParser #-}
 scoeCommandParser :: Parser SCOECommand
 scoeCommandParser = do
-  cmd <- commandParser
-  void space
-  args <- argumentListParser
-  return $! SCOECommand cmd (V.fromList args)
+  cmd  <- commandParser
+  args <- option V.empty $ A.try $ do
+    void space
+    V.fromList <$> argumentListParser
+  return $! SCOECommand cmd args
+
+{-# INLINABLE commandParser #-}
+commandParser :: Parser BS.ByteString
+commandParser = do
+  (bs, _) <- A.match $ do
+    void A.letter_ascii
+    void $ A.takeWhile (inClass keywordChars)
+  return (BCS.map toUpper bs)
+
+keywordChars :: String
+keywordChars = "_0..9a-zA-Z"
+
+{-# INLINABLE argumentListParser #-}
+argumentListParser :: Parser [BS.ByteString]
+argumentListParser = argumentParser `A.sepBy` choice [space, A.char ',']
+
+{-# INLINABLE argumentParser #-}
+argumentParser :: Parser BS.ByteString
+argumentParser = do
+  A.takeWhile (\c -> c /= ' ' && c /= ',')
 
 
-commandParser :: Parser ByteString
-commandParser = BCS.map toUpper <$> A.takeWhile (not . A.isSpace)
+  -- TODO: for now we have a shortcut to quickly get out strings, but not parse completely
+  --       This should be more done on SCOE side anyways.
 
-argumentParser :: Parser ByteString
-argumentParser = BCS.map toUpper <$> A.takeWhile (not . A.isSpace)
+  -- choice
+  --   [ parameterAssignListParser
+  --   , parameterAssignmentParser
+  --   , valueParser
+  --   , commandOptionParser
+  --   ]
 
-argumentListParser :: Parser [ByteString]
-argumentListParser = argumentParser `A.sepBy` space
+-- commandOptionParser :: Parser BS.ByteString
+-- commandOptionParser = do
+--   (bs, _) <- match $ do
+--     void A.letter_ascii
+--     void $ A.takeWhile (inClass idChars)
+--   return bs
+
+-- idChars :: String
+-- idChars = "_-.a-zA-Z0-9"
+
+-- parameterAssignmentParser :: Parser BS.ByteString
+-- parameterAssignmentParser = do
+--   (bs, _) <- match $ do
+--     void parameterIdentifier
+--     void $ option Nothing (Just <$> listItemParser)
+--     void $ A.char '='
+--     void valueParser
+--   return bs
+
+-- parameterIdentifier :: Parser BS.ByteString
+-- parameterIdentifier = do
+--   (bs, _) <- match $ do
+--     void A.letter_ascii
+--     void $ A.takeWhile (inClass keywordChars)
+--   return bs
+
+-- listItemParser :: Parser Int
+-- listItemParser = do
+--   void $ A.char '('
+--   v <- A.decimal
+--   void $ A.char ')'
+--   return v
+
+-- valueParser :: Parser BS.ByteString
+-- valueParser = do
+--   (bs, _) <- match $ choice [characterString, identifier, numericLiteral]
+--   return bs
+--  where
+--   numericLiteral = do
+--     (bs, _) <- match $ A.try hexNumber <|> decimalNumber
+--     return bs
+--   hexNumber = do
+--     (bs, _) <- match $ do
+--       void $ A.char '0'
+--       void $ A.try (A.char 'x') <|> A.char 'X'
+--       A.hexadecimal :: Parser Int
+--     return bs
+--   decimalNumber   = fst <$> match double
+
+--   characterString = do
+--     void $ A.char '"'
+--     v <- A.takeWhile (/= '"')
+--     void $ A.char '"'
+--     return v
+
+--   identifier = do
+--     (bs, _) <- match $ do
+--       void A.letter_ascii
+--       void $ A.takeWhile (inClass keywordChars)
+--     return bs
+
+-- parameterAssignListParser :: Parser BS.ByteString
+-- parameterAssignListParser = do
+--   (bs, _) <- match $ do
+--     void parameterAssignmentParser
+--     many1 $ do
+--       void $ A.char ','
+--       valueParser
+--   return bs
 
 
-
+{-# INLINABLE generateAckData #-}
 generateAckData :: SCOECommand -> Maybe ByteString -> ByteString
 generateAckData (SCOECommand "TRANSFER" args) Nothing =
   builderBytes $ bytes "ACK " <> bytes "TRANSFER " <> bytes (args V.! 0)
