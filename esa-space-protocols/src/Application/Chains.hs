@@ -55,9 +55,7 @@ import           Protocol.NCTRS                 ( receiveTmNcduC
                                                 , encodeTcNcduC
                                                 , receiveAdminNcduC
                                                 )
-import           Protocol.CnC                   ( receiveCnCC
-                                                , sendTCCncC
-                                                )
+import           Protocol.CnC                 
 import           Protocol.EDEN                  ( encodeEdenMessageC
                                                 , receiveEdenMessageC
                                                 )
@@ -199,7 +197,7 @@ runTMCnCChain cfg missionSpecific pktQueue = do
   logDebug "runTMCnCChain entering"
 
   let chain = receiveCnCC missionSpecific (IfCnc (cfgCncID cfg))
-        .| sinkTBQueue pktQueue
+        .| cncToTMPacket (IfCnc (cfgCncID cfg)) Nothing .| sinkTBQueue pktQueue
 
   runGeneralTCPReconnectClient
     (clientSettings (fromIntegral (cfgCncPortTM cfg))
@@ -235,7 +233,7 @@ runTCCnCChain cfg missionSpecific duQueue = do
   logDebug "runTCCnCChain entering"
 
   let chain = receivePktChannelC duQueue .| sendTCCncC
-      ackChain = receiveCnCC missionSpecific (IfCnc (cfgCncID cfg)) .| printC
+      ackChain = receiveCnCC missionSpecific (IfCnc (cfgCncID cfg)) .| cncProcessAcks
 
   logDebug $ "C&C TC: connecting to: " <> display (cfgCncHost cfg) <> " " <> display (cfgCncPortTC cfg)
 
