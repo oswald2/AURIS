@@ -22,24 +22,24 @@ state (or library state)
     , MultiParamTypeClasses
 #-}
 module Data.PUS.GlobalState
-  ( GlobalState
-  , AppState
-  , FOP1State
-  , COP1State
-  , CorrelationVar
-  , glsConfig
-  , glsState
-  , glsCorrState
-  , glsFOP1
-  , glsLogFunc
-  , glsRaiseEvent
-  , glsMissionSpecific
-  , glsDataModel
-  , glsTCRequestQueue
-  , newGlobalState
-  , nextADCount
-  )
-where
+    ( GlobalState
+    , AppState
+    , FOP1State
+    , COP1State
+    , CorrelationVar
+    , glsConfig
+    , glsState
+    , glsCorrState
+    , glsFOP1
+    , glsLogFunc
+    , glsRaiseEvent
+    , glsMissionSpecific
+    , glsDataModel
+    , glsTCRequestQueue
+    , glsVerifCommandQueue
+    , newGlobalState
+    , nextADCount
+    ) where
 
 
 import           RIO                     hiding ( to
@@ -49,19 +49,25 @@ import qualified RIO.HashMap                   as HM
 
 import           UnliftIO.STM                   ( )
 
-import Data.DataModel ( DataModel, empty )
+import           Data.DataModel                 ( DataModel
+                                                , empty
+                                                )
 
 import           Data.PUS.Config
-import Data.PUS.PUSState ( defaultPUSState, nextADCnt, PUSState )
-import Data.PUS.Events ( Event )
+import           Data.PUS.PUSState              ( defaultPUSState
+                                                , nextADCnt
+                                                , PUSState
+                                                )
+import           Data.PUS.Events                ( Event )
 import           Data.PUS.COP1Types
-import Data.PUS.MissionSpecific.Definitions ( PUSMissionSpecific )
-import Data.PUS.TCRequest ( TCRequest )
+import           Data.PUS.MissionSpecific.Definitions
+                                                ( PUSMissionSpecific )
+import           Data.PUS.TCRequest             ( TCRequest )
 
 import           General.PUSTypes
 import           General.Time
 
-
+import           Verification.Commands
 
 
 
@@ -78,66 +84,70 @@ type COP1State = HashMap VCID FOP1State
 
 
 rqstQueueSize :: Natural
-rqstQueueSize = 1000 
+rqstQueueSize = 1000
 
 -- | The 'GlobalState' contains the configuration, several TVars to
 -- transient state and some functions which must be provided by the
 -- user of the library. Currently for logging and raising events
-data GlobalState = GlobalState {
-    glsConfig :: !Config
-    , glsState :: !AppState
-    , glsFOP1 :: COP1State
-    , glsCorrState :: CorrelationVar
-    , glsDataModel :: TVar DataModel
-
-    , glsMissionSpecific :: PUSMissionSpecific
-
-    , glsRaiseEvent :: Event -> IO ()
-    , glsLogFunc :: !LogFunc
-    , glsTCRequestQueue :: TBQueue [TCRequest]
-}
+data GlobalState = GlobalState
+    { glsConfig            :: !Config
+    , glsState             :: !AppState
+    , glsFOP1              :: COP1State
+    , glsCorrState         :: CorrelationVar
+    , glsDataModel         :: TVar DataModel
+    , glsMissionSpecific   :: PUSMissionSpecific
+    , glsRaiseEvent        :: Event -> IO ()
+    , glsLogFunc           :: !LogFunc
+    , glsTCRequestQueue    :: TBQueue [TCRequest]
+    , glsVerifCommandQueue :: TBQueue VerifCommand
+    }
 
 -- | Constructor for the global state. Takes a configuration, a
 -- logging function as specified by the RIO library and a raiseEvent
 -- function to report events to the application
 newGlobalState
-  :: Config
-  -> PUSMissionSpecific
-  -> LogFunc
-  -> (Event -> IO ())
-  -> IO GlobalState
+    :: Config
+    -> PUSMissionSpecific
+    -> LogFunc
+    -> (Event -> IO ())
+    -> IO GlobalState
 newGlobalState cfg missionSpecific logErr raiseEvent = do
-  st     <- defaultPUSState cfg
-  tv     <- newTVarIO st
-  cv     <- newTVarIO defaultCoeffs
-  dmodel <- newTVarIO Data.DataModel.empty
-  let vcids = cfgVCIDs cfg
-  fopTVars <- mapM (newTVarIO . initialFOPState) vcids
-  let fop1 = HM.fromList $ zip vcids fopTVars
-  rqstQueue <- newTBQueueIO rqstQueueSize
+    st     <- defaultPUSState cfg
+    tv     <- newTVarIO st
+    cv     <- newTVarIO defaultCoeffs
+    dmodel <- newTVarIO Data.DataModel.empty
+    let vcids = cfgVCIDs cfg
+    fopTVars <- mapM (newTVarIO . initialFOPState) vcids
+    let fop1 = HM.fromList $ zip vcids fopTVars
+    rqstQueue  <- newTBQueueIO rqstQueueSize
+    verifQueue <- newTBQueueIO 5000
 
-  let state = GlobalState { glsConfig          = cfg
-                          , glsState           = tv
-                          , glsCorrState       = cv
-                          , glsFOP1            = fop1
-                          , glsRaiseEvent      = raiseEvent
-                          , glsLogFunc         = logErr
-                          , glsDataModel       = dmodel
-                          , glsMissionSpecific = missionSpecific
-                          , glsTCRequestQueue  = rqstQueue 
-                          }
-  pure state
+    let state = GlobalState { glsConfig            = cfg
+                            , glsState             = tv
+                            , glsCorrState         = cv
+                            , glsFOP1              = fop1
+                            , glsRaiseEvent        = raiseEvent
+                            , glsLogFunc           = logErr
+                            , glsDataModel         = dmodel
+                            , glsMissionSpecific   = missionSpecific
+                            , glsTCRequestQueue    = rqstQueue
+                            , glsVerifCommandQueue = verifQueue
+                            }
+    pure state
 
 -- | returns the next counter value for TC transfer frames
 -- in AD transmission mode
 nextADCount :: AppState -> STM Word8
 nextADCount st = do
-  state <- readTVar st
-  let (newSt, cnt) = nextADCnt state
-  writeTVar st newSt
-  pure cnt
+    state <- readTVar st
+    let (newSt, cnt) = nextADCnt state
+    writeTVar st newSt
+    pure cnt
+
 
 
 -- | Instance of the logging function for the global state
 instance HasLogFunc GlobalState where
-  logFuncL = lens glsLogFunc (\c lf -> c { glsLogFunc = lf })
+    logFuncL = lens glsLogFunc (\c lf -> c { glsLogFunc = lf })
+
+

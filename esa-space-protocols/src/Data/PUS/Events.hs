@@ -16,13 +16,12 @@ Contains just the Events, which can be raised by the library
     , NoImplicitPrelude
 #-}
 module Data.PUS.Events
-  ( Event(..)
-  , EventCommanding(..)
-  , EventTelemetry(..)
-  , EventAlarm(..)
-  , EventCOP1(..)
-  )
-where
+    ( Event(..)
+    , EventCommanding(..)
+    , EventTelemetry(..)
+    , EventAlarm(..)
+    , EventCOP1(..)
+    ) where
 
 
 import           RIO
@@ -37,13 +36,13 @@ import           Data.PUS.COP1Types
 import           Data.PUS.ExtractedDU           ( ExtractedDU )
 import           Data.PUS.TMFrame               ( TMFrame )
 import           Data.PUS.TMPacket              ( TMPacket )
-
+import           Data.PUS.TCRequest             ( TCRequest )
 import           Data.TM.Parameter
 
 import           Data.DataModel
 
 import           Protocol.ProtocolInterfaces
-
+import           Verification.Verification
 
 -- | The events themselves
 data Event = EVCommanding EventCommanding
@@ -55,16 +54,18 @@ data Event = EVCommanding EventCommanding
 instance Serialise Event
 instance FromJSON Event
 instance ToJSON Event where
-  toEncoding = genericToEncoding defaultOptions
+    toEncoding = genericToEncoding defaultOptions
 
 
-data EventCommanding = CommandEvent
+data EventCommanding =
+  EVTCVerificationNew TCRequest Verification
+  | EVTCVerificationUpdate RequestID Verification
     deriving (Show, Generic)
 
 instance Serialise EventCommanding
 instance FromJSON EventCommanding
 instance ToJSON EventCommanding where
-  toEncoding = genericToEncoding defaultOptions
+    toEncoding = genericToEncoding defaultOptions
 
 data EventTelemetry =
     -- | Event if a gap in the virtual channel frame count is detected. First
@@ -84,7 +85,7 @@ data EventTelemetry =
 instance Serialise EventTelemetry
 instance FromJSON EventTelemetry
 instance ToJSON EventTelemetry where
-  toEncoding = genericToEncoding defaultOptions
+    toEncoding = genericToEncoding defaultOptions
 
 
 data EventAlarm =
@@ -105,7 +106,7 @@ data EventAlarm =
 instance Serialise EventAlarm
 instance FromJSON EventAlarm
 instance ToJSON EventAlarm where
-  toEncoding = genericToEncoding defaultOptions
+    toEncoding = genericToEncoding defaultOptions
 
 data EventCOP1 =
     EVADInitializedWithoutCLCW VCID
@@ -137,4 +138,4 @@ data EventCOP1 =
 instance Serialise EventCOP1
 instance FromJSON EventCOP1
 instance ToJSON EventCOP1 where
-  toEncoding = genericToEncoding defaultOptions
+    toEncoding = genericToEncoding defaultOptions

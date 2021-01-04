@@ -208,20 +208,25 @@ pusPktTimePktAPID = APID 0
 pusPktIsIdle :: PUSPacket -> Bool
 pusPktIsIdle pkt = pkt ^. pusHdr . pusHdrAPID == pusPktIdleAPID
 
--- | encodes a packet and sets the PI1/2 values for correct identification
+-- | encodes a packet and sets the PI1/2 values for correct identification.
+-- Returns the encoded packet as well as the PacketID and the SSC field for
+-- TC verification purpuses
 {-# INLINABLE encodePUSPacket #-}
-encodePUSPacket :: PUSPacket -> ByteString
+encodePUSPacket :: PUSPacket -> (ByteString, Word16, Word16)
 encodePUSPacket pkt = if _pusEncodeCRC pkt
-  then crcEncodeAndAppendBS (encodePktWithoutCRC pkt True)
+  then 
+    let (encPkt, pktId, ssc) = encodePktWithoutCRC pkt True
+    in (crcEncodeAndAppendBS encPkt, pktId, ssc)
   else encodePktWithoutCRC pkt False
 
 -- | encodes a packet and sets the PI1/2 values for correct identification
 {-# INLINABLE encodePUSPktChoice #-}
-encodePUSPktChoice :: Bool -> PUSPacket -> ByteString
+encodePUSPktChoice :: Bool -> PUSPacket -> (ByteString, Word16, Word16)
 encodePUSPktChoice True pkt =
-  let !encPkt = encodePktWithoutCRC pkt True in crcEncodeAndAppendBS encPkt
-encodePUSPktChoice False pkt =
-  let !encPkt = encodePktWithoutCRC pkt False in encPkt
+  let (!encPkt, pktId, ssc) = encodePktWithoutCRC pkt True 
+  in 
+    (crcEncodeAndAppendBS encPkt, pktId, ssc)
+encodePUSPktChoice False pkt = encodePktWithoutCRC pkt False
 
 
 
@@ -232,16 +237,16 @@ encodePUSPktChoice False pkt =
 -- | So if you need to append the CRC later, this flag should be True, otherwise
 -- | False
 {-# INLINABLE encodePktWithoutCRC #-}
-encodePktWithoutCRC :: PUSPacket -> Bool -> ByteString
+encodePktWithoutCRC :: PUSPacket -> Bool -> (ByteString, Word16, Word16)
 encodePktWithoutCRC pkt useCRC =
   let newPkt  = pusPktUpdateLen pkt useCRC
-      encHdr  = pusPktHdrBuilder (newPkt ^. pusHdr)
+      (encHdr, pktId, ssc)  = pusPktHdrBuilder (newPkt ^. pusHdr)
       encDfh  = dfhBuilder (newPkt ^. pusDfh)
       payload = newPkt ^. pusData
       !pl     = builderBytes $ if newPkt ^. pusHdr . pusHdrDfhFlag
         then encHdr <> encDfh <> bytes payload
         else encHdr <> bytes payload
-  in  applied pkt pl
+  in  (applied pkt pl, pktId, ssc)
  where
   applied PUSPacket { _pusPIs = Nothing } encPkt = encPkt
   applied PUSPacket { _pusPIs = Just pis@(pi1, pi2) } encPkt =
@@ -306,14 +311,14 @@ applyPIvals encPkt pic = worker
 
 
 {-# INLINABLE pusPktHdrBuilder #-}
-pusPktHdrBuilder :: PUSHeader -> Builder
+pusPktHdrBuilder :: PUSHeader -> (Builder, Word16, Word16)
 pusPktHdrBuilder hdr =
   let !pktId = packPktID (_pusHdrTcVersion hdr)
                          (_pusHdrType hdr)
                          (_pusHdrDfhFlag hdr)
                          (_pusHdrAPID hdr)
       !seqFlags = packSeqFlags (_pusHdrSeqFlags hdr) (_pusHdrSSC hdr)
-  in  word16BE pktId <> word16BE seqFlags <> word16BE (_pusHdrTcLength hdr)
+  in  (word16BE pktId <> word16BE seqFlags <> word16BE (_pusHdrTcLength hdr), pktId, seqFlags)
 
 
 

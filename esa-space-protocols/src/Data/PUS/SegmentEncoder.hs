@@ -31,7 +31,7 @@ tcSegmentEncoderC = awaitForever $ \pkt -> do
         TCDir{}         -> mkMAPID 0
         TCScoeCommand{} -> mkMAPID 0
       segs = case pkt ^. encPktEncoded of
-        Just dat -> mkTCSegments mapid dat
+        Just (dat, _, _) -> mkTCSegments mapid dat
         Nothing  -> mkTCSegments mapid B.empty
       encSegs = encodeSegments rqst segs
   yieldMany (L.toList encSegs)

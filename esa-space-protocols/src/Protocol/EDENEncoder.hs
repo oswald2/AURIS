@@ -68,7 +68,7 @@ packetToEDEN
 packetToEDEN var encPkt = do
   case encPkt ^. encPktEncoded of
     Nothing     -> return Nothing
-    Just binPkt -> liftIO $ do
+    Just (binPkt, _, _) -> liftIO $ do
       now <- getCurrentTime
       st <- readTVarIO var
       let !edenMessage = createMessage now st (encPkt ^. encPktRequest) EdenTcPacket binPkt

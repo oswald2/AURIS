@@ -137,7 +137,7 @@ sendTCCncC
   => ConduitT EncodedPUSPacket ByteString m ()
 sendTCCncC = awaitForever $ \encPkt -> do
   case encPkt ^. encPktEncoded of
-    Just pkt -> do
+    Just (pkt, pktId, ssc) -> do
       logDebug $ display @Text "Encoded C&C:\n" <> display (hexdumpBS pkt)
       yield pkt
     Nothing -> return ()

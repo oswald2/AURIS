@@ -2,9 +2,8 @@
     TypeApplications
 #-}
 module AurisProcessing
-  ( runProcessing
-  )
-where
+    ( runProcessing
+    ) where
 
 import           RIO
 --import qualified Data.Text.IO                  as T
@@ -29,51 +28,57 @@ import           GUI.MainWindow
 import           Application.Chains
 import           Application.DataModel
 
+import           Verification.Processor
 
 
 runProcessing
-  :: AurisConfig
-  -> PUSMissionSpecific
-  -> Maybe FilePath
-  -> Interface
-  -> MainWindow
-  -> TBQueue InterfaceAction
-  -> IO ()
+    :: AurisConfig
+    -> PUSMissionSpecific
+    -> Maybe FilePath
+    -> Interface
+    -> MainWindow
+    -> TBQueue InterfaceAction
+    -> IO ()
 runProcessing cfg missionSpecific mibPath interface mainWindow coreQueue = do
-  defLogOptions <- logOptionsHandle stdout True
-  let logOptions =
-        setLogMinLevel (convLogLevel (aurisLogLevel cfg)) defLogOptions
-  withLogFunc logOptions $ \logFunc -> do
-    let logf = logFunc <> messageAreaLogFunc (mainWindow ^. mwMessageDisplay)
-    state <- newGlobalState (aurisPusConfig cfg)
-                            missionSpecific
-                            logf
-                            (ifRaiseEvent interface . EventPUS)
+    defLogOptions <- logOptionsHandle stdout True
+    let logOptions =
+            setLogMinLevel (convLogLevel (aurisLogLevel cfg)) defLogOptions
+    withLogFunc logOptions $ \logFunc -> do
+        let logf =
+                logFunc <> messageAreaLogFunc (mainWindow ^. mwMessageDisplay)
+        state <- newGlobalState (aurisPusConfig cfg)
+                                missionSpecific
+                                logf
+                                (ifRaiseEvent interface . EventPUS)
 
-    void $ runRIO state $ do
-      -- first, try to load a data model or import a MIB
-      logInfo "Loading Data Model..."
+        void $ runRIO state $ do
+          -- first, try to load a data model or import a MIB
+            logInfo "Loading Data Model..."
 
-      home <- liftIO getHomeDirectory
-      let path = case mibPath of
-            Just p  -> LoadFromMIB p serializedPath
-            Nothing -> LoadFromSerialized serializedPath
-          serializedPath = home </> configPath </> defaultMIBFile
+            home <- liftIO getHomeDirectory
+            let path = case mibPath of
+                    Just p  -> LoadFromMIB p serializedPath
+                    Nothing -> LoadFromSerialized serializedPath
+                serializedPath = home </> configPath </> defaultMIBFile
 
-      model <- loadDataModelDef path
-      env   <- ask
-      setDataModel env model
+            model <- loadDataModelDef path
+            env   <- ask
+            setDataModel env model
 
-      logInfo "Initialising User Interface with Data Model..."
-      liftIO $ mwInitialiseDataModel mainWindow model
+            logInfo "Initialising User Interface with Data Model..."
+            liftIO $ mwInitialiseDataModel mainWindow model
 
-      logInfo "Starting TM and TC chains..."
+            logInfo "Starting TM and TC chains..."
 
-      void $ async $ runCoreThread coreQueue
+            -- Start the core processing thread (commands from GUI)
+            void $ async $ runCoreThread coreQueue
 
-      -- run all processing chains (TM and TC) as well as the 
-      -- interface threads 
-      runChains missionSpecific
+            -- Start the TC verification processor 
+            void $ async $ processVerification (glsVerifCommandQueue env)
+
+            -- run all processing chains (TM and TC) as well as the 
+            -- interface threads 
+            runChains missionSpecific
 
 
 

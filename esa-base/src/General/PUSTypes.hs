@@ -237,7 +237,7 @@ toBool (MkFlag b) = b
 
 -- | The Request ID type
 newtype RequestID = RequestID { getRqstID :: Word32 }
-    deriving (Eq, Ord, Num, Show, Read, Generic)
+    deriving (Eq, Ord, Num, Show, Read, Hashable, Generic)
 
 -- | Smart constructor for the 'RequestID'
 mkRqstID :: Word32 -> RequestID
@@ -252,6 +252,10 @@ instance Serialise RequestID
 instance FromJSON RequestID
 instance ToJSON RequestID where
   toEncoding = genericToEncoding defaultOptions
+
+
+instance Display RequestID where 
+  display (RequestID x) = display x 
 
 saveRqstID :: RequestID -> IO ()
 saveRqstID rqstID = do

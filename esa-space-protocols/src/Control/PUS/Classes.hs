@@ -17,19 +17,19 @@ access control to IO functions. Used within the encoding conduits.
     , RankNTypes
 #-}
 module Control.PUS.Classes
-  ( HasConfig(..)
-  , HasPUSState(..)
-  , HasGlobalState
-  , HasFOPState(..)
-  , HasCorrelationState(..)
-  , HasMissionSpecific(..)
-  , HasDataModel(..)
-  , HasTCRqstQueue(..)
-  , getDataModel
-  , setDataModel
-  , HasRaiseEvent(..)
-  )
-where
+    ( HasConfig(..)
+    , HasPUSState(..)
+    , HasGlobalState
+    , HasFOPState(..)
+    , HasCorrelationState(..)
+    , HasMissionSpecific(..)
+    , HasDataModel(..)
+    , HasTCRqstQueue(..)
+    , getDataModel
+    , setDataModel
+    , HasRaiseEvent(..)
+    , HasVerif(..)
+    ) where
 
 import           RIO                     hiding ( to
                                                 , (^.)
@@ -46,6 +46,9 @@ import           Data.PUS.GlobalState
 import           Data.PUS.MissionSpecific.Definitions
                                                 ( PUSMissionSpecific )
 import           Data.PUS.TCRequest
+
+import           Verification.Commands
+
 
 
 
@@ -76,22 +79,27 @@ class HasDataModel env where
     getDataModelVar :: Getter env (TVar DataModel)
 
 -- | class for injecting TC Requests into the system
-class HasTCRqstQueue env where 
+class HasTCRqstQueue env where
   getRqstQueue :: Getter env (TBQueue [TCRequest])
 
 
 getDataModel :: (MonadIO m) => HasDataModel env => env -> m DataModel
-getDataModel env = do 
+getDataModel env = do
     liftIO $ readTVarIO (env ^. getDataModelVar)
 
-setDataModel :: (MonadIO m) => HasDataModel env => env -> DataModel -> m () 
-setDataModel env dm = do 
-    atomically $ writeTVar (env ^. getDataModelVar) dm 
+setDataModel :: (MonadIO m) => HasDataModel env => env -> DataModel -> m ()
+setDataModel env dm = do
+    atomically $ writeTVar (env ^. getDataModelVar) dm
 
 
 -- | class for raising an event to the user interfaces
 class HasRaiseEvent env where
     raiseEvent :: env -> Event -> IO ()
+
+
+-- | Class used for TC verification.
+class HasVerif env where
+  registerRequest :: env -> TCRequest -> Word16 -> Word16 -> IO ()
 
 
 -- | Class for accessing the global state
@@ -103,34 +111,41 @@ class (HasConfig env,
     HasLogFunc env,
     HasDataModel env,
     HasRaiseEvent env,
-    HasTCRqstQueue env) => HasGlobalState env
+    HasTCRqstQueue env,
+    HasVerif env) => HasGlobalState env
 
 
 
 instance HasConfig GlobalState where
-  getConfig = to glsConfig
+    getConfig = to glsConfig
 
 instance HasPUSState GlobalState where
-  appStateG = to glsState
+    appStateG = to glsState
 
 instance HasMissionSpecific GlobalState where
-  getMissionSpecific = to glsMissionSpecific
+    getMissionSpecific = to glsMissionSpecific
 
 instance HasFOPState GlobalState where
-  copStateG = to glsFOP1
-  fopStateG vcid env = glsFOP1 env HM.! vcid
+    copStateG = to glsFOP1
+    fopStateG vcid env = glsFOP1 env HM.! vcid
 
 instance HasCorrelationState GlobalState where
-  corrStateG = to glsCorrState
+    corrStateG = to glsCorrState
 
 instance HasDataModel GlobalState where
-  getDataModelVar = to glsDataModel
+    getDataModelVar = to glsDataModel
 
 instance HasRaiseEvent GlobalState where
-  raiseEvent = glsRaiseEvent
+    raiseEvent = glsRaiseEvent
 
-instance HasTCRqstQueue GlobalState where 
-  getRqstQueue = to glsTCRequestQueue
+instance HasTCRqstQueue GlobalState where
+    getRqstQueue = to glsTCRequestQueue
+
+instance HasVerif GlobalState where
+    registerRequest env rqst pktID ssc = atomically $ writeTBQueue
+        (glsVerifCommandQueue env)
+        (RegisterRequest rqst pktID ssc)
+
 
 
 instance HasGlobalState GlobalState

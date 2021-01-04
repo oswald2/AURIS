@@ -42,20 +42,28 @@ import           Protocol.ProtocolInterfaces
 
 import           GHC.Conc.Sync
 
+import           Verification.Verification
+
 
 pkt1 :: Word16 -> PUSPacket
 pkt1 ssc = PUSPacket
-  (PUSHeader 0 0 PUSTC True (APID 256) SegmentStandalone (mkSSC ssc) 0 0)
-  (PUSTCStdHeader 3 25 (mkSourceID 0) True True False True)
-  Nothing
-  (B.pack [0 .. 10])
-  True
+    (PUSHeader 0 0 PUSTC True (APID 256) SegmentStandalone (mkSSC ssc) 0 0)
+    (PUSTCStdHeader 3 25 (mkSourceID 0) True True False True)
+    Nothing
+    (B.pack [0 .. 10])
+    True
 
 rqst1 = TCRequest
-  0
-  (mkSCID 533)
-  (mkVCID 1)
-  (TCCommand 0 BD (DestNctrs (IfNctrs 1)) (TCPacket (APID 1024) (PUSType 128) (PUSSubType 1) (SourceID 0) Empty))
+    0
+    defaultVerificationAD
+    (mkSCID 533)
+    (mkVCID 1)
+    (TCCommand
+        0
+        BD
+        (DestNctrs (IfNctrs 1))
+        (TCPacket (APID 1024) (PUSType 128) (PUSSubType 1) (SourceID 0) Empty)
+    )
 
 pusPackets = RIO.map (\i -> (pkt1 i, rqst1)) [1 .. 1000]
 
@@ -65,7 +73,7 @@ pusPackets = RIO.map (\i -> (pkt1 i, rqst1)) [1 .. 1000]
 
 main :: IO ()
 main = do
-  return ()
+    return ()
     -- np <- getNumProcessors
     -- setNumCapabilities np
 
