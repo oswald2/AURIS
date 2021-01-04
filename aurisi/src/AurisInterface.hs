@@ -53,11 +53,11 @@ eventProcessor g (EventPUS (EVTelemetry (EVTMFrameGap old new))) = do
   mwLogWarn g txt
 eventProcessor g (EventPUS (EVTelemetry (EVTMRestartingVC vcid))) = do
   let txt = utf8BuilderToText $ "Restarting Virtual Channel " <> display vcid
-  mwLogWarn g txt
+  postGUIASync $ mwLogWarn g txt
 eventProcessor g (EventPUS (EVTelemetry (EVTMRejectSpillOver _))) = do
-  mwLogWarn g "TM Packet Reconstruction: Rejected Spillover"
+  postGUIASync $ mwLogWarn g "TM Packet Reconstruction: Rejected Spillover"
 eventProcessor g (EventPUS (EVTelemetry (EVTMGarbledSpillOver _))) = do
-  mwLogWarn g "TM Packet Reconstruction: Rejected Spillover"
+  postGUIASync $ mwLogWarn g "TM Packet Reconstruction: Rejected Spillover"
 eventProcessor g (EventPUS (EVTelemetry (EVTMRejectedSpillOverPkt pkt))) = do
   let txt =
         utf8BuilderToText
@@ -69,7 +69,7 @@ eventProcessor g (EventPUS (EVTelemetry (EVTMRejectedSpillOverPkt pkt))) = do
           <> display (pkt ^. pusDfh . to pusSubType)
           <> " SSC="
           <> display (pkt ^. pusHdr . pusHdrSSC)
-  mwLogWarn g txt
+  postGUIASync $ mwLogWarn g txt
 
 
 
@@ -97,6 +97,14 @@ eventProcessor g (EventPUS (EVAlarms (EVMIBLoadError txt))) = do
   postGUIASync (mwLogAlarm g txt)
 eventProcessor g (EventPUS (EVAlarms (EVMIBLoaded _))) = do
   postGUIASync (mwLogInfo g "MIB loaded successfully")
+
+
+eventProcessor g (EventPUS (EVCommanding (EVTCVerificationNew rqst verif))) = do 
+  postGUIASync (mwAddVerifRqst g rqst verif)
+eventProcessor g (EventPUS (EVCommanding (EVTCRelease rqstID releaseTime verif))) = do 
+  postGUIASync (mwReleaseRqst g rqstID releaseTime verif)
+
+
 eventProcessor _ _ = pure ()
 
 

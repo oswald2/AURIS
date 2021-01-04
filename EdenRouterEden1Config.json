@@ -38,6 +38,6 @@
         "cfgTMFrameHasCRC": true
     },
     "aurisLogLevel": {
-        "tag": "LogLevelInfo"
+        "tag": "LogLevelDebug"
     }
 }

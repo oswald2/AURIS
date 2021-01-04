@@ -41,13 +41,16 @@ import           Control.Lens.Getter
 import           Data.DataModel
 import           Data.PUS.Config
 import           Data.PUS.Events
-import           General.PUSTypes
 import           Data.PUS.GlobalState
 import           Data.PUS.MissionSpecific.Definitions
                                                 ( PUSMissionSpecific )
 import           Data.PUS.TCRequest
 
+import           General.PUSTypes
+import           General.Time
+
 import           Verification.Commands
+import           Verification.Verification
 
 
 
@@ -100,6 +103,7 @@ class HasRaiseEvent env where
 -- | Class used for TC verification.
 class HasVerif env where
   registerRequest :: env -> TCRequest -> Word16 -> Word16 -> IO ()
+  requestReleased :: env -> RequestID -> SunTime -> ReleaseStage -> IO ()
 
 
 -- | Class for accessing the global state
@@ -145,6 +149,9 @@ instance HasVerif GlobalState where
     registerRequest env rqst pktID ssc = atomically $ writeTBQueue
         (glsVerifCommandQueue env)
         (RegisterRequest rqst pktID ssc)
+    requestReleased env rqstID releaseTime status = atomically $ writeTBQueue
+        (glsVerifCommandQueue env)
+        (SetVerifR rqstID releaseTime status)
 
 
 

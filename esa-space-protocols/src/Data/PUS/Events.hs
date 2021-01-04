@@ -41,6 +41,8 @@ import           Data.TM.Parameter
 
 import           Data.DataModel
 
+import           General.Time
+
 import           Protocol.ProtocolInterfaces
 import           Verification.Verification
 
@@ -59,6 +61,7 @@ instance ToJSON Event where
 
 data EventCommanding =
   EVTCVerificationNew TCRequest Verification
+  | EVTCRelease RequestID SunTime Verification
   | EVTCVerificationUpdate RequestID Verification
     deriving (Show, Generic)
 

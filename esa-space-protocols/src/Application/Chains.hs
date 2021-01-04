@@ -412,6 +412,8 @@ runTCChain missionSpecific switcherMap = do
 -- and TC interfaces and processing chains in several threads
 runChains :: PUSMissionSpecific -> RIO GlobalState ()
 runChains missionSpecific = do
+  logDebug "runChains enters"
+
   cfg                         <- view getConfig
 
   pktQueue                    <- newTBQueueIO tmPacketQueueSize
@@ -437,6 +439,7 @@ runChains missionSpecific = do
 
   runConc (tmThreads <> tcThreads <> interfaceThreads <> adminThreads)
 
+  logDebug "runChains leaves"
  where
   edenIf pktQueue (switcherMap, ts) x = do
     (queue, newSm) <- createInterfaceChannel switcherMap (IfEden (cfgEdenID x))

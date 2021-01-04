@@ -65,6 +65,7 @@ library
   -- Modules exported by the library.
   exposed-modules:     
     GUI.TCTab
+    GUI.TCHistory
 
   -- Modules included in this library but not exported.
   -- other-modules:
@@ -78,6 +79,7 @@ library
     , containers
     , lens
     , text
+    , text-short
     , vector
     , gi-gtk
     , gi-gtk-hs
@@ -148,7 +150,7 @@ library
                      -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
                      -funbox-strict-fields -freverse-errors 
     else 
-        ghc-options: -O0 -Wall -Wcompat -Widentities -Wincomplete-record-updates
+        ghc-options: -O0 -g2 -Wall -Wcompat -Widentities -Wincomplete-record-updates
                      -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
                      -funbox-strict-fields -freverse-errors
 

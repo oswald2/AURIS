@@ -65,6 +65,10 @@ createTCTab window builder = do
                       1
                       [ SendRqst $ TCRequest
                             0
+                            "TEST-TC"
+                            "No Description"
+                            "TC-TAB"
+                            Nothing
                             defaultVerificationBD
                             (mkSCID 533)
                             (mkVCID 1)
@@ -89,6 +93,10 @@ createTCTab window builder = do
                       1
                       [ SendRqst $ TCRequest
                             0
+                            "TEST-TC"
+                            "No Description"
+                            "TC-TAB"
+                            Nothing
                             defaultVerificationBD
                             (mkSCID 533)
                             (mkVCID 1)
@@ -114,6 +122,10 @@ createTCTab window builder = do
                       1
                       [ SendRqst $ TCRequest
                             0
+                            "TEST-TC"
+                            "No Description"
+                            "TC-TAB"
+                            Nothing
                             defaultVerificationBD
                             (mkSCID 533)
                             (mkVCID 1)

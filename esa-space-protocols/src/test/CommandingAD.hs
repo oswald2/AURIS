@@ -55,6 +55,10 @@ pkt1 ssc = PUSPacket
 
 rqst1 = TCRequest
     0
+    "TEST-TC-AD"
+    "No Description"
+    "TEST"
+    Nothing
     defaultVerificationAD
     (mkSCID 533)
     (mkVCID 1)

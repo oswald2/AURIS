@@ -14,6 +14,9 @@ module Data.PUS.TCRequest
     , DirectiveDestination(..)
     , ScoeDestination(..)
     , tcReqRequestID
+    , tcReqName
+    , tcReqDescription
+    , tcReqSource
     , tcReqVerifications
     , tcReqMAPID
     , tcReqSCID
@@ -30,6 +33,7 @@ module Data.PUS.TCRequest
     , isSpaceTCRequest
     , tcReqDestination
     , tcReqCommand
+    , tcReqReleaseTime
     , _TCCommand
     , _TCDir
     ) where
@@ -40,11 +44,13 @@ import           Control.Lens                   ( makeLenses
                                                 , makePrisms
                                                 )
 
---import           Data.Binary
+import           Data.Text.Short                ( ShortText )
+
 import           Data.Aeson
 import           Codec.Serialise
 
 import           General.PUSTypes
+import           General.Time
 
 import           Data.PUS.TCDirective
 import           Data.PUS.TCPacket
@@ -185,6 +191,10 @@ instance ToJSON TCRequestBody where
 -- 'TCRequestBody'
 data TCRequest = TCRequest
     { _tcReqRequestID     :: !RequestID
+    , _tcReqName          :: !ShortText
+    , _tcReqDescription   :: !ShortText
+    , _tcReqSource        :: !ShortText
+    , _tcReqReleaseTime   :: Maybe SunTime
     , _tcReqVerifications :: !Verification
     , _tcReqSCID          :: !SCID
     , _tcReqVCID          :: !VCID

@@ -37,8 +37,12 @@ processVerification
     :: (MonadIO m, MonadReader env m, HasRaiseEvent env, HasLogFunc env)
     => TBQueue VerifCommand
     -> m ()
-processVerification queue = loop emptyState
+processVerification queue = do 
+  logDebug "Verification starts..."
+  loop emptyState
+  logDebug "Verification stopped"
   where
+    loop :: (MonadIO m, MonadReader env m, HasRaiseEvent env, HasLogFunc env) => VerifState -> m () 
     loop state = do
         cmd      <- atomically $ readTBQueue queue
         newState <- processCommand state cmd
@@ -73,7 +77,7 @@ processCommand st (RegisterDirective rqst) = do
     liftIO $ raiseEvent env (EVCommanding (EVTCVerificationNew rqst verif))
     return newSt
 
-processCommand st (SetVerifR rqstID status) = do
+processCommand st (SetVerifR rqstID releaseTime status) = do
     case HM.lookup rqstID (_stRqstMap st) of
         Just var -> do
             env <- ask
@@ -86,7 +90,7 @@ processCommand st (SetVerifR rqstID status) = do
                         (raiseEvent
                             env
                             (EVCommanding
-                                (EVTCVerificationUpdate rqstID newStatus)
+                                (EVTCRelease rqstID releaseTime newStatus)
                             )
                         )
                     )

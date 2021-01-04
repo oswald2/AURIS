@@ -11,11 +11,7 @@ This module is used for drawing the table widget. A table is associated with
 a 'ScrollingTableModel', which holds the data to be displayed
 -}
 module GUI.ScrollingTable
-  ( --setupTable
-  --, addRow
-  --, setupCallback
-  --, setTableFromModel
-  addRowSeqStore
+  ( addRowSeqStore
   , addRowSeqStoreAppend
   , setRowsSeqStore
   , setTreeViewCallback
@@ -24,16 +20,12 @@ module GUI.ScrollingTable
 where
 
 import           RIO
---import qualified RIO.Text                      as T
---import qualified RIO.Vector                    as V
---import qualified RIO.Vector.Partial            as V
 
 import           GI.Gtk                        as Gtk
 import           Data.GI.Gtk.ModelView.SeqStore
 import           Data.GI.Gtk.ModelView.CellLayout
 import           Data.GI.Base.Attributes
 
---import           GUI.Colors
 import           GUI.Definitions
 
 -- | Generic GTK function for adding a new row in a 'SeqStore a'. This is 

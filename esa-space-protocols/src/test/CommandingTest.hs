@@ -95,6 +95,10 @@ import           Verification.Verification
 rqst :: Int -> TCRequest
 rqst n = TCRequest
     0
+    "TEST-TC"
+    "No Description"
+    "TEST"
+    Nothing
     defaultVerificationBD
     (mkSCID 533)
     (mkVCID 1)
