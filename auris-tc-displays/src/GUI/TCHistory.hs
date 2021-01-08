@@ -4,11 +4,14 @@ module GUI.TCHistory
     , createTCHistory
     , tcHistAddNewRqst
     , tcHistReleaseRqst
+    , tcHistDisplayRqstVerification
     ) where
 
 import           RIO
 
-import           Control.Lens                   ( makeLenses, (?~) )
+import           Control.Lens                   ( makeLenses
+                                                , (?~)
+                                                )
 
 import           GI.Gtk                        as Gtk
 import           Data.GI.Gtk.ModelView.SeqStore
@@ -67,7 +70,7 @@ createTCHistory window builder = do
           , 250
           , \row -> [#text := textDisplay (row ^. rowRqst . tcReqDescription)]
           )
-        , ("Release Time", 120, displayReleaseTime)
+        , ("Release Time", 190, displayReleaseTime)
         , ( "Source"
           , 60
           , \row -> [#text := textDisplay (row ^. rowRqst . tcReqSource)]
@@ -78,6 +81,18 @@ createTCHistory window builder = do
         , ("T", verifColumnWidth, displayGround verGroundTransmission)
         , ("O", verifColumnWidth, displayGround verGroundOBR)
         , (" ", verifColumnWidth, displayEmptyText)
+        , ("A", verifColumnWidth, displayEmptyText)
+        , (" ", verifColumnWidth, displayEmptyText)
+        , ("S", verifColumnWidth, displayEmptyText)
+        , (" ", verifColumnWidth, displayEmptyText)
+        , ("0", verifColumnWidth, displayEmptyText)
+        , ("1", verifColumnWidth, displayEmptyText)
+        , ("2 ", verifColumnWidth, displayEmptyText)
+        , ("3", verifColumnWidth, displayEmptyText)
+        , ("4", verifColumnWidth, displayEmptyText)
+        , ("5", verifColumnWidth, displayEmptyText)
+        , (" ", verifColumnWidth, displayEmptyText)
+        , ("C", verifColumnWidth, displayEmptyText)
         ]
 
 
@@ -121,17 +136,19 @@ displayGround l row =
 
 mkRow :: TCRequest -> Verification -> Row
 mkRow rqst verif =
-    let (bgCol, fgCol) = determineColor
+    let (bgCol, fgCol) = determineColor verif
     in  Row { _rowRqst          = rqst
             , _rowVerifications = verif
             , _rowBGColor       = bgCol
             , _rowFGColor       = fgCol
             }
-  where
-    determineColor = if
-        | isFailed verif  -> (red, white)
-        | isSuccess verif -> (green, black)
-        | otherwise       -> (paleYellow, black)
+
+
+determineColor :: Verification -> (RGBA, RGBA)
+determineColor verif 
+    | isFailed verif  = (red, white)
+    | isSuccess verif = (green, black)
+    | otherwise       = (paleYellow, black)
 
 
 tcHistAddNewRqst :: TCHistory -> TCRequest -> Verification -> IO ()
@@ -147,6 +164,24 @@ tcHistReleaseRqst g rqstID releaseTime verif = do
     forM_ [0 .. len - 1] $ \i -> do
         val <- seqStoreGetValue model i
         when (rqstID == val ^. rowRqst . tcReqRequestID) $ do
-            let newVal = val & rowVerifications .~ verif
-                newVal2 = newVal & rowRqst . tcReqReleaseTime ?~ releaseTime
-            seqStoreSetValue model i newVal2
+            let newVal =
+                    val
+                        &  rowVerifications
+                        .~ verif
+                        &  rowRqst
+                        .  tcReqReleaseTime
+                        ?~ releaseTime
+            seqStoreSetValue model i newVal
+
+
+tcHistDisplayRqstVerification
+    :: TCHistory -> RequestID -> Verification -> IO ()
+tcHistDisplayRqstVerification g rqstID verif = do
+    let model = guiModel g
+    len <- seqStoreGetSize model
+    forM_ [0 .. len - 1] $ \i -> do
+        val <- seqStoreGetValue model i
+        when (rqstID == val ^. rowRqst . tcReqRequestID) $ do
+            let newVal = val &  rowVerifications .~ verif & rowBGColor .~ bg & rowFGColor .~ fg
+                (bg, fg) = determineColor verif 
+            seqStoreSetValue model i newVal

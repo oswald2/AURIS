@@ -15,6 +15,7 @@ module GUI.MainWindow
     , mwAddTMParameterDefinitions
     , mwAddVerifRqst
     , mwReleaseRqst
+    , mwDisplayRqstVerification
     , mwSetMission
     , mwMessageDisplay
     , mwFrameTab
@@ -109,6 +110,9 @@ mwAddVerifRqst :: MainWindow -> TCRequest -> Verification -> IO ()
 mwAddVerifRqst window rqst verif = do
     tcHistAddNewRqst (window ^. mwTCHistory) rqst verif
 
+mwDisplayRqstVerification :: MainWindow -> RequestID -> Verification -> IO ()
+mwDisplayRqstVerification window rqstID verif = do
+    tcHistDisplayRqstVerification (window ^. mwTCHistory) rqstID verif
 
 mwReleaseRqst :: MainWindow -> RequestID -> SunTime -> Verification -> IO ()
 mwReleaseRqst window rqstID releaseTime verif = do

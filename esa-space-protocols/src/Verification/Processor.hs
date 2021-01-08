@@ -7,6 +7,7 @@ module Verification.Processor
 
 import           RIO
 import qualified RIO.HashMap                   as HM
+import qualified RIO.Text                      as T
 
 import           Control.Lens                   ( makeLenses )
 import           Control.PUS.Classes
@@ -37,12 +38,15 @@ processVerification
     :: (MonadIO m, MonadReader env m, HasRaiseEvent env, HasLogFunc env)
     => TBQueue VerifCommand
     -> m ()
-processVerification queue = do 
-  logDebug "Verification starts..."
-  loop emptyState
-  logDebug "Verification stopped"
+processVerification queue = do
+    logDebug "Verification starts..."
+    loop emptyState
+    logDebug "Verification stopped"
   where
-    loop :: (MonadIO m, MonadReader env m, HasRaiseEvent env, HasLogFunc env) => VerifState -> m () 
+    loop
+        :: (MonadIO m, MonadReader env m, HasRaiseEvent env, HasLogFunc env)
+        => VerifState
+        -> m ()
     loop state = do
         cmd      <- atomically $ readTBQueue queue
         newState <- processCommand state cmd
@@ -101,13 +105,13 @@ processCommand st (SetVerifR rqstID releaseTime status) = do
                 <> " has not been found"
     return st
 
-processCommand st (SetVerifG rqstID status) = do 
+processCommand st a@(SetVerifG rqstID status) = do
     processGroundStage st rqstID status setGroundReceptionStage
-processCommand st (SetVerifT rqstID status) = do 
+processCommand st a@(SetVerifT rqstID status) = do
     processGroundStage st rqstID status setGroundTransmissionStage
-processCommand st (SetVerifO rqstID status) = do 
+processCommand st a@(SetVerifO rqstID status) = do
     processGroundStage st rqstID status setGroundOBRStage
-processCommand st (SetVerifGT rqstID status) = do 
+processCommand st a@(SetVerifGT rqstID status) = do
     processGroundStage st rqstID status setGroundGTStages
 
 
@@ -115,13 +119,19 @@ processCommand st (SetVerifGT rqstID status) = do
 processCommand st _ = return st
 
 
-processGroundStage :: (MonadIO m, MonadReader env m, HasRaiseEvent env, HasLogFunc env)
+processGroundStage
+    :: (MonadIO m, MonadReader env m, HasRaiseEvent env, HasLogFunc env)
     => VerifState
     -> RequestID
     -> GroundStage
     -> (GroundStage -> Verification -> Verification)
     -> m VerifState
-processGroundStage st rqstID status setStage = do     
+processGroundStage st rqstID status setStage = do
+    logDebug
+        $  "processGroundStage: RequestID: "
+        <> display rqstID
+        <> " Status: "
+        <> display status
     case HM.lookup rqstID (_stRqstMap st) of
         Just var -> do
             env <- ask
@@ -129,15 +139,9 @@ processGroundStage st rqstID status setStage = do
                 verif <- readTVar var
                 let newStatus = setStage status verif
                 writeTVar var newStatus
-                return
-                    (liftIO
-                        (raiseEvent
-                            env
-                            (EVCommanding
-                                (EVTCVerificationUpdate rqstID newStatus)
-                            )
-                        )
-                    )
+                return $ do
+                    let event = EVTCVerificationUpdate rqstID newStatus
+                    liftIO $ raiseEvent env (EVCommanding event)
         Nothing -> do
             logWarn
                 $  "Verification record for RequestID "

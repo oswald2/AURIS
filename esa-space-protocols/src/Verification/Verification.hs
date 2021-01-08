@@ -202,6 +202,8 @@ setReleaseStage status verif = verif & verRelease .~ status
 setGroundReceptionStage :: GroundStage -> Verification -> Verification
 setGroundReceptionStage StGFail verif =
     verif
+        &  verGroundReception
+        .~ StGFail
         &  verGroundTransmission
         .~ StGDisabled
         &  verGroundOBR
@@ -212,7 +214,12 @@ setGroundReceptionStage status verif = verif & verGroundReception .~ status
 
 setGroundTransmissionStage :: GroundStage -> Verification -> Verification
 setGroundTransmissionStage StGFail verif =
-    verif & verGroundOBR .~ StGDisabled & setAllTMStages StTmDisabled
+    verif
+        &  verGroundTransmission
+        .~ StGFail
+        &  verGroundOBR
+        .~ StGDisabled
+        &  setAllTMStages StTmDisabled
 setGroundTransmissionStage StGSuccess verif =
     let newVerif = if verif ^. verGroundReception /= StGSuccess
             then verif & verGroundReception .~ StGAssumed
@@ -222,7 +229,8 @@ setGroundTransmissionStage status verif =
     verif & verGroundTransmission .~ status
 
 setGroundOBRStage :: GroundStage -> Verification -> Verification
-setGroundOBRStage StGFail verif = verif & setAllTMStages StTmDisabled
+setGroundOBRStage StGFail verif =
+    verif & verGroundOBR .~ StGFail & setAllTMStages StTmDisabled
 setGroundOBRStage StGSuccess verif =
     let verif1 = if verif ^. verGroundReception /= StGSuccess
             then verif & verGroundReception .~ StGAssumed
@@ -235,7 +243,14 @@ setGroundOBRStage status verif = verif & verGroundOBR .~ status
 
 setGroundGTStages :: GroundStage -> Verification -> Verification
 setGroundGTStages StGFail verif =
-    verif & verGroundOBR .~ StGDisabled & setAllTMStages StTmDisabled
+    verif
+        &  verGroundReception
+        .~ StGFail
+        &  verGroundTransmission
+        .~ StGFail
+        &  verGroundOBR
+        .~ StGDisabled
+        &  setAllTMStages StTmDisabled
 setGroundGTStages status verif =
     verif & verGroundReception .~ status & verGroundTransmission .~ status
 
@@ -267,49 +282,35 @@ setAllTMStages status verif =
 
 isFailed :: Verification -> Bool
 isFailed Verification {..} =
-    _verRelease
-        == StRFail
-        || _verGroundReception
-        == StGFail
-        || _verGroundTransmission
-        == StGFail
-        || _verGroundOBR
-        == StGFail
-        || _verTMAcceptance
-        == StTmFail
-        || _verTMStart
-        == StTmFail
-        || _verTMComplete
-        == StTmFail
-        || V.any (== StTmFail) _verTMProgress
+    (_verRelease== StRFail)
+    || (_verGroundReception == StGFail)
+    || (_verGroundTransmission == StGFail)
+    || (_verGroundOBR == StGFail)
+    || (_verTMAcceptance == StTmFail)
+    || (_verTMStart == StTmFail)
+    || (_verTMComplete == StTmFail)
+    || V.any (== StTmFail) _verTMProgress
 
 
 isTMExpected :: Verification -> Bool
 isTMExpected Verification {..} =
-    _verTMAcceptance
-        == StTmExpected
-        || _verTMStart
-        == StTmExpected
-        || _verTMComplete
-        == StTmExpected
+    (_verTMAcceptance == StTmExpected)
+    || (_verTMStart == StTmExpected)
+    || (_verTMComplete == StTmExpected)
   -- we don't check for the progess, because for progess we need at 
   -- least a completion anyway
 
 
 isGroundSuccess :: Verification -> Bool
 isGroundSuccess Verification {..} =
-    _verGroundOBR
-        == StGSuccess
-        || _verGroundOBR
-        == StGDisabled
-        && _verGroundTransmission
-        == StGSuccess
+    (_verGroundOBR == StGSuccess)
+        || (_verGroundOBR == StGDisabled)
+        && (_verGroundTransmission == StGSuccess)
 
 
 
 isSuccess :: Verification -> Bool
 isSuccess verif@Verification {..} =
-    _verTMComplete
-        == StTmSuccess
+    (_verTMComplete == StTmSuccess)
         || not (isTMExpected verif)
         && isGroundSuccess verif

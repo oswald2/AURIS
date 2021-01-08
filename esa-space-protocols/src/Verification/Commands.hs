@@ -23,3 +23,4 @@ data VerifCommand =
   | SetVerifS !Word16 !Word16 !TMStage
   | SetVerifC !Word16 !Word16 !TMStage
   | SetVerifP !Natural !Word16 !Word16 !TMStage
+  deriving(Read, Show, Generic)

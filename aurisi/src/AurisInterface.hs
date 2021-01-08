@@ -103,7 +103,8 @@ eventProcessor g (EventPUS (EVCommanding (EVTCVerificationNew rqst verif))) = do
   postGUIASync (mwAddVerifRqst g rqst verif)
 eventProcessor g (EventPUS (EVCommanding (EVTCRelease rqstID releaseTime verif))) = do 
   postGUIASync (mwReleaseRqst g rqstID releaseTime verif)
-
+eventProcessor g (EventPUS (EVCommanding (EVTCVerificationUpdate rqst verif))) = do 
+  postGUIASync (mwDisplayRqstVerification g rqst verif)
 
 eventProcessor _ _ = pure ()
 
