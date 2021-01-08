@@ -7,7 +7,6 @@ module Verification.Processor
 
 import           RIO
 import qualified RIO.HashMap                   as HM
-import qualified RIO.Text                      as T
 
 import           Control.Lens                   ( makeLenses )
 import           Control.PUS.Classes
@@ -105,13 +104,13 @@ processCommand st (SetVerifR rqstID releaseTime status) = do
                 <> " has not been found"
     return st
 
-processCommand st a@(SetVerifG rqstID status) = do
+processCommand st (SetVerifG rqstID status) = do
     processGroundStage st rqstID status setGroundReceptionStage
-processCommand st a@(SetVerifT rqstID status) = do
+processCommand st (SetVerifT rqstID status) = do
     processGroundStage st rqstID status setGroundTransmissionStage
-processCommand st a@(SetVerifO rqstID status) = do
+processCommand st (SetVerifO rqstID status) = do
     processGroundStage st rqstID status setGroundOBRStage
-processCommand st a@(SetVerifGT rqstID status) = do
+processCommand st (SetVerifGT rqstID status) = do
     processGroundStage st rqstID status setGroundGTStages
 
 
