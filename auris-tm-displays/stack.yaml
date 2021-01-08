@@ -1,5 +1,5 @@
 flags: {}
-resolver: nightly-2021-01-05
+resolver: lts-16.28
 extra-deps:
 allow-newer: true
 
