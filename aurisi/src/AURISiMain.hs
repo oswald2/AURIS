@@ -137,6 +137,8 @@ main = do
         void $ GI.timeoutAddSeconds GI.PRIORITY_DEFAULT
                                     1
                                     (mwTimerLabelCB mainWindow)
+        
+        Gtk.setCurrentThreadAsGUIThread
         Gtk.main
 
 

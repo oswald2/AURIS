@@ -1,0 +1,29 @@
+oswald@aldebaran:~/Projects/Haskell/AURIS$ AURISi --config EdenRouterEden1Config.json
+Loading configuration from file EdenRouterEden1Config.json
+Theme directory is existing. Not extracting theme.
+2021-01-08 14:35:32.602860: [info] Loading Data Model...
+@(src/AurisProcessing.hs:57:13)
+2021-01-08 14:35:32.603609: [debug] calling readDataModel...
+@(src/Application/DataModel.hs:55:7)
+2021-01-08 14:35:32.705664: [info] Successfully loaded data model
+@(src/Application/DataModel.hs:66:11)
+2021-01-08 14:35:32.705803: [info] Initialising User Interface with Data Model...
+@(src/AurisProcessing.hs:69:13)
+2021-01-08 14:35:32.705851: [info] Starting TM and TC chains...
+@(src/AurisProcessing.hs:72:13)
+2021-01-08 14:35:32.705910: [debug] runChains enters
+@(src/Application/Chains.hs:415:3)
+2021-01-08 14:35:32.705996: [debug] Starting CoreThread...
+@(src/Interface/CoreProcessor.hs:38:3)
+2021-01-08 14:35:32.706104: [debug] Verification starts...
+@(src/Verification/Processor.hs:41:3)
+2021-01-08 14:35:32.706430: [debug] runEdenChain entering
+@(src/Application/Chains.hs:297:3)
+2021-01-08 14:35:32.706496: [debug] runTMCain entering
+@(src/Application/Chains.hs:352:3)
+2021-01-08 14:35:32.706601: [debug] runTCChain entering
+@(src/Application/Chains.hs:383:3)
+AURISi: internal error: ARR_WORDS object (0x42012a6aea) entered!
+    (GHC version 8.10.3 for x86_64_unknown_linux)
+    Please report this as a GHC bug:  https://www.haskell.org/ghc/reportabug
+Aborted (core dumped)

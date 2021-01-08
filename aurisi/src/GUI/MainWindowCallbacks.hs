@@ -55,20 +55,3 @@ importMIB gui interface = do
         callInterface interface actionImportMIB fn serializedPath
     _ -> return ()
 
-
-  -- chooser <- nativeFileChooserNew (Just BrowseDirectory)
-  -- setTitle chooser "Import MIB, select directory..."
-  -- result <- showWidget chooser
-  -- case result of
-  --   NativeFileChooserPicked -> do
-  --     dir' <- getFilename chooser
-  --     case dir' of
-  --       Nothing  -> return ()
-  --       Just dir -> do
-  --         home <- liftIO getHomeDirectory
-  --         let serializedPath = home </> configPath </> defaultMIBFile
-  --         callInterface interface actionImportMIB (T.unpack dir) serializedPath
-  --   NativeFileChooserError -> do
-  --     msg <- getErrmsg chooser
-  --     forM_ msg flAlert
-  --   _ -> return ()

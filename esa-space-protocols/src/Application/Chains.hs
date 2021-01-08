@@ -349,7 +349,7 @@ runEdenChain cfg missionSpecific pktQueue edenQueue = do
 runTMChain
   :: PUSMissionSpecific -> TBQueue ExtractedPacket -> RIO GlobalState ()
 runTMChain missionSpecific pktQueue = do
-  logDebug "runTMCain entering"
+  logDebug "runTMChain entering"
 
   cfg <- view getConfig
   let nctrsCfg = cfgNCTRS cfg
@@ -419,34 +419,37 @@ runChains missionSpecific = do
   pktQueue                    <- newTBQueueIO tmPacketQueueSize
 
   -- create the EDEN interface threads and the switcher map 
-  (switcherMap1, edenThreads) <- foldM (edenIf pktQueue)
-                                       (HM.empty, mempty)
-                                       (cfgEDEN cfg)
+  -- (switcherMap1, edenThreads) <- foldM (edenIf pktQueue)
+  --                                      (HM.empty, mempty)
+  --                                      (cfgEDEN cfg)
+  -- (switcherMap, interfaceThreads) <- foldM (edenIf pktQueue)
+  --                                      (HM.empty, mempty)
+  --                                      (cfgEDEN cfg)
 
   -- create the interface threads and switcher map for the NCTRS interfaces
-  (switcherMap2, nctrsThreads) <- foldM nctrsIf
-                                        (switcherMap1, edenThreads)
-                                        (cfgNCTRS cfg)
+  -- (switcherMap2, nctrsThreads) <- foldM nctrsIf
+  --                                       (switcherMap1, edenThreads)
+  --                                       (cfgNCTRS cfg)
 
   -- create the interface threads and switcher map for the C&C interfaces
-  (switcherMap, interfaceThreads) <- foldM cncIf
-                                           (switcherMap2, nctrsThreads)
-                                           (cfgCnC cfg)
+  -- (switcherMap, interfaceThreads) <- foldM cncIf
+  --                                          (switcherMap2, nctrsThreads)
+  --                                          (cfgCnC cfg)
 
   let tmThreads    = conc $ runTMChain missionSpecific pktQueue
-      tcThreads    = conc $ runTCChain missionSpecific switcherMap
-      adminThreads = mconcat $ map (conc . runAdminNctrsChain) (cfgNCTRS cfg)
+      --tcThreads    = conc $ runTCChain missionSpecific switcherMap
+      --adminThreads = mconcat $ map (conc . runAdminNctrsChain) (cfgNCTRS cfg)
 
-  runConc (tmThreads <> tcThreads <> interfaceThreads <> adminThreads)
+  runConc (tmThreads {-<> tcThreads <> interfaceThreads <> adminThreads-})
 
   logDebug "runChains leaves"
- where
-  edenIf pktQueue (switcherMap, ts) x = do
-    (queue, newSm) <- createInterfaceChannel switcherMap (IfEden (cfgEdenID x))
-    return (newSm, ts <> conc (runEdenChain x missionSpecific pktQueue queue))
-  nctrsIf (sm, ts) x = do
-    (queue, newSm) <- createInterfaceChannel sm (IfNctrs (cfgNctrsID x))
-    return (newSm, ts <> conc (runTCNctrsChain x queue))
-  cncIf (sm, ts) x = do
-    (queue, newSm) <- createInterfaceChannel sm (IfCnc (cfgCncID x))
-    return (newSm, ts <> conc (runTCCnCChain x missionSpecific queue))
+ --where
+  -- edenIf pktQueue (switcherMap, ts) x = do
+  --   (queue, newSm) <- createInterfaceChannel switcherMap (IfEden (cfgEdenID x))
+  --   return (newSm, ts <> conc (runEdenChain x missionSpecific pktQueue queue))
+  -- nctrsIf (sm, ts) x = do
+  --   (queue, newSm) <- createInterfaceChannel sm (IfNctrs (cfgNctrsID x))
+  --   return (newSm, ts <> conc (runTCNctrsChain x queue))
+  -- cncIf (sm, ts) x = do
+  --   (queue, newSm) <- createInterfaceChannel sm (IfCnc (cfgCncID x))
+  --   return (newSm, ts <> conc (runTCCnCChain x missionSpecific queue))
