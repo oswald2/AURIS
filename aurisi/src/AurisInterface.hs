@@ -50,7 +50,7 @@ eventProcessor g (EventPUS (EVTelemetry (EVTMFrameGap old new))) = do
           <> display old
           <> ", new VC FC: "
           <> display new
-  mwLogWarn g txt
+  postGUIASync $ mwLogWarn g txt
 eventProcessor g (EventPUS (EVTelemetry (EVTMRestartingVC vcid))) = do
   let txt = utf8BuilderToText $ "Restarting Virtual Channel " <> display vcid
   postGUIASync $ mwLogWarn g txt

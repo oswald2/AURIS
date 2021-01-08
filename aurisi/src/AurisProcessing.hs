@@ -24,6 +24,7 @@ import           System.FilePath
 
 import           GUI.MessageDisplay             ( messageAreaLogFunc )
 import           GUI.MainWindow
+import           Data.GI.Gtk.Threading          ( postGUIASync )
 
 import           Application.Chains
 import           Application.DataModel
@@ -66,7 +67,7 @@ runProcessing cfg missionSpecific mibPath interface mainWindow coreQueue = do
             setDataModel env model
 
             logInfo "Initialising User Interface with Data Model..."
-            liftIO $ mwInitialiseDataModel mainWindow model
+            liftIO $ postGUIASync $ mwInitialiseDataModel mainWindow model
 
             logInfo "Starting TM and TC chains..."
 
