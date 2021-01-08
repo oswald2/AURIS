@@ -69,7 +69,7 @@ createTCTab window builder = do
                             "No Description"
                             "TC-TAB"
                             Nothing
-                            defaultVerificationBD
+                            defaultVerificationSCOE
                             (mkSCID 533)
                             (mkVCID 1)
                             (TCCommand
@@ -97,7 +97,7 @@ createTCTab window builder = do
                             "No Description"
                             "TC-TAB"
                             Nothing
-                            defaultVerificationBD
+                            defaultVerificationSCOE
                             (mkSCID 533)
                             (mkVCID 1)
                             (TCCommand
@@ -126,7 +126,7 @@ createTCTab window builder = do
                             "No Description"
                             "TC-TAB"
                             Nothing
-                            defaultVerificationBD
+                            defaultVerificationSCOE
                             (mkSCID 533)
                             (mkVCID 1)
                             (TCScoeCommand

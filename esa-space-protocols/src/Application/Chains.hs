@@ -1,16 +1,15 @@
 module Application.Chains
-  ( runChains
-  , runTMChain
-  , runTMNctrsChain
-  , runTMCnCChain
-  , runTCCnCChain
-  , runEdenChain
-  , runTCChain
-  , NctrsID(..)
-  , CncID(..)
-  , EdenID(..)
-  )
-where
+    ( runChains
+    , runTMChain
+    , runTMNctrsChain
+    , runTMCnCChain
+    , runTCCnCChain
+    , runEdenChain
+    , runTCChain
+    , NctrsID(..)
+    , CncID(..)
+    , EdenID(..)
+    ) where
 
 import           RIO
 import qualified RIO.HashMap                   as HM
@@ -55,7 +54,7 @@ import           Protocol.NCTRS                 ( receiveTmNcduC
                                                 , encodeTcNcduC
                                                 , receiveAdminNcduC
                                                 )
-import           Protocol.CnC                 
+import           Protocol.CnC
 import           Protocol.EDEN                  ( encodeEdenMessageC
                                                 , receiveEdenMessageC
                                                 )
@@ -78,209 +77,255 @@ tmPacketQueueSize = 5000
 
 runTMNctrsChain :: NctrsConfig -> TBQueue ExtractedPacket -> RIO GlobalState ()
 runTMNctrsChain cfg pktQueue = do
-  logDebug "runTMNctrsChain entering"
+    logDebug "runTMNctrsChain entering"
 
-  (_thread, vcMap) <- setupFrameSwitcher (IfNctrs (cfgNctrsID cfg)) pktQueue
+    (_thread, vcMap) <- setupFrameSwitcher (IfNctrs (cfgNctrsID cfg)) pktQueue
 
-  let chain =
-        receiveTmNcduC .| ncduToTMFrameC .| storeFrameC .| tmFrameSwitchVC vcMap
+    let chain =
+            receiveTmNcduC
+                .| ncduToTMFrameC
+                .| storeFrameC
+                .| tmFrameSwitchVC vcMap
 
-  runGeneralTCPReconnectClient
-    (clientSettings (fromIntegral (cfgNctrsPortTM cfg))
-                    (encodeUtf8 (cfgNctrsHost cfg))
-    )
-    200000
-    (tmClient chain)
-
-  logDebug "runTMNctrsChain leaving"
- where
-  tmClient chain app = do
-    env <- ask
-    liftIO $ raiseEvent
-      env
-      (EVAlarms (EVEConnection (IfNctrs (cfgNctrsID cfg)) ConnTM Connected))
-    res <- try $ void $ runConduitRes (appSource app .| chain)
-
-    liftIO
-      (raiseEvent
-        env
-        (EVAlarms (EVEConnection (IfNctrs (cfgNctrsID cfg)) ConnTM Disconnected)
+    runGeneralTCPReconnectClient
+        (clientSettings (fromIntegral (cfgNctrsPortTM cfg))
+                        (encodeUtf8 (cfgNctrsHost cfg))
         )
-      )
-    case res of
-      Left (e :: SomeException) -> do
-        logError $ display @Text "NCTRS Interface Exception: " <> displayShow e
-        throwM e
-      Right _ -> return ()
+        200000
+        (tmClient chain)
+
+    logDebug "runTMNctrsChain leaving"
+  where
+    tmClient chain app = do
+        env <- ask
+        liftIO $ raiseEvent
+            env
+            (EVAlarms
+                (EVEConnection (IfNctrs (cfgNctrsID cfg)) ConnTM Connected)
+            )
+        res <- try $ void $ runConduitRes (appSource app .| chain)
+
+        liftIO
+            (raiseEvent
+                env
+                (EVAlarms
+                    (EVEConnection (IfNctrs (cfgNctrsID cfg))
+                                   ConnTM
+                                   Disconnected
+                    )
+                )
+            )
+        case res of
+            Left (e :: SomeException) -> do
+                logError
+                    $  display @Text "NCTRS Interface Exception: "
+                    <> displayShow e
+                throwM e
+            Right _ -> return ()
 
 
 
 runTCNctrsChain :: NctrsConfig -> ProtocolQueue -> RIO GlobalState ()
 runTCNctrsChain cfg cltuQueue = do
-  logDebug "runTCNctrsChain entering"
+    logDebug "runTCNctrsChain entering"
 
-  let chain = receiveCltuChannelC cltuQueue .| cltuToNcduC .| encodeTcNcduC
+    let chain = receiveCltuChannelC cltuQueue .| cltuToNcduC .| encodeTcNcduC
 
-  runGeneralTCPReconnectClient
-    (clientSettings (fromIntegral (cfgNctrsPortTC cfg))
-                    (encodeUtf8 (cfgNctrsHost cfg))
-    )
-    200000
-    (tcClient chain)
-
-  logDebug "runTCNctrsChain leaving"
- where
-  tcClient chain app = do
-    env <- ask
-    liftIO $ raiseEvent
-      env
-      (EVAlarms (EVEConnection (IfNctrs (cfgNctrsID cfg)) ConnTC Connected))
-    res <- try $ void $ runConduitRes (chain .| appSink app)
-
-    liftIO
-      (raiseEvent
-        env
-        (EVAlarms (EVEConnection (IfNctrs (cfgNctrsID cfg)) ConnTC Disconnected)
+    runGeneralTCPReconnectClient
+        (clientSettings (fromIntegral (cfgNctrsPortTC cfg))
+                        (encodeUtf8 (cfgNctrsHost cfg))
         )
-      )
-    case res of
-      Left (e :: SomeException) -> do
-        logError $ display @Text "NCTRS Interface Exception: " <> displayShow e
-        throwM e
-      Right _ -> return ()
+        200000
+        (tcClient chain)
+
+    logDebug "runTCNctrsChain leaving"
+  where
+    tcClient chain app = do
+        env <- ask
+        liftIO $ raiseEvent
+            env
+            (EVAlarms
+                (EVEConnection (IfNctrs (cfgNctrsID cfg)) ConnTC Connected)
+            )
+        res <- try $ void $ runConduitRes (chain .| appSink app)
+
+        liftIO
+            (raiseEvent
+                env
+                (EVAlarms
+                    (EVEConnection (IfNctrs (cfgNctrsID cfg))
+                                   ConnTC
+                                   Disconnected
+                    )
+                )
+            )
+        case res of
+            Left (e :: SomeException) -> do
+                logError
+                    $  display @Text "NCTRS Interface Exception: "
+                    <> displayShow e
+                throwM e
+            Right _ -> return ()
 
 
 runAdminNctrsChain :: NctrsConfig -> RIO GlobalState ()
 runAdminNctrsChain cfg = do
-  logDebug "runAdminNctrsChain entering"
+    logDebug "runAdminNctrsChain entering"
 
-  let chain = receiveAdminNcduC .| printC
+    let chain = receiveAdminNcduC .| printC
 
-  runGeneralTCPReconnectClient
-    (clientSettings (fromIntegral (cfgNctrsPortADM cfg))
-                    (encodeUtf8 (cfgNctrsHost cfg))
-    )
-    200000
-    (tmClient chain)
-
-  logDebug "runAdminNctrsChain leaving"
- where
-  tmClient chain app = do
-    env <- ask
-    liftIO $ raiseEvent
-      env
-      (EVAlarms (EVEConnection (IfNctrs (cfgNctrsID cfg)) ConnAdmin Connected))
-    res <- try $ void $ runConduitRes (appSource app .| chain)
-
-    liftIO
-      (raiseEvent
-        env
-        (EVAlarms
-          (EVEConnection (IfNctrs (cfgNctrsID cfg)) ConnAdmin Disconnected)
+    runGeneralTCPReconnectClient
+        (clientSettings (fromIntegral (cfgNctrsPortADM cfg))
+                        (encodeUtf8 (cfgNctrsHost cfg))
         )
-      )
-    case res of
-      Left (e :: SomeException) -> do
-        logError $ display @Text "NCTRS Interface Exception: " <> displayShow e
-        throwM e
-      Right _ -> return ()
+        200000
+        (tmClient chain)
+
+    logDebug "runAdminNctrsChain leaving"
+  where
+    tmClient chain app = do
+        env <- ask
+        liftIO $ raiseEvent
+            env
+            (EVAlarms
+                (EVEConnection (IfNctrs (cfgNctrsID cfg)) ConnAdmin Connected)
+            )
+        res <- try $ void $ runConduitRes (appSource app .| chain)
+
+        liftIO
+            (raiseEvent
+                env
+                (EVAlarms
+                    (EVEConnection (IfNctrs (cfgNctrsID cfg))
+                                   ConnAdmin
+                                   Disconnected
+                    )
+                )
+            )
+        case res of
+            Left (e :: SomeException) -> do
+                logError
+                    $  display @Text "NCTRS Interface Exception: "
+                    <> displayShow e
+                throwM e
+            Right _ -> return ()
 
 
 
 
 runTMCnCChain
-  :: CncConfig
-  -> PUSMissionSpecific
-  -> TBQueue ExtractedPacket
-  -> RIO GlobalState ()
+    :: CncConfig
+    -> PUSMissionSpecific
+    -> TBQueue ExtractedPacket
+    -> RIO GlobalState ()
 runTMCnCChain cfg missionSpecific pktQueue = do
-  logDebug "runTMCnCChain entering"
+    logDebug "runTMCnCChain entering"
 
-  let chain = receiveCnCC missionSpecific (IfCnc (cfgCncID cfg))
-        .| cncToTMPacket (IfCnc (cfgCncID cfg)) Nothing .| sinkTBQueue pktQueue
+    let chain =
+            receiveCnCC missionSpecific (IfCnc (cfgCncID cfg))
+                .| cncToTMPacket (IfCnc (cfgCncID cfg)) Nothing
+                .| sinkTBQueue pktQueue
 
-  runGeneralTCPReconnectClient
-    (clientSettings (fromIntegral (cfgCncPortTM cfg))
-                    (encodeUtf8 (cfgCncHost cfg))
-    )
-    200000
-    (tmClient chain)
+    runGeneralTCPReconnectClient
+        (clientSettings (fromIntegral (cfgCncPortTM cfg))
+                        (encodeUtf8 (cfgCncHost cfg))
+        )
+        200000
+        (tmClient chain)
 
-  logDebug "runTMCnCChain leaving"
- where
-  tmClient chain app = do
-    env <- ask
-    liftIO $ raiseEvent
-      env
-      (EVAlarms (EVEConnection (IfCnc (cfgCncID cfg)) ConnTM Connected))
-    
-    res <- try $ void $ runConduitRes (appSource app .| chain)
+    logDebug "runTMCnCChain leaving"
+  where
+    tmClient chain app = do
+        env <- ask
+        liftIO $ raiseEvent
+            env
+            (EVAlarms (EVEConnection (IfCnc (cfgCncID cfg)) ConnTM Connected))
 
-    liftIO
-      (raiseEvent
-        env
-        (EVAlarms (EVEConnection (IfCnc (cfgCncID cfg)) ConnTM Disconnected))
-      )
-    case res of
-      Left (e :: SomeException) -> do
-        logError $ display @Text "C&C TM Interface Exception: " <> displayShow e
-        throwM e
-      Right _ -> return ()
+        res <- try $ void $ runConduitRes (appSource app .| chain)
+
+        liftIO
+            (raiseEvent
+                env
+                (EVAlarms
+                    (EVEConnection (IfCnc (cfgCncID cfg)) ConnTM Disconnected)
+                )
+            )
+        case res of
+            Left (e :: SomeException) -> do
+                logError
+                    $  display @Text "C&C TM Interface Exception: "
+                    <> displayShow e
+                throwM e
+            Right _ -> return ()
 
 
-runTCCnCChain :: CncConfig -> PUSMissionSpecific -> ProtocolQueue -> RIO GlobalState ()
+runTCCnCChain
+    :: CncConfig -> PUSMissionSpecific -> ProtocolQueue -> RIO GlobalState ()
 runTCCnCChain cfg missionSpecific duQueue = do
-  logDebug "runTCCnCChain entering"
+    logDebug "runTCCnCChain entering"
 
-  let chain = receivePktChannelC duQueue .| sendTCCncC
-      ackChain = receiveCnCC missionSpecific (IfCnc (cfgCncID cfg)) .| cncProcessAcks
+    let chain = receivePktChannelC duQueue .| sendTCCncC
+        ackChain =
+            receiveCnCC missionSpecific (IfCnc (cfgCncID cfg)) .| cncProcessAcks
 
-  logDebug $ "C&C TC: connecting to: " <> display (cfgCncHost cfg) <> " " <> display (cfgCncPortTC cfg)
+    logDebug
+        $  "C&C TC: connecting to: "
+        <> display (cfgCncHost cfg)
+        <> " "
+        <> display (cfgCncPortTC cfg)
 
-  runGeneralTCPReconnectClient
-    (clientSettings (fromIntegral (cfgCncPortTC cfg))
-                    (encodeUtf8 (cfgCncHost cfg))
-    )
-    200000
-    (\app -> race_ (tcClient chain app) (tcAckClient ackChain app))
+    runGeneralTCPReconnectClient
+        (clientSettings (fromIntegral (cfgCncPortTC cfg))
+                        (encodeUtf8 (cfgCncHost cfg))
+        )
+        200000
+        (\app -> race_ (tcClient chain app) (tcAckClient ackChain app))
 
-  logDebug "runTCCnCChain leaving"
- where
-  tcClient chain app = do
-    env <- ask
-    liftIO $ raiseEvent
-      env
-      (EVAlarms (EVEConnection (IfCnc (cfgCncID cfg)) ConnTC Connected))
+    logDebug "runTCCnCChain leaving"
+  where
+    tcClient chain app = do
+        env <- ask
+        liftIO $ raiseEvent
+            env
+            (EVAlarms (EVEConnection (IfCnc (cfgCncID cfg)) ConnTC Connected))
 
-    res <- try $ void $ runConduitRes (chain .| appSink app)
+        res <- try $ void $ runConduitRes (chain .| appSink app)
 
-    liftIO
-      (raiseEvent
-        env
-        (EVAlarms (EVEConnection (IfCnc (cfgCncID cfg)) ConnTC Disconnected))
-      )
-    case res of
-      Left (e :: SomeException) -> do
-        logError $ display @Text "C&C TC Interface Exception: " <> displayShow e
-        throwM e
-      Right _ -> return ()
-  tcAckClient chain app = do
-    env <- ask
-    logDebug "C&C TC Ack reader thread started"
+        liftIO
+            (raiseEvent
+                env
+                (EVAlarms
+                    (EVEConnection (IfCnc (cfgCncID cfg)) ConnTC Disconnected)
+                )
+            )
+        case res of
+            Left (e :: SomeException) -> do
+                logError
+                    $  display @Text "C&C TC Interface Exception: "
+                    <> displayShow e
+                throwM e
+            Right _ -> return ()
+    tcAckClient chain app = do
+        env <- ask
+        logDebug "C&C TC Ack reader thread started"
 
-    res <- try $ void $ runConduitRes (appSource app .| chain )
+        res <- try $ void $ runConduitRes (appSource app .| chain)
 
-    liftIO
-      (raiseEvent
-        env
-        (EVAlarms (EVEConnection (IfCnc (cfgCncID cfg)) ConnTC Disconnected))
-      )
-    case res of
-      Left (e :: SomeException) -> do
-        logError $ display @Text "C&C TC Interface Exception: " <> displayShow e
-        throwM e
-      Right _ -> return ()
-    logDebug "C&C TC Ack reader thread leaves"
+        liftIO
+            (raiseEvent
+                env
+                (EVAlarms
+                    (EVEConnection (IfCnc (cfgCncID cfg)) ConnTC Disconnected)
+                )
+            )
+        case res of
+            Left (e :: SomeException) -> do
+                logError
+                    $  display @Text "C&C TC Interface Exception: "
+                    <> displayShow e
+                throwM e
+            Right _ -> return ()
+        logDebug "C&C TC Ack reader thread leaves"
 
 
 
@@ -288,123 +333,132 @@ runTCCnCChain cfg missionSpecific duQueue = do
 
 
 runEdenChain
-  :: EDENConfig
-  -> PUSMissionSpecific
-  -> TBQueue ExtractedPacket
-  -> ProtocolQueue
-  -> RIO GlobalState ()
+    :: EDENConfig
+    -> PUSMissionSpecific
+    -> TBQueue ExtractedPacket
+    -> ProtocolQueue
+    -> RIO GlobalState ()
 runEdenChain cfg missionSpecific pktQueue edenQueue = do
-  logDebug "runEdenChain entering"
+    logDebug "runEdenChain entering"
 
 
-  void $ runGeneralTCPReconnectClient
-    (clientSettings (fromIntegral (cfgEdenPort cfg))
-                    (encodeUtf8 (cfgEdenHost cfg))
-    )
-    200000
-    edenClient
-
-  logDebug "runEdenChain leaving"
- where
-  edenClient app = do
-    env <- ask
-    liftIO $ raiseEvent
-      env
-      (EVAlarms (EVEConnection (IfEden (cfgEdenID cfg)) ConnSingle Connected))
-
-    res <- try $ race_ (tmChain app) (tcChain app)
-
-    liftIO
-      (raiseEvent
-        env
-        (EVAlarms
-          (EVEConnection (IfEden (cfgEdenID cfg)) ConnSingle Disconnected)
+    void $ runGeneralTCPReconnectClient
+        (clientSettings (fromIntegral (cfgEdenPort cfg))
+                        (encodeUtf8 (cfgEdenHost cfg))
         )
-      )
-    case res of
-      Left (e :: SomeException) -> do
-        logError $ display @Text "EDEN Interface Exception: " <> displayShow e
-        throwM e
-      Right _ -> return ()
+        200000
+        edenClient
 
-  tmChain app = do
-    let chain =
-          appSource app
-            .| receiveEdenMessageC
-            .| edenMessageProcessorC missionSpecific (IfEden (cfgEdenID cfg))
-            .| sinkTBQueue pktQueue
-    runConduitRes chain
+    logDebug "runEdenChain leaving"
+  where
+    edenClient app = do
+        env <- ask
+        liftIO $ raiseEvent
+            env
+            (EVAlarms
+                (EVEConnection (IfEden (cfgEdenID cfg)) ConnSingle Connected)
+            )
 
-  tcChain app = do
-    let chain =
-          receiveQueueMsg edenQueue
-            .| createEdenMsgC
-            .| encodeEdenMessageC
-            .| appSink app
-    runConduitRes chain
+        res <- try $ race_ (tmChain app) (tcChain app)
+
+        liftIO
+            (raiseEvent
+                env
+                (EVAlarms
+                    (EVEConnection (IfEden (cfgEdenID cfg))
+                                   ConnSingle
+                                   Disconnected
+                    )
+                )
+            )
+        case res of
+            Left (e :: SomeException) -> do
+                logError
+                    $  display @Text "EDEN Interface Exception: "
+                    <> displayShow e
+                throwM e
+            Right _ -> return ()
+
+    tmChain app = do
+        let chain =
+                appSource app
+                    .| receiveEdenMessageC
+                    .| edenMessageProcessorC missionSpecific
+                                             (IfEden (cfgEdenID cfg))
+                    .| sinkTBQueue pktQueue
+        runConduitRes chain
+
+    tcChain app = do
+        let chain =
+                receiveQueueMsg edenQueue
+                    .| createEdenMsgC
+                    .| encodeEdenMessageC
+                    .| appSink app
+        runConduitRes chain
 
 
 
 
 runTMChain
-  :: PUSMissionSpecific -> TBQueue ExtractedPacket -> RIO GlobalState ()
+    :: PUSMissionSpecific -> TBQueue ExtractedPacket -> RIO GlobalState ()
 runTMChain missionSpecific pktQueue = do
-  logDebug "runTMChain entering"
+    logDebug "runTMChain entering"
 
-  cfg <- view getConfig
-  let nctrsCfg = cfgNCTRS cfg
-      cncCfg   = cfgCnC cfg
+    cfg <- view getConfig
+    let nctrsCfg = cfgNCTRS cfg
+        cncCfg   = cfgCnC cfg
 
-  let chain =
-        sourceTBQueue pktQueue
-          .| packetProcessorC
-          .| raiseTMPacketC
-          .| raiseTMParameterC
-          .| sinkNull
+    let chain =
+            sourceTBQueue pktQueue
+                .| packetProcessorC
+                .| raiseTMPacketC
+                .| raiseTMParameterC
+                .| sinkNull
 
-  let
-    processingThread = conc $ runConduitRes chain
-    nctrsTMThread conf = conc $ runTMNctrsChain conf pktQueue
-    cncTMThread conf = conc $ runTMCnCChain conf missionSpecific pktQueue
+    let processingThread = conc $ runConduitRes chain
+        nctrsTMThread conf = conc $ runTMNctrsChain conf pktQueue
+        cncTMThread conf = conc $ runTMCnCChain conf missionSpecific pktQueue
 
-    threads =
-      processingThread : fmap nctrsTMThread nctrsCfg <> fmap cncTMThread cncCfg
+        threads =
+            processingThread
+                :  fmap nctrsTMThread nctrsCfg
+                <> fmap cncTMThread   cncCfg
 
-  -- run all threads and wait until all are finished
-  runConc $ mconcat threads
+    -- run all threads and wait until all are finished
+    runConc $ mconcat threads
 
-  logDebug "runTMCain leaving"
+    logDebug "runTMCain leaving"
 
 
 
 
 runTCChain :: PUSMissionSpecific -> InterfaceSwitcherMap -> RIO GlobalState ()
 runTCChain missionSpecific switcherMap = do
-  logDebug "runTCChain entering"
+    logDebug "runTCChain entering"
 
-  rqstQueue <- view getRqstQueue
+    rqstQueue <- view getRqstQueue
 
-  let rqstChain =
-        sourceTBQueue rqstQueue
-          .| concatC
-          .| tcPktEncoderC missionSpecific
-          .| tcPktToEncPUSC initialSSCCounterMap
-          .| switchProtocolPktC switcherMap
-  -- TODO: This chain is currently only BD mode! AD mode needs to be implemented
-          .| tcSegmentEncoderC
-          .| tcSegmentToTransferFrame
-          .| tcFrameEncodeC
-          .| switchProtocolFrameC switcherMap
-          .| tcFrameToCltuC
-          .| cltuEncodeRandomizedC
-          .| switchProtocolCltuC switcherMap
+    let rqstChain =
+            sourceTBQueue rqstQueue
+                .| concatC
+                .| tcPktEncoderC missionSpecific
+                .| tcPktToEncPUSC initialSSCCounterMap
+                .| switchProtocolPktC switcherMap
+    -- TODO: This chain is currently only BD mode! AD mode needs to be implemented
+                .| tcSegmentEncoderC
+                .| tcSegmentToTransferFrame
+                .| tcFrameEncodeC
+                .| switchProtocolFrameC switcherMap
+                .| tcFrameToCltuC
+                .| cltuEncodeRandomizedC
+                .| switchProtocolCltuC switcherMap
 
-  let rqstThread = conc $ runConduitRes rqstChain
+    let rqstThread = conc $ runConduitRes rqstChain
 
-  -- start all threads and wait until they are all finished
-  runConc rqstThread
+    -- start all threads and wait until they are all finished
+    runConc rqstThread
 
-  logDebug "runTCChain leaving"
+    logDebug "runTCChain leaving"
 
 
 
@@ -412,44 +466,43 @@ runTCChain missionSpecific switcherMap = do
 -- and TC interfaces and processing chains in several threads
 runChains :: PUSMissionSpecific -> RIO GlobalState ()
 runChains missionSpecific = do
-  logDebug "runChains enters"
+    logDebug "runChains enters"
 
-  cfg                         <- view getConfig
+    cfg                         <- view getConfig
 
-  pktQueue                    <- newTBQueueIO tmPacketQueueSize
+    pktQueue                    <- newTBQueueIO tmPacketQueueSize
 
-  -- create the EDEN interface threads and the switcher map 
-  -- (switcherMap1, edenThreads) <- foldM (edenIf pktQueue)
-  --                                      (HM.empty, mempty)
-  --                                      (cfgEDEN cfg)
-  -- (switcherMap, interfaceThreads) <- foldM (edenIf pktQueue)
-  --                                      (HM.empty, mempty)
-  --                                      (cfgEDEN cfg)
+    -- create the EDEN interface threads and the switcher map 
+    (switcherMap1, edenThreads) <- foldM (edenIf pktQueue)
+                                         (HM.empty, mempty)
+                                         (cfgEDEN cfg)
 
-  -- create the interface threads and switcher map for the NCTRS interfaces
-  -- (switcherMap2, nctrsThreads) <- foldM nctrsIf
-  --                                       (switcherMap1, edenThreads)
-  --                                       (cfgNCTRS cfg)
+    -- create the interface threads and switcher map for the NCTRS interfaces
+    (switcherMap2, nctrsThreads) <- foldM nctrsIf
+                                          (switcherMap1, edenThreads)
+                                          (cfgNCTRS cfg)
 
-  -- create the interface threads and switcher map for the C&C interfaces
-  -- (switcherMap, interfaceThreads) <- foldM cncIf
-  --                                          (switcherMap2, nctrsThreads)
-  --                                          (cfgCnC cfg)
+    -- create the interface threads and switcher map for the C & C interfaces
+    (switcherMap, interfaceThreads) <- foldM cncIf
+                                             (switcherMap2, nctrsThreads)
+                                             (cfgCnC cfg)
 
-  let tmThreads    = conc $ runTMChain missionSpecific pktQueue
-      --tcThreads    = conc $ runTCChain missionSpecific switcherMap
-      --adminThreads = mconcat $ map (conc . runAdminNctrsChain) (cfgNCTRS cfg)
+    let tmThreads    = conc $ runTMChain missionSpecific pktQueue
+        tcThreads    = conc $ runTCChain missionSpecific switcherMap
+        adminThreads = mconcat $ map (conc . runAdminNctrsChain) (cfgNCTRS cfg)
 
-  runConc (tmThreads {-<> tcThreads <> interfaceThreads <> adminThreads-})
+    runConc (tmThreads <> tcThreads <> interfaceThreads <> adminThreads)
 
-  logDebug "runChains leaves"
- --where
-  -- edenIf pktQueue (switcherMap, ts) x = do
-  --   (queue, newSm) <- createInterfaceChannel switcherMap (IfEden (cfgEdenID x))
-  --   return (newSm, ts <> conc (runEdenChain x missionSpecific pktQueue queue))
-  -- nctrsIf (sm, ts) x = do
-  --   (queue, newSm) <- createInterfaceChannel sm (IfNctrs (cfgNctrsID x))
-  --   return (newSm, ts <> conc (runTCNctrsChain x queue))
-  -- cncIf (sm, ts) x = do
-  --   (queue, newSm) <- createInterfaceChannel sm (IfCnc (cfgCncID x))
-  --   return (newSm, ts <> conc (runTCCnCChain x missionSpecific queue))
+    logDebug "runChains leaves"
+  where
+    edenIf pktQueue (switcherMap, ts) x = do
+        (queue, newSm) <- createInterfaceChannel switcherMap
+                                                 (IfEden (cfgEdenID x))
+        return
+            (newSm, ts <> conc (runEdenChain x missionSpecific pktQueue queue))
+    nctrsIf (sm, ts) x = do
+        (queue, newSm) <- createInterfaceChannel sm (IfNctrs (cfgNctrsID x))
+        return (newSm, ts <> conc (runTCNctrsChain x queue))
+    cncIf (sm, ts) x = do
+        (queue, newSm) <- createInterfaceChannel sm (IfCnc (cfgCncID x))
+        return (newSm, ts <> conc (runTCCnCChain x missionSpecific queue))

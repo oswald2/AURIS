@@ -101,5 +101,46 @@ processCommand st (SetVerifR rqstID releaseTime status) = do
                 <> " has not been found"
     return st
 
+processCommand st (SetVerifG rqstID status) = do 
+    processGroundStage st rqstID status setGroundReceptionStage
+processCommand st (SetVerifT rqstID status) = do 
+    processGroundStage st rqstID status setGroundTransmissionStage
+processCommand st (SetVerifO rqstID status) = do 
+    processGroundStage st rqstID status setGroundOBRStage
+processCommand st (SetVerifGT rqstID status) = do 
+    processGroundStage st rqstID status setGroundGTStages
+
+
+
 processCommand st _ = return st
 
+
+processGroundStage :: (MonadIO m, MonadReader env m, HasRaiseEvent env, HasLogFunc env)
+    => VerifState
+    -> RequestID
+    -> GroundStage
+    -> (GroundStage -> Verification -> Verification)
+    -> m VerifState
+processGroundStage st rqstID status setStage = do     
+    case HM.lookup rqstID (_stRqstMap st) of
+        Just var -> do
+            env <- ask
+            join $ atomically $ do
+                verif <- readTVar var
+                let newStatus = setStage status verif
+                writeTVar var newStatus
+                return
+                    (liftIO
+                        (raiseEvent
+                            env
+                            (EVCommanding
+                                (EVTCVerificationUpdate rqstID newStatus)
+                            )
+                        )
+                    )
+        Nothing -> do
+            logWarn
+                $  "Verification record for RequestID "
+                <> display rqstID
+                <> " has not been found"
+    return st

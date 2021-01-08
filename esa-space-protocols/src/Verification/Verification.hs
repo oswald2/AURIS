@@ -7,7 +7,12 @@ module Verification.Verification
     , emptyVerification
     , defaultVerificationBD
     , defaultVerificationAD
+    , defaultVerificationSCOE
     , setReleaseStage
+    , setGroundReceptionStage
+    , setGroundTransmissionStage
+    , setGroundOBRStage
+    , setGroundGTStages
     , setAllGroundStages
     , setAllTMStages
     , verRelease
@@ -171,6 +176,19 @@ defaultVerificationAD :: Verification
 defaultVerificationAD = defaultVerificationBD & verGroundOBR .~ StGExpected
 
 
+defaultVerificationSCOE :: Verification
+defaultVerificationSCOE = Verification { _verRelease            = StRDisabled
+                                       , _verGroundReception    = StGExpected
+                                       , _verGroundTransmission = StGExpected
+                                       , _verGroundOBR          = StGDisabled
+                                       , _verTMAcceptance       = StTmDisabled
+                                       , _verTMStart            = StTmDisabled
+                                       , _verTMProgress         = V.empty
+                                       , _verTMComplete         = StTmDisabled
+                                       }
+
+
+
 
 setReleaseStage :: ReleaseStage -> Verification -> Verification
 setReleaseStage StRFail verif =
@@ -180,6 +198,46 @@ setReleaseStage StRFail verif =
         &  setAllGroundStages StGDisabled
         &  setAllTMStages StTmDisabled
 setReleaseStage status verif = verif & verRelease .~ status
+
+setGroundReceptionStage :: GroundStage -> Verification -> Verification
+setGroundReceptionStage StGFail verif =
+    verif
+        &  verGroundTransmission
+        .~ StGDisabled
+        &  verGroundOBR
+        .~ StGDisabled
+        &  setAllTMStages StTmDisabled
+setGroundReceptionStage status verif = verif & verGroundReception .~ status
+
+
+setGroundTransmissionStage :: GroundStage -> Verification -> Verification
+setGroundTransmissionStage StGFail verif =
+    verif & verGroundOBR .~ StGDisabled & setAllTMStages StTmDisabled
+setGroundTransmissionStage StGSuccess verif =
+    let newVerif = if verif ^. verGroundReception /= StGSuccess
+            then verif & verGroundReception .~ StGAssumed
+            else verif
+    in  newVerif & verGroundTransmission .~ StGSuccess
+setGroundTransmissionStage status verif =
+    verif & verGroundTransmission .~ status
+
+setGroundOBRStage :: GroundStage -> Verification -> Verification
+setGroundOBRStage StGFail verif = verif & setAllTMStages StTmDisabled
+setGroundOBRStage StGSuccess verif =
+    let verif1 = if verif ^. verGroundReception /= StGSuccess
+            then verif & verGroundReception .~ StGAssumed
+            else verif
+        verif2 = if verif1 ^. verGroundTransmission /= StGSuccess
+            then verif1 & verGroundTransmission .~ StGAssumed
+            else verif1
+    in  verif2 & verGroundOBR .~ StGSuccess
+setGroundOBRStage status verif = verif & verGroundOBR .~ status
+
+setGroundGTStages :: GroundStage -> Verification -> Verification
+setGroundGTStages StGFail verif =
+    verif & verGroundOBR .~ StGDisabled & setAllTMStages StTmDisabled
+setGroundGTStages status verif =
+    verif & verGroundReception .~ status & verGroundTransmission .~ status
 
 
 setAllGroundStages :: GroundStage -> Verification -> Verification

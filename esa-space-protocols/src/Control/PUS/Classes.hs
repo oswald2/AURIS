@@ -104,7 +104,10 @@ class HasRaiseEvent env where
 class HasVerif env where
   registerRequest :: env -> TCRequest -> Word16 -> Word16 -> IO ()
   requestReleased :: env -> RequestID -> SunTime -> ReleaseStage -> IO ()
-
+  requestVerifyG :: env -> RequestID -> GroundStage -> IO () 
+  requestVerifyT :: env -> RequestID -> GroundStage -> IO () 
+  requestVerifyO :: env -> RequestID -> GroundStage -> IO () 
+  requestVerifyGT :: env -> RequestID -> GroundStage -> IO () 
 
 -- | Class for accessing the global state
 class (HasConfig env,
@@ -152,7 +155,14 @@ instance HasVerif GlobalState where
     requestReleased env rqstID releaseTime status = atomically $ writeTBQueue
         (glsVerifCommandQueue env)
         (SetVerifR rqstID releaseTime status)
-
+    requestVerifyG env rqstID status =
+        atomically $ writeTBQueue (glsVerifCommandQueue env) (SetVerifG rqstID status)
+    requestVerifyT env rqstID status =
+        atomically $ writeTBQueue (glsVerifCommandQueue env) (SetVerifT rqstID status)
+    requestVerifyO env rqstID status =
+        atomically $ writeTBQueue (glsVerifCommandQueue env) (SetVerifO rqstID status)
+    requestVerifyGT env rqstID status =
+        atomically $ writeTBQueue (glsVerifCommandQueue env) (SetVerifGT rqstID status)
 
 
 instance HasGlobalState GlobalState
