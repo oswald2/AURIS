@@ -28,6 +28,8 @@ import           Data.PUS.TCPacketEncoder
 import           Data.PUS.TCRequest
 import           Data.PUS.Counter
 
+import           General.PUSTypes
+
 
 
 data EncodedPUSPacket = EncodedPUSPacket
@@ -47,9 +49,7 @@ pusPacketEncoderC = awaitForever $ \(pkt, rqst) -> do
 
 
 tcPktToEncPUSC
-    :: (MonadIO m,
-        MonadReader env m,
-        HasVerif env)
+    :: (MonadIO m, MonadReader env m, HasVerif env)
     => SSCCounterMap
     -> ConduitT EncodedTCPacket EncodedPUSPacket m ()
 tcPktToEncPUSC hm = do
@@ -68,7 +68,10 @@ tcPktToEncPUSC hm = do
 
                     -- register this TC for Verification
                     env <- ask
-                    liftIO $ registerRequest env request pktID seqFlags
+                    liftIO $ registerRequest env
+                                             request
+                                             (PktID pktID)
+                                             (SeqControl seqFlags)
 
                     -- now pass the packet on to the next stage in encoding
                     yield (EncodedPUSPacket (Just enc) request)

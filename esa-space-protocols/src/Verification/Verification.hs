@@ -13,6 +13,10 @@ module Verification.Verification
     , setGroundTransmissionStage
     , setGroundOBRStage
     , setGroundGTStages
+    , setTMAcceptStage
+    , setTMStartStage
+    , setTMCompleteStage
+    , setTMProgressStage
     , setAllGroundStages
     , setAllTMStages
     , verRelease
@@ -31,6 +35,8 @@ module Verification.Verification
 
 import           RIO
 import qualified RIO.Vector                    as V
+import qualified RIO.Vector.Partial            as V
+                                                ( (//) )
 
 import           Control.Lens                   ( makeLenses
                                                 , traversed
@@ -197,7 +203,8 @@ setReleaseStage StRFail verif =
         .~ StRFail
         &  setAllGroundStages StGDisabled
         &  setAllTMStages StTmDisabled
-setReleaseStage status verif = verif & verRelease .~ status
+setReleaseStage status verif =
+    setAllExpectedToPending (verif & verRelease .~ status)
 
 setGroundReceptionStage :: GroundStage -> Verification -> Verification
 setGroundReceptionStage StGFail verif =
@@ -255,6 +262,99 @@ setGroundGTStages status verif =
     verif & verGroundReception .~ status & verGroundTransmission .~ status
 
 
+setTMAcceptStage :: TMStage -> Verification -> Verification
+setTMAcceptStage StTmFail verif =
+    verif
+        &  verTMAcceptance
+        .~ StTmFail
+        &  verTMStart
+        .~ StTmDisabled
+        &  verTMComplete
+        .~ StTmDisabled
+        &  verTMProgress
+        .  traversed
+        .~ StTmDisabled
+setTMAcceptStage StTmSuccess verif =
+    let obr      = newVerif ^. verGroundOBR
+        newVerif = verif & verTMAcceptance .~ StTmSuccess
+    in  if (obr == StGExpected) || (obr == StGPending)
+            then newVerif & verGroundOBR .~ StGAssumed
+            else newVerif
+setTMAcceptStage StTmAssumed verif =
+    let obr      = newVerif ^. verGroundOBR
+        newVerif = verif & verTMAcceptance .~ StTmAssumed
+    in  if (obr == StGExpected) || (obr == StGPending)
+            then newVerif & verGroundOBR .~ StGAssumed
+            else newVerif
+setTMAcceptStage status verif = verif & verTMAcceptance .~ status
+
+
+setTMStartStage :: TMStage -> Verification -> Verification
+setTMStartStage StTmFail verif =
+    verif
+        &  verTMStart
+        .~ StTmFail
+        &  verTMComplete
+        .~ StTmDisabled
+        &  verTMProgress
+        .  traversed
+        .~ StTmDisabled
+setTMStartStage StTmSuccess verif =
+    setAcceptPending (verif & verTMStart .~ StTmSuccess)
+setTMStartStage StTmAssumed verif =
+    setAcceptPending (verif & verTMStart .~ StTmAssumed)
+setTMStartStage status verif = verif & verTMStart .~ status
+
+setAcceptPending :: Verification -> Verification
+setAcceptPending newVerif =
+    let acc = newVerif ^. verTMAcceptance
+    in  if (acc == StTmExpected) || (acc == StTmPending)
+            then setTMAcceptStage StTmAssumed newVerif
+            else newVerif
+
+
+setTMProgressStage :: TMStage -> Int -> Verification -> Verification
+setTMProgressStage status i verif =
+    let prog = (verif ^. verTMProgress)
+    in  if i >= 0 && i < V.length prog
+            then verif & verTMProgress .~ setProg prog status
+            else verif
+  where
+    setProg prog StTmFail    = V.imap setFail prog
+    setProg prog StTmSuccess = V.imap (setp StTmSuccess) prog
+    setProg prog StTmAssumed = V.imap (setp StTmAssumed) prog
+    setProg prog st          = prog V.// [(i, st)]
+
+
+    setFail ix v = if
+        | i < ix    -> StTmDisabled
+        | i == ix   -> StTmFail
+        | otherwise -> v
+
+    setp st ix v = if
+        | i == ix -> st
+        | i > ix -> if (v == StTmExpected) || (v == StTmPending)
+            then StTmAssumed
+            else v
+        | otherwise -> v
+
+
+setProgressAssumed :: Verification -> Verification
+setProgressAssumed verif =
+    verif & verTMProgress . traversed %~ setp 
+    where 
+        setp x = if x == StTmExpected || x == StTmPending then StTmAssumed else x   
+
+
+
+setTMCompleteStage :: TMStage -> Verification -> Verification
+setTMCompleteStage StTmSuccess verif =
+    setProgressAssumed (verif & verTMComplete .~ StTmSuccess)
+setTMCompleteStage status verif = verif & verTMComplete .~ status
+
+
+
+
 setAllGroundStages :: GroundStage -> Verification -> Verification
 setAllGroundStages status verif =
     verif
@@ -278,25 +378,41 @@ setAllTMStages status verif =
         .  traversed
         .~ status
 
+setAllExpectedToPending :: Verification -> Verification
+setAllExpectedToPending verif =
+    gr verGroundReception verif
+        &  gr verGroundTransmission
+        &  gr verGroundOBR
+        &  tm verTMAcceptance
+        &  tm verTMStart
+        &  tm verTMComplete
+        &  verTMProgress
+        .  traversed
+        %~ \x -> if x == StTmExpected then StTmPending else x
+  where
+    gr :: Lens' Verification GroundStage -> Verification -> Verification
+    gr l x = if x ^. l == StGExpected then x & l .~ StGPending else x
 
+    tm :: Lens' Verification TMStage -> Verification -> Verification
+    tm l x = if x ^. l == StTmExpected then x & l .~ StTmPending else x
 
 isFailed :: Verification -> Bool
 isFailed Verification {..} =
-    (_verRelease== StRFail)
-    || (_verGroundReception == StGFail)
-    || (_verGroundTransmission == StGFail)
-    || (_verGroundOBR == StGFail)
-    || (_verTMAcceptance == StTmFail)
-    || (_verTMStart == StTmFail)
-    || (_verTMComplete == StTmFail)
-    || V.any (== StTmFail) _verTMProgress
+    (_verRelease == StRFail)
+        || (_verGroundReception == StGFail)
+        || (_verGroundTransmission == StGFail)
+        || (_verGroundOBR == StGFail)
+        || (_verTMAcceptance == StTmFail)
+        || (_verTMStart == StTmFail)
+        || (_verTMComplete == StTmFail)
+        || V.any (== StTmFail) _verTMProgress
 
 
 isTMExpected :: Verification -> Bool
 isTMExpected Verification {..} =
     (_verTMAcceptance == StTmExpected)
-    || (_verTMStart == StTmExpected)
-    || (_verTMComplete == StTmExpected)
+        || (_verTMStart == StTmExpected)
+        || (_verTMComplete == StTmExpected)
   -- we don't check for the progess, because for progess we need at 
   -- least a completion anyway
 

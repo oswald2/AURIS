@@ -12,15 +12,15 @@ import           Data.PUS.TCRequest
 
 
 data VerifCommand =
-  RegisterRequest !TCRequest !Word16 !Word16
+  RegisterRequest !TCRequest !PktID !SeqControl
   | RegisterDirective !TCRequest
   | SetVerifR !RequestID !SunTime !ReleaseStage
   | SetVerifG !RequestID !GroundStage
   | SetVerifT !RequestID !GroundStage
   | SetVerifGT !RequestID !GroundStage
   | SetVerifO !RequestID !GroundStage
-  | SetVerifA !Word16 !Word16 !TMStage
-  | SetVerifS !Word16 !Word16 !TMStage
-  | SetVerifC !Word16 !Word16 !TMStage
-  | SetVerifP !Natural !Word16 !Word16 !TMStage
+  | SetVerifA !PktID !SeqControl !TMStage
+  | SetVerifS !PktID !SeqControl !TMStage
+  | SetVerifC !PktID !SeqControl !TMStage
+  | SetVerifP !Natural !PktID !SeqControl !TMStage
   deriving(Read, Show, Generic)

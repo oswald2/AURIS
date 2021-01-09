@@ -102,7 +102,7 @@ class HasRaiseEvent env where
 
 -- | Class used for TC verification.
 class HasVerif env where
-  registerRequest :: env -> TCRequest -> Word16 -> Word16 -> IO ()
+  registerRequest :: env -> TCRequest -> PktID -> SeqControl -> IO ()
   requestReleased :: env -> RequestID -> SunTime -> ReleaseStage -> IO ()
   requestVerifyG :: env -> RequestID -> GroundStage -> IO () 
   requestVerifyT :: env -> RequestID -> GroundStage -> IO () 

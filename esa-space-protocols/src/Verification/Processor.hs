@@ -16,14 +16,14 @@ import           Verification.Commands
 
 import           Data.PUS.TCRequest
 
-import           General.PUSTypes               ( RequestID )
+import           General.PUSTypes               ( RequestID, PktID, SeqControl)
 
 import           Data.PUS.Events
 
 
 data VerifState = VerifState
     { _stRqstMap :: HashMap RequestID (TVar Verification)
-    , _stApidMap :: HashMap (Word16, Word16) (RequestID, TVar Verification)
+    , _stApidMap :: HashMap (PktID, SeqControl) (RequestID, TVar Verification)
     }
 makeLenses ''VerifState
 
@@ -113,6 +113,8 @@ processCommand st (SetVerifO rqstID status) = do
 processCommand st (SetVerifGT rqstID status) = do
     processGroundStage st rqstID status setGroundGTStages
 
+processCommand st (SetVerifA pktID ssc status) = do 
+    processTMStage st pktID ssc status setTMAcceptStage
 
 
 processCommand st _ = return st
@@ -133,17 +135,47 @@ processGroundStage st rqstID status setStage = do
         <> display status
     case HM.lookup rqstID (_stRqstMap st) of
         Just var -> do
-            env <- ask
-            join $ atomically $ do
-                verif <- readTVar var
-                let newStatus = setStage status verif
-                writeTVar var newStatus
-                return $ do
-                    let event = EVTCVerificationUpdate rqstID newStatus
-                    liftIO $ raiseEvent env (EVCommanding event)
+            doUpdate rqstID status var setStage
         Nothing -> do
             logWarn
                 $  "Verification record for RequestID "
                 <> display rqstID
                 <> " has not been found"
     return st
+
+
+processTMStage
+    :: (MonadIO m, MonadReader env m, HasRaiseEvent env, HasLogFunc env)
+    => VerifState
+    -> PktID
+    -> SeqControl
+    -> TMStage 
+    -> (TMStage -> Verification -> Verification)
+    -> m VerifState
+processTMStage st pktID ssc status setStage = do
+    logDebug
+        $  "processTMStage: PktID: "
+        <> display pktID <> " SeqStatus: " <> display ssc
+        <> " Status: "
+        <> display status
+    case HM.lookup (pktID, ssc) (_stApidMap st) of
+        Just (rqstID, var) -> do
+            doUpdate rqstID status var setStage 
+        Nothing -> do
+            logWarn
+                $  "Verification record for PktID "
+                <> display pktID <> " SeqStatus: " <> display ssc 
+                <> " has not been found"
+    return st
+
+
+doUpdate :: (MonadReader env m, MonadIO m, HasRaiseEvent env) => RequestID -> t -> TVar Verification -> (t -> Verification -> Verification) -> m ()
+doUpdate rqstID status var setStage = do
+    env <- ask
+    join $ atomically $ do
+        verif <- readTVar var
+        let newStatus = setStage status verif
+        writeTVar var newStatus
+        return $ do
+            let event = EVTCVerificationUpdate rqstID newStatus
+            liftIO $ raiseEvent env (EVCommanding event)

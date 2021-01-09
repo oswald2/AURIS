@@ -67,6 +67,8 @@ module General.PUSTypes
   , SPID(..)
   , PTC(..)
   , PFC(..)
+  , PktID(..)
+  , SeqControl(..)
   )
 where
 
@@ -360,6 +362,35 @@ instance Serialise PUSSubType
 instance FromJSON PUSSubType
 instance ToJSON PUSSubType where
   toEncoding = genericToEncoding defaultOptions
+
+
+
+newtype PktID = PktID { getPktID :: Word16 }
+  deriving (Eq, Ord, Enum, Num, Real, Integral, Show, Read, Generic)
+
+instance NFData PktID
+instance Hashable PktID
+instance Serialise PktID
+instance FromJSON PktID
+instance ToJSON PktID where
+  toEncoding = genericToEncoding defaultOptions
+
+instance Display PktID where 
+  display (PktID x) = display x
+
+
+newtype SeqControl = SeqControl { getSeqControl :: Word16 }
+  deriving (Eq, Ord, Enum, Num, Real, Integral, Show, Read, Generic)
+
+instance NFData SeqControl
+instance Hashable SeqControl
+instance Serialise SeqControl
+instance FromJSON SeqControl
+instance ToJSON SeqControl where
+  toEncoding = genericToEncoding defaultOptions
+
+instance Display SeqControl where 
+  display (SeqControl x) = display x
 
 
 -- | Type for the source sequence count
