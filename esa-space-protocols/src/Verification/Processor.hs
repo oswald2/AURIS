@@ -16,7 +16,10 @@ import           Verification.Commands
 
 import           Data.PUS.TCRequest
 
-import           General.PUSTypes               ( RequestID, PktID, SeqControl)
+import           General.PUSTypes               ( RequestID
+                                                , PktID
+                                                , SeqControl
+                                                )
 
 import           Data.PUS.Events
 
@@ -113,7 +116,7 @@ processCommand st (SetVerifO rqstID status) = do
 processCommand st (SetVerifGT rqstID status) = do
     processGroundStage st rqstID status setGroundGTStages
 
-processCommand st (SetVerifA pktID ssc status) = do 
+processCommand st (SetVerifA pktID ssc status) = do
     processTMStage st pktID ssc status setTMAcceptStage
 
 
@@ -149,27 +152,37 @@ processTMStage
     => VerifState
     -> PktID
     -> SeqControl
-    -> TMStage 
+    -> TMStage
     -> (TMStage -> Verification -> Verification)
     -> m VerifState
 processTMStage st pktID ssc status setStage = do
     logDebug
         $  "processTMStage: PktID: "
-        <> display pktID <> " SeqStatus: " <> display ssc
+        <> display pktID
+        <> " SeqStatus: "
+        <> display ssc
         <> " Status: "
         <> display status
     case HM.lookup (pktID, ssc) (_stApidMap st) of
         Just (rqstID, var) -> do
-            doUpdate rqstID status var setStage 
+            doUpdate rqstID status var setStage
         Nothing -> do
             logWarn
                 $  "Verification record for PktID "
-                <> display pktID <> " SeqStatus: " <> display ssc 
+                <> display pktID
+                <> " SeqStatus: "
+                <> display ssc
                 <> " has not been found"
     return st
 
 
-doUpdate :: (MonadReader env m, MonadIO m, HasRaiseEvent env) => RequestID -> t -> TVar Verification -> (t -> Verification -> Verification) -> m ()
+doUpdate
+    :: (MonadReader env m, MonadIO m, HasRaiseEvent env)
+    => RequestID
+    -> t
+    -> TVar Verification
+    -> (t -> Verification -> Verification)
+    -> m ()
 doUpdate rqstID status var setStage = do
     env <- ask
     join $ atomically $ do
@@ -177,5 +190,7 @@ doUpdate rqstID status var setStage = do
         let newStatus = setStage status verif
         writeTVar var newStatus
         return $ do
-            let event = EVTCVerificationUpdate rqstID newStatus
+            let event = EVTCVerificationUpdate
+                    rqstID
+                    newStatus
             liftIO $ raiseEvent env (EVCommanding event)

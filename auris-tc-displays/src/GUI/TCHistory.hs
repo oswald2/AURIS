@@ -75,24 +75,24 @@ createTCHistory window builder = do
           , 60
           , \row -> [#text := textDisplay (row ^. rowRqst . tcReqSource)]
           )
-        , ("R", verifColumnWidth, displayRelease)
-        , (" ", verifColumnWidth, displayEmptyText)
-        , ("G", verifColumnWidth, displayGround verGroundReception)
-        , ("T", verifColumnWidth, displayGround verGroundTransmission)
-        , ("O", verifColumnWidth, displayGround verGroundOBR)
-        , (" ", verifColumnWidth, displayEmptyText)
-        , ("A", verifColumnWidth, displayEmptyText)
-        , (" ", verifColumnWidth, displayEmptyText)
-        , ("S", verifColumnWidth, displayEmptyText)
-        , (" ", verifColumnWidth, displayEmptyText)
-        , ("0", verifColumnWidth, displayEmptyText)
-        , ("1", verifColumnWidth, displayEmptyText)
+        , ("R" , verifColumnWidth, displayRelease)
+        , (" " , verifColumnWidth, displayEmptyText)
+        , ("G" , verifColumnWidth, displayGround verGroundReception)
+        , ("T" , verifColumnWidth, displayGround verGroundTransmission)
+        , ("O" , verifColumnWidth, displayGround verGroundOBR)
+        , (" " , verifColumnWidth, displayEmptyText)
+        , ("A" , verifColumnWidth, displayEmptyText)
+        , (" " , verifColumnWidth, displayEmptyText)
+        , ("S" , verifColumnWidth, displayEmptyText)
+        , (" " , verifColumnWidth, displayEmptyText)
+        , ("0" , verifColumnWidth, displayEmptyText)
+        , ("1" , verifColumnWidth, displayEmptyText)
         , ("2 ", verifColumnWidth, displayEmptyText)
-        , ("3", verifColumnWidth, displayEmptyText)
-        , ("4", verifColumnWidth, displayEmptyText)
-        , ("5", verifColumnWidth, displayEmptyText)
-        , (" ", verifColumnWidth, displayEmptyText)
-        , ("C", verifColumnWidth, displayEmptyText)
+        , ("3" , verifColumnWidth, displayEmptyText)
+        , ("4" , verifColumnWidth, displayEmptyText)
+        , ("5" , verifColumnWidth, displayEmptyText)
+        , (" " , verifColumnWidth, displayEmptyText)
+        , ("C" , verifColumnWidth, displayEmptyText)
         ]
 
 
@@ -145,10 +145,9 @@ mkRow rqst verif =
 
 
 determineColor :: Verification -> (RGBA, RGBA)
-determineColor verif 
-    | isFailed verif  = (red, white)
-    | isSuccess verif = (green, black)
-    | otherwise       = (paleYellow, black)
+determineColor verif | isFailed verif  = (red, white)
+                     | isSuccess verif = (green, black)
+                     | otherwise       = (paleYellow, black)
 
 
 tcHistAddNewRqst :: TCHistory -> TCRequest -> Verification -> IO ()
@@ -182,6 +181,13 @@ tcHistDisplayRqstVerification g rqstID verif = do
     forM_ [0 .. len - 1] $ \i -> do
         val <- seqStoreGetValue model i
         when (rqstID == val ^. rowRqst . tcReqRequestID) $ do
-            let newVal = val &  rowVerifications .~ verif & rowBGColor .~ bg & rowFGColor .~ fg
-                (bg, fg) = determineColor verif 
+            let newVal =
+                    val
+                        &  rowVerifications
+                        .~ verif
+                        &  rowBGColor
+                        .~ bg
+                        &  rowFGColor
+                        .~ fg
+                (bg, fg) = determineColor verif
             seqStoreSetValue model i newVal
