@@ -7,6 +7,8 @@ or from the German Space Operations Center (GSOC): [DLR GECCOS](https://www.aero
 
 ## First Screenshots
 
+Please note that these screenshots are preliminary. The displays are still subject to major changes, also most implementations are not complete.
+
 Telemetry Frame Display:
 
 ![TM Frame Display](screenshots/TMFrames.png)
@@ -16,14 +18,28 @@ Telemetry Packet Display:
 ![TM Packet Display](screenshots/TMPackets.png)
 
 Graphical Parameter Display:
-➜
+
 ![TM Parameter Display](screenshots/GRD.png)
+
+The commanding interface currently is a very simple implementation to be able to send commands to every interface in the system. The commands currently are specified in textual form, so the GUI for this is minimal:
+
+![Commanding](screenshots/Commanding.png)
+
+The **TC History** is also very fresh and not completely implemented and does not yet show all necessary information:
+
+![TC History](screenshots/TCHistory.png)
+
+Connections Tab:
+
+![Connections display](screenshots/Connections.png)
 
 
 
 ## Building 
 
 Currently, building via stack is recommended. Cabal new-* commands should also work, but currently there is no cabal.project file available. 
+
+In the current project, FLTK has been replaced by GTK. Therefore the dependencies required by the Haskell libraries 
 
 There are some dependencies need beforehand (for Debian based systems):
 
