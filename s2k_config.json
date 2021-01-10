@@ -1,0 +1,56 @@
+{
+    "aurisMIB": null,
+    "aurisMission": "DEFAULT",
+    "aurisPusConfig": {
+        "cfgCnC": [
+            {
+                "cfgCncHasCRC": true,
+                "cfgCncPortTM": 33333,
+                "cfgCncHost": "localhost",
+                "cfgCncPortTC": 22222,
+                "cfgCncID": 1
+            }
+        ],
+        "cfgUnknownSPID": 5071,
+        "cfgEpoch": "UnixTime",
+        "cfgInterfacePort": 55555,
+        "cfgRandomizerStartValue": 255,
+        "cfgVCIDs": [
+            {
+                "getVCID": 0
+            },
+            {
+                "getVCID": 1
+            }
+        ],
+        "cfgLeapSeconds": {
+            "fromLeaps": 17
+        },
+        "cfgSCID": {
+            "getSCID": 0
+        },
+        "cfgNCTRS": [
+            {
+                "cfgNctrsPortTC": 32111,
+                "cfgNctrsID": 1,
+                "cfgNctrsHost": "localhost",
+                "cfgNctrsPortADM": 32110,
+                "cfgNctrsPortTM": 2502
+            }
+        ],
+        "cfgMaxTMFrameLen": 1115,
+        "cfgCltuBlockSize": "CltuBS_8",
+        "cfgEDEN": [
+            {
+                "cfgEdenID": 1,
+                "cfgEdenHost": "localhost",
+                "cfgEdenPort": 40300
+            }
+        ],
+        "cfgTMSegLength": "TMSegment65536",
+        "cfgTMFrameHasCRC": true
+    },
+    "aurisLogLevel": {
+        "tag": "LogLevelDebug"
+    }
+}
