@@ -118,9 +118,12 @@ processCommand st (SetVerifGT rqstID status) = do
 
 processCommand st (SetVerifA pktID ssc status) = do
     processTMStage st pktID ssc status setTMAcceptStage
-
-
-processCommand st _ = return st
+processCommand st (SetVerifS pktID ssc status) = do
+    processTMStage st pktID ssc status setTMStartStage
+processCommand st (SetVerifC pktID ssc status) = do
+    processTMStage st pktID ssc status setTMCompleteStage
+processCommand st (SetVerifP idx pktID ssc status) = do
+    processTMStage st pktID ssc status (setTMProgressStage (fromIntegral idx))
 
 
 processGroundStage

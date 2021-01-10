@@ -4,6 +4,7 @@ module Verification.Verification
     , ReleaseStage(..)
     , GroundStage(..)
     , TMStage(..)
+    , VerifStatus(..)
     , emptyVerification
     , defaultVerificationBD
     , defaultVerificationAD
@@ -27,6 +28,7 @@ module Verification.Verification
     , verTMStart
     , verTMProgress
     , verTMComplete
+    , verStatus
     , isFailed
     , isTMExpected
     , isGroundSuccess
@@ -119,6 +121,27 @@ instance Display TMStage where
     textDisplay StTmAssumed  = "A"
 
 
+data VerifStatus =
+    VerifStatNominal
+    | VerifStatDeleted
+    | VerifStatEnabled
+    | VerifStatDisabled
+    deriving (Eq, Ord, Enum, Show, Read, Generic)
+
+instance NFData VerifStatus
+instance Serialise VerifStatus
+instance FromJSON VerifStatus
+instance ToJSON VerifStatus where
+    toEncoding = genericToEncoding defaultOptions
+
+
+instance Display VerifStatus where
+    textDisplay VerifStatNominal  = ""
+    textDisplay VerifStatDeleted  = "DELETED"
+    textDisplay VerifStatEnabled  = "ENABLED"
+    textDisplay VerifStatDisabled = "DISABLED"
+
+
 data Verification = Verification
     { _verRelease            :: ReleaseStage
     , _verGroundReception    :: GroundStage
@@ -128,6 +151,7 @@ data Verification = Verification
     , _verTMStart            :: TMStage
     , _verTMProgress         :: Vector TMStage
     , _verTMComplete         :: TMStage
+    , _verStatus             :: VerifStatus
     }
     deriving (Read, Show, Generic)
 makeLenses ''Verification
@@ -165,6 +189,7 @@ emptyVerification = Verification { _verRelease            = StRDisabled
                                  , _verTMStart            = StTmDisabled
                                  , _verTMProgress         = V.empty
                                  , _verTMComplete         = StTmDisabled
+                                 , _verStatus             = VerifStatNominal
                                  }
 
 defaultVerificationBD :: Verification
@@ -176,6 +201,7 @@ defaultVerificationBD = Verification { _verRelease            = StRDisabled
                                      , _verTMStart            = StTmExpected
                                      , _verTMProgress         = V.empty
                                      , _verTMComplete         = StTmExpected
+                                     , _verStatus             = VerifStatNominal
                                      }
 
 defaultVerificationAD :: Verification
@@ -191,6 +217,7 @@ defaultVerificationSCOE = Verification { _verRelease            = StRDisabled
                                        , _verTMStart            = StTmDisabled
                                        , _verTMProgress         = V.empty
                                        , _verTMComplete         = StTmDisabled
+                                       , _verStatus = VerifStatNominal
                                        }
 
 
@@ -313,8 +340,8 @@ setAcceptPending newVerif =
             else newVerif
 
 
-setTMProgressStage :: TMStage -> Int -> Verification -> Verification
-setTMProgressStage status i verif =
+setTMProgressStage :: Int -> TMStage -> Verification -> Verification
+setTMProgressStage i status verif =
     let prog = (verif ^. verTMProgress)
     in  if i >= 0 && i < V.length prog
             then verif & verTMProgress .~ setProg prog status
@@ -340,10 +367,9 @@ setTMProgressStage status i verif =
 
 
 setProgressAssumed :: Verification -> Verification
-setProgressAssumed verif =
-    verif & verTMProgress . traversed %~ setp 
-    where 
-        setp x = if x == StTmExpected || x == StTmPending then StTmAssumed else x   
+setProgressAssumed verif = verif & verTMProgress . traversed %~ setp
+  where
+    setp x = if x == StTmExpected || x == StTmPending then StTmAssumed else x
 
 
 

@@ -1115,6 +1115,7 @@ processVerification
     -> m ()
 processVerification pusPkt = do
     let subType = pusSubType (pusPkt ^. epDU . pusDfh)
+    logDebug $ "Processing Verification (1," <> display subType
     case subType of
         1 -> do -- TM Acceptance Success
             processVerifData pusPkt

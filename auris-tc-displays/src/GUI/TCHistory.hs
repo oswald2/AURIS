@@ -11,6 +11,7 @@ import           RIO
 
 import           Control.Lens                   ( makeLenses
                                                 , (?~)
+                                                , ix
                                                 )
 
 import           GI.Gtk                        as Gtk
@@ -81,18 +82,19 @@ createTCHistory window builder = do
         , ("T" , verifColumnWidth, displayGround verGroundTransmission)
         , ("O" , verifColumnWidth, displayGround verGroundOBR)
         , (" " , verifColumnWidth, displayEmptyText)
-        , ("A" , verifColumnWidth, displayEmptyText)
+        , ("A" , verifColumnWidth, displayTM verTMAcceptance)
         , (" " , verifColumnWidth, displayEmptyText)
-        , ("S" , verifColumnWidth, displayEmptyText)
+        , ("S" , verifColumnWidth, displayTM verTMStart)
         , (" " , verifColumnWidth, displayEmptyText)
-        , ("0" , verifColumnWidth, displayEmptyText)
-        , ("1" , verifColumnWidth, displayEmptyText)
-        , ("2 ", verifColumnWidth, displayEmptyText)
-        , ("3" , verifColumnWidth, displayEmptyText)
-        , ("4" , verifColumnWidth, displayEmptyText)
-        , ("5" , verifColumnWidth, displayEmptyText)
+        , ("0" , verifColumnWidth, displayTMProgress 0)
+        , ("1" , verifColumnWidth, displayTMProgress 1)
+        , ("2 ", verifColumnWidth, displayTMProgress 2)
+        , ("3" , verifColumnWidth, displayTMProgress 3)
+        , ("4" , verifColumnWidth, displayTMProgress 4)
+        , ("5" , verifColumnWidth, displayTMProgress 5)
         , (" " , verifColumnWidth, displayEmptyText)
-        , ("C" , verifColumnWidth, displayEmptyText)
+        , ("C" , verifColumnWidth, displayTM verTMComplete)
+        , ("Status", 50, \row -> [#text := textDisplay (row ^. rowVerifications . verStatus)])
         ]
 
 
@@ -127,6 +129,27 @@ displayGround
     -> [AttrOp CellRendererText 'AttrSet]
 displayGround l row =
     [ #text := textDisplay (row ^. rowVerifications . l)
+    , #backgroundSet := True
+    , #backgroundRgba := row ^. rowBGColor
+    , #foregroundSet := True
+    , #foregroundRgba := row ^. rowFGColor
+    ]
+
+
+displayTM
+    :: Lens' Verification TMStage -> Row -> [AttrOp CellRendererText 'AttrSet]
+displayTM l row =
+    [ #text := textDisplay (row ^. rowVerifications . l)
+    , #backgroundSet := True
+    , #backgroundRgba := row ^. rowBGColor
+    , #foregroundSet := True
+    , #foregroundRgba := row ^. rowFGColor
+    ]
+
+displayTMProgress :: Int -> Row -> [AttrOp CellRendererText 'AttrSet]
+displayTMProgress idx row =
+    [ #text := textDisplay
+        (fromMaybe StTmDisabled (row ^. rowVerifications . verTMProgress ^? ix idx))
     , #backgroundSet := True
     , #backgroundRgba := row ^. rowBGColor
     , #foregroundSet := True
