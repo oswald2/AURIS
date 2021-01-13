@@ -33,7 +33,7 @@ import           General.PUSTypes
 
 
 data EncodedPUSPacket = EncodedPUSPacket
-    { _encPktEncoded :: Maybe (ByteString, Word16, Word16)
+    { _encPktEncoded :: Maybe (ByteString, PktID, SeqControl)
     , _encPktRequest :: TCRequest
     }
 
@@ -70,8 +70,8 @@ tcPktToEncPUSC hm = do
                     env <- ask
                     liftIO $ registerRequest env
                                              request
-                                             (PktID pktID)
-                                             (SeqControl seqFlags)
+                                             pktID
+                                             seqFlags
 
                     -- now pass the packet on to the next stage in encoding
                     yield (EncodedPUSPacket (Just enc) request)

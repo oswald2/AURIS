@@ -57,7 +57,6 @@ import qualified Text.Builder                  as T
 import           Control.Lens                   ( makeLenses
                                                 , (.~)
                                                 )
-import           Data.Binary
 import           Data.Aeson
 import           Codec.Serialise
 import           Data.Attoparsec.ByteString     ( Parser )
@@ -85,28 +84,16 @@ import           Data.TM.PIVals
 
 
 
-data PUSPacketType = PUSTM | PUSTC deriving (Ord, Eq, Enum, Show, Read, Generic)
-
-
-instance Binary PUSPacketType
-instance Serialise PUSPacketType
-instance FromJSON PUSPacketType
-instance ToJSON PUSPacketType where
-  toEncoding = genericToEncoding defaultOptions
-
-
-
-
 
 data PUSHeader = PUSHeader
-  { _pusHdrPktID     :: !Word16
+  { _pusHdrPktID     :: !PktID
   , _pusHdrTcVersion :: !Word8
   , _pusHdrType      :: !PUSPacketType
   , _pusHdrDfhFlag   :: !Bool
   , _pusHdrAPID      :: !APID
   , _pusHdrSeqFlags  :: !SegmentationFlags
   , _pusHdrSSC       :: !SSC
-  , _pusHdrSeqCtrl   :: !Word16
+  , _pusHdrSeqCtrl   :: !SeqControl 
   , _pusHdrTcLength  :: !Word16
   }
   deriving (Show, Read, Generic)
@@ -135,7 +122,6 @@ instance Eq PUSHeader where
       == _pusHdrSSC p2
 
 
-instance Binary PUSHeader
 instance Serialise PUSHeader
 instance FromJSON PUSHeader
 instance ToJSON PUSHeader where
@@ -212,7 +198,7 @@ pusPktIsIdle pkt = pkt ^. pusHdr . pusHdrAPID == pusPktIdleAPID
 -- Returns the encoded packet as well as the PacketID and the SSC field for
 -- TC verification purpuses
 {-# INLINABLE encodePUSPacket #-}
-encodePUSPacket :: PUSPacket -> (ByteString, Word16, Word16)
+encodePUSPacket :: PUSPacket -> (ByteString, PktID, SeqControl)
 encodePUSPacket pkt = if _pusEncodeCRC pkt
   then 
     let (encPkt, pktId, ssc) = encodePktWithoutCRC pkt True
@@ -221,7 +207,7 @@ encodePUSPacket pkt = if _pusEncodeCRC pkt
 
 -- | encodes a packet and sets the PI1/2 values for correct identification
 {-# INLINABLE encodePUSPktChoice #-}
-encodePUSPktChoice :: Bool -> PUSPacket -> (ByteString, Word16, Word16)
+encodePUSPktChoice :: Bool -> PUSPacket -> (ByteString, PktID, SeqControl)
 encodePUSPktChoice True pkt =
   let (!encPkt, pktId, ssc) = encodePktWithoutCRC pkt True 
   in 
@@ -237,7 +223,7 @@ encodePUSPktChoice False pkt = encodePktWithoutCRC pkt False
 -- | So if you need to append the CRC later, this flag should be True, otherwise
 -- | False
 {-# INLINABLE encodePktWithoutCRC #-}
-encodePktWithoutCRC :: PUSPacket -> Bool -> (ByteString, Word16, Word16)
+encodePktWithoutCRC :: PUSPacket -> Bool -> (ByteString, PktID, SeqControl)
 encodePktWithoutCRC pkt useCRC =
   let newPkt  = pusPktUpdateLen pkt useCRC
       (encHdr, pktId, ssc)  = pusPktHdrBuilder (newPkt ^. pusHdr)
@@ -311,14 +297,14 @@ applyPIvals encPkt pic = worker
 
 
 {-# INLINABLE pusPktHdrBuilder #-}
-pusPktHdrBuilder :: PUSHeader -> (Builder, Word16, Word16)
+pusPktHdrBuilder :: PUSHeader -> (Builder, PktID, SeqControl)
 pusPktHdrBuilder hdr =
   let !pktId = packPktID (_pusHdrTcVersion hdr)
                          (_pusHdrType hdr)
                          (_pusHdrDfhFlag hdr)
                          (_pusHdrAPID hdr)
       !seqFlags = packSeqFlags (_pusHdrSeqFlags hdr) (_pusHdrSSC hdr)
-  in  (word16BE pktId <> word16BE seqFlags <> word16BE (_pusHdrTcLength hdr), pktId, seqFlags)
+  in  (word16BE pktId <> word16BE seqFlags <> word16BE (_pusHdrTcLength hdr), PktID pktId, SeqControl seqFlags)
 
 
 
@@ -332,7 +318,7 @@ pusPktHdrParser = do
   let (!vers, !tp, !dfh, !apid) = unpackPktID pktId
       (!sf, !ssc)               = unpackSeqFlags seqFlags
 
-  return (PUSHeader pktId vers tp dfh apid sf ssc seqFlags len)
+  return (PUSHeader (PktID pktId) vers tp dfh apid sf ssc (SeqControl seqFlags) len)
 
 
 {-# INLINABLE pusPktHdrLenOnlyParser #-}

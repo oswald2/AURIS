@@ -15,6 +15,7 @@ module Protocol.CnC
 
 import           RIO
 import qualified RIO.ByteString                as BS
+import qualified Data.ByteString.Char8         as BS8
 import qualified RIO.Text                      as T
 import           ByteString.StrictBuilder       ( builderBytes
                                                 , bytes
@@ -103,8 +104,7 @@ cncProcessAcks interf queue oldSSC = do
                 (pkt ^. pusHdr . pusHdrDfhFlag)
             then
                 -- we have most probably an ACK packet
-                -- TODO process the acknowledgements 
-                return ()
+                processAsciiAck protPkt
             else
                 do
                     -- we have a binary ACK packet
@@ -155,6 +155,35 @@ ackDataParser = do
     i <- PktID <$> A.anyWord16be
     s <- SeqControl <$> A.anyWord16be
     return (i, s)
+
+
+processAsciiAck
+    :: (MonadIO m, MonadReader env m, HasVerif env, HasLogFunc env)
+    => ProtocolPacket PUSPacket
+    -> m ()
+processAsciiAck protPkt = do
+    let hdr   = protPkt ^. protContent . pusHdr
+        pktID = hdr ^. pusHdrPktID
+        seqC  = hdr ^. pusHdrSeqCtrl
+        ack   = BS8.pack "ACK"
+        nak   = BS8.pack "NAK"
+        dat   = BS.take 3 (protPkt ^. protContent . pusData)
+
+    env <- ask
+    if
+        | dat == ack
+        -> do
+            liftIO $ requestVerifyGTCnC env (pktID, seqC) StGSuccess
+        | dat == nak
+        -> do
+            liftIO $ requestVerifyGTCnC env (pktID, seqC) StGSuccess
+        | otherwise
+        -> logWarn $ "Could not parse C&C ACK data from pkt: " <> displayShow
+            (protPkt ^. protContent)
+
+
+
+
 
 
 cncToTMPacket
