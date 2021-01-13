@@ -18,6 +18,7 @@ data VerifCommand =
   | SetVerifG !RequestID !GroundStage
   | SetVerifT !RequestID !GroundStage
   | SetVerifGT !RequestID !GroundStage
+  | SerVerifGTCnC !PktID !SeqControl !GroundStage
   | SetVerifO !RequestID !GroundStage
   | SetVerifA !PktID !SeqControl !TMStage
   | SetVerifS !PktID !SeqControl !TMStage

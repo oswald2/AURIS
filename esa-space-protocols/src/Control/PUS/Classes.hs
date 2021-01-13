@@ -108,6 +108,7 @@ class HasVerif env where
   requestVerifyT :: env -> RequestID -> GroundStage -> IO () 
   requestVerifyO :: env -> RequestID -> GroundStage -> IO () 
   requestVerifyGT :: env -> RequestID -> GroundStage -> IO () 
+  requestVerifyGTCnC :: env -> (PktID, SeqControl) -> GroundStage -> IO ()
   requestVerifyTMA :: env -> (PktID, SeqControl) -> TMStage -> IO ()
   requestVerifyTMS :: env -> (PktID, SeqControl) -> TMStage -> IO ()
   requestVerifyTMC :: env -> (PktID, SeqControl) -> TMStage -> IO ()
@@ -167,6 +168,8 @@ instance HasVerif GlobalState where
         atomically $ writeTBQueue (glsVerifCommandQueue env) (SetVerifO rqstID status)
     requestVerifyGT env rqstID status =
         atomically $ writeTBQueue (glsVerifCommandQueue env) (SetVerifGT rqstID status)
+    requestVerifyGTCnC env (pktID, seqC) status = 
+        atomically $ writeTBQueue (glsVerifCommandQueue env) (SerVerifGTCnC pktID seqC status)
     requestVerifyTMA env (pktID, seqC) status = 
         atomically $ writeTBQueue (glsVerifCommandQueue env) (SetVerifA pktID seqC status)
     requestVerifyTMS env (pktID, seqC) status = 

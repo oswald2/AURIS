@@ -47,8 +47,8 @@ import           Data.PUS.TCTransferFrameEncoder
 
 import           Data.PUS.SegmentEncoder        ( tcSegmentEncoderC )
 import           Data.PUS.CLTU                  ( cltuEncodeRandomizedC )
-import           Data.PUS.CLTUEncoder
-import           Data.PUS.Counter
+import           Data.PUS.CLTUEncoder           ( cltuToNcduC )
+import           Data.PUS.Counter               ( initialSSCCounterMap )
 
 import           Protocol.NCTRS                 ( receiveTmNcduC
                                                 , encodeTcNcduC
@@ -260,13 +260,18 @@ runTMCnCChain cfg missionSpecific pktQueue = do
 
 
 runTCCnCChain
-    :: CncConfig -> PUSMissionSpecific -> ProtocolQueue -> RIO GlobalState ()
-runTCCnCChain cfg missionSpecific duQueue = do
+    :: CncConfig
+    -> PUSMissionSpecific
+    -> ProtocolQueue
+    -> TBQueue ExtractedPacket
+    -> RIO GlobalState ()
+runTCCnCChain cfg missionSpecific duQueue pktQueue = do
     logDebug "runTCCnCChain entering"
 
     let chain = receivePktChannelC duQueue .| sendTCCncC
         ackChain =
-            receiveCnCC missionSpecific (IfCnc (cfgCncID cfg)) .| cncProcessAcks
+            receiveCnCC missionSpecific ifID .| cncProcessAcks ifID pktQueue Nothing
+        ifID = IfCnc (cfgCncID cfg)
 
     logDebug
         $  "C&C TC: connecting to: "
@@ -279,15 +284,15 @@ runTCCnCChain cfg missionSpecific duQueue = do
                         (encodeUtf8 (cfgCncHost cfg))
         )
         200000
-        (\app -> race_ (tcClient chain app) (tcAckClient ackChain app))
+        (\app -> race_ (tcClient ifID chain app) (tcAckClient ifID ackChain app))
 
     logDebug "runTCCnCChain leaving"
   where
-    tcClient chain app = do
+    tcClient ifID chain app = do
         env <- ask
         liftIO $ raiseEvent
             env
-            (EVAlarms (EVEConnection (IfCnc (cfgCncID cfg)) ConnTC Connected))
+            (EVAlarms (EVEConnection ifID ConnTC Connected))
 
         res <- try $ void $ runConduitRes (chain .| appSink app)
 
@@ -305,7 +310,7 @@ runTCCnCChain cfg missionSpecific duQueue = do
                     <> displayShow e
                 throwM e
             Right _ -> return ()
-    tcAckClient chain app = do
+    tcAckClient ifID chain app = do
         env <- ask
         logDebug "C&C TC Ack reader thread started"
 
@@ -315,7 +320,7 @@ runTCCnCChain cfg missionSpecific duQueue = do
             (raiseEvent
                 env
                 (EVAlarms
-                    (EVEConnection (IfCnc (cfgCncID cfg)) ConnTC Disconnected)
+                    (EVEConnection ifID ConnTC Disconnected)
                 )
             )
         case res of
@@ -483,7 +488,7 @@ runChains missionSpecific = do
                                           (cfgNCTRS cfg)
 
     -- create the interface threads and switcher map for the C & C interfaces
-    (switcherMap, interfaceThreads) <- foldM cncIf
+    (switcherMap, interfaceThreads) <- foldM (cncIf pktQueue)
                                              (switcherMap2, nctrsThreads)
                                              (cfgCnC cfg)
 
@@ -503,6 +508,6 @@ runChains missionSpecific = do
     nctrsIf (sm, ts) x = do
         (queue, newSm) <- createInterfaceChannel sm (IfNctrs (cfgNctrsID x))
         return (newSm, ts <> conc (runTCNctrsChain x queue))
-    cncIf (sm, ts) x = do
+    cncIf pktQueue (sm, ts) x = do
         (queue, newSm) <- createInterfaceChannel sm (IfCnc (cfgCncID x))
-        return (newSm, ts <> conc (runTCCnCChain x missionSpecific queue))
+        return (newSm, ts <> conc (runTCCnCChain x missionSpecific queue pktQueue))

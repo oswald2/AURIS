@@ -4,201 +4,272 @@
     , NoImplicitPrelude
 #-}
 module Protocol.CnC
-  ( receiveCnCC
-  , sendTCCncC
-  , cncToTMPacket
-  , cncProcessAcks
-  , scoeCommandC
-  , SCOECommand(..)
-  , generateAckData
-  ) where
+    ( receiveCnCC
+    , sendTCCncC
+    , cncToTMPacket
+    , cncProcessAcks
+    , scoeCommandC
+    , SCOECommand(..)
+    , generateAckData
+    ) where
 
 import           RIO
 import qualified RIO.ByteString                as BS
-
-import           ByteString.StrictBuilder
+import qualified RIO.Text                      as T
+import           ByteString.StrictBuilder       ( builderBytes
+                                                , bytes
+                                                )
 
 import           Conduit
 import           Data.Conduit.Attoparsec
 import qualified Data.ByteString.Char8         as BCS
 import           Data.Attoparsec.ByteString.Char8
                                                as A
-
+import qualified Data.Attoparsec.Binary        as A
 import qualified Data.Vector                   as V
 import           Data.Char
 
 import           Data.PUS.PUSPacket
+import           Data.PUS.PUSDfh                ( pusSubType
+                                                , pusType
+                                                )
 import           Data.PUS.PUSPacketEncoder
 import           Data.PUS.ExtractedDU
 import           Data.PUS.ExtractedPUSPacket
 import           Data.PUS.MissionSpecific.Definitions
 import           Data.PUS.Events
-
-import           Protocol.ProtocolInterfaces
+import           Data.PUS.TCRequest
+import           Protocol.ProtocolInterfaces    ( protContent
+                                                , ProtocolInterface(IfCnc)
+                                                , ProtocolPacket(ProtocolPacket)
+                                                )
 
 import           General.Time
 import           General.PUSTypes
 import           General.Hexdump
 import           Control.PUS.Classes
 
-
+import           Verification.Verification
 
 -- if we have a SCOE packet, and it has a secondary header, it is a binary
 -- TC, else an ASCII one.
 isASCIICc :: ProtocolPacket PUSPacket -> Bool
 isASCIICc (ProtocolPacket (IfCnc _) pusPkt) =
-  let hdr = pusPkt ^. pusHdr
-  in  hdr ^. pusHdrTcVersion == 3 && not (hdr ^. pusHdrDfhFlag)
+    let hdr = pusPkt ^. pusHdr
+    in  hdr ^. pusHdrTcVersion == 3 && not (hdr ^. pusHdrDfhFlag)
 isASCIICc _ = False
 
 
 receiveCnCC
-  :: (MonadIO m, MonadReader env m, HasLogFunc env, HasRaiseEvent env)
-  => PUSMissionSpecific
-  -> ProtocolInterface
-  -> ConduitT ByteString (ByteString, ProtocolPacket PUSPacket) m ()
+    :: (MonadIO m, MonadReader env m, HasLogFunc env, HasRaiseEvent env)
+    => PUSMissionSpecific
+    -> ProtocolInterface
+    -> ConduitT ByteString (ByteString, ProtocolPacket PUSPacket) m ()
 receiveCnCC missionSpecific interf = do
-  conduitParserEither (match (pusPktParser missionSpecific interf))
-    .| sink
- where
-  sink = do
+    conduitParserEither (match (pusPktParser missionSpecific interf)) .| sink
+  where
+    sink = do
+        x <- await
+        case x of
+            Nothing -> return ()
+            Just tc -> do
+                case tc of
+                    Left err -> do
+                        env <- ask
+                        let msg = "Error decoding CnC packet: "
+                                <> displayShow err
+                        logError msg
+                        liftIO $ raiseEvent
+                            env
+                            (EVAlarms (EVPacketAlarm (utf8BuilderToText msg)))
+                        return ()
+                    Right (_, res) -> do
+                        yield res
+                        sink
+
+
+cncProcessAcks
+    :: (MonadIO m, MonadReader env m, HasLogFunc env, HasVerif env)
+    => ProtocolInterface
+    -> TBQueue ExtractedPacket
+    -> Maybe SSC
+    -> ConduitT (ByteString, ProtocolPacket PUSPacket) Void m ()
+cncProcessAcks interf queue oldSSC = do
     x <- await
     case x of
-      Nothing -> return ()
-      Just tc -> do
-        case tc of
-          Left err -> do
+        Just (byts, protPkt) -> do
+            let pkt = protPkt ^. protContent
+            if pkt ^. pusHdr . pusHdrTcVersion == 3 && not
+                (pkt ^. pusHdr . pusHdrDfhFlag)
+            then
+                -- we have most probably an ACK packet
+                -- TODO process the acknowledgements 
+                return ()
+            else
+                do
+                    -- we have a binary ACK packet
+                    processBinaryAck protPkt
+                    -- forward the ack packet also to the TM packet processing
+                    (newPkt, newSSC) <- convertCncToTMPacket (byts, protPkt)
+                                                             interf
+                                                             oldSSC
+                    atomically $ writeTBQueue queue newPkt
+                    cncProcessAcks interf queue (Just newSSC)
+        Nothing -> return ()
+
+processBinaryAck
+    :: (MonadReader env m, MonadIO m, HasLogFunc env, HasVerif env)
+    => ProtocolPacket PUSPacket
+    -> m ()
+processBinaryAck protPkt = do
+    let pusPkt = protPkt ^. protContent
+        t      = pusType (pusPkt ^. pusDfh)
+        st     = pusSubType (pusPkt ^. pusDfh)
+    case t of
+        1 -> do
             env <- ask
-            let msg = "Error decoding CnC packet: " <> displayShow err
-            logError msg
-            liftIO $ raiseEvent
-              env
-              (EVAlarms (EVPacketAlarm (utf8BuilderToText msg)))
-            return ()
-          Right (_, res) -> do
-            yield res
-            sink
+            case st of
+                129 -> do
+                  -- ACK
+                    parseAndVerify env pusPkt StGSuccess
+                130 -> do
+                  -- NAK
+                    parseAndVerify env pusPkt StGFail
+                _ -> return ()
+        _ -> return ()
+  where
+    parseAndVerify env pusPkt status = do
+        let dat = pusPkt ^. pusData
+        case parseOnly ackDataParser dat of
+            Left err ->
+                logWarn
+                    $  "Could not parse C&C ACK data from pkt: "
+                    <> display (T.pack err)
+                    <> " packet: "
+                    <> displayShow pusPkt
+            Right val -> liftIO $ requestVerifyGTCnC env val status
 
 
-cncProcessAcks :: (Monad m) => ConduitT (ByteString, ProtocolPacket PUSPacket) Void m () 
-cncProcessAcks = awaitForever $ \(byts, protPkt) -> do 
-  let pkt    = protPkt ^. protContent
-  if pkt ^. pusHdr . pusHdrTcVersion == 3 && pkt ^. pusHdr . pusHdrDfhFlag == False 
-    then
-      -- we have most probably an ACK packet
-      -- TODO process the acknowledgements 
-      return () 
-    else 
-      -- we have a different packet, just log it. We should only be used on the return of the TC link
-      return () 
+ackDataParser :: Parser (PktID, SeqControl)
+ackDataParser = do
+    i <- PktID <$> A.anyWord16be
+    s <- SeqControl <$> A.anyWord16be
+    return (i, s)
 
 
 cncToTMPacket
-  :: (MonadIO m, MonadReader env m, HasLogFunc env)
-  => ProtocolInterface
-  -> Maybe SSC
-  -> ConduitT
-       (ByteString, ProtocolPacket PUSPacket)
-       ExtractedPacket
-       m
-       ()
+    :: (MonadIO m, MonadReader env m, HasLogFunc env)
+    => ProtocolInterface
+    -> Maybe SSC
+    -> ConduitT
+           (ByteString, ProtocolPacket PUSPacket)
+           ExtractedPacket
+           m
+           ()
 cncToTMPacket interf lastSSC = do
-  x <- await
-  case x of
-    Nothing              -> return ()
-    Just (byts, protPkt) -> do
-      ert <- liftIO getCurrentTime
-      let epd = ExtractedDU { _epQuality = toFlag Good True
-                            , _epERT     = ert
-                            , _epGap     = determineGap lastSSC newSSC
-                            , _epSource  = interf
-                            , _epVCID    = IsSCOE
-                            , _epDU      = pkt
-                            }
-          newSSC = pkt ^. pusHdr . pusHdrSSC
-          pkt    = protPkt ^. protContent
-          newPkt = ExtractedPacket byts epd
+    x <- await
+    case x of
+        Nothing  -> return ()
+        Just res -> do
+            (newPkt, newSSC) <- convertCncToTMPacket res interf lastSSC
+            logDebug $ "CnC TM: received packet: " <> displayShow newPkt
+            yield newPkt
+            cncToTMPacket interf (Just newSSC)
 
-      logDebug $ "CnC TM: received packet: " <> displayShow epd
 
-      yield newPkt
-      cncToTMPacket interf (Just newSSC)
+convertCncToTMPacket
+    :: MonadIO m
+    => (ByteString, ProtocolPacket PUSPacket)
+    -> ProtocolInterface
+    -> Maybe SSC
+    -> m (ExtractedPacket, SSC)
+convertCncToTMPacket (byts, protPkt) interf lastSSC = do
+    ert <- liftIO getCurrentTime
+    let epd = ExtractedDU { _epQuality = toFlag Good True
+                          , _epERT     = ert
+                          , _epGap     = determineGap lastSSC newSSC
+                          , _epSource  = interf
+                          , _epVCID    = IsSCOE
+                          , _epDU      = pkt
+                          }
+        newSSC = pkt ^. pusHdr . pusHdrSSC
+        pkt    = protPkt ^. protContent
+        newPkt = ExtractedPacket byts epd
 
- where
-  determineGap Nothing       _   = Nothing
-  determineGap (Just oldSSC) ssc = if oldSSC + 1 == ssc
-    then Nothing
-    else Just (fromIntegral oldSSC, fromIntegral ssc)
+    return (newPkt, newSSC)
+  where
+    determineGap Nothing       _   = Nothing
+    determineGap (Just oldSSC) ssc = if oldSSC + 1 == ssc
+        then Nothing
+        else Just (fromIntegral oldSSC, fromIntegral ssc)
 
 
 
 sendTCCncC
-  :: (MonadIO m, MonadReader env m, HasLogFunc env)
-  => ConduitT EncodedPUSPacket ByteString m ()
+    :: (MonadIO m, MonadReader env m, HasLogFunc env, HasVerif env)
+    => ConduitT EncodedPUSPacket ByteString m ()
 sendTCCncC = awaitForever $ \encPkt -> do
-  case encPkt ^. encPktEncoded of
-    Just (pkt, pktId, ssc) -> do
-      logDebug $ display @Text "Encoded C&C:\n" <> display (hexdumpBS pkt)
-      yield pkt
-    Nothing -> return ()
+    case encPkt ^. encPktEncoded of
+        Just (pkt, _pktId, _ssc) -> do
+            logDebug $ display @Text "Encoded C&C:\n" <> display (hexdumpBS pkt)
+            now <- liftIO $ getCurrentTime
+            yield pkt
+
+            -- confirm release for the verifications
+            env <- ask
+            liftIO $ requestReleased
+                env
+                (encPkt ^. encPktRequest . tcReqRequestID)
+                now
+                StRSuccess
+        Nothing -> return ()
 
 
 scoeCommandC
-  :: (Monad m) => ConduitT (ProtocolPacket PUSPacket) SCOECommand m ()
+    :: (Monad m) => ConduitT (ProtocolPacket PUSPacket) SCOECommand m ()
 scoeCommandC = awaitForever $ \pusPkt -> do
-  maybe scoeCommandC yield (extractCommand pusPkt)
+    maybe scoeCommandC yield (extractCommand pusPkt)
 
-
-
--- sendTC :: Socket -> B.ByteString -> IO ()
--- sendTC handle msg = do
---   logStr nctrsArea $ "Sending SCOE TC ACK: " ++ hexDumpString msg
---   sendAll handle msg
-
-
--- sendTM :: Socket -> B.ByteString -> Int -> IO ()
--- sendTM sock pl _leaps = do
---   sendAll sock pl
 
 {-# INLINABLE extractCommand #-}
 extractCommand :: ProtocolPacket PUSPacket -> Maybe SCOECommand
 extractCommand cpkt@(ProtocolPacket (IfCnc _) pusPkt) =
-  if isASCIICc cpkt then parseCncContent (_pusData pusPkt) else Nothing
+    if isASCIICc cpkt then parseCncContent (_pusData pusPkt) else Nothing
 extractCommand _ = Nothing
 
 {-# INLINABLE parseCncContent #-}
 parseCncContent :: BCS.ByteString -> Maybe SCOECommand
 parseCncContent cont = case parse scoeCommandParser cont of
-  Fail{}    -> Nothing
-  Partial c -> case c BCS.empty of
-    Fail{}     -> Nothing
-    Partial _  -> Nothing
+    Fail{}    -> Nothing
+    Partial c -> case c BCS.empty of
+        Fail{}     -> Nothing
+        Partial _  -> Nothing
+        Done _ res -> Just res
     Done _ res -> Just res
-  Done _ res -> Just res
 
 
 data SCOECommand = SCOECommand
-  { sccCommand :: !BS.ByteString
-  , sccArgs    :: V.Vector BS.ByteString
-  }
-  deriving (Eq, Show, Read)
+    { sccCommand :: !BS.ByteString
+    , sccArgs    :: V.Vector BS.ByteString
+    }
+    deriving (Eq, Show, Read)
 
 {-# INLINABLE scoeCommandParser #-}
 scoeCommandParser :: Parser SCOECommand
 scoeCommandParser = do
-  cmd  <- commandParser
-  args <- option V.empty $ A.try $ do
-    void space
-    V.fromList <$> argumentListParser
-  return $! SCOECommand cmd args
+    cmd  <- commandParser
+    args <- option V.empty $ A.try $ do
+        void space
+        V.fromList <$> argumentListParser
+    return $! SCOECommand cmd args
 
 {-# INLINABLE commandParser #-}
 commandParser :: Parser BS.ByteString
 commandParser = do
-  (bs, _) <- A.match $ do
-    void A.letter_ascii
-    void $ A.takeWhile (inClass keywordChars)
-  return (BCS.map toUpper bs)
+    (bs, _) <- A.match $ do
+        void A.letter_ascii
+        void $ A.takeWhile (inClass keywordChars)
+    return (BCS.map toUpper bs)
 
 keywordChars :: String
 keywordChars = "_0..9a-zA-Z"
@@ -210,7 +281,7 @@ argumentListParser = argumentParser `A.sepBy` choice [space, A.char ',']
 {-# INLINABLE argumentParser #-}
 argumentParser :: Parser BS.ByteString
 argumentParser = do
-  A.takeWhile (\c -> c /= ' ' && c /= ',')
+    A.takeWhile (\c -> c /= ' ' && c /= ',')
 
 
   -- TODO: for now we have a shortcut to quickly get out strings, but not parse completely
@@ -297,77 +368,77 @@ argumentParser = do
 {-# INLINABLE generateAckData #-}
 generateAckData :: SCOECommand -> Maybe ByteString -> ByteString
 generateAckData (SCOECommand "TRANSFER" args) Nothing =
-  builderBytes $ bytes "ACK " <> bytes "TRANSFER " <> bytes (args V.! 0)
+    builderBytes $ bytes "ACK " <> bytes "TRANSFER " <> bytes (args V.! 0)
 generateAckData (SCOECommand "TRANSFER" args) (Just reason) =
-  builderBytes
-    $  bytes "NAK "
-    <> bytes "TRANSFER "
-    <> bytes (args V.! 0)
-    <> bytes " "
-    <> bytes reason
+    builderBytes
+        $  bytes "NAK "
+        <> bytes "TRANSFER "
+        <> bytes (args V.! 0)
+        <> bytes " "
+        <> bytes reason
 
 generateAckData (SCOECommand "ONLINE" _args) Nothing =
-  builderBytes $ bytes "ACK " <> bytes "ONLINE "
+    builderBytes $ bytes "ACK " <> bytes "ONLINE "
 generateAckData (SCOECommand "ONLINE" _args) (Just reason) =
-  builderBytes $ bytes "NAK " <> bytes "ONLINE " <> bytes reason
+    builderBytes $ bytes "NAK " <> bytes "ONLINE " <> bytes reason
 
 generateAckData (SCOECommand "OFFLINE" _args) Nothing =
-  builderBytes $ bytes "ACK " <> bytes "OFFLINE "
+    builderBytes $ bytes "ACK " <> bytes "OFFLINE "
 generateAckData (SCOECommand "OFFLINE" _args) (Just reason) =
-  builderBytes $ bytes "NAK " <> bytes "OFFLINE " <> bytes reason
+    builderBytes $ bytes "NAK " <> bytes "OFFLINE " <> bytes reason
 
 generateAckData (SCOECommand "RESET" _args) Nothing = "ACK " <> "RESET "
 generateAckData (SCOECommand "RESET" _args) (Just reason) =
-  "NAK " <> "RESET " <> " " <> reason
+    "NAK " <> "RESET " <> " " <> reason
 
 generateAckData (SCOECommand "RESTART" args) Nothing =
-  "ACK " <> "RESTART " <> args V.! 0
+    "ACK " <> "RESTART " <> args V.! 0
 generateAckData (SCOECommand "RESTART" args) (Just reason) =
-  "NAK " <> "RESTART " <> args V.! 0 <> " " <> reason
+    "NAK " <> "RESTART " <> args V.! 0 <> " " <> reason
 
 generateAckData (SCOECommand "START" args) Nothing =
-  "ACK " <> "START " <> args V.! 0
+    "ACK " <> "START " <> args V.! 0
 generateAckData (SCOECommand "START" args) (Just reason) =
-  "NAK " <> "START " <> args V.! 0 <> " " <> reason
+    "NAK " <> "START " <> args V.! 0 <> " " <> reason
 
 generateAckData (SCOECommand "STOP" args) Nothing =
-  "ACK " <> "STOP " <> args V.! 0
+    "ACK " <> "STOP " <> args V.! 0
 generateAckData (SCOECommand "STOP" args) (Just reason) =
-  "NAK " <> "STOP " <> args V.! 0 <> " " <> reason
+    "NAK " <> "STOP " <> args V.! 0 <> " " <> reason
 
 generateAckData (SCOECommand "APPLY" args) Nothing =
-  "ACK " <> "APPLY " <> args V.! 0
+    "ACK " <> "APPLY " <> args V.! 0
 generateAckData (SCOECommand "APPLY" args) (Just reason) =
-  "NAK " <> "APPLY " <> args V.! 0 <> " " <> reason
+    "NAK " <> "APPLY " <> args V.! 0 <> " " <> reason
 
 generateAckData (SCOECommand "SET" args) Nothing =
-  "ACK " <> "SET " <> args V.! 0
+    "ACK " <> "SET " <> args V.! 0
 generateAckData (SCOECommand "SET" args) (Just reason) =
-  "NAK " <> "SET " <> args V.! 0 <> " " <> reason
+    "NAK " <> "SET " <> args V.! 0 <> " " <> reason
 
 generateAckData (SCOECommand "REPORTPARA" args) Nothing =
-  "ACK " <> "REPORTPARA " <> args V.! 0
+    "ACK " <> "REPORTPARA " <> args V.! 0
 generateAckData (SCOECommand "REPORTPARA" args) (Just reason) =
-  "NAK " <> "REPORTPARA " <> args V.! 0 <> " " <> reason
+    "NAK " <> "REPORTPARA " <> args V.! 0 <> " " <> reason
 
 generateAckData (SCOECommand "TEST" args) Nothing =
-  "ACK " <> "TEST " <> args V.! 0
+    "ACK " <> "TEST " <> args V.! 0
 generateAckData (SCOECommand "TEST" args) (Just reason) =
-  "NAK " <> "TEST " <> args V.! 0 <> " " <> reason
+    "NAK " <> "TEST " <> args V.! 0 <> " " <> reason
 
 generateAckData (SCOECommand "REPORT" args) Nothing =
-  "ACK " <> "REPORT " <> args V.! 0
+    "ACK " <> "REPORT " <> args V.! 0
 generateAckData (SCOECommand "REPORT" args) (Just reason) =
-  "NAK " <> "REPORT " <> args V.! 0 <> " " <> reason
+    "NAK " <> "REPORT " <> args V.! 0 <> " " <> reason
 
 generateAckData (SCOECommand "GETTM" args) Nothing =
-  "ACK " <> "GETTM " <> args V.! 0
+    "ACK " <> "GETTM " <> args V.! 0
 generateAckData (SCOECommand "GETTM" args) (Just reason) =
-  "NAK " <> "GETTM " <> args V.! 0 <> " " <> reason
+    "NAK " <> "GETTM " <> args V.! 0 <> " " <> reason
 
 
 generateAckData (SCOECommand x args) Nothing =
-  "ACK " <> x <> " " <> if V.length args >= 1 then args V.! 0 else BS.empty
+    "ACK " <> x <> " " <> if V.length args >= 1 then args V.! 0 else BS.empty
 generateAckData (SCOECommand x args) (Just reason) =
-  "ACK " <> x <> " " <> arg1 <> " " <> reason
-  where arg1 = if V.length args >= 1 then args V.! 0 else BS.empty
+    "ACK " <> x <> " " <> arg1 <> " " <> reason
+    where arg1 = if V.length args >= 1 then args V.! 0 else BS.empty

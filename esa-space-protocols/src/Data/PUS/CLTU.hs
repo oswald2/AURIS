@@ -35,40 +35,41 @@ module Data.PUS.CLTU
 where
 
 import           RIO                     hiding ( Builder )
-import           RIO.ByteString                 ( ByteString )
 import qualified RIO.ByteString                as BS
 
-import           Control.Monad                  ( void )
-import           Control.Monad.State
-import           Control.PUS.Classes
+import Control.Monad.State ( State, evalState )
+import Control.PUS.Classes ( HasConfig(..) )
 
-import           ByteString.StrictBuilder
+import ByteString.StrictBuilder
+    ( Builder, builderBytes, bytes, word8 )
 
-import           Data.Bits
-import           Data.Text                      ( Text )
+import Data.Bits ( Bits((.&.), xor, shiftL) )
 import qualified Data.Text                     as T
 import qualified Data.Text.Lazy                as TL
 import qualified Data.Text.Lazy.Builder        as TB
 import           Data.List                     as L
                                                 ( intersperse )
 
-import           Data.PUS.Config
-import           Data.PUS.CLTUTable
-import           Data.PUS.Randomizer
-import Data.PUS.TCRequest
+import Data.PUS.Config
+    ( cltuBlockSizeAsWord8,
+      Config(cfgCltuBlockSize, cfgRandomizerStartValue) )
+import Data.PUS.CLTUTable ( cltuTable )
+import Data.PUS.Randomizer ( initialize, randomize, Randomizer )
+import Data.PUS.TCRequest ( TCRequest )
 
 import qualified TextShow                      as TS
-import           TextShow.Data.Integral
+import TextShow.Data.Integral ( showbHex )
 
-import           General.Chunks
-import           General.Hexdump
+import General.Chunks ( chunkedByBS )
+import General.Hexdump ( hexdumpLineBS )
 
 
 import           Data.Attoparsec.ByteString     ( Parser )
 import qualified Data.Attoparsec.ByteString    as A
 
-import           Data.Conduit
-import           Data.Conduit.Attoparsec
+import Data.Conduit ( ConduitT, awaitForever, yield )
+import Data.Conduit.Attoparsec
+    ( conduitParserEither, ParseError, PositionRange )
 
 
 -- The CLTU itself

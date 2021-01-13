@@ -115,6 +115,8 @@ processCommand st (SetVerifO rqstID status) = do
     processGroundStage st rqstID status setGroundOBRStage
 processCommand st (SetVerifGT rqstID status) = do
     processGroundStage st rqstID status setGroundGTStages
+processCommand st (SerVerifGTCnC pktID ssc status) = do
+    processCncGroundStage st (pktID, ssc) status setGroundGTStages
 
 processCommand st (SetVerifA pktID ssc status) = do
     processTMStage st pktID ssc status setTMAcceptStage
@@ -148,6 +150,40 @@ processGroundStage st rqstID status setStage = do
                 <> display rqstID
                 <> " has not been found"
     return st
+
+processCncGroundStage
+    :: ( MonadReader env m
+       , MonadIO m
+       , Display t
+       , HasLogFunc env
+       , HasRaiseEvent env
+       )
+    => VerifState
+    -> (PktID, SeqControl)
+    -> t
+    -> (t -> Verification -> Verification)
+    -> m VerifState
+processCncGroundStage st key@(pktID, ssc) status setStage = do
+    logDebug
+        $  "processCncGroundStage: PktID: "
+        <> display pktID
+        <> " SSC: "
+        <> display ssc
+        <> " Status: "
+        <> display status
+    case HM.lookup key (_stApidMap st) of
+        Just (rqstID, var) -> do
+            doUpdate rqstID status var setStage
+        Nothing -> do
+            logWarn
+                $  "Verification record for Key "
+                <> display pktID
+                <> " SSC: "
+                <> display ssc
+                <> " Status: "
+                <> " has not been found"
+    return st
+
 
 
 processTMStage
@@ -193,7 +229,5 @@ doUpdate rqstID status var setStage = do
         let newStatus = setStage status verif
         writeTVar var newStatus
         return $ do
-            let event = EVTCVerificationUpdate
-                    rqstID
-                    newStatus
+            let event = EVTCVerificationUpdate rqstID newStatus
             liftIO $ raiseEvent env (EVCommanding event)
