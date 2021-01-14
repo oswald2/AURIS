@@ -55,6 +55,7 @@ module Data.TM.TMParameterDef
   , getWidth
   , getPaddedWidth
   , getPadding
+  , uintParamDef
   )
 where
 
@@ -451,3 +452,26 @@ instance FromJSON TMParameterDef
 instance ToJSON TMParameterDef where
   toEncoding = genericToEncoding defaultOptions
 
+
+uintParamDef :: ShortText -> ShortText -> Int -> TMParameterDef
+uintParamDef name descr bitWidth = 
+  TMParameterDef {
+              _fpName = name
+              , _fpDescription = descr
+              , _fpPID = Nothing
+              , _fpUnit = ""
+              , _fpType = ParamUInteger bitWidth
+              , _fpWidth = Nothing
+              , _fpValid = Nothing
+              , _fpRelated = Nothing
+              , _fpCalibs = CritNoCalib
+              , _fpNatur = NaturRaw
+              , _fpInterpolation = CalibFail
+              , _fpStatusConsistency = SCCOff
+              , _fpDecim = 0 
+              , _fpDefaultVal = nullValue
+              , _fpSubsys = ""
+              , _fpValidityValue = nullValue
+              , _fpOBTID = Nothing
+              , _fpEndian = BiE
+  }

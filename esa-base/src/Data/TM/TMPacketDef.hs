@@ -61,6 +61,7 @@ module Data.TM.TMPacketDef
   , tmplSuperComm
   , tmplParam
   , isSuperCommutated
+  , simpleParamLocation
   , TMPacketMap
   , TMPacketKey(..)
   , PICSearchIndex(..)
@@ -80,6 +81,7 @@ module Data.TM.TMPacketDef
   , tmvpRadix
   , tmvpOffset
   , tmvpParam
+  , fixedTMPacketDefs
   )
 where
 
@@ -151,6 +153,18 @@ instance AE.ToJSON TMParamLocation where
 -- | returns if a param location is supercommutated
 isSuperCommutated :: TMParamLocation -> Bool
 isSuperCommutated TMParamLocation {..} = isJust _tmplSuperComm
+
+
+simpleParamLocation :: ShortText -> Int -> TMParameterDef -> TMParamLocation
+simpleParamLocation name byteOffset param = 
+  TMParamLocation {
+          _tmplName = name
+          , _tmplOffset = mkOffset (ByteOffset byteOffset) (BitOffset 0)
+          , _tmplTime = nullTime 
+          , _tmplSuperComm = Nothing
+          , _tmplParam = param
+    }
+
 
 -- | An event. It is possible to specify, that an event/alaram is raised
 -- when a corresponding packet is received. This defines the severity of
@@ -313,6 +327,52 @@ instance AE.FromJSON TMPacketDef
 instance AE.ToJSON TMPacketDef where 
   toEncoding = AE.genericToEncoding AE.defaultOptions
 
+
+fixedTMPacketDefs :: [TMPacketDef]
+fixedTMPacketDefs = [
+  TMPacketDef {
+    _tmpdSPID = SPID 5075
+    , _tmpdName = "C&C_ACK"
+    , _tmpdDescr = "C&C Acknowledge Packet"
+    , _tmpdType = PUSType 1
+    , _tmpdSubType = PUSSubType 129
+    , _tmpdApid = 1857
+    , _tmpdPI1Val = 0
+    , _tmpdPI2Val = 0
+    , _tmpdUnit = ""
+    , _tmpdTime = True 
+    , _tmpdInter = Nothing
+    , _tmpdValid = True
+    , _tmpdCheck = False
+    , _tmpdEvent = PIDNo
+    , _tmpdParams = TMFixedParams (V.fromList 
+      [ simpleParamLocation "CnCAckPktID" 16 (uintParamDef "CnCAckPktID" "Packet ID of the C&C ACK packet" 16)
+        , simpleParamLocation "CnCAckSSC" 18 (uintParamDef "CnCAckSSC" "SSC of the C&C ACK packet" 16)
+      ])
+    }
+  , TMPacketDef {
+      _tmpdSPID = SPID 5076
+      , _tmpdName = "C&C_NAK"
+      , _tmpdDescr = "C&C NAK Packet"
+      , _tmpdType = PUSType 1
+      , _tmpdSubType = PUSSubType 130
+      , _tmpdApid = 1857
+      , _tmpdPI1Val = 0
+      , _tmpdPI2Val = 0
+      , _tmpdUnit = ""
+      , _tmpdTime = True 
+      , _tmpdInter = Nothing
+      , _tmpdValid = True
+      , _tmpdCheck = False
+      , _tmpdEvent = PIDNo
+      , _tmpdParams = TMFixedParams (V.fromList 
+        [ simpleParamLocation "CnCAckPktID" 16 (uintParamDef "CnCAckPktID" "Packet ID of the C&C ACK packet" 16)
+          , simpleParamLocation "CnCAckSSC" 18 (uintParamDef "CnCAckSSC" "SSC of the C&C ACK packet" 16)
+          , simpleParamLocation "CnCAckERR" 20 (uintParamDef "CnCAckERR" "Error Code for Acknowledge" 16)
+        ])
+    }
+
+  ]
 
 -- | The tuple (APID, PUSType, PUSSubType, PI1, PI2) which is the lookup key
 -- for the packet definition

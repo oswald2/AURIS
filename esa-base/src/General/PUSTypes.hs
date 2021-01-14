@@ -69,6 +69,7 @@ module General.PUSTypes
     , PFC(..)
     , PUSPacketType(..)
     , PktID(..)
+    , pktIdDisplayPretty
     , pktIdVersion
     , pktIdType
     , pktIdSetType
@@ -378,11 +379,14 @@ instance ToJSON PUSSubType where
 
 data PUSPacketType = PUSTM | PUSTC deriving (Ord, Eq, Enum, Show, Read, Generic)
 
-
 instance Serialise PUSPacketType
 instance FromJSON PUSPacketType
 instance ToJSON PUSPacketType where
     toEncoding = genericToEncoding defaultOptions
+
+instance Display PUSPacketType where 
+    display PUSTM = "TM"
+    display PUSTC = "TC"
 
 
 
@@ -398,6 +402,13 @@ instance ToJSON PktID where
 
 instance Display PktID where
     display (PktID x) = display x
+
+pktIdDisplayPretty :: PktID -> Utf8Builder
+pktIdDisplayPretty x = 
+    "Version: " <> display (pktIdVersion x) 
+    <> " Type: " <> display (pktIdType x)
+    <> " DFH: " <> if pktIdDfh x then "True" else "False"
+    <> " APID: " <> display (pktIdAPID x)
 
 pktIdVersion :: PktID -> Word8
 pktIdVersion (PktID x) =

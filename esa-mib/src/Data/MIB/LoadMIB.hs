@@ -249,7 +249,7 @@ loadPackets mibPath parameters vpdLookup = do
     let key pkt = TMPacketKey (_tmpdApid pkt)
             (_tmpdType pkt) (_tmpdSubType pkt)
             (fromIntegral (_tmpdPI1Val pkt)) (fromIntegral (_tmpdPI2Val pkt))
-        lst = map (\x -> (key x, x)) packets
+        lst = map (\x -> (key x, x)) (fixedTMPacketDefs ++ packets)
     hm <- liftEither $ runST $ do
       ht <- HTC.fromList lst
       Right <$> HT.unsafeFreeze ht

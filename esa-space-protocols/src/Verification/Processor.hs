@@ -71,6 +71,8 @@ processCommand st (RegisterRequest rqst pktId ssc) = do
                 &  stApidMap
                 .~ HM.insert (pktId, ssc) (rqstID, var) (_stApidMap st)
     env <- ask
+    logDebug $ "Verification: registerRequest got new request RqstID: " <> display rqstID 
+        <> " PktID: " <> display pktId <> " SSC: " <> display ssc
     liftIO $ raiseEvent env (EVCommanding (EVTCVerificationNew rqst verif))
     return newSt
 

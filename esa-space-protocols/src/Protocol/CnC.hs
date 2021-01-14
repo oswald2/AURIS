@@ -103,9 +103,10 @@ cncProcessAcks interf queue oldSSC = do
             let pkt = protPkt ^. protContent
             if pkt ^. pusHdr . pusHdrTcVersion == 3 && not
                 (pkt ^. pusHdr . pusHdrDfhFlag)
-            then
+            then do
                 -- we have most probably an ACK packet
                 processAsciiAck protPkt
+                cncProcessAcks interf queue oldSSC
             else
                 do
                     -- we have a binary ACK packet
@@ -164,7 +165,9 @@ processAsciiAck
     -> m ()
 processAsciiAck protPkt = do
     let hdr   = protPkt ^. protContent . pusHdr
-        pktID = hdr ^. pusHdrPktID
+        -- the ack is a TM packet, but the PktID to be used for verification is a 
+        -- TC, therefore, we need to set the type flag in the PktID
+        pktID = pktIdSetType (hdr ^. pusHdrPktID) PUSTC
         seqC  = hdr ^. pusHdrSeqCtrl
         ack   = BS8.pack "ACK"
         nak   = BS8.pack "NAK"
