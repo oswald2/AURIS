@@ -29,7 +29,7 @@ import           General.PUSTypes               ( VCID(VCID)
                                                 , mkRqstID
                                                 )
 import           General.Hexdump                ( hexdumpBS )
-import           General.Types                  ( HexBytes(unHexBytes) )
+import           General.Types                  ( HexBytes(toBS) )
 import           General.Time                   ( edenTimeParser
                                                 , nullTime
                                                 )
@@ -78,7 +78,7 @@ handleEdenMessage missionSpecific interf counters eden@EdenMessage { _edenType =
           -- handle TM via EDEN
             dat@EdenTM {..} -> do
                 logDebug $ "Received TM Data: " <> display
-                    (hexdumpBS (unHexBytes _edenTmData))
+                    (hexdumpBS (toBS _edenTmData))
                 case handleEdenPacket missionSpecific interf dat counters of
                     Left err -> do
                         env <- ask
@@ -99,7 +99,7 @@ handleEdenMessage missionSpecific interf counters eden@EdenMessage { _edenType =
                         return (Right newCounters)
             dat@EdenSCOETM {..} -> do
                 logDebug $ "Received TM Data: " <> display
-                    (hexdumpBS (unHexBytes _edenTmScoeData))
+                    (hexdumpBS (toBS _edenTmScoeData))
                 case handleEdenPacket missionSpecific interf dat counters of
                     Left err -> do
                         env <- ask
@@ -161,7 +161,7 @@ handleEdenPacket
 handleEdenPacket missionSpecific interf EdenTM {..} counters = do
     case
             parseOnly (match (pusPktParser missionSpecific interf))
-                      (unHexBytes _edenTmData)
+                      (toBS _edenTmData)
         of
             Left err -> Left (T.pack err)
             Right (oct, packet) ->
@@ -195,7 +195,7 @@ handleEdenPacket missionSpecific interf EdenTM {..} counters = do
 handleEdenPacket missionSpecific interf EdenSCOETM {..} counters = do
     case
             parseOnly (match (pusPktParser missionSpecific interf))
-                      (unHexBytes _edenTmScoeData)
+                      (toBS _edenTmScoeData)
         of
             Left err -> Left (T.pack err)
             Right (oct, packet) ->

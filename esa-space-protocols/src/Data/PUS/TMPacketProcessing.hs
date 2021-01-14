@@ -135,7 +135,7 @@ packetProcessorC = awaitForever $ \pkt@(ExtractedPacket oct pusPkt) -> do
                     { _pName     = "Content"
                     , _pTime     = timeStamp
                     , _pValue    = TMValue
-                                       (TMValOctet (pusPkt ^. epDU . pusData))
+                                       (TMValOctet (toBS (pusPkt ^. epDU . pusData)))
                                        clearValidity
                     , _pEngValue = Nothing
                     }
@@ -1179,7 +1179,7 @@ processVerifData
     -> m ()
 processVerifData pusPkt subType p verifF status = do
     env <- ask
-    case A.parseOnly p (pusPkt ^. epDU . pusData) of
+    case A.parseOnly p (toBS (pusPkt ^. epDU . pusData)) of
         Right val -> liftIO $ verifF env val status
         Left err ->
             logError

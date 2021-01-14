@@ -47,7 +47,8 @@ import           Protocol.ProtocolInterfaces    ( protContent
 
 import           General.Time
 import           General.PUSTypes
-import           General.Hexdump
+import           General.Types
+import General.Hexdump ( hexdumpBS )
 import           Control.PUS.Classes
 
 import           Verification.Verification
@@ -140,7 +141,7 @@ processBinaryAck protPkt = do
   where
     parseAndVerify env pusPkt status = do
         let dat = pusPkt ^. pusData
-        case parseOnly ackDataParser dat of
+        case parseOnly ackDataParser (toBS dat) of
             Left err ->
                 logWarn
                     $  "Could not parse C&C ACK data from pkt: "
@@ -167,7 +168,7 @@ processAsciiAck protPkt = do
         seqC  = hdr ^. pusHdrSeqCtrl
         ack   = BS8.pack "ACK"
         nak   = BS8.pack "NAK"
-        dat   = BS.take 3 (protPkt ^. protContent . pusData)
+        dat   = BS.take 3 (toBS (protPkt ^. protContent . pusData))
 
     env <- ask
     if
@@ -263,7 +264,7 @@ scoeCommandC = awaitForever $ \pusPkt -> do
 {-# INLINABLE extractCommand #-}
 extractCommand :: ProtocolPacket PUSPacket -> Maybe SCOECommand
 extractCommand cpkt@(ProtocolPacket (IfCnc _) pusPkt) =
-    if isASCIICc cpkt then parseCncContent (_pusData pusPkt) else Nothing
+    if isASCIICc cpkt then parseCncContent (toBS (_pusData pusPkt)) else Nothing
 extractCommand _ = Nothing
 
 {-# INLINABLE parseCncContent #-}

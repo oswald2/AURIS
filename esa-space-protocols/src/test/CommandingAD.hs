@@ -42,6 +42,8 @@ import           Protocol.ProtocolInterfaces
 
 import           GHC.Conc.Sync
 
+import           General.Types
+
 import           Verification.Verification
 
 
@@ -50,7 +52,7 @@ pkt1 ssc = PUSPacket
     (PUSHeader 0 0 PUSTC True (APID 256) SegmentStandalone (mkSSC ssc) 0 0)
     (PUSTCStdHeader 3 25 (mkSourceID 0) True True False True)
     Nothing
-    (B.pack [0 .. 10])
+    (HexBytes (B.pack [0 .. 10]))
     True
 
 rqst1 = TCRequest
