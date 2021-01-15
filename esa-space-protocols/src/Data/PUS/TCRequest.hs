@@ -34,6 +34,7 @@ module Data.PUS.TCRequest
     , tcReqDestination
     , tcReqCommand
     , tcReqReleaseTime
+    , tcReqMapID
     , _TCCommand
     , _TCDir
     ) where
@@ -212,6 +213,10 @@ tcReqGetTransmissionMode req = case _tcReqPayload req of
     TCCommand {..}  -> _tcReqTransMode
     TCDir{}         -> AD
     TCScoeCommand{} -> BD -- there is no AD mode for SCOE commands as this mode requires a lower protocol level
+
+
+tcReqMapID :: TCRequest -> Maybe MAPID
+tcReqMapID rqst = rqst ^. tcReqPayload ^? tcReqMAPID
 
 -- | Get the transmission mode. 
 tcReqTransmissionMode :: Getting r TCRequest TransmissionMode

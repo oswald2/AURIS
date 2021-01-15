@@ -22,7 +22,7 @@ import           Data.PUS.Config
 import           Data.PUS.MissionSpecific.Definitions
 import           Data.PUS.TMFrameExtractor
 import           Data.PUS.NcduToTMFrame
-import           Protocol.NCTRS
+import           Protocol.NCTRSProcessor
 import           Protocol.ProtocolInterfaces
 
 import           GHC.Conc.Sync

@@ -39,7 +39,7 @@ import           Data.PUS.Value
 import           Data.PUS.MissionSpecific.Definitions
 import           Data.PUS.Counter
 
-import           Protocol.NCTRS
+import           Protocol.NCTRSProcessor
 import           Protocol.ProtocolInterfaces
 
 import           GHC.Conc.Sync

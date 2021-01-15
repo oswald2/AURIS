@@ -99,6 +99,8 @@ data Config = Config {
     cfgCltuBlockSize :: CltuBlockSize
     -- | If the socket interface is used, specifies Just portnumber, else Nothing
     , cfgInterfacePort :: Maybe Word16
+    -- | If the TC randomization is enabled by default
+    , cfgRandomizerEnabled :: !Bool
     -- | The start value of the randomizer used for standard ESA TC randomization
     , cfgRandomizerStartValue :: !Word8
     -- | The spacecraft ID used
@@ -181,6 +183,7 @@ defaultCncConfig = CncConfig { cfgCncID     = 1
 defaultConfig :: Config
 defaultConfig = Config { cfgCltuBlockSize        = CltuBS_8
                        , cfgInterfacePort        = Just 55555
+                       , cfgRandomizerEnabled    = False 
                        , cfgRandomizerStartValue = 0xFF
                        , cfgSCID                 = mkSCID 0
                        , cfgVCIDs                = [0, 1]

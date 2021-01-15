@@ -12,6 +12,7 @@
             }
         ],
         "cfgUnknownSPID": 5071,
+        "cfgRandomizerEnabled": false,
         "cfgEpoch": "UnixTime",
         "cfgInterfacePort": 55555,
         "cfgRandomizerStartValue": 255,
@@ -44,7 +45,6 @@
             {
                 "cfgEdenID": 1,
                 "cfgEdenHost": "localhost",
-                "cfgEdenType": "SCOE",
                 "cfgEdenPort": 40300
             }
         ],
@@ -52,6 +52,6 @@
         "cfgTMFrameHasCRC": true
     },
     "aurisLogLevel": {
-        "tag": "LogLevelDebug"
+        "tag": "LogLevelInfo"
     }
 }

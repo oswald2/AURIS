@@ -50,17 +50,47 @@ import           Data.PUS.CLTU                  ( cltuEncodeRandomizedC )
 import           Data.PUS.CLTUEncoder           ( cltuToNcduC )
 import           Data.PUS.Counter               ( initialSSCCounterMap )
 
-import           Protocol.NCTRS                 ( receiveTmNcduC
-                                                , encodeTcNcduC
+import           Protocol.NCTRSProcessor        ( receiveTcNcduC
+                                                , receiveTmNcduC
                                                 , receiveAdminNcduC
+                                                , encodeTcNcduC
+                                                , nctrsProcessorC
                                                 )
-import           Protocol.CnC
+import           Protocol.CnC                   ( receiveCnCC
+                                                , cncProcessAcks
+                                                , cncToTMPacket
+                                                , sendTCCncC
+                                                )
 import           Protocol.EDEN                  ( encodeEdenMessageC
                                                 , receiveEdenMessageC
                                                 )
 import           Protocol.EDENProcessor         ( edenMessageProcessorC )
-import           Protocol.ProtocolInterfaces
-import           Protocol.ProtocolSwitcher
+import           Protocol.ProtocolInterfaces    ( ConnType
+                                                    ( ConnSingle
+                                                    , ConnAdmin
+                                                    , ConnTM
+                                                    , ConnTC
+                                                    )
+                                                , ConnectionState
+                                                    ( Disconnected
+                                                    , Connected
+                                                    )
+                                                , ProtocolInterface
+                                                    ( IfCnc
+                                                    , IfEden
+                                                    , IfNctrs
+                                                    )
+                                                )
+import           Protocol.ProtocolSwitcher      ( InterfaceSwitcherMap
+                                                , ProtocolQueue
+                                                , createInterfaceChannel
+                                                , switchProtocolPktC
+                                                , switchProtocolFrameC
+                                                , switchProtocolCltuC
+                                                , receivePktChannelC
+                                                , receiveCltuChannelC
+                                                , receiveQueueMsg
+                                                )
 import           Protocol.EDENEncoder           ( createEdenMsgC )
 
 import           Control.PUS.Classes
@@ -130,13 +160,14 @@ runTCNctrsChain cfg cltuQueue = do
     logDebug "runTCNctrsChain entering"
 
     let chain = receiveCltuChannelC cltuQueue .| cltuToNcduC .| encodeTcNcduC
+        recvChain = receiveTcNcduC .| nctrsProcessorC
 
     runGeneralTCPReconnectClient
         (clientSettings (fromIntegral (cfgNctrsPortTC cfg))
                         (encodeUtf8 (cfgNctrsHost cfg))
         )
         200000
-        (tcClient chain)
+        (\app -> race_ (tcClient chain app) (tcRecvClient recvChain app))
 
     logDebug "runTCNctrsChain leaving"
   where
@@ -166,7 +197,15 @@ runTCNctrsChain cfg cltuQueue = do
                     <> displayShow e
                 throwM e
             Right _ -> return ()
-
+    tcRecvClient chain app = do
+        res <- try $ void $ runConduitRes (appSource app .| chain)
+        case res of
+            Left (e :: SomeException) -> do
+                logError
+                    $  display @Text "NCTRS Interface Exception: "
+                    <> displayShow e
+                throwM e
+            Right _ -> return ()
 
 runAdminNctrsChain :: NctrsConfig -> RIO GlobalState ()
 runAdminNctrsChain cfg = do
@@ -270,7 +309,8 @@ runTCCnCChain cfg missionSpecific duQueue pktQueue = do
 
     let chain = receivePktChannelC duQueue .| sendTCCncC
         ackChain =
-            receiveCnCC missionSpecific ifID .| cncProcessAcks ifID pktQueue Nothing
+            receiveCnCC missionSpecific ifID
+                .| cncProcessAcks ifID pktQueue Nothing
         ifID = IfCnc (cfgCncID cfg)
 
     logDebug
@@ -284,15 +324,14 @@ runTCCnCChain cfg missionSpecific duQueue pktQueue = do
                         (encodeUtf8 (cfgCncHost cfg))
         )
         200000
-        (\app -> race_ (tcClient ifID chain app) (tcAckClient ifID ackChain app))
+        (\app -> race_ (tcClient ifID chain app) (tcAckClient ifID ackChain app)
+        )
 
     logDebug "runTCCnCChain leaving"
   where
     tcClient ifID chain app = do
         env <- ask
-        liftIO $ raiseEvent
-            env
-            (EVAlarms (EVEConnection ifID ConnTC Connected))
+        liftIO $ raiseEvent env (EVAlarms (EVEConnection ifID ConnTC Connected))
 
         res <- try $ void $ runConduitRes (chain .| appSink app)
 
@@ -317,12 +356,7 @@ runTCCnCChain cfg missionSpecific duQueue pktQueue = do
         res <- try $ void $ runConduitRes (appSource app .| chain)
 
         liftIO
-            (raiseEvent
-                env
-                (EVAlarms
-                    (EVEConnection ifID ConnTC Disconnected)
-                )
-            )
+            (raiseEvent env (EVAlarms (EVEConnection ifID ConnTC Disconnected)))
         case res of
             Left (e :: SomeException) -> do
                 logError
@@ -510,4 +544,5 @@ runChains missionSpecific = do
         return (newSm, ts <> conc (runTCNctrsChain x queue))
     cncIf pktQueue (sm, ts) x = do
         (queue, newSm) <- createInterfaceChannel sm (IfCnc (cfgCncID x))
-        return (newSm, ts <> conc (runTCCnCChain x missionSpecific queue pktQueue))
+        return
+            (newSm, ts <> conc (runTCCnCChain x missionSpecific queue pktQueue))

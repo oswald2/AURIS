@@ -21,6 +21,7 @@
         "cfgUnknownSPID": 5071,
         "cfgEpoch": "UnixTime",
         "cfgInterfacePort": 55555,
+        "cfgRandomizerEnabled": false,
         "cfgRandomizerStartValue": 255,
         "cfgVCIDs": [
             {

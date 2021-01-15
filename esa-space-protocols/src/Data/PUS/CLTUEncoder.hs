@@ -17,29 +17,50 @@ Provides a conduit for translating a CLTU into a NCDU for transmission via NCTRS
     , NoImplicitPrelude
 #-}
 module Data.PUS.CLTUEncoder
-    (
-        cltuToNcduC
-    )
-where
+    ( cltuToNcduC
+    ) where
 
-import RIO
+import           RIO
 
-import Data.Conduit
+import           Data.Conduit
 
-import Protocol.NCTRS
-import Data.PUS.CLTU
-import General.PUSTypes
+import           Protocol.NCTRS
+
+import           Control.PUS.Classes
+
+import           Data.PUS.CLTU
+import           Data.PUS.TCRequest
+import           General.PUSTypes
+import           General.Time
+
+import           Verification.Verification
 
 
 -- | This is just very basic now, it directly converts the CLTU
 -- into a NCDU with just default values. There is much to be done
 -- here
-cltuToNcduC :: (MonadIO m, MonadReader env m, HasLogFunc env) =>
-    ConduitT EncodedCLTU NcduTcDu m ()
-cltuToNcduC = awaitForever $ \(EncodedCLTU cltu _) -> do
-    let hdr = NcduTcHeader 0 NCDU_TC_CLTU_TYPE (mkSCID 0)
-        cltuhdr = NcduTcCltuHeader BD 0 (mkVCID 0) (mkMAPID 0) 0 0 0 0 0 0
-        dat = NcduTcDuCltuData cltuhdr cltu
+cltuToNcduC
+    :: (MonadIO m, MonadReader env m, HasLogFunc env, HasVerif env)
+    => ConduitT EncodedCLTU NcduTcDu m ()
+cltuToNcduC = awaitForever $ \(EncodedCLTU cltu rqst) -> do
+    let hdr     = NcduTcHeader 0 NCDU_TC_CLTU_TYPE (mkSCID 0)
+        rqstID  = rqst ^. tcReqRequestID
+        cltuhdr = NcduTcCltuHeader
+            BD
+            (getRqstID rqstID)
+            (rqst ^. tcReqVCID)
+            (fromMaybe (mkMAPID 0) (tcReqMapID rqst))
+            0
+            0
+            0
+            0
+            0
+            0
+        dat  = NcduTcDuCltuData cltuhdr cltu
         ncdu = NcduTcDu hdr dat
     logDebug $ "NCDU: " <> displayShow ncdu
+    now <- liftIO getCurrentTime
     yield ncdu
+    -- also set to RELEASED
+    env <- ask
+    liftIO $ requestReleased env rqstID now StRSuccess

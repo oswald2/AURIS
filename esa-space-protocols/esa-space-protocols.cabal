@@ -81,6 +81,7 @@ library
         Data.PUS.NcduToTMFrame
         Data.PUS.Counter
         Protocol.NCTRS
+        Protocol.NCTRSProcessor
         Protocol.EDEN
         Protocol.EDENProcessor
         Protocol.EDENEncoder
