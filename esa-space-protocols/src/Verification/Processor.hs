@@ -16,16 +16,12 @@ import           Verification.Commands
 
 import           Data.PUS.TCRequest
 
-import           General.PUSTypes               ( RequestID
-                                                , PktID
-                                                , SeqControl
-                                                )
-
+import           General.PUSTypes              
 import           Data.PUS.Events
 
 
 data VerifState = VerifState
-    { _stRqstMap :: HashMap RequestID (TVar Verification)
+    { _stRqstMap :: HashMap RequestID (PktID, SeqControl, TVar Verification)
     , _stApidMap :: HashMap (PktID, SeqControl) (RequestID, TVar Verification)
     }
 makeLenses ''VerifState
@@ -67,7 +63,7 @@ processCommand st (RegisterRequest rqst pktId ssc) = do
     let newSt =
             st
                 &  stRqstMap
-                .~ HM.insert rqstID var (_stRqstMap st)
+                .~ HM.insert rqstID (pktId, ssc, var) (_stRqstMap st)
                 &  stApidMap
                 .~ HM.insert (pktId, ssc) (rqstID, var) (_stApidMap st)
     env <- ask
@@ -80,16 +76,16 @@ processCommand st (RegisterDirective rqst) = do
     let verif  = rqst ^. tcReqVerifications
         rqstID = rqst ^. tcReqRequestID
     var <- newTVarIO verif
-    let newSt = st & stRqstMap .~ HM.insert rqstID var (_stRqstMap st)
+    let newSt = st & stRqstMap .~ HM.insert rqstID (PktID 0, SeqControl 0, var) (_stRqstMap st)
     env <- ask
     liftIO $ raiseEvent env (EVCommanding (EVTCVerificationNew rqst verif))
     return newSt
 
 processCommand st (SetVerifR rqstID releaseTime status) = do
     case HM.lookup rqstID (_stRqstMap st) of
-        Just var -> do
+        Just (pktID, ssc, var) -> do
             env <- ask
-            join $ atomically $ do
+            (action, newStatus) <- atomically $ do
                 verif <- readTVar var
                 let newStatus = setReleaseStage status verif
                 writeTVar var newStatus
@@ -101,13 +97,22 @@ processCommand st (SetVerifR rqstID releaseTime status) = do
                                 (EVTCRelease rqstID releaseTime newStatus)
                             )
                         )
-                    )
+                    , newStatus)
+            action
+            -- in case the verification is finished, we delete the verification entry
+            return $ if isFinished newStatus 
+                then 
+                    VerifState { 
+                        _stRqstMap = HM.delete rqstID (_stRqstMap st)
+                        , _stApidMap = HM.delete (pktID, ssc) (_stApidMap st)
+                    }
+                else st 
         Nothing -> do
             logWarn
                 $  "Verification record for RequestID "
                 <> display rqstID
                 <> " has not been found"
-    return st
+            return st
 
 processCommand st (SetVerifG rqstID status) = do
     processGroundStage st rqstID status setGroundReceptionStage
@@ -144,14 +149,24 @@ processGroundStage st rqstID status setStage = do
         <> " Status: "
         <> display status
     case HM.lookup rqstID (_stRqstMap st) of
-        Just var -> do
-            doUpdate rqstID status var setStage
+        Just (pktID, ssc, var) -> do
+            -- Perform the update of the verifications
+            newStatus <- doUpdate rqstID status var setStage
+            -- check the delivered new Verification, if it is finished. If so,
+            -- remove it from the maps
+            if isFinished newStatus 
+                then 
+                    return VerifState { 
+                        _stRqstMap = HM.delete rqstID (_stRqstMap st)
+                        , _stApidMap = HM.delete (pktID, ssc) (_stApidMap st)
+                    }
+                else return st 
         Nothing -> do
             logWarn
                 $  "Verification record for RequestID "
                 <> display rqstID
                 <> " has not been found"
-    return st
+            return st 
 
 processCncGroundStage
     :: ( MonadReader env m
@@ -175,7 +190,17 @@ processCncGroundStage st key@(pktID, ssc) status setStage = do
         <> display status
     case HM.lookup key (_stApidMap st) of
         Just (rqstID, var) -> do
-            doUpdate rqstID status var setStage
+            -- Perform the update of the Verification
+            newStatus <- doUpdate rqstID status var setStage
+            -- check the delivered new Verification, if it is finished. If so,
+            -- remove it from the maps
+            if isFinished newStatus 
+                then 
+                    return VerifState { 
+                        _stRqstMap = HM.delete rqstID (_stRqstMap st)
+                        , _stApidMap = HM.delete (pktID, ssc) (_stApidMap st)
+                    }
+                else return st 
         Nothing -> do
             logWarn
                 $  "Verification record for Key "
@@ -184,7 +209,7 @@ processCncGroundStage st key@(pktID, ssc) status setStage = do
                 <> display ssc
                 <> " Status: "
                 <> " has not been found"
-    return st
+            return st
 
 
 
@@ -206,7 +231,17 @@ processTMStage st pktID ssc status setStage = do
         <> display status
     case HM.lookup (pktID, ssc) (_stApidMap st) of
         Just (rqstID, var) -> do
-            doUpdate rqstID status var setStage
+            -- perform the update 
+            newStatus <- doUpdate rqstID status var setStage
+            -- check the delivered new Verification, if it is finished. If so,
+            -- remove it from the maps
+            if isFinished newStatus 
+                then 
+                    return VerifState { 
+                        _stRqstMap = HM.delete rqstID (_stRqstMap st)
+                        , _stApidMap = HM.delete (pktID, ssc) (_stApidMap st)
+                    }
+                else return st 
         Nothing -> do
             logWarn
                 $  "Verification record for PktID "
@@ -214,7 +249,7 @@ processTMStage st pktID ssc status setStage = do
                 <> " SeqStatus: "
                 <> display ssc
                 <> " has not been found"
-    return st
+            return st
 
 
 doUpdate
@@ -223,13 +258,17 @@ doUpdate
     -> t
     -> TVar Verification
     -> (t -> Verification -> Verification)
-    -> m ()
+    -> m Verification
 doUpdate rqstID status var setStage = do
     env <- ask
-    join $ atomically $ do
+    (action, newStatus) <- atomically $ do
         verif <- readTVar var
         let newStatus = setStage status verif
         writeTVar var newStatus
-        return $ do
-            let event = EVTCVerificationUpdate rqstID newStatus
-            liftIO $ raiseEvent env (EVCommanding event)
+        let action = do
+                let event = EVTCVerificationUpdate rqstID newStatus
+                liftIO $ raiseEvent env (EVCommanding event)
+        return (action, newStatus)
+    action 
+    return newStatus            
+    
