@@ -456,11 +456,13 @@ decodePktMissionSpecific pkt missionSpecific commIF
         "PUS Packet is too short"
     | otherwise = case crcCheck pkt of
         Left  err -> Left err
-        Right (result, pl, extractedCRC, calcdCRC) -> if result
-            then case A.parse (pusPktParser missionSpecific commIF) pl of
+        Right (result, _pl, extractedCRC, calcdCRC) -> if result
+            then case A.parse (pusPktParser missionSpecific commIF) pkt of
                 A.Fail _ _ err -> Left (T.pack err)
-                A.Partial _ ->
-                    Left "PUS Packet: not enough input to parse PUS Packet"
+                A.Partial f -> case f B.empty of 
+                    A.Fail _ _ err -> Left (T.pack err)
+                    A.Partial _ -> Left "PUS Packet: not enough input to parse PUS Packet"
+                    A.Done _ p -> Right p
                 A.Done _ p -> Right p
             else
                 Left

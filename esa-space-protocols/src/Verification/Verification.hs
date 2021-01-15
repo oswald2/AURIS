@@ -32,7 +32,13 @@ module Verification.Verification
     , isFailed
     , isTMExpected
     , isGroundSuccess
+    , isGroundExpected
+    , isGroundTimeout
+    , isGroundFail
+    , isGroundDisabled
     , isSuccess
+    , isTimeout
+    , isFinished
     ) where
 
 import           RIO
@@ -49,6 +55,7 @@ import           Codec.Serialise
 
 data ReleaseStage =
   StRDisabled
+  | StRPending
   | StRFail
   | StRSuccess
   deriving(Ord, Enum, Eq, Read, Show, Generic)
@@ -64,7 +71,7 @@ instance Display ReleaseStage where
     textDisplay StRDisabled = " "
     textDisplay StRFail     = "F"
     textDisplay StRSuccess  = "S"
-
+    textDisplay StRPending  = "P"
 
 
 
@@ -449,10 +456,48 @@ isGroundSuccess Verification {..} =
         || (_verGroundOBR == StGDisabled)
         && (_verGroundTransmission == StGSuccess)
 
+isGroundTimeout :: Verification -> Bool 
+isGroundTimeout Verification {..} = 
+    (_verGroundOBR == StGTimeout)
+        || (_verGroundOBR == StGDisabled)
+        && (_verGroundTransmission == StGTimeout)
+
+isGroundDisabled :: Verification -> Bool 
+isGroundDisabled Verification {..} = 
+    (_verGroundReception == StGDisabled) 
+    && (_verGroundTransmission == StGDisabled)
+    && (_verGroundOBR == StGDisabled)
+
+isGroundExpected :: Verification -> Bool 
+isGroundExpected Verification {..} =
+    ((_verGroundReception == StGExpected) || (_verGroundReception == StGPending))
+    || ((_verGroundTransmission == StGExpected) || (_verGroundTransmission == StGPending))
+    || ((_verGroundOBR == StGExpected) || (_verGroundOBR == StGPending))
+
+isGroundFail :: Verification -> Bool 
+isGroundFail Verification {..} =
+    (_verGroundReception == StGFail)
+    || (_verGroundTransmission == StGFail)
+    || (_verGroundOBR == StGFail)
+
 
 
 isSuccess :: Verification -> Bool
 isSuccess verif@Verification {..} =
     (_verTMComplete == StTmSuccess)
+        || (not (isTMExpected verif)
+        && isGroundSuccess verif)
+        || isGroundDisabled verif
+        && (_verRelease == StRSuccess)
+
+
+isTimeout :: Verification -> Bool 
+isTimeout verif@Verification {..} = 
+    (_verTMComplete == StTmTimeout)
         || not (isTMExpected verif)
-        && isGroundSuccess verif
+        && isGroundTimeout verif 
+
+
+isFinished :: Verification -> Bool 
+isFinished verif = 
+    isFailed verif || isSuccess verif || isTimeout verif 

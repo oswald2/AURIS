@@ -61,7 +61,7 @@ processCommand
     -> VerifCommand
     -> m VerifState
 processCommand st (RegisterRequest rqst pktId ssc) = do
-    let verif  = rqst ^. tcReqVerifications
+    let verif  = rqst ^. tcReqVerifications & verRelease .~ StRPending 
         rqstID = rqst ^. tcReqRequestID
     var <- newTVarIO verif
     let newSt =
