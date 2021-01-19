@@ -88,35 +88,8 @@ packetProcessorC = awaitForever $ \pkt@(ExtractedPacket oct pusPkt) -> do
         Just (key, def) -> do
             if def ^. tmpdCheck
                 then do
-                    logDebug $ display (hexdumpBS oct)
-                    case crcCheck oct of
-                        Left err ->
-                            logError
-                                $  "CRC Check on TM packet failed: "
-                                <> display err
-                                <> ". Packet ignored."
-                        Right (chk, payload, crcReceived, crcCalcd) -> do
-                            if chk
-                                then do
-                                -- first check for verifications 
-                                    when
-                                            (  pusType (pusPkt ^. epDU . pusDfh)
-                                            == 1
-                                            )
-                                        $ do
-                                              processVerification pusPkt
-                                    -- process the packet and pass it on 
-                                    yieldM $ processPacket
-                                        def
-                                        key
-                                        (ExtractedPacket payload pusPkt)
-                                else
-                                    logError
-                                    $ "CRC Check on TM packet failed: received: "
-                                    <> display crcReceived
-                                    <> ", calculated: "
-                                    <> display crcCalcd
-                                    <> ". Packet ignored."
+                    logDebug $ "TM Packet Processor: received: " <> display (hexdumpBS oct)
+                    checkCRC pusPkt def key oct 
                 else yieldM $ processPacket def key pkt
         Nothing -> do
             -- if we have a packet, that is not found in the data model,
@@ -159,6 +132,37 @@ packetProcessorC = awaitForever $ \pkt@(ExtractedPacket oct pusPkt) -> do
                     }
 
             yield tmpkt
+    where 
+        checkCRC pusPkt def key oct = do 
+            case crcCheck oct of
+                Left err ->
+                    logError
+                        $  "CRC Check on TM packet failed: "
+                        <> display err
+                        <> ". Packet ignored."
+                Right (chk, payload, crcReceived, crcCalcd) -> do
+                    if chk
+                        then performProcessing pusPkt def key payload
+                        else
+                            logError
+                            $ "CRC Check on TM packet failed: received: "
+                            <> display crcReceived
+                            <> ", calculated: "
+                            <> display crcCalcd
+                            <> ". Packet ignored."
+
+
+        performProcessing pusPkt def key payload = do
+            -- first check for verifications 
+            when (pusType (pusPkt ^. epDU . pusDfh) == 1) $ do
+                processVerification pusPkt
+
+            when (pusPkt ^. epDU . pusHdr . pusHdrType == PUSTC) $ do 
+                logDebug $ "Received TC Echo from SCOE: " <> displayShow (pusPkt ^. epDU)
+                
+            -- process the packet and pass it on 
+            yieldM $ processPacket def key (ExtractedPacket payload pusPkt)
+
 
 
 
@@ -168,6 +172,7 @@ getPackeDefinition
     :: DataModel -> ExtractedPacket -> Maybe (TMPacketKey, TMPacketDef)
 getPackeDefinition model (ExtractedPacket bytes pkt) =
     let pusPkt     = pkt ^. epDU
+        pktType    = hdr ^. pusHdrType 
         hdr        = pusPkt ^. pusHdr
         apid       = hdr ^. pusHdrAPID
         dfh        = pusPkt ^. pusDfh
@@ -177,9 +182,18 @@ getPackeDefinition model (ExtractedPacket bytes pkt) =
             Just def -> extractPIVals def bytes
             Nothing  -> (0, 0)
         pktKey = TMPacketKey apid t st pi1 pi2
-    in  case HT.ilookup (model ^. dmTMPackets) pktKey of
-            Nothing -> Nothing
-            Just p  -> Just (pktKey, p)
+    in  
+        case pktType of 
+            PUSTM -> 
+                case HT.ilookup (model ^. dmTMPackets) pktKey of
+                    Nothing -> Nothing
+                    Just p  -> Just (pktKey, p)
+            PUSTC -> 
+                -- we have a TC Echo Packet from a SCOE
+                let def = tcEchoDef apid t st in 
+                Just (pktKey, def)
+
+
 
 
 
@@ -1115,7 +1129,7 @@ processVerification
     -> m ()
 processVerification pusPkt = do
     let subType = pusSubType (pusPkt ^. epDU . pusDfh)
-    logDebug $ "Processing Verification (1," <> display subType
+    logDebug $ "Processing Verification (1," <> display subType <> ")"
     case subType of
         1 -> do -- TM Acceptance Success
             processVerifData pusPkt

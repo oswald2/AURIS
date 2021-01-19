@@ -138,6 +138,7 @@ library
         TypeSynonymInstances
         TypeApplications
         ViewPatterns
+        NumericUnderscores
 
     build-depends:
         base

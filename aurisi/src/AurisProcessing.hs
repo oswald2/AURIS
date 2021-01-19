@@ -6,8 +6,6 @@ module AurisProcessing
     ) where
 
 import           RIO
---import qualified Data.Text.IO                  as T
-import           Data.PUS.Config
 import           Data.PUS.GlobalState
 import           Data.PUS.MissionSpecific.Definitions
 

@@ -82,6 +82,7 @@ module Data.TM.TMPacketDef
   , tmvpOffset
   , tmvpParam
   , fixedTMPacketDefs
+  , tcEchoDef
   )
 where
 
@@ -373,6 +374,29 @@ fixedTMPacketDefs = [
     }
 
   ]
+
+
+tcEchoDef :: APID -> PUSType -> PUSSubType -> TMPacketDef 
+tcEchoDef apid typ subtype = 
+  TMPacketDef {
+      _tmpdSPID = SPID 5077
+      , _tmpdName = "TC ECHO"
+      , _tmpdDescr = "TC Echo Packet"
+      , _tmpdType = typ
+      , _tmpdSubType = subtype
+      , _tmpdApid = apid
+      , _tmpdPI1Val = 0
+      , _tmpdPI2Val = 0
+      , _tmpdUnit = ""
+      , _tmpdTime = False
+      , _tmpdInter = Nothing
+      , _tmpdValid = True
+      , _tmpdCheck = False
+      , _tmpdEvent = PIDNo
+      , _tmpdParams = TMFixedParams (V.fromList 
+        [ simpleParamLocation "TC Content" 16 (octetParamDef "TC Content" "Content of the TC Echo")
+        ])
+    }
 
 -- | The tuple (APID, PUSType, PUSSubType, PI1, PI2) which is the lookup key
 -- for the packet definition

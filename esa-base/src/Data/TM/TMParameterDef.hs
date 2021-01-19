@@ -56,6 +56,7 @@ module Data.TM.TMParameterDef
   , getPaddedWidth
   , getPadding
   , uintParamDef
+  , octetParamDef
   )
 where
 
@@ -461,6 +462,29 @@ uintParamDef name descr bitWidth =
               , _fpPID = Nothing
               , _fpUnit = ""
               , _fpType = ParamUInteger bitWidth
+              , _fpWidth = Nothing
+              , _fpValid = Nothing
+              , _fpRelated = Nothing
+              , _fpCalibs = CritNoCalib
+              , _fpNatur = NaturRaw
+              , _fpInterpolation = CalibFail
+              , _fpStatusConsistency = SCCOff
+              , _fpDecim = 0 
+              , _fpDefaultVal = nullValue
+              , _fpSubsys = ""
+              , _fpValidityValue = nullValue
+              , _fpOBTID = Nothing
+              , _fpEndian = BiE
+  }
+
+octetParamDef :: ShortText -> ShortText -> TMParameterDef
+octetParamDef name descr = 
+  TMParameterDef {
+              _fpName = name
+              , _fpDescription = descr
+              , _fpPID = Nothing
+              , _fpUnit = ""
+              , _fpType = ParamOctet Nothing
               , _fpWidth = Nothing
               , _fpValid = Nothing
               , _fpRelated = Nothing

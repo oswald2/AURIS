@@ -47,16 +47,17 @@ processVerification queue = do
         -> m ()
     loop state = do
         cmd      <- atomically $ readTBQueue queue
-        newState <- processCommand state cmd
+        newState <- processCommand queue state cmd
         loop newState
 
 
 processCommand
     :: (MonadIO m, MonadReader env m, HasRaiseEvent env, HasLogFunc env)
-    => VerifState
+    => TBQueue VerifCommand
+    -> VerifState
     -> VerifCommand
     -> m VerifState
-processCommand st (RegisterRequest rqst pktId ssc) = do
+processCommand queue st (RegisterRequest rqst pktId ssc) = do
     let verif  = rqst ^. tcReqVerifications & verRelease .~ StRPending 
         rqstID = rqst ^. tcReqRequestID
     var <- newTVarIO verif
@@ -72,7 +73,7 @@ processCommand st (RegisterRequest rqst pktId ssc) = do
     liftIO $ raiseEvent env (EVCommanding (EVTCVerificationNew rqst verif))
     return newSt
 
-processCommand st (RegisterDirective rqst) = do
+processCommand queue st (RegisterDirective rqst) = do
     let verif  = rqst ^. tcReqVerifications
         rqstID = rqst ^. tcReqRequestID
     var <- newTVarIO verif
@@ -81,7 +82,7 @@ processCommand st (RegisterDirective rqst) = do
     liftIO $ raiseEvent env (EVCommanding (EVTCVerificationNew rqst verif))
     return newSt
 
-processCommand st (SetVerifR rqstID releaseTime status) = do
+processCommand queue st (SetVerifR rqstID releaseTime status) = do
     case HM.lookup rqstID (_stRqstMap st) of
         Just (pktID, ssc, var) -> do
             env <- ask
@@ -100,13 +101,15 @@ processCommand st (SetVerifR rqstID releaseTime status) = do
                     , newStatus)
             action
             -- in case the verification is finished, we delete the verification entry
-            return $ if isFinished newStatus 
+            if isFinished newStatus 
                 then 
-                    VerifState { 
+                    return VerifState { 
                         _stRqstMap = HM.delete rqstID (_stRqstMap st)
                         , _stApidMap = HM.delete (pktID, ssc) (_stApidMap st)
                     }
-                else st 
+                else do
+                    --async (timerThreadGTO queue 10 rqstID newStatus)
+                    return st 
         Nothing -> do
             logWarn
                 $  "Verification record for RequestID "
@@ -114,24 +117,26 @@ processCommand st (SetVerifR rqstID releaseTime status) = do
                 <> " has not been found"
             return st
 
-processCommand st (SetVerifG rqstID status) = do
+processCommand queue st (SetVerifG rqstID status) = do
     processGroundStage st rqstID status setGroundReceptionStage
-processCommand st (SetVerifT rqstID status) = do
+processCommand queue st (SetVerifT rqstID status) = do
     processGroundStage st rqstID status setGroundTransmissionStage
-processCommand st (SetVerifO rqstID status) = do
+processCommand queue st (SetVerifO rqstID status) = do
     processGroundStage st rqstID status setGroundOBRStage
-processCommand st (SetVerifGT rqstID status) = do
+processCommand queue st (SetVerifGT rqstID status) = do
     processGroundStage st rqstID status setGroundGTStages
-processCommand st (SerVerifGTCnC pktID ssc status) = do
+processCommand queue st (SetVerifGTO rqstID status) = do
+    processGroundStage st rqstID status setGroundGTStages
+processCommand queue st (SerVerifGTCnC pktID ssc status) = do
     processCncGroundStage st (pktID, ssc) status setGroundGTStages
 
-processCommand st (SetVerifA pktID ssc status) = do
+processCommand queue st (SetVerifA pktID ssc status) = do
     processTMStage st pktID ssc status setTMAcceptStage
-processCommand st (SetVerifS pktID ssc status) = do
+processCommand queue st (SetVerifS pktID ssc status) = do
     processTMStage st pktID ssc status setTMStartStage
-processCommand st (SetVerifC pktID ssc status) = do
+processCommand queue st (SetVerifC pktID ssc status) = do
     processTMStage st pktID ssc status setTMCompleteStage
-processCommand st (SetVerifP idx pktID ssc status) = do
+processCommand queue st (SetVerifP idx pktID ssc status) = do
     processTMStage st pktID ssc status (setTMProgressStage (fromIntegral idx))
 
 
@@ -272,3 +277,15 @@ doUpdate rqstID status var setStage = do
     action 
     return newStatus            
     
+
+
+timerThreadGTO :: MonadIO m => TBQueue VerifCommand -> Int -> RequestID -> Verification -> m () 
+timerThreadGTO queue seconds rqstID verif = do 
+    threadDelay (seconds * 1_000_000)
+    if (_verGroundOBR verif == StGExpected) || (_verGroundOBR verif == StGPending)
+        then 
+            atomically $ writeTBQueue queue (SetVerifGTO rqstID StGTimeout)
+        else do
+            when ((_verGroundTransmission verif == StGExpected) || (_verGroundTransmission verif == StGPending)) $ do
+                atomically $ writeTBQueue queue (SetVerifGT rqstID StGTimeout)
+        
