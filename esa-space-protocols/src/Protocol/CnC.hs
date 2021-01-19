@@ -133,9 +133,11 @@ processBinaryAck protPkt = do
             case st of
                 129 -> do
                   -- ACK
+                    logDebug $ "Received C&C ACK: " <> displayShow pusPkt
                     parseAndVerify env pusPkt StGSuccess
                 130 -> do
                   -- NAK
+                    logDebug $ "Received C&C NAK: " <> displayShow pusPkt
                     parseAndVerify env pusPkt StGFail
                 _ -> return ()
         _ -> return ()

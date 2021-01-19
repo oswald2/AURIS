@@ -236,18 +236,24 @@ instance SizeOf DataFieldHeader where
 -- | A builder for the data field header
 dfhBuilder :: DataFieldHeader -> Builder
 dfhBuilder PUSEmptyHeader = mempty
-dfhBuilder x@PUSTCStdHeader{} =
-    let b1 = 0x10 .|. if _stdFlagAcceptance x
-            then 0x01
-            else 0x00 .|. if _stdFlagStartExec x
-                then 0x20
-                else 0x00 .|. if _stdFlagProgressExec x
-                    then 0x40
-                    else 0x00 .|. if _stdFlagExecComp x then 0x80 else 0x00
+dfhBuilder PUSTCStdHeader{..} =
+    let b1 = 0x10 
+            .|. (if _stdFlagAcceptance
+                    then 0x01
+                    else 0x00)
+            .|. (if _stdFlagStartExec
+                    then 0x02
+                    else 0x00) 
+            .|. (if _stdFlagProgressExec
+                    then 0x04
+                    else 0x00) 
+            .|. (if _stdFlagExecComp 
+                    then 0x08 
+                    else 0x00)
     in  word8 b1
-            <> pusTypeBuilder (_stdType x)
-            <> pusSubTypeBuilder (_stdSubType x)
-            <> sourceIDBuilder (_stdSrcID x)
+            <> pusTypeBuilder _stdType
+            <> pusSubTypeBuilder _stdSubType
+            <> sourceIDBuilder _stdSrcID
 dfhBuilder x@PUSTMStdHeader{} =
     word8 ((((_stdTmVersion x) .&. 0x07) `shiftL` 4))
         <> pusTypeBuilder (_stdTmType x)
@@ -260,13 +266,18 @@ dfhBuilder x@PUSCnCTCHeader{} =
         <> pusSubTypeBuilder (_cncTcSubType x)
         <> sourceIDBuilder (_cncTcSourceID x)
   where
-    ackFlags = if _cncTcAcceptance x
-        then 0x01
-        else 0 .|. if _cncTcStart x
-            then 0x02
-            else 0 .|. if _cncTcProgress x
+    ackFlags = (if _cncTcAcceptance x
+            then 0x01
+            else 0) 
+        .|. (if _cncTcStart x
+                then 0x02
+                else 0) 
+        .|. (if _cncTcProgress x
                 then 0x40
-                else 0 .|. if _cncTcCompletion x then 0x08 else 0
+                else 0) 
+        .|. (if _cncTcCompletion x 
+                then 0x08 
+                else 0)
 
 
 

@@ -110,7 +110,7 @@ encodeScoeTCPacket pkt _missionSpecific =
 
 
 tcPktEncoderC
-    :: MonadIO m
+    :: (MonadIO m, MonadReader env m, HasLogFunc env)
     => PUSMissionSpecific
     -> ConduitT TCRequest EncodedTCPacket m ()
 tcPktEncoderC missionSpecific = do
@@ -128,6 +128,7 @@ tcPktEncoderC missionSpecific = do
                 case newRqst ^. tcReqPayload of
                     TCCommand {..} -> do
                         let enc = encodeTCPacket _tcReqPacket missionSpecific
+                        logDebug $ "Encoded TC Packet: " <> displayShow enc
                         yield $ EncodedTCPacket (Just enc) newRqst
                     TCDir{} -> yield $ EncodedTCPacket Nothing newRqst
                     TCScoeCommand {..} -> do

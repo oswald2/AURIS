@@ -83,6 +83,15 @@ packetProcessorC = awaitForever $ \pkt@(ExtractedPacket oct pusPkt) -> do
     env   <- ask
     model <- getDataModel env
     cfg   <- view getConfig
+
+    -- first check for verifications 
+    when (pusType (pusPkt ^. epDU . pusDfh) == 1) $ do
+        processVerification pusPkt
+
+    -- if we received a TC Echo just log it 
+    when (pusPkt ^. epDU . pusHdr . pusHdrType == PUSTC) $ do 
+        logDebug $ "Received TC Echo from SCOE: " <> displayShow (pusPkt ^. epDU)
+
     let def' = getPackeDefinition model pkt
     case def' of
         Just (key, def) -> do
@@ -153,13 +162,6 @@ packetProcessorC = awaitForever $ \pkt@(ExtractedPacket oct pusPkt) -> do
 
 
         performProcessing pusPkt def key payload = do
-            -- first check for verifications 
-            when (pusType (pusPkt ^. epDU . pusDfh) == 1) $ do
-                processVerification pusPkt
-
-            when (pusPkt ^. epDU . pusHdr . pusHdrType == PUSTC) $ do 
-                logDebug $ "Received TC Echo from SCOE: " <> displayShow (pusPkt ^. epDU)
-                
             -- process the packet and pass it on 
             yieldM $ processPacket def key (ExtractedPacket payload pusPkt)
 
@@ -1179,6 +1181,8 @@ processVerification pusPkt = do
                              verifDataParser
                              requestVerifyTMC
                              StTmFail
+        129 -> return ()
+        130 -> return ()
         _ -> logWarn $ "Illegal sub-type for service 1 TM: " <> display subType
     return ()
 

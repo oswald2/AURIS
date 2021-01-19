@@ -381,10 +381,19 @@ setProgressAssumed verif = verif & verTMProgress . traversed %~ setp
 
 
 setTMCompleteStage :: TMStage -> Verification -> Verification
+setTMCompleteStage StTmFail verif =
+    verif & verTMComplete .~ StTmFail & setStartPending & setProgressAssumed
 setTMCompleteStage StTmSuccess verif =
-    setProgressAssumed (verif & verTMComplete .~ StTmSuccess)
+    verif & verTMComplete .~ StTmSuccess & setStartPending & setProgressAssumed
 setTMCompleteStage status verif = verif & verTMComplete .~ status
 
+
+setStartPending :: Verification -> Verification
+setStartPending newVerif =
+    let acc = newVerif ^. verTMStart
+    in  if (acc == StTmExpected) || (acc == StTmPending)
+            then setTMStartStage StTmAssumed newVerif
+            else newVerif
 
 
 
@@ -443,9 +452,9 @@ isFailed Verification {..} =
 
 isTMExpected :: Verification -> Bool
 isTMExpected Verification {..} =
-    (_verTMAcceptance == StTmExpected)
-        || (_verTMStart == StTmExpected)
-        || (_verTMComplete == StTmExpected)
+    (_verTMAcceptance == StTmExpected) || (_verTMAcceptance == StTmPending)
+        || (_verTMStart == StTmExpected) || (_verTMStart == StTmPending)
+        || (_verTMComplete == StTmExpected) || (_verTMComplete == StTmPending)
   -- we don't check for the progess, because for progess we need at 
   -- least a completion anyway
 
