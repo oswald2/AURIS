@@ -139,6 +139,22 @@ white = unsafePerformIO $ do
   return col
 
 
+{-# NOINLINE lightOrange #-}
+lightOrange ::RGBA
+lightOrange = unsafePerformIO $ do
+  col <- newZeroRGBA
+  void $ rGBAParse col "#f5deb3"
+  return col
+
+{-# NOINLINE orange #-}
+orange ::RGBA
+orange = unsafePerformIO $ do
+  col <- newZeroRGBA
+  void $ rGBAParse col "#ffa500"
+  return col
+
+
+
 -- mcsWindowSetColor :: Ref Window -> IO ()
 -- mcsWindowSetColor w = do
 --   setColor w mcsBackground

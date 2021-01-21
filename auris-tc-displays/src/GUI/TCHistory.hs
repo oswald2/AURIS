@@ -170,6 +170,7 @@ mkRow rqst verif =
 determineColor :: Verification -> (RGBA, RGBA)
 determineColor verif | isFailed verif  = (red, white)
                      | isSuccess verif = (green, black)
+                     | isTimeout verif = (orange, black)
                      | otherwise       = (paleYellow, black)
 
 

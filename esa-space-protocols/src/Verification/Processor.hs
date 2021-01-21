@@ -124,7 +124,7 @@ processCommand timerWheel queue st (SetVerifR rqstID releaseTime status) = do
                     hdl <- liftIO $ register timerWheel gtTimeOut (timeoutGT queue rqstID newStatus)
                     return st { _stGTTimer = Just hdl }
         Nothing -> do
-            logWarn
+            logDebug
                 $  "Verification record for RequestID "
                 <> display rqstID
                 <> " has not been found"
@@ -179,7 +179,7 @@ processGroundStage st rqstID status setStage = do
                     }
                 else return st
         Nothing -> do
-            logWarn
+            logDebug
                 $  "Verification record for RequestID "
                 <> display rqstID
                 <> " has not been found"
@@ -218,7 +218,7 @@ processCncGroundStage st key@(pktID, ssc) status setStage = do
                     }
                 else return st
         Nothing -> do
-            logWarn
+            logDebug
                 $  "Verification record for Key "
                 <> display pktID
                 <> " SSC: "
@@ -258,7 +258,7 @@ processTMStage st pktID ssc status setStage = do
                     }
                 else return st
         Nothing -> do
-            logWarn
+            logDebug
                 $  "Verification record for PktID "
                 <> display pktID
                 <> " SeqStatus: "
