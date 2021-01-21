@@ -16,22 +16,27 @@ import           Verification.Commands
 
 import           Data.PUS.TCRequest
 
-import           General.PUSTypes              
+import           General.PUSTypes
 import           Data.PUS.Events
 
-import           System.TimeManager as TM
- 
+import           Data.Fixed 
+
+import          Data.TimerWheel               as TW
+
 
 data VerifState = VerifState
     { _stRqstMap :: HashMap RequestID (PktID, SeqControl, TVar Verification)
     , _stApidMap :: HashMap (PktID, SeqControl) (RequestID, TVar Verification)
-    , _stGTTimer :: Maybe TM.Handle 
+    , _stGTTimer :: Maybe (IO Bool)
     }
 makeLenses ''VerifState
 
 
 emptyState :: VerifState
 emptyState = VerifState HM.empty HM.empty Nothing
+
+gtTimeOut :: Fixed E6
+gtTimeOut = 10
 
 
 
@@ -42,33 +47,34 @@ processVerification
 processVerification queue = do
     logDebug "Verification starts..."
 
-    bracket
-        (liftIO (initialize 1_000_000))
-        (liftIO . killManager)
-        (loop emptyState)
-    
+    let twConfig = TW.Config 1000 1
+
+    bracket (liftIO (create twConfig))
+            (liftIO . destroy)
+            (loop emptyState)
+
     logDebug "Verification stopped"
   where
     loop
         :: (MonadIO m, MonadReader env m, HasRaiseEvent env, HasLogFunc env)
         => VerifState
-        -> Manager
+        -> TimerWheel
         -> m ()
-    loop state manager = do
+    loop state timerWheel = do
         cmd      <- atomically $ readTBQueue queue
-        newState <- processCommand manager queue state cmd
-        loop newState manager
+        newState <- processCommand timerWheel queue state cmd
+        loop newState timerWheel
 
 
 processCommand
     :: (MonadIO m, MonadReader env m, HasRaiseEvent env, HasLogFunc env)
-    => Manager
+    => TimerWheel
     -> TBQueue VerifCommand
     -> VerifState
     -> VerifCommand
     -> m VerifState
-processCommand _manager _queue st (RegisterRequest rqst pktId ssc) = do
-    let verif  = rqst ^. tcReqVerifications & verRelease .~ StRPending 
+processCommand _timerWheel _queue st (RegisterRequest rqst pktId ssc) = do
+    let verif  = rqst ^. tcReqVerifications & verRelease .~ StRPending
         rqstID = rqst ^. tcReqRequestID
     var <- newTVarIO verif
     let newSt =
@@ -78,39 +84,44 @@ processCommand _manager _queue st (RegisterRequest rqst pktId ssc) = do
                 &  stApidMap
                 .~ HM.insert (pktId, ssc) (rqstID, var) (_stApidMap st)
     env <- ask
-    logDebug $ "Verification: registerRequest got new request RqstID: " <> display rqstID 
-        <> " PktID: " <> display pktId <> " SSC: " <> display ssc
+    logDebug
+        $  "Verification: registerRequest got new request RqstID: "
+        <> display rqstID
+        <> " PktID: "
+        <> display pktId
+        <> " SSC: "
+        <> display ssc
     liftIO $ raiseEvent env (EVCommanding (EVTCVerificationNew rqst verif))
     return newSt
 
 -- Process the Release Stage
-processCommand manager queue st (SetVerifR rqstID releaseTime status) = do
+processCommand timerWheel queue st (SetVerifR rqstID releaseTime status) = do
     case HM.lookup rqstID (_stRqstMap st) of
         Just (pktID, ssc, var) -> do
-            env <- ask
+            env                 <- ask
             (action, newStatus) <- atomically $ do
                 verif <- readTVar var
                 let newStatus = setReleaseStage status verif
                 writeTVar var newStatus
                 return
-                    (liftIO
+                    ( liftIO
                         (raiseEvent
                             env
                             (EVCommanding
                                 (EVTCRelease rqstID releaseTime newStatus)
                             )
                         )
-                    , newStatus)
+                    , newStatus
+                    )
             action
             -- in case the verification is finished, we delete the verification entry
-            if isFinished newStatus 
-                then 
-                    return st { 
-                        _stRqstMap = HM.delete rqstID (_stRqstMap st)
-                        , _stApidMap = HM.delete (pktID, ssc) (_stApidMap st)
+            if isFinished newStatus
+                then return st
+                    { _stRqstMap = HM.delete rqstID (_stRqstMap st)
+                    , _stApidMap = HM.delete (pktID, ssc) (_stApidMap st)
                     }
                 else do
-                    hdl <- register manager timeoutGT 
+                    hdl <- liftIO $ register timerWheel gtTimeOut (timeoutGT queue rqstID newStatus)
                     return st { _stGTTimer = Just hdl }
         Nothing -> do
             logWarn
@@ -119,26 +130,26 @@ processCommand manager queue st (SetVerifR rqstID releaseTime status) = do
                 <> " has not been found"
             return st
 
-processCommand manager queue st (SetVerifG rqstID status) = do
+processCommand timerWheel queue st (SetVerifG rqstID status) = do
     processGroundStage st rqstID status setGroundReceptionStage
-processCommand manager queue st (SetVerifT rqstID status) = do
+processCommand timerWheel queue st (SetVerifT rqstID status) = do
     processGroundStage st rqstID status setGroundTransmissionStage
-processCommand manager queue st (SetVerifO rqstID status) = do
+processCommand timerWheel queue st (SetVerifO rqstID status) = do
     processGroundStage st rqstID status setGroundOBRStage
-processCommand manager queue st (SetVerifGT rqstID status) = do
+processCommand timerWheel queue st (SetVerifGT rqstID status) = do
     processGroundStage st rqstID status setGroundGTStages
-processCommand manager queue st (SetVerifGTO rqstID status) = do
+processCommand timerWheel queue st (SetVerifGTO rqstID status) = do
     processGroundStage st rqstID status setGroundGTStages
-processCommand manager queue st (SerVerifGTCnC pktID ssc status) = do
+processCommand timerWheel queue st (SerVerifGTCnC pktID ssc status) = do
     processCncGroundStage st (pktID, ssc) status setGroundGTStages
 
-processCommand manager queue st (SetVerifA pktID ssc status) = do
+processCommand timerWheel queue st (SetVerifA pktID ssc status) = do
     processTMStage st pktID ssc status setTMAcceptStage
-processCommand manager queue st (SetVerifS pktID ssc status) = do
+processCommand timerWheel queue st (SetVerifS pktID ssc status) = do
     processTMStage st pktID ssc status setTMStartStage
-processCommand manager queue st (SetVerifC pktID ssc status) = do
+processCommand timerWheel queue st (SetVerifC pktID ssc status) = do
     processTMStage st pktID ssc status setTMCompleteStage
-processCommand manager queue st (SetVerifP idx pktID ssc status) = do
+processCommand timerWheel queue st (SetVerifP idx pktID ssc status) = do
     processTMStage st pktID ssc status (setTMProgressStage (fromIntegral idx))
 
 
@@ -161,19 +172,18 @@ processGroundStage st rqstID status setStage = do
             newStatus <- doUpdate rqstID status var setStage
             -- check the delivered new Verification, if it is finished. If so,
             -- remove it from the maps
-            if isFinished newStatus 
-                then 
-                    return VerifState { 
-                        _stRqstMap = HM.delete rqstID (_stRqstMap st)
-                        , _stApidMap = HM.delete (pktID, ssc) (_stApidMap st)
+            if isFinished newStatus
+                then return VerifState
+                    { _stRqstMap = HM.delete rqstID (_stRqstMap st)
+                    , _stApidMap = HM.delete (pktID, ssc) (_stApidMap st)
                     }
-                else return st 
+                else return st
         Nothing -> do
             logWarn
                 $  "Verification record for RequestID "
                 <> display rqstID
                 <> " has not been found"
-            return st 
+            return st
 
 processCncGroundStage
     :: ( MonadReader env m
@@ -201,13 +211,12 @@ processCncGroundStage st key@(pktID, ssc) status setStage = do
             newStatus <- doUpdate rqstID status var setStage
             -- check the delivered new Verification, if it is finished. If so,
             -- remove it from the maps
-            if isFinished newStatus 
-                then 
-                    return VerifState { 
-                        _stRqstMap = HM.delete rqstID (_stRqstMap st)
-                        , _stApidMap = HM.delete (pktID, ssc) (_stApidMap st)
+            if isFinished newStatus
+                then return VerifState
+                    { _stRqstMap = HM.delete rqstID (_stRqstMap st)
+                    , _stApidMap = HM.delete (pktID, ssc) (_stApidMap st)
                     }
-                else return st 
+                else return st
         Nothing -> do
             logWarn
                 $  "Verification record for Key "
@@ -242,13 +251,12 @@ processTMStage st pktID ssc status setStage = do
             newStatus <- doUpdate rqstID status var setStage
             -- check the delivered new Verification, if it is finished. If so,
             -- remove it from the maps
-            if isFinished newStatus 
-                then 
-                    return VerifState { 
-                        _stRqstMap = HM.delete rqstID (_stRqstMap st)
-                        , _stApidMap = HM.delete (pktID, ssc) (_stApidMap st)
+            if isFinished newStatus
+                then return VerifState
+                    { _stRqstMap = HM.delete rqstID (_stRqstMap st)
+                    , _stApidMap = HM.delete (pktID, ssc) (_stApidMap st)
                     }
-                else return st 
+                else return st
         Nothing -> do
             logWarn
                 $  "Verification record for PktID "
@@ -267,7 +275,7 @@ doUpdate
     -> (t -> Verification -> Verification)
     -> m Verification
 doUpdate rqstID status var setStage = do
-    env <- ask
+    env                 <- ask
     (action, newStatus) <- atomically $ do
         verif <- readTVar var
         let newStatus = setStage status verif
@@ -276,17 +284,14 @@ doUpdate rqstID status var setStage = do
                 let event = EVTCVerificationUpdate rqstID newStatus
                 liftIO $ raiseEvent env (EVCommanding event)
         return (action, newStatus)
-    action 
-    return newStatus            
-    
+    action
+    return newStatus
 
 
-timeoutGT :: TBQueue VerifCommand -> RequestID -> Verification -> IO () 
-timeoutGT queue rqstID verif = do 
-    if (_verGroundOBR verif == StGExpected) || (_verGroundOBR verif == StGPending)
-        then 
-            atomically $ writeTBQueue queue (SetVerifGTO rqstID StGTimeout)
-        else do
-            when ((_verGroundTransmission verif == StGExpected) || (_verGroundTransmission verif == StGPending)) $ do
-                atomically $ writeTBQueue queue (SetVerifGT rqstID StGTimeout)
-        
+
+timeoutGT :: TBQueue VerifCommand -> RequestID -> Verification -> IO ()
+timeoutGT queue rqstID verif = do
+    atomically $ writeTBQueue
+        queue
+        (SetVerifGT rqstID StGTimeout)
+

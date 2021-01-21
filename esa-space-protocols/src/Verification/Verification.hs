@@ -250,6 +250,10 @@ setGroundReceptionStage StGFail verif =
         &  verGroundOBR
         .~ StGDisabled
         &  setAllTMStages StTmDisabled
+setGroundReceptionStage StGTimeout verif = 
+    if (verif ^. verGroundReception == StGPending) || (verif ^. verGroundReception == StGExpected)
+        then verif & verGroundReception .~ StGTimeout
+        else verif 
 setGroundReceptionStage status verif = verif & verGroundReception .~ status
 
 
@@ -266,6 +270,10 @@ setGroundTransmissionStage StGSuccess verif =
             then verif & verGroundReception .~ StGAssumed
             else verif
     in  newVerif & verGroundTransmission .~ StGSuccess
+setGroundTransmissionStage StGTimeout verif = 
+    if (verif ^. verGroundTransmission == StGPending) || (verif ^. verGroundTransmission == StGExpected)
+        then verif & verGroundTransmission .~ StGTimeout
+        else verif
 setGroundTransmissionStage status verif =
     verif & verGroundTransmission .~ status
 
@@ -280,6 +288,10 @@ setGroundOBRStage StGSuccess verif =
             then verif1 & verGroundTransmission .~ StGAssumed
             else verif1
     in  verif2 & verGroundOBR .~ StGSuccess
+setGroundOBRStage StGTimeout verif = 
+    if (verif ^. verGroundOBR == StGPending) || (verif ^. verGroundOBR == StGExpected)
+        then verif & verGroundOBR .~ StGTimeout
+        else verif
 setGroundOBRStage status verif = verif & verGroundOBR .~ status
 
 setGroundGTStages :: GroundStage -> Verification -> Verification
@@ -292,6 +304,14 @@ setGroundGTStages StGFail verif =
         &  verGroundOBR
         .~ StGDisabled
         &  setAllTMStages StTmDisabled
+setGroundGTStages StGTimeout verif = 
+    let newVerif = if (verif ^. verGroundReception == StGPending) || (verif ^. verGroundReception == StGExpected)
+                        then verif & verGroundReception .~ StGTimeout
+                        else verif 
+    in 
+    if (newVerif ^. verGroundTransmission == StGPending) || (newVerif ^. verGroundTransmission == StGExpected)
+        then newVerif & verGroundTransmission .~ StGTimeout
+        else newVerif
 setGroundGTStages status verif =
     verif & verGroundReception .~ status & verGroundTransmission .~ status
 
@@ -320,6 +340,10 @@ setTMAcceptStage StTmAssumed verif =
     in  if (obr == StGExpected) || (obr == StGPending)
             then newVerif & verGroundOBR .~ StGAssumed
             else newVerif
+setTMAcceptStage StTmTimeout verif = 
+    if (verif ^. verTMAcceptance == StTmPending) || (verif ^. verTMAcceptance == StTmExpected)
+        then verif & verTMAcceptance .~ StTmTimeout
+        else verif
 setTMAcceptStage status verif = verif & verTMAcceptance .~ status
 
 
@@ -337,6 +361,10 @@ setTMStartStage StTmSuccess verif =
     setAcceptPending (verif & verTMStart .~ StTmSuccess)
 setTMStartStage StTmAssumed verif =
     setAcceptPending (verif & verTMStart .~ StTmAssumed)
+setTMStartStage StTmTimeout verif = 
+    if (verif ^. verTMStart == StTmPending) || (verif ^. verTMStart == StTmExpected)
+        then verif & verTMStart .~ StTmTimeout
+        else verif
 setTMStartStage status verif = verif & verTMStart .~ status
 
 setAcceptPending :: Verification -> Verification
@@ -357,6 +385,7 @@ setTMProgressStage i status verif =
     setProg prog StTmFail    = V.imap setFail prog
     setProg prog StTmSuccess = V.imap (setp StTmSuccess) prog
     setProg prog StTmAssumed = V.imap (setp StTmAssumed) prog
+    setProg prog StTmTimeout = V.imap (setp StTmTimeout) prog
     setProg prog st          = prog V.// [(i, st)]
 
 
@@ -385,6 +414,10 @@ setTMCompleteStage StTmFail verif =
     verif & verTMComplete .~ StTmFail & setStartPending & setProgressAssumed
 setTMCompleteStage StTmSuccess verif =
     verif & verTMComplete .~ StTmSuccess & setStartPending & setProgressAssumed
+setTMCompleteStage StTmTimeout verif = 
+    if (verif ^. verTMComplete == StTmPending) || (verif ^. verTMComplete == StTmExpected)
+        then verif & verTMComplete .~ StTmTimeout
+        else verif
 setTMCompleteStage status verif = verif & verTMComplete .~ status
 
 

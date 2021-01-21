@@ -7,6 +7,8 @@ module Data.TimerWheel
   ( -- * Timer wheel
     TimerWheel,
     with,
+    create,
+    destroy,
     Config (..),
     register,
     register_,
@@ -137,6 +139,42 @@ _with config action = do
     result <- restore (action TimerWheel {supply, wheel, thread}) `catch` handler
     cleanup
     pure result
+
+
+create :: Config -> IO TimerWheel
+create config = 
+  case validateConfig config of
+    () -> _create config
+
+_create :: Config -> IO TimerWheel
+_create config = do
+
+  wheel :: Wheel <-
+    Wheel.create
+      (Config.spokes config)
+      (Micros.fromFixed (Config.resolution config))
+
+  supply :: Supply <-
+    Supply.new
+
+  thread <- myThreadId
+
+  reaperThread <-
+    forkIOWithUnmask $ \unmask ->
+      unmask (Wheel.reap wheel)
+        `catch` \e ->
+          case fromException e of
+            Just ThreadKilled -> pure ()
+            _                 -> throwTo thread (TimerWheelDied e)
+
+  pure (TimerWheel supply wheel reaperThread)
+
+
+-- | Tear down a timer wheel by killing the timeout thread.
+destroy :: TimerWheel -> IO ()
+destroy wheel =
+  killThread (thread wheel)
+
 
 validateConfig :: Config -> ()
 validateConfig config
