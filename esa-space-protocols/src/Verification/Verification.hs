@@ -462,14 +462,12 @@ isTMExpected Verification {..} =
 isGroundSuccess :: Verification -> Bool
 isGroundSuccess Verification {..} =
     (_verGroundOBR == StGSuccess)
-        || (_verGroundOBR == StGDisabled)
-        && (_verGroundTransmission == StGSuccess)
+    || (_verGroundOBR == StGDisabled) && (_verGroundTransmission == StGSuccess)
 
 isGroundTimeout :: Verification -> Bool 
 isGroundTimeout Verification {..} = 
     (_verGroundOBR == StGTimeout)
-        || (_verGroundOBR == StGDisabled)
-        && (_verGroundTransmission == StGTimeout)
+    || (_verGroundOBR == StGDisabled) && (_verGroundTransmission == StGTimeout)
 
 isGroundDisabled :: Verification -> Bool 
 isGroundDisabled Verification {..} = 
@@ -494,17 +492,14 @@ isGroundFail Verification {..} =
 isSuccess :: Verification -> Bool
 isSuccess verif@Verification {..} =
     (_verTMComplete == StTmSuccess)
-        || (not (isTMExpected verif)
-        && isGroundSuccess verif)
-        || isGroundDisabled verif
-        && (_verRelease == StRSuccess)
+    || (not (isTMExpected verif) && isGroundSuccess verif)
+    || (isGroundDisabled verif && (_verRelease == StRSuccess))
 
 
 isTimeout :: Verification -> Bool 
 isTimeout verif@Verification {..} = 
     (_verTMComplete == StTmTimeout)
-        || not (isTMExpected verif)
-        && isGroundTimeout verif 
+    || not (isTMExpected verif) && isGroundTimeout verif 
 
 
 isFinished :: Verification -> Bool 

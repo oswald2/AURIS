@@ -30,6 +30,7 @@ resolver: lts-16.28
 #   - wai
 packages:
 - hashtables-mo
+- timer-wheel
 - esa-base
 - esa-mib
 - esa-space-protocols

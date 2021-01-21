@@ -1,0 +1,103 @@
+cabal-version: 2.0
+
+name: timer-wheel
+version: 0.3.0
+category: Data
+description:
+  This library provides a timer wheel data structure for
+  .
+  * (Almost) /O(1)/ registering @IO@ actions to fire after a given amount of time
+  * /O(1)/ canceling registered actions
+  .
+  It is similar to @TimerManager@ from "GHC.Event", but supports recurring
+  timers, can scale to handle many more registered timers.
+  .
+synopsis: A timer wheel
+author: Mitchell Rosen
+maintainer: Mitchell Rosen <mitchellwrosen@gmail.com>
+homepage: https://github.com/mitchellwrosen/timer-wheel
+bug-reports: https://github.com/mitchellwrosen/timer-wheel/issues
+copyright: (c) 2018-2020, Mitchell Rosen
+license: BSD3
+license-file: LICENSE
+build-type: Simple
+
+extra-source-files:
+  CHANGELOG.md
+  README.md
+  cabal.project
+
+source-repository head
+  type: git
+  location: git://github.com/mitchellwrosen/timer-wheel.git
+
+library
+  build-depends:
+    atomic-primops ^>= 0.8,
+    base ^>= 4.9 || ^>= 4.10 || ^>= 4.11 || ^>= 4.12 || ^>= 4.13 || ^>= 4.14,
+    psqueues ^>= 0.2.7,
+    vector ^>= 0.10 || ^>= 0.11 || ^>= 0.12
+
+  default-extensions:
+    BlockArguments
+    DeriveAnyClass
+    DeriveGeneric
+    DerivingStrategies
+    GeneralizedNewtypeDeriving
+    LambdaCase
+    NamedFieldPuns
+    RecursiveDo
+    ScopedTypeVariables
+    TupleSections
+    TypeApplications
+    ViewPatterns
+
+  default-language:
+    Haskell2010
+
+  exposed-modules:
+    Data.TimerWheel
+
+  ghc-options:
+    -Weverything
+    -Wno-all-missed-specialisations
+    -Wno-implicit-prelude
+    -Wno-missing-import-lists
+    -Wno-unsafe
+  if impl(ghc >= 8.10)
+    ghc-options:
+      -Wno-missing-safe-haskell-mode
+      -Wno-prepositive-qualified-module
+
+  hs-source-dirs:
+    src
+
+  other-modules:
+    Data.TimerWheel.Internal.Config
+    Data.TimerWheel.Internal.Entries
+    Data.TimerWheel.Internal.Micros
+    Data.TimerWheel.Internal.Supply
+    Data.TimerWheel.Internal.Timestamp
+    Data.TimerWheel.Internal.Wheel
+
+test-suite tests
+  build-depends:
+    base,
+    timer-wheel
+
+  default-language:
+    Haskell2010
+
+  ghc-options:
+    -threaded
+    -with-rtsopts=-N2
+    -Wall
+
+  hs-source-dirs:
+    test
+
+  main-is:
+    Main.hs
+
+  type:
+    exitcode-stdio-1.0

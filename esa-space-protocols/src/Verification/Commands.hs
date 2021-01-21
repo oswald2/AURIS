@@ -13,7 +13,6 @@ import           Data.PUS.TCRequest
 
 data VerifCommand =
   RegisterRequest !TCRequest !PktID !SeqControl
-  | RegisterDirective !TCRequest
   | SetVerifR !RequestID !SunTime !ReleaseStage
   | SetVerifG !RequestID !GroundStage
   | SetVerifT !RequestID !GroundStage

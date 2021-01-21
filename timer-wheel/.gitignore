@@ -1,0 +1,5 @@
+.envrc
+.ghc.environment.*
+cabal.project.local
+dist/
+dist-newstyle/
