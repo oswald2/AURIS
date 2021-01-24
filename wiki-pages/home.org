@@ -1,0 +1,24 @@
+* Welcome to the AURIS wiki!
+
+This wiki provides general information about the AURIS mission control system. AURIS is a try to implement typical mission control system (MCS) and central checkout system (CCS) features in Haskell.
+
+*DISCLAIMER*: knowledge about MCS systems is not something that is available in broad range or can be learned quickly. Therefore, I am very well aware that I am the 'bottleneck' in information passing. As the system is developed in my spare time, I also have quite limited time available for sharing knowledge or discussions. I will try my best to be available for questions and discussions on the Discord server, but I may not be always immediately responsive.
+
+That said, lets first give a bit of an overview of the repository.
+
+* Repository Overview
+
+The repository consists of several libraries in a big mono-repo.
+
+ - =esa-base=: this is a library where base functionality which is used in multiple other libraries is pulled out in order to break dependency circles between the libraries. All general data structures and functions which are used in multiple libraries need to be defined here.
+ - =esa-mib=: library for loading and parsing the MIB (Mission Information Base).
+ - =esa-space-protocols=: this is the main library doing the whole processing of the protocols used to talk to a spacecraft and/or test equipment. For details see it's own dedicated page.
+ - =esa-db=: the database interface for permanent storage of the data
+ - =gui-base=: general building blocks for the graphical user interface, used in the other user interface libraries
+ - =mcs-interface=: the primary interface to the processing part (=esa-space-protocols=). The interface consists of actions which can be triggered by applications and which are transferred to the processing core, and events which are the opposite directions. Events define what happened in the system and applications can register for events to be notified for them. A lot of events are used for data display purposes.
+ - =auris-tm-displays=: telemetry (TM) displays (Frame History, Packet History, Graphical Display, Alphanumerical Display (not yet), Scrolling Display (not yet)
+ - =auris-tc-displays=: telecommand (TC) displays (Stack for sending commands, TC History)
+ - =auris-control-displays=: this is intended for all control displays. Currently only the "connections" display is implemented, but also TC and TM processing settings as well as status displays will be put here
+ - =aurisi=: a single executable with graphical user interface. This is the current main application and is an all-integrated approach, more like a Central Checkout System or a Test System Controller. Evolution will tell if there will be client-server separated interfaces in the future.
+ - =hashtables-mo=: a fork of the =hastables= package. Additionally contains a freeze function for the hash table, as the hash table is only created once and then only used for lookups and therefore can be accessed from pure code.
+ - =timer-wheel=: a fork of the timer-wheel package. This was necessary as the lates version of =timer-wheel= removed the create and destroy functions and only provides a =with= function which only takes an =IO= function as action to run. AURIS uses internally a mtl based approach (and the =RIO= monad in the concrete implementation), so the library could not be used. Therefore, a fork was done where the create/destroy functions are available again and can be used within a =unliftio= based bracket with the =RIO= monad.

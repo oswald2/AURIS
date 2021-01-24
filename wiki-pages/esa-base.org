@@ -1,0 +1,27 @@
+* esa-base
+
+The =esa-base= library contains data types and common functionality to be used in different libraries. The module hierarchy is as follows:
+
+** General
+
+Contains general data structures and functionalities:
+ - General data types like the types used in the Packet Utilisiation Standard (PUS) like APID, Type, SubType, SID, VCID etc as well as time types for operating.
+ - Utility functions: hexdumps on byte strings, setting of bit aligned values in the data part of packets, SizeOf class definitions
+
+** Data.DataModel
+
+This contains one data structure, namely the data model itself. When parsing the system information (currently only the MIB format from SCOS-2000), the information is assembled into a data model which contains information about how TM and TC data are structured, which calibrations, limit checks and processing settings are there, which displays are defined in the MIB and so on. Basically, it is a data structure containing various hashtables and hash-maps to lookup the definitions which are then used for processing.
+
+** Data.TM
+
+Contains definitions for the telemetry side (TM). The most important ones are the parameter definitions and the packet definitions. These describe, what parameters are defined (their data type, size, location in the packet, extraction information) and how the packets are structured (fixed, variable).
+
+For a basic understanding: a parameter consists of a value (which is a sum type which determines the actual data type like integer, string, time etc), a timestamp (when the value was sampled/created) and a validity (is the given value valid or did it have conditions like calibration out of range, division by zero, dependencies of this parameter value are not valid etc).
+
+Synthetic parameters are defined by a small language called OL (operations language), which define parameters as a function on other parameters. Synthetic parameters are calculated when one of their dependencies (the parameters they depend on) changes. AURIS does not make a difference between synthetic, saved synthetic and hardcoded synthetic values like SCOS-2000 does, it currently always uses saved synthetic. This means the parameter values are calculated and then stored in the DB. SCOS did not do this and always needed a re-processing of the parameters (therefore the saved-synthetic parameters were invented). As AURIS will use a parameter based archive in combination with a packet based archive, this does not apply.
+
+Calibrations are also defined here (linear, polynomial and logarithmic calibration curves, textual calibrations and so on). Limit checks are not yet implemented.
+
+** Data.Display
+
+This will contain the displays as defined in the MIB. Currently, a very first draft of a GRD display is created, but not directly coupled with the GUI. ANDs are the next to be implemented. In contrast to SCOS-2000, where the MIB definition of the displays is crucial, AURIS aims for them as merely configuration data as displays can be created on the fly and saved locally for later usage (also currently not implemented).
