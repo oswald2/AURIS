@@ -66,7 +66,7 @@ should also work, but currently there is no cabal.project file
 available.
 
 In the current project, FLTK has been replaced by GTK. Therefore the
-dependencies required by the Haskell library =gi-gtk=
+dependencies are the same as the one required by the Haskell library =gi-gtk=.
 
 There are 3 stack.yaml files provided:
  - stack.yaml: this is for developing with non-optimized code
