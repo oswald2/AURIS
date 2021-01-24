@@ -12,4 +12,5 @@ very specific, there is a Discord server for questions and discussions: [Discord
  * All current libraries directly created for AURIS use the `rio` library as a prelude and most IO related things come from `unliftio`. This was a natural choice and should be kept for new code.
  * There are no hard restrictions on how to import modules (qualified, explicit imports). Data types are normally imported unqualified (if possible), explicit imports currently in the code are mainly from the haskell-language-server functionality to automatically propose them.
  * As the system is quite heavily under development and APIs are changing, it is a good idea to export record fields and also newtype accessors with the (natural) exception for the need of encapsulation and smart constructors.
- * Wiki pages and text files should be written in Emacs org-mode format! The wiki pages are also present in the `wiki-pages` directory in the AURIS root. 
+ * Wiki pages and text files should be written in Emacs org-mode format! 
+ * To change the wiki pages, clone the URL: https://github.com/oswald2/AURIS.wiki.git, and edit the files there. 
