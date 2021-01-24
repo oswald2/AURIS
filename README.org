@@ -130,6 +130,10 @@ integrated) in the 'aurisi' directory.
 
 The AURISi executable uses GTK for the graphical user interface.
 
+* More Information
+
+There is more information available (restructuring and growing) on the Wiki on github: [[https://github.com/oswald2/AURIS/wiki][wiki]]
+
 ** Database
    :PROPERTIES:
    :CUSTOM_ID: database
@@ -178,3 +182,14 @@ usable and can be found here:
   =ilookup=, =fold= and =toList= are implemented.
 - The timer functionality is still undecided.
 - State machines need more research. Combining state machines with STM and timers is quite challenging. This is needed for the COP-1 machine for AD mode as well as for the Verification timers and the OBQM implementation.
+
+** Contributing
+
+All contributions are welcome, though I am aware that there is quite an entry hurdle as the topic of mission control is a very 
+niche topic and there is not really much broad knowledge available. Things to implement can be found on the Issues page on github.
+They are often broader topics, which should be split into sub-tasks before. I try to keep them up-to-date as far as possible. 
+
+As this is not a simple topic, please ask questions. For issues, this can be directly done in the Issues pages or on the dedicated 
+Discord server for the system: [[https://discord.gg/jEdJxfVd][Discord]].
+
+See the file [[CONTRIBUTING.md][CONTRIBUTING.md]] on how to contribute.

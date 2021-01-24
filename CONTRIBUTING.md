@@ -1,6 +1,7 @@
 # Contributing
 
-Contributions are most welcome. Please follow the following guidelines if you wish to contribute.
+Contributions are most welcome. Please follow the following guidelines if you wish to contribute. As the topic is broad, diverse and 
+very specific, there is a Discord server for questions and discussions: [[https://discord.gg/jEdJxfVd][Discord]].
 
 # Guidelines
 
