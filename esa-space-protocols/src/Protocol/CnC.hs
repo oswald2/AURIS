@@ -182,7 +182,7 @@ processAsciiAck protPkt = do
             liftIO $ requestVerifyGTCnC env (pktID, seqC) StGSuccess
         | dat == nak
         -> do
-            liftIO $ requestVerifyGTCnC env (pktID, seqC) StGSuccess
+            liftIO $ requestVerifyGTCnC env (pktID, seqC) StGFail
         | otherwise
         -> logWarn $ "Could not parse C&C ACK data from pkt: " <> displayShow
             (protPkt ^. protContent)

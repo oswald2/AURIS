@@ -421,6 +421,8 @@ test-suite TCEncodeTests
         , unliftio
         , hspec
         , sorted-list
+        , vector
+        , bytestring-to-vector
 
 test-suite TMExtractionTest
     type: exitcode-stdio-1.0

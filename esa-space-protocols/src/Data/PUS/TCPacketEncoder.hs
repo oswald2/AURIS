@@ -127,6 +127,7 @@ tcPktEncoderC missionSpecific = do
                     newRqstID = nextRqstID rqstID
                 case newRqst ^. tcReqPayload of
                     TCCommand {..} -> do
+                        logDebug $ "TC Packet: " <> displayShow _tcReqPacket
                         let enc = encodeTCPacket _tcReqPacket missionSpecific
                         logDebug $ "Encoded TC Packet: " <> displayShow enc
                         yield $ EncodedTCPacket (Just enc) newRqst

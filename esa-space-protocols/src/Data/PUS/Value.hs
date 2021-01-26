@@ -25,8 +25,7 @@ module Data.PUS.Value
     , getUnalignedValue
     , isStorableWord64
     , isGettableUnaligned
-    )
-where
+    ) where
 
 import           RIO
 import qualified RIO.ByteString                as B
@@ -66,6 +65,10 @@ data Value =
     ValInt8 !Int8
     | ValInt16 Endian !Word16
     | ValUInt3 !Word8
+    | ValUInt8 !Word8
+    | ValUInt16 Endian !Word16
+    | ValUInt32 Endian !Word32
+    | ValUInt64 Endian !Word64
     | ValDouble Endian !Double
     | ValString !ByteString
     | ValFixedString !Word16 !ByteString
@@ -90,6 +93,14 @@ instance AE.ToJSON Value where
             ]
     toJSON (ValUInt3 x) =
         object ["valType" .= ("ValUInt3" :: Text), "value" .= x]
+    toJSON (ValUInt8 x) =
+        object ["valType" .= ("ValUInt8" :: Text), "value" .= x]
+    toJSON (ValUInt16 e x) =
+        object ["valType" .= ("ValUInt16" :: Text), "value" .= x, "endian" .= e]
+    toJSON (ValUInt32 e x) =
+        object ["valType" .= ("ValUInt32" :: Text), "value" .= x, "endian" .= e]
+    toJSON (ValUInt64 e x) =
+        object ["valType" .= ("ValUInt64" :: Text), "value" .= x, "endian" .= e]
     toJSON (ValDouble b x) =
         object
             [ "valType" .= ("ValDouble" :: Text)
@@ -132,6 +143,32 @@ instance AE.ToJSON Value where
         )
     toEncoding (ValUInt3 x) =
         pairs ("valType" .= ("ValUInt3" :: Text) <> "value" .= x)
+    toEncoding (ValUInt8 x) =
+        pairs ("valType" .= ("ValUInt8" :: Text) <> "value" .= x)
+    toEncoding (ValUInt16 e x) = pairs
+        (  "valType"
+        .= ("ValUInt16" :: Text)
+        <> "value"
+        .= x
+        <> "endian"
+        .= toJSON e
+        )
+    toEncoding (ValUInt32 e x) = pairs
+        (  "valType"
+        .= ("ValUInt32" :: Text)
+        <> "value"
+        .= x
+        <> "endian"
+        .= toJSON e
+        )
+    toEncoding (ValUInt64 e x) = pairs
+        (  "valType"
+        .= ("ValUInt64" :: Text)
+        <> "value"
+        .= x
+        <> "endian"
+        .= toJSON e
+        )
     toEncoding (ValDouble b x) = pairs
         (  "valType"
         .= ("ValDouble" :: Text)
@@ -177,6 +214,13 @@ instance FromJSON Value where
         Just (String "ValInt8" ) -> ValInt8 <$> o .: "value"
         Just (String "ValInt16") -> ValInt16 <$> o .: "endian" <*> o .: "value"
         Just (String "ValUInt3") -> ValUInt3 <$> o .: "value"
+        Just (String "ValUInt8") -> ValUInt8 <$> o .: "value"
+        Just (String "ValUInt16") ->
+            ValUInt16 <$> o .: "endian" <*> o .: "value"
+        Just (String "ValUInt32") ->
+            ValUInt32 <$> o .: "endian" <*> o .: "value"
+        Just (String "ValUInt64") ->
+            ValUInt64 <$> o .: "endian" <*> o .: "value"
         Just (String "ValDouble") ->
             ValDouble <$> o .: "endian" <*> o .: "value"
         Just (String "ValString") -> ValString . encodeUtf8 <$> o .: "value"
@@ -197,6 +241,10 @@ instance FromJSON Value where
 
 {-# INLINABLE initialValue #-}
 initialValue :: Endian -> PTC -> PFC -> Value
+initialValue _ (PTC 3) (PFC 4 ) = ValUInt8 0
+initialValue b (PTC 3) (PFC 12) = ValUInt16 b 0
+initialValue b (PTC 3) (PFC 14) = ValUInt32 b 0
+initialValue b (PTC 3) (PFC 16) = ValUInt64 b 0
 initialValue _ (PTC 4) (PFC 4 ) = ValInt8 0
 initialValue b (PTC 4) (PFC 12) = ValInt16 b 0
 initialValue b (PTC 5) (PFC 2 ) = ValDouble b 0.0
@@ -216,6 +264,10 @@ instance BitSizes Value where
     bitSize ValInt8{}     = mkBitSize 8
     bitSize ValInt16{}    = mkBitSize 16
     bitSize ValUInt3{}    = mkBitSize 3
+    bitSize ValUInt8{}    = mkBitSize 8
+    bitSize ValUInt16{}   = mkBitSize 16
+    bitSize ValUInt32{}   = mkBitSize 32
+    bitSize ValUInt64{}   = mkBitSize 64
     bitSize ValDouble{}   = mkBitSize 64
     bitSize (ValString x) = bytesToBitSize . mkByteSize $ B.length x
     bitSize (ValFixedString width _) =
@@ -232,6 +284,10 @@ getByteOrder :: Value -> Maybe Endian
 getByteOrder ValInt8{}        = Nothing
 getByteOrder (ValInt16 b _ )  = Just b
 getByteOrder (ValUInt3 _   )  = Nothing
+getByteOrder (ValUInt8 _   )  = Nothing
+getByteOrder (ValUInt16 b _)  = Just b
+getByteOrder (ValUInt32 b _)  = Just b
+getByteOrder (ValUInt64 b _)  = Just b
 getByteOrder (ValDouble b _)  = Just b
 getByteOrder ValString{}      = Nothing
 getByteOrder ValFixedString{} = Nothing
@@ -250,6 +306,10 @@ isStorableWord64 :: Value -> Bool
 isStorableWord64 ValInt8{}   = True
 isStorableWord64 ValInt16{}  = True
 isStorableWord64 ValUInt3{}  = True
+isStorableWord64 ValUInt8{}  = True
+isStorableWord64 ValUInt16{} = True
+isStorableWord64 ValUInt32{} = True
+isStorableWord64 ValUInt64{} = True
 isStorableWord64 ValDouble{} = True
 isStorableWord64 _           = False
 
@@ -259,6 +319,10 @@ instance Display Value where
     display (ValInt8 x    ) = display x
     display (ValInt16 _ x ) = display x
     display (ValUInt3 x   ) = display x
+    display (ValUInt8 x   ) = display x
+    display (ValUInt16 _ x) = display x
+    display (ValUInt32 _ x) = display x
+    display (ValUInt64 _ x) = display x
     display (ValDouble _ x) = display x
     display (ValString x  ) = displayBytesUtf8 x
     display (ValFixedString n x) =
@@ -278,6 +342,10 @@ instance GetInt Word64 where
     getInt (ValInt8 x    ) = fromIntegral x
     getInt (ValInt16 _ x ) = fromIntegral x
     getInt (ValUInt3 x   ) = fromIntegral x
+    getInt (ValUInt8 x   ) = fromIntegral x
+    getInt (ValUInt16 _ x) = fromIntegral x
+    getInt (ValUInt32 _ x) = fromIntegral x
+    getInt (ValUInt64 _ x) = x
     getInt (ValDouble _ x) = round x
     getInt (ValString x  ) = case parseOnly decimal x of
         Left  _   -> 0
@@ -299,6 +367,10 @@ instance GetInt Int64 where
     getInt (ValInt8 x    ) = fromIntegral x
     getInt (ValInt16 _ x ) = fromIntegral x
     getInt (ValUInt3 x   ) = fromIntegral x
+    getInt (ValUInt8 x   ) = fromIntegral x
+    getInt (ValUInt16 _ x) = fromIntegral x
+    getInt (ValUInt32 _ x) = fromIntegral x
+    getInt (ValUInt64 _ x) = fromIntegral x
     getInt (ValDouble _ x) = round x
     getInt (ValString x  ) = case parseOnly decimal x of
         Left  _   -> 0
@@ -322,6 +394,10 @@ instance GetInt Integer where
     getInt (ValInt8 x    ) = fromIntegral x
     getInt (ValInt16 _ x ) = fromIntegral x
     getInt (ValUInt3 x   ) = fromIntegral x
+    getInt (ValUInt8 x   ) = fromIntegral x
+    getInt (ValUInt16 _ x) = fromIntegral x
+    getInt (ValUInt32 _ x) = fromIntegral x
+    getInt (ValUInt64 _ x) = fromIntegral x
     getInt (ValDouble _ x) = round x
     getInt (ValString x  ) = case parseOnly decimal x of
         Left  _   -> 0
@@ -343,6 +419,10 @@ instance SetInt Integer where
     setInt (ValInt8 _             ) x = ValInt8 (fromIntegral x)
     setInt (ValInt16 b _          ) x = ValInt16 b (fromIntegral x)
     setInt (ValUInt3 _            ) x = ValUInt3 (fromIntegral x .&. 0x07)
+    setInt (ValUInt8 _            ) x = ValUInt8 (fromIntegral x)
+    setInt (ValUInt16 b _         ) x = ValUInt16 b (fromIntegral x)
+    setInt (ValUInt32 b _         ) x = ValUInt32 b (fromIntegral x)
+    setInt (ValUInt64 b _         ) x = ValUInt64 b (fromIntegral x)
     setInt (ValDouble b _         ) x = ValDouble b (fromIntegral x)
     setInt (ValString _) x = ValString (builderBytes (asciiIntegral x))
     setInt (ValFixedString width _) x = ValFixedString width $ rightPaddedC
@@ -360,6 +440,10 @@ instance SetInt Word64 where
     setInt (ValInt8 _             ) x = ValInt8 (fromIntegral (x .&. 0xFF))
     setInt (ValInt16 b _          ) x = ValInt16 b (fromIntegral (x .&. 0xFFFF))
     setInt (ValUInt3 _            ) x = ValUInt3 (fromIntegral (x .&. 0x07))
+    setInt (ValUInt8 _            ) x = ValUInt8 (fromIntegral x)
+    setInt (ValUInt16 b _         ) x = ValUInt16 b (fromIntegral x)
+    setInt (ValUInt32 b _         ) x = ValUInt32 b (fromIntegral x)
+    setInt (ValUInt64 b _         ) x = ValUInt64 b x
     setInt (ValDouble b _         ) x = ValDouble b (fromIntegral x)
     setInt (ValString _) x = ValString (builderBytes (asciiIntegral x))
     setInt (ValFixedString width _) x = ValFixedString width $ rightPaddedC
@@ -391,12 +475,16 @@ toBytes x = B.reverse . B.unfoldr (fmap go) . Just $ changeSign x
 fromBytesToInteger :: Endian -> ByteString -> Integer
 fromBytesToInteger BiE = B.foldl' f 0
     where f a b = a `shiftL` 8 .|. fromIntegral b
-fromBytesToInteger LiE = (fromBytesToInteger BiE) . B.reverse
+fromBytesToInteger LiE = fromBytesToInteger BiE . B.reverse
 
 
 
 {-# INLINABLE isSetableAligned #-}
 isSetableAligned :: Value -> Bool
+isSetableAligned ValUInt8{}       = True
+isSetableAligned ValUInt16{}      = True
+isSetableAligned ValUInt32{}      = True
+isSetableAligned ValUInt64{}      = True
 isSetableAligned ValInt8{}        = True
 isSetableAligned ValInt16{}       = True
 isSetableAligned ValDouble{}      = True
@@ -410,6 +498,10 @@ isSetableAligned _                = False
 
 {-# INLINABLE setAlignedValue #-}
 setAlignedValue :: VS.MVector s Word8 -> ByteOffset -> Value -> ST s ()
+setAlignedValue vec !off (ValUInt8 x   ) = setValue vec off BiE x
+setAlignedValue vec !off (ValUInt16 b x) = setValue vec off b x
+setAlignedValue vec !off (ValUInt32 b x) = setValue vec off b x
+setAlignedValue vec !off (ValUInt64 b x) = setValue vec off b x
 setAlignedValue vec !off (ValInt8 x    ) = setValue vec off BiE x
 setAlignedValue vec !off (ValInt16  b x) = setValue vec off b x
 setAlignedValue vec !off (ValDouble b x) = setValue vec off b x
@@ -425,6 +517,10 @@ setAlignedValue _   _    _              = pure ()
 
 {-# INLINABLE getAlignedValue #-}
 getAlignedValue :: ByteString -> ByteOffset -> Value -> Maybe Value
+getAlignedValue byts off ValUInt8{}      = ValUInt8 <$> getValue byts off BiE
+getAlignedValue byts off (ValUInt16 b _) = ValUInt16 b <$> getValue byts off b
+getAlignedValue byts off (ValUInt32 b _) = ValUInt32 b <$> getValue byts off b
+getAlignedValue byts off (ValUInt64 b _) = ValUInt64 b <$> getValue byts off b
 getAlignedValue byts off ValInt8{}       = ValInt8 <$> getValue byts off BiE
 getAlignedValue byts off (ValInt16  b _) = ValInt16 b <$> getValue byts off b
 getAlignedValue byts off (ValDouble b _) = ValDouble b <$> getValue byts off b
@@ -441,6 +537,14 @@ getAlignedValue _ _ _ = Just ValUndefined
 
 {-# INLINABLE getUnalignedValue #-}
 getUnalignedValue :: ByteString -> Offset -> Value -> Maybe Value
+getUnalignedValue byts off ValUInt8{} =
+    ValUInt8 . fromIntegral <$> getBitFieldInt64 byts off (BitSize 8) BiE
+getUnalignedValue byts off (ValUInt16 b _) =
+    ValUInt16 b . fromIntegral <$> getBitFieldInt64 byts off (BitSize 16) b
+getUnalignedValue byts off (ValUInt32 b _) =
+    ValUInt32 b . fromIntegral <$> getBitFieldInt64 byts off (BitSize 32) b
+getUnalignedValue byts off (ValUInt64 b _) =
+    ValUInt64 b . fromIntegral <$> getBitFieldInt64 byts off (BitSize 64) b
 getUnalignedValue byts off ValUInt3{} =
     ValUInt3 . fromIntegral <$> getBitFieldWord64 byts off (BitSize 3) BiE
 getUnalignedValue byts off ValInt8{} =
@@ -454,7 +558,10 @@ getUnalignedValue _ _ _ = Just ValUndefined
 {-# INLINABLE isGettableUnaligned #-}
 isGettableUnaligned :: Value -> Bool
 isGettableUnaligned ValUInt3{}  = True
+isGettableUnaligned ValUInt8{}   = True
+isGettableUnaligned ValUInt16{}   = True
+isGettableUnaligned ValUInt32{}   = True
+isGettableUnaligned ValUInt64{}   = True
 isGettableUnaligned ValInt8{}   = True
 isGettableUnaligned ValInt16{}  = True
-isGettableUnaligned ValDouble{} = True
 isGettableUnaligned _           = False

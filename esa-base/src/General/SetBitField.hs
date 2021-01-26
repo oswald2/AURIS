@@ -53,13 +53,13 @@ instance SetValue Word8 where
 
 instance SetValue Word16 where
   setValue vec off' BiE val = do
-    let !val1 = fromIntegral $ val .&. 0xFF00 `shiftR` 8
+    let !val1 = fromIntegral $ (val `shiftR` 8) .&. 0xFF
         !val2 = fromIntegral $ val .&. 0xFF
         off   = unByteOffset off'
     VS.unsafeWrite vec off val1
     VS.unsafeWrite vec (off + 1) val2
   setValue vec off' LiE val = do
-    let !val2 = fromIntegral $ val .&. 0xFF00 `shiftR` 8
+    let !val2 = fromIntegral $ (val `shiftR` 8) .&. 0xFF
         !val1 = fromIntegral $ val .&. 0xFF
         off   = unByteOffset off'
     VS.unsafeWrite vec off val1
@@ -73,20 +73,20 @@ instance SetValue Int16 where
 
 instance SetValue Word32 where
   setValue vec off' BiE val = do
-    let !val1 = fromIntegral $ val .&. 0xFF000000 `shiftR` 24
-        !val2 = fromIntegral $ val .&. 0x00FF0000 `shiftR` 16
-        !val3 = fromIntegral $ val .&. 0x0000FF00 `shiftR` 8
-        !val4 = fromIntegral $ val .&. 0x000000FF
+    let !val1 = fromIntegral $ (val `shiftR` 24) .&. 0xFF
+        !val2 = fromIntegral $ (val `shiftR` 16) .&. 0xFF
+        !val3 = fromIntegral $ (val `shiftR` 8) .&. 0xFF
+        !val4 = fromIntegral $ (val .&. 0xFF)
         off   = unByteOffset off'
     VS.unsafeWrite vec off val1
     VS.unsafeWrite vec (off + 1) val2
     VS.unsafeWrite vec (off + 2) val3
     VS.unsafeWrite vec (off + 3) val4
   setValue vec off' LiE val = do
-    let !val4 = fromIntegral $ val .&. 0xFF000000 `shiftR` 24
-        !val3 = fromIntegral $ val .&. 0x00FF0000 `shiftR` 16
-        !val2 = fromIntegral $ val .&. 0x0000FF00 `shiftR` 8
-        !val1 = fromIntegral $ val .&. 0x000000FF
+    let !val4 = fromIntegral $ (val `shiftR` 24) .&. 0xFF
+        !val3 = fromIntegral $ (val `shiftR` 16) .&. 0xFF
+        !val2 = fromIntegral $ (val `shiftR` 8) .&. 0xFF
+        !val1 = fromIntegral $ (val .&. 0xFF)
         off   = unByteOffset off'
     VS.unsafeWrite vec off val1
     VS.unsafeWrite vec (off + 1) val2
@@ -102,14 +102,14 @@ instance SetValue Int32 where
 
 instance SetValue Word64 where
   setValue vec off' BiE val = do
-    let !val1 = fromIntegral $ val .&. 0xFF00000000000000 `shiftR` 56
-        !val2 = fromIntegral $ val .&. 0x00FF000000000000 `shiftR` 48
-        !val3 = fromIntegral $ val .&. 0x0000FF0000000000 `shiftR` 40
-        !val4 = fromIntegral $ val .&. 0x000000FF00000000 `shiftR` 32
-        !val5 = fromIntegral $ val .&. 0x00000000FF000000 `shiftR` 24
-        !val6 = fromIntegral $ val .&. 0x0000000000FF0000 `shiftR` 16
-        !val7 = fromIntegral $ val .&. 0x000000000000FF00 `shiftR` 8
-        !val8 = fromIntegral $ val .&. 0x00000000000000FF
+    let !val1 = fromIntegral $ (val `shiftR` 56) .&. 0xFF
+        !val2 = fromIntegral $ (val `shiftR` 48) .&. 0xFF
+        !val3 = fromIntegral $ (val `shiftR` 40) .&. 0xFF
+        !val4 = fromIntegral $ (val `shiftR` 32) .&. 0xFF
+        !val5 = fromIntegral $ (val `shiftR` 24) .&. 0xFF
+        !val6 = fromIntegral $ (val `shiftR` 16) .&. 0xFF
+        !val7 = fromIntegral $ (val `shiftR` 8) .&. 0xFF
+        !val8 = fromIntegral $ val .&. 0xFF
         off   = unByteOffset off'
     VS.unsafeWrite vec off val1
     VS.unsafeWrite vec (off + 1) val2
@@ -120,14 +120,14 @@ instance SetValue Word64 where
     VS.unsafeWrite vec (off + 6) val7
     VS.unsafeWrite vec (off + 7) val8
   setValue vec off' LiE val = do
-    let !val8 = fromIntegral $ val .&. 0xFF00000000000000 `shiftR` 56
-        !val7 = fromIntegral $ val .&. 0x00FF000000000000 `shiftR` 48
-        !val6 = fromIntegral $ val .&. 0x0000FF0000000000 `shiftR` 40
-        !val5 = fromIntegral $ val .&. 0x000000FF00000000 `shiftR` 32
-        !val4 = fromIntegral $ val .&. 0x00000000FF000000 `shiftR` 24
-        !val3 = fromIntegral $ val .&. 0x0000000000FF0000 `shiftR` 16
-        !val2 = fromIntegral $ val .&. 0x000000000000FF00 `shiftR` 8
-        !val1 = fromIntegral $ val .&. 0x00000000000000FF
+    let !val8 = fromIntegral $ (val `shiftR` 56) .&. 0xFF
+        !val7 = fromIntegral $ (val `shiftR` 48) .&. 0xFF
+        !val6 = fromIntegral $ (val `shiftR` 40) .&. 0xFF
+        !val5 = fromIntegral $ (val `shiftR` 32) .&. 0xFF
+        !val4 = fromIntegral $ (val `shiftR` 24) .&. 0xFF
+        !val3 = fromIntegral $ (val `shiftR` 16) .&. 0xFF
+        !val2 = fromIntegral $ (val `shiftR` 8) .&. 0xFF
+        !val1 = fromIntegral $ val .&. 0xFF
         off   = unByteOffset off'
     VS.unsafeWrite vec off val1
     VS.unsafeWrite vec (off + 1) val2

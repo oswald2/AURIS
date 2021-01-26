@@ -46,6 +46,14 @@ extParamToParVal timestamp epoch validity ExtParameter {..} = TMParameter
 valueToTMValue :: Epoch -> Validity -> Value -> TMValue
 valueToTMValue _ validity (ValUInt3 x) =
   TMValue (TMValUInt (fromIntegral x)) validity
+valueToTMValue _ validity (ValUInt8 x) =
+  TMValue (TMValUInt (fromIntegral x)) validity
+valueToTMValue _ validity (ValUInt16 _ x) =
+  TMValue (TMValUInt (fromIntegral x)) validity
+valueToTMValue _ validity (ValUInt32 _ x) =
+  TMValue (TMValUInt (fromIntegral x)) validity
+valueToTMValue _ validity (ValUInt64 _ x) =
+  TMValue (TMValUInt x) validity
 valueToTMValue _ validity (ValInt8 x) =
   TMValue (TMValInt (fromIntegral x)) validity
 valueToTMValue _ validity (ValInt16 _ x) =
