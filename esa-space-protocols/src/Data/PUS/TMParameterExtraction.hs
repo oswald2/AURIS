@@ -58,6 +58,10 @@ valueToTMValue _ validity (ValInt8 x) =
   TMValue (TMValInt (fromIntegral x)) validity
 valueToTMValue _ validity (ValInt16 _ x) =
   TMValue (TMValInt (fromIntegral x)) validity
+valueToTMValue _ validity (ValInt32 _ x) =
+  TMValue (TMValInt (fromIntegral x)) validity
+valueToTMValue _ validity (ValInt64 _ x) =
+  TMValue (TMValInt x) validity
 valueToTMValue _ validity (ValDouble _ x) = TMValue (TMValDouble x) validity
 valueToTMValue _ validity (ValString x       ) = checkString validity x
 valueToTMValue _ validity (ValFixedString _ x) = checkString validity x
