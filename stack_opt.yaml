@@ -17,7 +17,7 @@
 #
 # resolver: ./custom-snapshot.yaml
 # resolver: https://example.com/snapshots/2018-01-01.yaml
-resolver: lts-16.28
+resolver: lts-17.0
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -63,7 +63,19 @@ extra-deps:
 - timers-updatable-0.2.0.2
 - direct-sqlite-2.3.26
 - Chart-cairo-1.9.3@sha256:f484a7194ca08ed67f02aa626e2f8f4d1a9b50624e0d50e3ced62958f7481cca,925
-
+- haskell-gi-base-0.24.4
+- haskell-gi-0.24.5
+- gi-glib-2.0.24
+- gi-pango-1.0.23
+- gi-harfbuzz-0.0.3
+- gi-gtk-3.0.36
+- gi-gtk-hs-0.3.9
+- gi-atk-2.0.21
+- gi-cairo-render-0.1.0
+- gi-cairo-connector-0.1.0
+- gi-gobject-2.0.24
+- refined-0.6.1@sha256:d5d713f0a2ad79d1c049d2d132fd8c2078b883b5ea3db876087eaec102843e57,2748
+- these-skinny-0.7.4@sha256:e29336a1a70a497e09d8266f8438efb30a807bafaa6b00f5a136f7493efb3160,1239
 ghc-options: 
   "$targets": -freverse-errors 
 
