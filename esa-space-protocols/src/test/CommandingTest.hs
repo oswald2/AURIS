@@ -5,6 +5,7 @@
     , RecordWildCards
     , FlexibleInstances
     , BinaryLiterals
+    , TemplateHaskell
 #-}
 module Main where
 
@@ -45,6 +46,8 @@ import           Protocol.ProtocolInterfaces
 import           GHC.Conc.Sync
 
 import           Verification.Verification
+
+import           Refined 
 
 
 -- transferFrames :: [TCTransferFrame]
@@ -113,7 +116,7 @@ rqst n = TCRequest
                   (List params Empty)
         )
     )
-    where params = RIO.replicate n (Parameter "X" (ValUInt3 0b101))
+    where params = RIO.replicate n (Parameter "X" (ValUInt8X (B8 $$(refineTH 3)) 0b101))
 
 
 -- | Generate a TC Packet where the parameter n is the number of 'Parameter'

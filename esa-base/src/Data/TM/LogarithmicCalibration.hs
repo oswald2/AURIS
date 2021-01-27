@@ -44,7 +44,7 @@ import           Data.Text.Short                ( ShortText )
 import           Codec.Serialise
 import           Data.Aeson
 
-import           General.Types                  ( ToDouble(..) )
+--import           General.Types                  ( ToDouble(..) )
 
 import           Data.TM.CalibrationTypes
 import           Data.TM.Value

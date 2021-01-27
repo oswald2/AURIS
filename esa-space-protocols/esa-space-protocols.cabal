@@ -116,7 +116,7 @@ library
         FlexibleInstances
         FunctionalDependencies
         GADTs
-        GeneralizedNewtypeDeriving
+        DeriveAnyClass
         InstanceSigs
         KindSignatures
         LambdaCase
@@ -190,6 +190,8 @@ library
         , filepath
         , directory
         , timer-wheel
+        , refined
+        , word24
 
     if flag(llvm)
         ghc-options: -O2 -Wall -Wcompat -Widentities -Wincomplete-record-updates
@@ -357,6 +359,7 @@ executable CommandingTest
         , rio
         , text
         , unliftio
+        , refined 
 
 -- executable EventLoggingDBTest
 --     main-is: EventLoggingDBTest.hs
@@ -398,6 +401,7 @@ executable CommandingAD
         , text
         , unliftio
         , stm-conduit
+        , refined
 
 
 test-suite TCEncodeTests

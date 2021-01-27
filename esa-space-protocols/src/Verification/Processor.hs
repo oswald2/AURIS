@@ -173,7 +173,7 @@ processGroundStage st rqstID status setStage = do
             -- check the delivered new Verification, if it is finished. If so,
             -- remove it from the maps
             if isFinished newStatus
-                then return VerifState
+                then return st
                     { _stRqstMap = HM.delete rqstID (_stRqstMap st)
                     , _stApidMap = HM.delete (pktID, ssc) (_stApidMap st)
                     }
@@ -212,7 +212,7 @@ processCncGroundStage st key@(pktID, ssc) status setStage = do
             -- check the delivered new Verification, if it is finished. If so,
             -- remove it from the maps
             if isFinished newStatus
-                then return VerifState
+                then return st
                     { _stRqstMap = HM.delete rqstID (_stRqstMap st)
                     , _stApidMap = HM.delete (pktID, ssc) (_stApidMap st)
                     }
@@ -252,7 +252,7 @@ processTMStage st pktID ssc status setStage = do
             -- check the delivered new Verification, if it is finished. If so,
             -- remove it from the maps
             if isFinished newStatus
-                then return VerifState
+                then return st
                     { _stRqstMap = HM.delete rqstID (_stRqstMap st)
                     , _stApidMap = HM.delete (pktID, ssc) (_stApidMap st)
                     }
@@ -290,7 +290,7 @@ doUpdate rqstID status var setStage = do
 
 
 timeoutGT :: TBQueue VerifCommand -> RequestID -> Verification -> IO ()
-timeoutGT queue rqstID verif = do
+timeoutGT queue rqstID _verif = do
     atomically $ writeTBQueue
         queue
         (SetVerifGT rqstID StGTimeout)

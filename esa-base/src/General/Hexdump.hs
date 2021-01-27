@@ -21,7 +21,6 @@ where
 import           RIO hiding (Builder)
 
 import           Data.Char
-import           Data.Text                      ( Text )
 import           Data.Text.Lazy.Builder
 import qualified Data.ByteString.Lazy          as BL
 import qualified Data.ByteString               as BS

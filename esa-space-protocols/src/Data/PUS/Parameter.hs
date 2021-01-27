@@ -63,7 +63,6 @@ import qualified RIO.Text                      as T
 import           RIO.List.Partial               ( (!!) )
 
 import           Control.Lens           (makeLenses, (.~))
-import           Data.Binary
 import           Data.Aeson              hiding ( Value )
 import qualified Data.Vector.Storable          as VS
 import qualified Data.Vector.Storable.Mutable  as VS
@@ -92,7 +91,6 @@ data Parameter = Parameter {
 } deriving (Show, Read, Generic)
 makeLenses ''Parameter
 
-instance Binary Parameter
 instance Serialise Parameter
 instance FromJSON Parameter
 instance ToJSON Parameter
@@ -160,7 +158,6 @@ data SizedParameterList = SizedParameterList {
 makeLenses ''SizedParameterList
 
 instance NFData SizedParameterList
-instance Binary SizedParameterList
 instance Serialise SizedParameterList
 instance FromJSON SizedParameterList
 instance ToJSON SizedParameterList where

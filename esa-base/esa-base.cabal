@@ -167,6 +167,7 @@ library
     , colour
     , directory
     , filepath
+    , word24
 
 
   -- Directories containing source files.

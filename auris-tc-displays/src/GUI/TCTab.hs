@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell 
+#-}
 module GUI.TCTab
     ( TCTab
     , createTCTab
@@ -27,6 +29,8 @@ import           General.APID
 import           Protocol.ProtocolInterfaces
 
 import           Verification.Verification
+
+import           Refined
 
 
 data TCTab = TCTab
@@ -85,7 +89,7 @@ createTCTab window builder = do
                             )
                       ]
                 ]
-            params = RIO.replicate 10 (Parameter "X" (ValUInt3 0b101))
+            params = RIO.replicate 10 (Parameter "X" (ValUInt8X (B8 $$(refineTH 3)) 0b101))
         textViewSetText textView (T.pack (ppShow rqst))
     _ <- Gtk.on btCcInsert #clicked $ do
         let rqst =
@@ -113,7 +117,7 @@ createTCTab window builder = do
                             )
                       ]
                 ]
-            params = RIO.replicate 10 (Parameter "X" (ValUInt3 0b101))
+            params = RIO.replicate 10 (Parameter "X" (ValUInt8X (B8 $$(refineTH 3)) 0b101))
         textViewSetText textView (T.pack (ppShow rqst))
     _ <- Gtk.on btCcScoeInsert #clicked $ do
         let

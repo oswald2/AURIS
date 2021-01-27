@@ -91,6 +91,7 @@ library
     , esa-space-protocols
     , gui-base
     , mcs-interface
+    , refined
 
   default-extensions:
         

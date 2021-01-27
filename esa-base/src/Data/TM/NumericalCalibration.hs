@@ -37,7 +37,7 @@ import           Data.Aeson
 --import           Data.TM.Parameter
 import           Data.Text.Short                ( ShortText )
 
-import           General.Types                  ( ToDouble(..) )
+--import           General.Types                  ( ToDouble(..) )
 
 import           Data.TM.CalibrationTypes
 import           Data.TM.Value
