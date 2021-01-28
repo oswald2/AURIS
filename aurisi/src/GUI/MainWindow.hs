@@ -159,6 +159,10 @@ createMainWindow cfg = do
 
     menuItemLoadTC    <- getObject builder "menuItemLoadTCFile" MenuItem
     menuItemSaveTC    <- getObject builder "menuItemSaveTCFile" MenuItem
+    menuItemSaveTCAs  <- getObject builder "menuItemSaveTCFileAs" MenuItem
+
+    -- create the message display
+    msgDisp           <- createMessageDisplay builder
 
     -- create the tabs in the notebook
     tmfTab            <- createTMFTab builder
@@ -168,8 +172,6 @@ createMainWindow cfg = do
     tcTab             <- createTCTab window builder
     tcHistory         <- createTCHistory window builder
 
-    -- create the message display
-    msgDisp           <- createMessageDisplay builder
 
     setLogo logo 65 65
 
@@ -196,8 +198,9 @@ createMainWindow cfg = do
         widgetDestroy window
         mainQuit
 
-    void $ Gtk.on menuItemLoadTC #activate $ tcTabLoadFile tcTab 
-    void $ Gtk.on menuItemSaveTC #activate $ tcTabSaveFile tcTab 
+    void $ Gtk.on menuItemLoadTC #activate $ tcTabLoadFile tcTab
+    void $ Gtk.on menuItemSaveTC #activate $ tcTabSaveFile tcTab
+    void $ Gtk.on menuItemSaveTCAs #activate $ tcTabSaveFileAs tcTab
 
     textViewSetText configTextView (configPretty cfg)
 

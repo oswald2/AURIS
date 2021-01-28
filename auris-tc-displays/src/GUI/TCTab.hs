@@ -6,6 +6,7 @@ module GUI.TCTab
     , setupCallbacks
     , tcTabLoadFile
     , tcTabSaveFile
+    , tcTabSaveFileAs
     , tcTabLoadTCFile
     , tcTabSaveTCFile
     ) where
@@ -21,6 +22,7 @@ import           Interface.Interface            ( Interface
                                                 , ActionTable
                                                     ( actionSendTCRequest
                                                     , actionSendTCGroup
+                                                    , actionLogMessage 
                                                     )
                                                 )
 
@@ -65,6 +67,7 @@ import           System.FilePath
 
 
 
+
 data TCTab = TCTab
     { _tcTabWindow             :: !Window
     , _tcTabTextView           :: !TextView
@@ -73,6 +76,8 @@ data TCTab = TCTab
     , _tcTabButtonInsertScoeCc :: !Button
     , _tcTabButtonClear        :: !Button
     , _tcTabButtonSend         :: !Button
+    , _tcTabFileName           :: IORef (Maybe FilePath)
+    , _tcTabLogFunc            :: IORef (Maybe (LogSource -> LogLevel -> Utf8Builder -> IO ()))
     }
 
 
@@ -85,6 +90,9 @@ createTCTab window builder = do
     btClear        <- getObject builder "buttonTCClear" Button
     btSend         <- getObject builder "buttonTCSend" Button
 
+    ur <- newIORef Nothing 
+    l <- newIORef Nothing
+
     let g = TCTab { _tcTabWindow             = window
                   , _tcTabTextView           = textView
                   , _tcTabButtonInsert       = btInsert
@@ -92,6 +100,8 @@ createTCTab window builder = do
                   , _tcTabButtonSend         = btSend
                   , _tcTabButtonInsertCc     = btCcInsert
                   , _tcTabButtonInsertScoeCc = btCcScoeInsert
+                  , _tcTabFileName           = ur
+                  , _tcTabLogFunc            = l
                   }
 
     _ <- Gtk.on btClear #clicked $ textViewClear textView
@@ -191,12 +201,25 @@ instance NFData TCAction
 
 setupCallbacks :: TCTab -> Interface -> IO ()
 setupCallbacks gui interface = do
+    -- Callback for the SEND button
     void $ Gtk.on (_tcTabButtonSend gui) #clicked $ do
         text <- textViewGetText (_tcTabTextView gui)
         let actions = readMaybe (T.unpack text) :: Maybe [TCAction]
         case actions of
             Just a  -> mapM_ (processAction interface) (force a)
             Nothing -> warningDialog "Could not parse specified actions!"
+
+    -- We need to store the log function here, because we cannot have an 
+    -- interface on construction of a TCTab
+    writeIORef (_tcTabLogFunc gui) (Just (callInterface interface actionLogMessage))
+
+
+tcTabLog :: TCTab -> LogSource -> LogLevel -> Utf8Builder -> IO () 
+tcTabLog gui source level content = do 
+    l <- readIORef (_tcTabLogFunc gui)
+    case l of 
+        Nothing -> return () 
+        Just action -> action source level content
 
 
 processAction :: Interface -> TCAction -> IO ()
@@ -224,6 +247,8 @@ tcTabLoadFile gui = do
             fileName <- Gtk.fileChooserGetFilename fc
             forM_ fileName $ \fn -> do
                 tcTabLoadTCFile gui fn
+                writeIORef (_tcTabFileName gui) (Just fn)
+                tcTabLog gui "Commanding" LevelInfo ("Loaded file '" <> display (T.pack fn) <> "'")
         _ -> return ()
 
 
@@ -233,9 +258,19 @@ tcTabLoadTCFile gui file = do
     textViewSetText (_tcTabTextView gui) content
 
 
-
 tcTabSaveFile :: TCTab -> IO ()
-tcTabSaveFile gui = do
+tcTabSaveFile gui = do 
+    file <- readIORef (_tcTabFileName gui)
+    case file of 
+        Just fn -> do 
+            let filename = replaceExtension fn ".tc"
+            tcTabSaveTCFile gui filename
+            tcTabLog gui "Commanding" LevelInfo ("Saved file '" <> display (T.pack filename) <> "'")
+        Nothing -> tcTabSaveFileAs gui
+
+
+tcTabSaveFileAs :: TCTab -> IO ()
+tcTabSaveFileAs gui = do
     fc <- Gtk.fileChooserNativeNew (Just "Save TC File...")
                                    (Just (_tcTabWindow gui))
                                    Gtk.FileChooserActionSave
@@ -248,7 +283,10 @@ tcTabSaveFile gui = do
         Gtk.ResponseTypeAccept -> do
             fileName <- Gtk.fileChooserGetFilename fc
             forM_ fileName $ \fn -> do
-                tcTabSaveTCFile gui (replaceExtension fn ".tc")
+                let filename = replaceExtension fn ".tc"
+                writeIORef (_tcTabFileName gui) (Just filename)
+                tcTabSaveTCFile gui filename
+                tcTabLog gui "Commanding" LevelInfo ("Saved file '" <> display (T.pack filename) <> "'")
         _ -> return ()
 
 

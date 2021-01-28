@@ -264,6 +264,7 @@ Author: Michael Oswald
                                 <property name="can_focus">False</property>
                                 <property name="label" translatable="yes">Load TC File...</property>
                                 <property name="use_underline">True</property>
+                                <accelerator key="o" signal="activate" modifiers="GDK_CONTROL_MASK"/>
                               </object>
                             </child>
                             <child>
@@ -271,6 +272,15 @@ Author: Michael Oswald
                                 <property name="visible">True</property>
                                 <property name="can_focus">False</property>
                                 <property name="label" translatable="yes">Save TC File...</property>
+                                <property name="use_underline">True</property>
+                                <accelerator key="s" signal="activate" modifiers="GDK_CONTROL_MASK"/>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkMenuItem" id="menuItemSaveTCFileAs">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                                <property name="label" translatable="yes">Save TC File As...</property>
                                 <property name="use_underline">True</property>
                               </object>
                             </child>
