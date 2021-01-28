@@ -2,7 +2,7 @@
     1
     [ SendRqst
         TCRequest
-          { _tcReqRequestID = RequestID { getRqstID = 0 }
+          { _tcReqRequestID = RequestID 0
           , _tcReqName = "TEST-TC"
           , _tcReqDescription = "No Description"
           , _tcReqSource = "TC-TAB"
@@ -19,19 +19,19 @@
                 , _verTMComplete = StTmDisabled
                 , _verStatus = VerifStatNominal
                 }
-          , _tcReqSCID = SCID { getSCID = 533 }
-          , _tcReqVCID = VCID { getVCID = 1 }
+          , _tcReqSCID = SCID 533
+          , _tcReqVCID = VCID 1
           , _tcReqPayload =
               TCCommand
-                { _tcReqMAPID = MAPID { getMAPID = 0 }
+                { _tcReqMAPID = MAPID 0
                 , _tcReqTransMode = BD
                 , _tcDestination = DestCnc (IfCnc 1)
                 , _tcReqPacket =
                     TCPacket
-                      { _tcpAPID = APID { getAPID = 1000 }
-                      , _tcpType = PUSType { getPUSTypeVal = 8 }
-                      , _tcpSubType = PUSSubType { getPUSSubTypeVal = 1 }
-                      , _tcpSourceID = SourceID { getSourceID = 0 }
+                      { _tcpAPID = APID 1000
+                      , _tcpType = PUSType 8
+                      , _tcpSubType = PUSSubType 1
+                      , _tcpSourceID = SourceID 10
                       , _tcpParams =
                           List
                             [ Parameter

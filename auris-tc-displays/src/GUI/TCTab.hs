@@ -60,6 +60,9 @@ import           Protocol.ProtocolInterfaces    ( ProtocolInterface
 import           Verification.Verification      ( defaultVerificationSCOE )
 
 import           Refined                        ( refineTH )
+import           System.FilePath
+
+
 
 
 data TCTab = TCTab
@@ -245,7 +248,7 @@ tcTabSaveFile gui = do
         Gtk.ResponseTypeAccept -> do
             fileName <- Gtk.fileChooserGetFilename fc
             forM_ fileName $ \fn -> do
-                tcTabSaveTCFile gui fn
+                tcTabSaveTCFile gui (replaceExtension fn ".tc")
         _ -> return ()
 
 

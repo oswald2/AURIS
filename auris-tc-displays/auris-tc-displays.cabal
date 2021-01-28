@@ -92,6 +92,7 @@ library
     , gui-base
     , mcs-interface
     , refined
+    , filepath
 
   default-extensions:
         
