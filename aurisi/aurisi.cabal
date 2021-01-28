@@ -41,7 +41,9 @@ Executable AURISi
     GUI.MainWindow
     GUI.MainWindowCallbacks
     GUI.MainWindowActions
+    GUI.MessageTypes
     GUI.MessageDisplay
+    GUI.MessageDetails
     GUI.Logo
     GUI.LogoXPM
     GUI.About

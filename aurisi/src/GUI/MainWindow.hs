@@ -48,8 +48,10 @@ import           GUI.TCHistory
 import           GUI.Utils
 import           GUI.Logo
 import           GUI.MessageDisplay
+import           GUI.MessageDetails
 import           GUI.About
 import           GUI.TextView
+
 
 import           Data.PUS.TMPacket
 import           Data.PUS.ExtractedDU
@@ -162,7 +164,8 @@ createMainWindow cfg = do
     menuItemSaveTCAs  <- getObject builder "menuItemSaveTCFileAs" MenuItem
 
     -- create the message display
-    msgDisp           <- createMessageDisplay builder
+    msgDetails        <- createMsgDetailWindow window builder
+    msgDisp           <- createMessageDisplay msgDetails builder
 
     -- create the tabs in the notebook
     tmfTab            <- createTMFTab builder

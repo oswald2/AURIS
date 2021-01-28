@@ -1,5 +1,6 @@
 module GUI.MessageDisplay
     ( MessageDisplay
+    , MessageEntry(..)
     , addMessageLine
     , addMessageLine'
     , messageAreaLogFunc
@@ -15,33 +16,35 @@ import           Data.GI.Gtk.Threading
 import           GUI.Utils
 import           GUI.Colors
 import           GUI.ScrollingTable
+import           GUI.MessageTypes
+import           GUI.MessageDetails
 
 import           General.Time
 
 
-data MessageEntry = MessageEntry SunTime LogLevel Text Text
 
 
 data MessageDisplay = MessageDisplay
-    { _msgdDisplay :: TreeView
+    { _msgdDetails :: !MessageDetailWindow
+    , _msgdDisplay :: !TreeView
     , _msgdModel   :: SeqStore MessageEntry
     }
 
 
-createMessageDisplay :: Gtk.Builder -> IO MessageDisplay
-createMessageDisplay builder = do
+createMessageDisplay :: MessageDetailWindow -> Gtk.Builder -> IO MessageDisplay
+createMessageDisplay !detWin !builder = do
     tv  <- getObject builder "messageDisplay" TreeView
 
-    tbl <- createScrollingTable
+    gui <- createScrollingTable
         tv
-        MessageDisplay
+        (MessageDisplay detWin)
         [ ("Time"   , 190, timeAttrs)
         , ("Level"  , 50 , levelAttrs)
         , ("Source" , 70 , sourceAttrs)
         , ("Message", 800, textAttrs)
         ]
-    setTreeViewCallback tbl _msgdDisplay _msgdModel displayMessage
-    return tbl
+    setTreeViewCallback gui _msgdDisplay _msgdModel (displayMessage gui)
+    return gui
 
   where
     timeAttrs (MessageEntry time _ _ _) = [#text := textDisplay time]
@@ -104,12 +107,16 @@ addMessageLine' _      _      LevelDebug _       = return ()
 addMessageLine' window source level      builder = do
     now <- getCurrentTime
     postGUIASync $ do
-        addRowScrollingTable 
+        addRowScrollingTable
             (_msgdDisplay window)
             (_msgdModel window)
             (MessageEntry now level source (utf8BuilderToText builder))
 
 
 
-displayMessage :: MessageEntry -> IO ()
-displayMessage _ = return ()
+displayMessage :: MessageDisplay -> MessageEntry -> IO ()
+displayMessage gui entry = do 
+  msgDetailShowMsg (_msgdDetails gui) entry
+  msgDetailShowWindow (_msgdDetails gui)
+
+

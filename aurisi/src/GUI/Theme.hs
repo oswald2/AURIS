@@ -10,8 +10,6 @@ import RIO
 import qualified RIO.ByteString               as B
 import qualified RIO.ByteString.Lazy          as BL
 import qualified Data.Text.IO as T
-import           Data.Text                      ( Text )
-import           Control.Monad
 
 import           Codec.Archive.Tar             as T
 import           Codec.Compression.GZip
