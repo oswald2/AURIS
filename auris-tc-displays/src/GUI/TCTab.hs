@@ -30,6 +30,7 @@ import           GUI.TextView                   ( textViewClear
                                                 , textViewSetText
                                                 )
 import           GUI.MessageDialogs             ( warningDialog )
+import           GUI.FileChooser
 
 import           Data.PUS.TCRequest
 import           Data.PUS.TCPacket              ( TCPacket(TCPacket) )
@@ -212,6 +213,7 @@ tcTabLoadFile gui = do
                                    Gtk.FileChooserActionOpen
                                    Nothing
                                    Nothing
+    addFilterPatterns fc [("TC File", "*.tc"), ("All Files", "*")]
 
     res <- Gtk.nativeDialogRun fc
     case toEnum (fromIntegral res) of
@@ -236,6 +238,7 @@ tcTabSaveFile gui = do
                                    Gtk.FileChooserActionSave
                                    Nothing
                                    Nothing
+    addFilterPatterns fc [("TC File", "*.tc"), ("All Files", "*")]
 
     res <- Gtk.nativeDialogRun fc
     case toEnum (fromIntegral res) of

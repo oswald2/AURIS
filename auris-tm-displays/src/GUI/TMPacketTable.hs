@@ -32,7 +32,7 @@ data TMPacketTable = TMPacketTable {
 -- default GUI values). This function is intended for the live-view of incoming
 -- telemetry.
 tmPacketTableAddRow :: TMPacketTable -> TMPacket -> IO ()
-tmPacketTableAddRow g = addRowSeqStore (_tmptModel g)
+tmPacketTableAddRow g = addRowScrollingTable (_tmptTable g) (_tmptModel g)
 
 
 -- | Set the internal model to the list of given 'TMPacket' values. In contrast

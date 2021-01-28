@@ -39,7 +39,7 @@ data PUSPacketTable = PUSPacketTable
 -- default GUI values). This function is intended for the live-view of incoming
 -- telemetry.
 tmPUSPacketTableAddRow :: PUSPacketTable -> ExtractedDU PUSPacket -> IO ()
-tmPUSPacketTableAddRow g = addRowSeqStore (_pptModel g)
+tmPUSPacketTableAddRow g = addRowScrollingTable (_pptTable g) (_pptModel g)
 
 
 -- | Set the internal model to the list of given 'PUSPacket' values. In contrast

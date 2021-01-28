@@ -16,10 +16,12 @@ module General.PUSTypes
     ( VCID(..)
     , EduVCID(..)
     , mkVCID
+    , getVCID
     , vcidBuilder
     , vcidParser
     , SCID(..)
     , mkSCID
+    , getSCID
     , scidBuilder
     , scidParser
     , MAPID
@@ -48,8 +50,10 @@ module General.PUSTypes
     , transmissionModeParser
     , PUSType(..)
     , mkPUSType
+    , getPUSTypeVal
     , PUSSubType(..)
     , mkPUSSubType
+    , getPUSSubTypeVal
     , pusTypeBuilder
     , pusSubTypeBuilder
     , pusTypeParser
@@ -60,6 +64,7 @@ module General.PUSTypes
     , nextSSC
     , SourceID(..)
     , mkSourceID
+    , getSourceID
     , sourceIDBuilder
     , sourceIDParser
     , TMSegmentLen(..)
@@ -107,8 +112,12 @@ import           System.FilePath                ( (</>) )
 import           General.APID                   ( APID(APID) )
 
 -- | Virtual Channel ID
-newtype VCID = VCID { getVCID :: Word8 }
+newtype VCID = VCID Word8 
     deriving (Eq, Ord, Num, Show, Read, Generic)
+
+
+getVCID :: VCID -> Word8
+getVCID (VCID x) = x
 
 -- | Smart constructor for the Virtual Channel ID
 mkVCID :: Word8 -> VCID
@@ -134,8 +143,11 @@ vcidParser = VCID <$> A.anyWord8
 
 
 -- | The Spacecraft ID
-newtype SCID = SCID { getSCID :: Word16 }
+newtype SCID = SCID Word16
     deriving (Eq, Ord, Show, Read, Generic)
+
+getSCID :: SCID -> Word16
+getSCID (SCID x) = x 
 
 -- | Smart constructor for the S/C ID
 mkSCID :: Word16 -> SCID
@@ -162,8 +174,11 @@ scidParser = SCID <$> A.anyWord16be
 
 -- | The MAPID (Mulitplexer Access Point ID) used in the TC segmentation
 -- layer
-newtype MAPID = MAPID { getMAPID :: Word8 }
+newtype MAPID = MAPID Word8
     deriving (Eq, Ord, Num, Show, Read, Generic)
+
+getMAPID :: MAPID -> Word8
+getMAPID (MAPID x) = x
 
 -- | Smart constructor for the MAPID
 mkMAPID :: Word8 -> MAPID
@@ -252,8 +267,11 @@ toBool :: Flag t -> Bool
 toBool (MkFlag b) = b
 
 -- | The Request ID type
-newtype RequestID = RequestID { getRqstID :: Word32 }
+newtype RequestID = RequestID Word32
     deriving (Eq, Ord, Num, Show, Read, Hashable, Generic)
+
+getRqstID :: RequestID -> Word32
+getRqstID (RequestID x) = x 
 
 -- | Smart constructor for the 'RequestID'
 mkRqstID :: Word32 -> RequestID
@@ -320,8 +338,12 @@ transmissionModeParser = do
         _ -> pure BD
 
 -- | PUS Packet Type
-newtype PUSType = PUSType { getPUSTypeVal :: Word8 }
+newtype PUSType = PUSType Word8
     deriving (Eq, Ord, Num, Show, Read, Generic)
+
+
+getPUSTypeVal :: PUSType -> Word8 
+getPUSTypeVal (PUSType x) = x 
 
 -- | Smart constructor for the 'PUSType'
 mkPUSType :: Word8 -> PUSType
@@ -333,8 +355,12 @@ instance Display PUSType where
 
 
 -- | PUS Sub Type
-newtype PUSSubType = PUSSubType { getPUSSubTypeVal :: Word8 }
+newtype PUSSubType = PUSSubType Word8
     deriving (Eq, Ord, Num, Show, Read, Generic)
+
+getPUSSubTypeVal :: PUSSubType -> Word8
+getPUSSubTypeVal (PUSSubType x) = x
+
 
 -- | Smart constructor for the 'PUSSubType'
 mkPUSSubType :: Word8 -> PUSSubType
@@ -443,8 +469,12 @@ instance Display SeqControl where
 
 
 -- | Type for the source sequence count
-newtype SSC = SSC { getSSC :: Word16 }
+newtype SSC = SSC Word16
     deriving (Eq, Ord, Enum, Num, Real, Integral, Show, Read, Generic)
+
+
+getSSC :: SSC -> Word16
+getSSC (SSC x) = x 
 
 -- | Smart constructor for a 'SSC'
 mkSSC :: Word16 -> SSC
@@ -464,8 +494,11 @@ instance Hashable SSC
 instance Display SSC where
     display (SSC x) = display x
 
-newtype SourceID = SourceID { getSourceID :: Word8 }
+newtype SourceID = SourceID Word8
     deriving (Eq, Ord, Num, Show, Read, Generic)
+
+getSourceID :: SourceID -> Word8
+getSourceID (SourceID x) = x 
 
 mkSourceID :: Word8 -> SourceID
 mkSourceID = SourceID

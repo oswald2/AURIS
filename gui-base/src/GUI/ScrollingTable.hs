@@ -12,6 +12,7 @@ a 'ScrollingTableModel', which holds the data to be displayed
 -}
 module GUI.ScrollingTable
   ( addRowSeqStore
+  , addRowScrollingTable
   , addRowSeqStoreAppend
   , setRowsSeqStore
   , setTreeViewCallback
@@ -27,6 +28,8 @@ import           Data.GI.Gtk.ModelView.CellLayout
 import           Data.GI.Base.Attributes
 
 import           GUI.Definitions
+import           GUI.TreeView
+
 
 -- | Generic GTK function for adding a new row in a 'SeqStore a'. This is 
 -- intended for the live-view as only 'defMaxRowTM' rows will be added. When
@@ -37,6 +40,16 @@ addRowSeqStore model val = do
   when (n > defMaxRowTM) $ do
     seqStoreRemove model (n - 1)
   seqStorePrepend model val
+
+
+-- | Generic GTK function for adding a new row in a 'SeqStore a'. This is 
+-- intended for the live-view as only 'defMaxRowTM' rows will be added. When
+-- this limit is reached, the oldest row will be removed first.
+-- Additionally, this functions scrolls to the top, when a row was added 
+addRowScrollingTable :: TreeView -> SeqStore a -> a -> IO () 
+addRowScrollingTable tv model val = do 
+  addRowSeqStore model val 
+  scrollToTop tv 
 
 
 addRowSeqStoreAppend :: SeqStore a -> a -> IO ()

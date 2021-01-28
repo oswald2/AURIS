@@ -49,6 +49,7 @@ import           GUI.Utils
 import           GUI.Logo
 import           GUI.MessageDisplay
 import           GUI.About
+import           GUI.TextView
 
 import           Data.PUS.TMPacket
 import           Data.PUS.ExtractedDU
@@ -151,6 +152,7 @@ createMainWindow cfg = do
     aboutItem         <- getObject builder "menuitemAbout" MenuItem
     logo              <- getObject builder "logo" Image
     timeLabel         <- getObject builder "labelTime" Label
+    configTextView    <- getObject builder "textViewConfig" TextView
 
     menuItemQuit      <- getObject builder "menuItemQuit" MenuItem
     menuItemImportMIB <- getObject builder "menuItemImportMIB" MenuItem
@@ -196,6 +198,8 @@ createMainWindow cfg = do
 
     void $ Gtk.on menuItemLoadTC #activate $ tcTabLoadFile tcTab 
     void $ Gtk.on menuItemSaveTC #activate $ tcTabSaveFile tcTab 
+
+    textViewSetText configTextView (configPretty cfg)
 
     return gui
 

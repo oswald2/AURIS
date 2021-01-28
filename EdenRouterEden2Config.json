@@ -10,19 +10,13 @@
         "cfgRandomizerEnabled": false,
         "cfgRandomizerStartValue": 255,
         "cfgVCIDs": [
-            {
-                "getVCID": 0
-            },
-            {
-                "getVCID": 1
-            }
+            0,
+            1
         ],
         "cfgLeapSeconds": {
             "fromLeaps": 17
         },
-        "cfgSCID": {
-            "getSCID": 0
-        },
+        "cfgSCID": 0,
         "cfgNCTRS": [
         ],
         "cfgMaxTMFrameLen": 1115,

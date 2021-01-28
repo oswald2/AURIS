@@ -77,6 +77,7 @@ import           Data.Bits                      ( Bits
 
 import           General.PUSTypes               ( SSC(..)
                                                 , mkSSC
+                                                , getSSC
                                                 , PUSPacketType(..)
                                                 , PktID(..)
                                                 , SeqControl(..)

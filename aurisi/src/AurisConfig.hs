@@ -12,6 +12,7 @@ module AurisConfig
   , defaultConfigFileName
   , convLogLevel
   , configPath
+  , configPretty
   , defaultMIBFile
   )
 where
@@ -81,6 +82,12 @@ instance FromJSON AurisConfig
 instance ToJSON AurisConfig where
   toEncoding = genericToEncoding defaultOptions
 
+
+configPretty :: AurisConfig -> Text 
+configPretty cfg = 
+  case (decodeUtf8' . B.toStrict . encodePretty) cfg of 
+    Left err -> "Error decoding Config in UTF8: " <> T.pack (show err)
+    Right val -> val
 
 
 -- | write the config in JSON format to a file. Uses the aeson for conversion to/from JSON

@@ -16,6 +16,8 @@ for mixed containers.
 module General.APID
     ( APID(..)
     , PID(..)
+    , getAPID
+    , getPID
     , APIDorPID(..)
     , apidToPid
     , apidToPcat
@@ -43,12 +45,20 @@ import           Formatting
 -- is truncated to 11 bits. But there are applications which specify
 -- larger APIDs, so it can contain also higher values. Currently
 -- represented as Word16
-newtype APID = APID { getAPID :: Word16 }
+newtype APID = APID Word16
     deriving (Read, Show, Eq, Ord, Num, Generic)
 
+getAPID :: APID -> Word16 
+getAPID (APID x) = x
+
 -- | A PID is the lower 7 bits of an APID.
-newtype PID = PID { getPID :: Word8 }
+newtype PID = PID Word8
     deriving (Read, Show, Eq, Ord, Num, Generic)
+
+getPID :: PID -> Word8 
+getPID (PID x) = x 
+
+
 
 instance NFData APID 
 instance Hashable APID

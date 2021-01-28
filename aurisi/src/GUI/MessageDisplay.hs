@@ -1,11 +1,10 @@
 module GUI.MessageDisplay
-  ( MessageDisplay
-  , addMessageLine
-  , addMessageLine'
-  , messageAreaLogFunc
-  , createMessageDisplay
-  )
-where
+    ( MessageDisplay
+    , addMessageLine
+    , addMessageLine'
+    , messageAreaLogFunc
+    , createMessageDisplay
+    ) where
 
 import           RIO
 
@@ -23,63 +22,65 @@ import           General.Time
 data MessageEntry = MessageEntry SunTime LogLevel Text Text
 
 
-data MessageDisplay = MessageDisplay {
-    _msgdDisplay :: TreeView
-    , _msgdModel :: SeqStore MessageEntry
-  }
+data MessageDisplay = MessageDisplay
+    { _msgdDisplay :: TreeView
+    , _msgdModel   :: SeqStore MessageEntry
+    }
 
 
 createMessageDisplay :: Gtk.Builder -> IO MessageDisplay
 createMessageDisplay builder = do
-  tv <- getObject builder "messageDisplay" TreeView
+    tv  <- getObject builder "messageDisplay" TreeView
 
-  tbl <- createScrollingTable
-    tv
-    MessageDisplay
-    [ ("Time"   , 190, timeAttrs)
-    , ("Level"  , 50, levelAttrs)
-    , ("Source" , 70, sourceAttrs)
-    , ("Message", 800, textAttrs)
-    ]
-  setTreeViewCallback tbl _msgdDisplay _msgdModel displayMessage 
-  return tbl
+    tbl <- createScrollingTable
+        tv
+        MessageDisplay
+        [ ("Time"   , 190, timeAttrs)
+        , ("Level"  , 50 , levelAttrs)
+        , ("Source" , 70 , sourceAttrs)
+        , ("Message", 800, textAttrs)
+        ]
+    setTreeViewCallback tbl _msgdDisplay _msgdModel displayMessage
+    return tbl
 
- where
-  timeAttrs (MessageEntry time _ _ _) = [#text := textDisplay time]
-  levelAttrs (MessageEntry _ (LevelOther lvl) _ _) =
-    (#text := utf8BuilderToText (display ("Other: " :: Text) <> display lvl)) : colors (LevelOther lvl)
-  levelAttrs (MessageEntry _ LevelDebug _ _) =
-    (#text := ("DEBUG" :: Text)) : colors LevelDebug
-  levelAttrs (MessageEntry _ LevelInfo _ _) =
-    (#text := ("INFO" :: Text)) : colors LevelInfo 
-  levelAttrs (MessageEntry _ LevelWarn _ _) =
-    (#text := ("WARN" :: Text)) : colors LevelWarn
-  levelAttrs (MessageEntry _ LevelError _ _) =
-    (#text := ("ERROR" :: Text)) : colors LevelError
-  sourceAttrs (MessageEntry _ _ source _) = [#text := source ]
-  textAttrs (MessageEntry _ _ _ text) = [#text := text]
+  where
+    timeAttrs (MessageEntry time _ _ _) = [#text := textDisplay time]
+    levelAttrs (MessageEntry _ (LevelOther lvl) _ _) =
+        (#text := utf8BuilderToText (display ("Other: " :: Text) <> display lvl)
+            )
+            : colors (LevelOther lvl)
+    levelAttrs (MessageEntry _ LevelDebug _ _) =
+        (#text := ("DEBUG" :: Text)) : colors LevelDebug
+    levelAttrs (MessageEntry _ LevelInfo _ _) =
+        (#text := ("INFO" :: Text)) : colors LevelInfo
+    levelAttrs (MessageEntry _ LevelWarn _ _) =
+        (#text := ("WARN" :: Text)) : colors LevelWarn
+    levelAttrs (MessageEntry _ LevelError _ _) =
+        (#text := ("ERROR" :: Text)) : colors LevelError
+    sourceAttrs (MessageEntry _ _ source _) = [#text := source]
+    textAttrs (MessageEntry _ _ _ text) = [#text := text]
 
-  colors LevelDebug = [#backgroundSet := False, #foregroundSet := False]
-  -- colors LevelInfo  = [#backgroundSet := False, #foregroundSet := False]
-  colors LevelInfo =
-    [ #backgroundSet := True
-    , #foregroundSet := True
-    , #backgroundRgba := green
-    , #foregroundRgba := black
-    ]
-  colors LevelWarn =
-    [ #backgroundSet := True
-    , #foregroundSet := True
-    , #backgroundRgba := paleYellow
-    , #foregroundRgba := black
-    ]
-  colors LevelError =
-    [ #backgroundSet := True
-    , #foregroundSet := True
-    , #backgroundRgba := red
-    , #foregroundRgba := white
-    ]
-  colors (LevelOther _) = [#backgroundSet := False, #foregroundSet := False]
+    colors LevelDebug = [#backgroundSet := False, #foregroundSet := False]
+    -- colors LevelInfo  = [#backgroundSet := False, #foregroundSet := False]
+    colors LevelInfo =
+        [ #backgroundSet := True
+        , #foregroundSet := True
+        , #backgroundRgba := green
+        , #foregroundRgba := black
+        ]
+    colors LevelWarn =
+        [ #backgroundSet := True
+        , #foregroundSet := True
+        , #backgroundRgba := paleYellow
+        , #foregroundRgba := black
+        ]
+    colors LevelError =
+        [ #backgroundSet := True
+        , #foregroundSet := True
+        , #backgroundRgba := red
+        , #foregroundRgba := white
+        ]
+    colors (LevelOther _) = [#backgroundSet := False, #foregroundSet := False]
 
 messageAreaLogFunc :: MessageDisplay -> LogFunc
 messageAreaLogFunc window = mkLogFunc (addMessageLine window)
@@ -89,24 +90,26 @@ messageAreaLogFunc window = mkLogFunc (addMessageLine window)
 
 
 addMessageLine
-  :: MessageDisplay
-  -> CallStack
-  -> LogSource
-  -> LogLevel
-  -> Utf8Builder
-  -> IO ()
+    :: MessageDisplay
+    -> CallStack
+    -> LogSource
+    -> LogLevel
+    -> Utf8Builder
+    -> IO ()
 addMessageLine window _stack = addMessageLine' window
 
 addMessageLine'
-  :: MessageDisplay -> LogSource -> LogLevel -> Utf8Builder -> IO ()
-addMessageLine' _ _ LevelDebug _ = return ()
-addMessageLine' window source level builder = do
-  now <- getCurrentTime
-  postGUIASync $ addRowSeqStore (_msgdModel window)
-    (MessageEntry now level source (utf8BuilderToText builder))
+    :: MessageDisplay -> LogSource -> LogLevel -> Utf8Builder -> IO ()
+addMessageLine' _      _      LevelDebug _       = return ()
+addMessageLine' window source level      builder = do
+    now <- getCurrentTime
+    postGUIASync $ do
+        addRowScrollingTable 
+            (_msgdDisplay window)
+            (_msgdModel window)
+            (MessageEntry now level source (utf8BuilderToText builder))
 
 
 
-
-displayMessage :: MessageEntry -> IO () 
+displayMessage :: MessageEntry -> IO ()
 displayMessage _ = return ()

@@ -37,7 +37,7 @@ data TMFrameTable = TMFrameTable {
 -- default GUI values). This function is intended for the live-view of incoming
 -- telemetry.
 tmFrameTableAddRow :: TMFrameTable -> ExtractedDU TMFrame -> IO ()
-tmFrameTableAddRow g = addRowSeqStore (_tmfrModel g)
+tmFrameTableAddRow g = addRowScrollingTable (_tmfrTable g) (_tmfrModel g)
 
 
 -- | Set the internal model to the list of given 'TMFrame' values. In contrast

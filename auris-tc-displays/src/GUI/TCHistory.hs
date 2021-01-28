@@ -177,7 +177,7 @@ determineColor verif | isFailed verif  = (red, white)
 tcHistAddNewRqst :: TCHistory -> TCRequest -> Verification -> IO ()
 tcHistAddNewRqst g rqst verif = do
     let row = mkRow rqst verif
-    addRowSeqStore (guiModel g) row
+    addRowScrollingTable (guiTreeView g) (guiModel g) row
 
 
 tcHistReleaseRqst :: TCHistory -> RequestID -> SunTime -> Verification -> IO ()

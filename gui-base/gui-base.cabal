@@ -68,9 +68,11 @@ library
     GUI.NameDescrTable
     GUI.StatusEntry
     GUI.TextView
+    GUI.TreeView
     GUI.Definitions
     GUI.ConnectionStatus
     GUI.MessageDialogs
+    GUI.FileChooser
 
   -- Modules included in this library but not exported.
   -- other-modules:
