@@ -192,7 +192,10 @@ getPackeDefinition model (ExtractedPacket bytes pkt) =
                     Just p  -> Just (pktKey, p)
             PUSTC -> 
                 -- we have a TC Echo Packet from a SCOE
-                let def = tcEchoDef apid t st in 
+                let def = if hdr ^. pusHdrTcVersion == 3 
+                            then tcEchoDefCC apid 
+                            else tcEchoDef apid t st 
+                in 
                 Just (pktKey, def)
 
 

@@ -4,33 +4,61 @@ module GUI.TCTab
     ( TCTab
     , createTCTab
     , setupCallbacks
+    , tcTabLoadFile
+    , tcTabSaveFile
+    , tcTabLoadTCFile
+    , tcTabSaveTCFile
     ) where
 
 
 import           RIO
+import           RIO.Partial                    ( toEnum )
 import qualified RIO.Text                      as T
 import           GI.Gtk                        as Gtk
 import           Text.Show.Pretty               ( ppShow )
-import           Interface.Interface
+import           Interface.Interface            ( Interface
+                                                , callInterface
+                                                , ActionTable
+                                                    ( actionSendTCRequest
+                                                    , actionSendTCGroup
+                                                    )
+                                                )
 
-import           GUI.Utils
-import           GUI.TextView
-import           GUI.MessageDialogs
+import           GUI.Utils                      ( getObject )
+import           GUI.TextView                   ( textViewClear
+                                                , textViewGetText
+                                                , textViewSetText
+                                                )
+import           GUI.MessageDialogs             ( warningDialog )
 
 import           Data.PUS.TCRequest
-import           Data.PUS.TCPacket
-import           Data.PUS.Parameter
-import           Data.PUS.Value
-import           Data.PUS.TCCnc
+import           Data.PUS.TCPacket              ( TCPacket(TCPacket) )
+import           Data.PUS.Parameter             ( Parameter(Parameter)
+                                                , ParameterList(Empty, List)
+                                                )
+import           Data.PUS.Value                 ( Value(ValUInt8X)
+                                                , B8(B8)
+                                                )
+import           Data.PUS.TCCnc                 ( TCScoe(TCScoe) )
 
-import           General.PUSTypes
-import           General.APID
+import           General.PUSTypes               ( mkPUSSubType
+                                                , mkPUSType
+                                                , mkSCID
+                                                , mkSourceID
+                                                , mkVCID
+                                                , TransmissionMode(BD)
+                                                )
+import           General.APID                   ( APID(APID) )
 
-import           Protocol.ProtocolInterfaces
+import           Protocol.ProtocolInterfaces    ( ProtocolInterface
+                                                    ( IfCnc
+                                                    , IfEden
+                                                    )
+                                                )
 
-import           Verification.Verification
+import           Verification.Verification      ( defaultVerificationSCOE )
 
-import           Refined
+import           Refined                        ( refineTH )
 
 
 data TCTab = TCTab
@@ -89,7 +117,9 @@ createTCTab window builder = do
                             )
                       ]
                 ]
-            params = RIO.replicate 10 (Parameter "X" (ValUInt8X (B8 $$(refineTH 3)) 0b101))
+            params = RIO.replicate
+                10
+                (Parameter "X" (ValUInt8X (B8 $$(refineTH 3)) 0b101))
         textViewSetText textView (T.pack (ppShow rqst))
     _ <- Gtk.on btCcInsert #clicked $ do
         let rqst =
@@ -117,7 +147,9 @@ createTCTab window builder = do
                             )
                       ]
                 ]
-            params = RIO.replicate 10 (Parameter "X" (ValUInt8X (B8 $$(refineTH 3)) 0b101))
+            params = RIO.replicate
+                10
+                (Parameter "X" (ValUInt8X (B8 $$(refineTH 3)) 0b101))
         textViewSetText textView (T.pack (ppShow rqst))
     _ <- Gtk.on btCcScoeInsert #clicked $ do
         let
@@ -172,3 +204,49 @@ processAction interface (RepeatN n group) = do
     let actions = force concat $ replicate n group
     mapM_ (processAction interface) actions
 
+
+tcTabLoadFile :: TCTab -> IO ()
+tcTabLoadFile gui = do
+    fc <- Gtk.fileChooserNativeNew (Just "Load TC File...")
+                                   (Just (_tcTabWindow gui))
+                                   Gtk.FileChooserActionOpen
+                                   Nothing
+                                   Nothing
+
+    res <- Gtk.nativeDialogRun fc
+    case toEnum (fromIntegral res) of
+        Gtk.ResponseTypeAccept -> do
+            fileName <- Gtk.fileChooserGetFilename fc
+            forM_ fileName $ \fn -> do
+                tcTabLoadTCFile gui fn
+        _ -> return ()
+
+
+tcTabLoadTCFile :: TCTab -> FilePath -> IO ()
+tcTabLoadTCFile gui file = do
+    content <- readFileUtf8 file
+    textViewSetText (_tcTabTextView gui) content
+
+
+
+tcTabSaveFile :: TCTab -> IO ()
+tcTabSaveFile gui = do
+    fc <- Gtk.fileChooserNativeNew (Just "Save TC File...")
+                                   (Just (_tcTabWindow gui))
+                                   Gtk.FileChooserActionSave
+                                   Nothing
+                                   Nothing
+
+    res <- Gtk.nativeDialogRun fc
+    case toEnum (fromIntegral res) of
+        Gtk.ResponseTypeAccept -> do
+            fileName <- Gtk.fileChooserGetFilename fc
+            forM_ fileName $ \fn -> do
+                tcTabSaveTCFile gui fn
+        _ -> return ()
+
+
+tcTabSaveTCFile :: TCTab -> FilePath -> IO ()
+tcTabSaveTCFile gui file = do
+    content <- textViewGetText (_tcTabTextView gui)
+    writeFileUtf8 file content

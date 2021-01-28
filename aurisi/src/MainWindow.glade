@@ -259,6 +259,22 @@ Author: Michael Oswald
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
                             <child>
+                              <object class="GtkMenuItem" id="menuItemLoadTCFile">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                                <property name="label" translatable="yes">Load TC File...</property>
+                                <property name="use_underline">True</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkMenuItem" id="menuItemSaveTCFile">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                                <property name="label" translatable="yes">Save TC File...</property>
+                                <property name="use_underline">True</property>
+                              </object>
+                            </child>
+                            <child>
                               <object class="GtkMenuItem" id="menuItemImportMIB">
                                 <property name="visible">True</property>
                                 <property name="can_focus">False</property>

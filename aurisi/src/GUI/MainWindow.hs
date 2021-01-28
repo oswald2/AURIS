@@ -155,6 +155,9 @@ createMainWindow cfg = do
     menuItemQuit      <- getObject builder "menuItemQuit" MenuItem
     menuItemImportMIB <- getObject builder "menuItemImportMIB" MenuItem
 
+    menuItemLoadTC    <- getObject builder "menuItemLoadTCFile" MenuItem
+    menuItemSaveTC    <- getObject builder "menuItemSaveTCFile" MenuItem
+
     -- create the tabs in the notebook
     tmfTab            <- createTMFTab builder
     tmpTab            <- createTMPTab builder
@@ -190,6 +193,9 @@ createMainWindow cfg = do
     void $ Gtk.on menuItemQuit #activate $ do
         widgetDestroy window
         mainQuit
+
+    void $ Gtk.on menuItemLoadTC #activate $ tcTabLoadFile tcTab 
+    void $ Gtk.on menuItemSaveTC #activate $ tcTabSaveFile tcTab 
 
     return gui
 
