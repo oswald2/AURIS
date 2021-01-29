@@ -9,6 +9,13 @@
         "cfgInterfacePort": 55555,
         "cfgRandomizerEnabled": false,
         "cfgRandomizerStartValue": 255,
+        "cfgVerification": {
+            "cfgTimeoutC": 30,
+            "cfgTimeoutGT": 20,
+            "cfgTimeoutS": 30,
+            "cfgTimeoutA": 30,
+            "cfgTimeoutO": 20
+        },
         "cfgVCIDs": [
             0,
             1

@@ -13,6 +13,13 @@
         ],
         "cfgUnknownSPID": 5071,
         "cfgRandomizerEnabled": false,
+        "cfgVerification": {
+            "cfgTimeoutC": 30,
+            "cfgTimeoutGT": 20,
+            "cfgTimeoutS": 30,
+            "cfgTimeoutA": 30,
+            "cfgTimeoutO": 20
+        },
         "cfgEpoch": "UnixTime",
         "cfgInterfacePort": 55555,
         "cfgRandomizerStartValue": 255,
