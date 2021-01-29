@@ -75,7 +75,7 @@ import           Data.Bits                      ( Bits
                                                     )
                                                 )
 
-import           General.PUSTypes               ( SSC(..)
+import           General.PUSTypes               ( SSC
                                                 , mkSSC
                                                 , getSSC
                                                 , PUSPacketType(..)

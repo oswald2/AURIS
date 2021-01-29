@@ -19,6 +19,7 @@ module Data.PUS.Config
   , NctrsConfig(..)
   , CncConfig(..)
   , EDENConfig(..)
+  , VerificationConfig(..)
   , cltuBlockSizeAsWord8
   , defaultConfig
     -- , writeConfigString
@@ -93,6 +94,36 @@ instance ToJSON EDENConfig where
   toEncoding = genericToEncoding defaultOptions
 
 
+-- | Configuration data for the TC verifications. All timeouts 
+-- are specified in seconds
+data VerificationConfig = VerificationConfig {
+  -- | Specifies the timeout for the G and T stage. Both are set 
+  -- together with he same timeout (ground reception and transmission)
+  cfgTimeoutGT :: Word16
+  -- | Specifies the timeout for the O (on-board arrival) stage.
+  , cfgTimeoutO :: Word16
+  -- | Specifies the timeout for the A (acceptance) stage.
+  , cfgTimeoutA :: Word16 
+  -- | Specifies the timeout for the S (start execution) stage.
+  , cfgTimeoutS :: Word16
+  -- | Specifies the timeout for the C (execution complete) stage.
+  , cfgTimeoutC :: Word16 
+} deriving (Eq, Generic)
+
+instance FromJSON VerificationConfig
+instance ToJSON VerificationConfig where
+  toEncoding = genericToEncoding defaultOptions
+
+defaultVerifConfig :: VerificationConfig
+defaultVerifConfig = VerificationConfig {
+  cfgTimeoutGT = 20
+  , cfgTimeoutO = 20
+  , cfgTimeoutA = 30
+  , cfgTimeoutS = 30 
+  , cfgTimeoutC = 30 
+}
+
+
 -- | The configuration of the PUS functionality
 data Config = Config {
     -- | The block size that is used to encode/decode the CLTU
@@ -128,6 +159,8 @@ data Config = Config {
     , cfgCnC :: [CncConfig]
     -- | Specifies the configuration of the available EDEN connections
     , cfgEDEN :: [EDENConfig]
+    -- | Specifies default values for TC verifications
+    , cfgVerification :: VerificationConfig
 } deriving (Eq, Generic)
 
 
@@ -196,6 +229,7 @@ defaultConfig = Config { cfgCltuBlockSize        = CltuBS_8
                        , cfgNCTRS                = [defaultNctrsConfig]
                        , cfgCnC                  = [defaultCncConfig]
                        , cfgEDEN                 = [defaultEdenConfig]
+                       , cfgVerification         = defaultVerifConfig
                        }
 
 

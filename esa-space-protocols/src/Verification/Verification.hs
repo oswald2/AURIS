@@ -31,11 +31,15 @@ module Verification.Verification
     , verStatus
     , isFailed
     , isTMExpected
+    , isTMAExpected
+    , isTMSExpected
+    , isTMCExpected
     , isGroundSuccess
     , isGroundExpected
     , isGroundTimeout
     , isGroundFail
     , isGroundDisabled
+    , isOBAExpected
     , isSuccess
     , isTimeout
     , isFinished
@@ -484,12 +488,25 @@ isFailed Verification {..} =
 
 
 isTMExpected :: Verification -> Bool
-isTMExpected Verification {..} =
-    (_verTMAcceptance == StTmExpected) || (_verTMAcceptance == StTmPending)
-        || (_verTMStart == StTmExpected) || (_verTMStart == StTmPending)
-        || (_verTMComplete == StTmExpected) || (_verTMComplete == StTmPending)
+isTMExpected verif =
+    isTMAExpected verif 
+        || isTMSExpected verif
+        || isTMCExpected verif
   -- we don't check for the progess, because for progess we need at 
   -- least a completion anyway
+
+
+isTMAExpected :: Verification -> Bool 
+isTMAExpected Verification {..} =
+    (_verTMAcceptance == StTmExpected) || (_verTMAcceptance == StTmPending)
+
+isTMSExpected :: Verification -> Bool 
+isTMSExpected Verification {..} =
+    (_verTMStart == StTmExpected) || (_verTMStart == StTmPending)
+
+isTMCExpected :: Verification -> Bool 
+isTMCExpected Verification {..} =
+    (_verTMComplete == StTmExpected) || (_verTMComplete == StTmPending)
 
 
 isGroundSuccess :: Verification -> Bool
@@ -520,7 +537,9 @@ isGroundFail Verification {..} =
     || (_verGroundTransmission == StGFail)
     || (_verGroundOBR == StGFail)
 
-
+isOBAExpected :: Verification -> Bool 
+isOBAExpected Verification {..} = 
+    (_verGroundOBR == StGExpected) || (_verGroundOBR == StGPending)
 
 isSuccess :: Verification -> Bool
 isSuccess verif@Verification {..} =
