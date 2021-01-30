@@ -190,6 +190,6 @@ niche topic and there is not really much broad knowledge available. Things to im
 They are often broader topics, which should be split into sub-tasks before. I try to keep them up-to-date as far as possible. 
 
 As this is not a simple topic, please ask questions. For issues, this can be directly done in the Issues pages or on the dedicated 
-Discord server for the system: [[https://discord.gg/jEdJxfVd][Discord]].
+Discord server for the system [[https://discord.gg/S7MySPc5EW][Discord]].
 
 See the file [[CONTRIBUTING.md][CONTRIBUTING.md]] on how to contribute.
