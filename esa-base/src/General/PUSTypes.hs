@@ -190,6 +190,9 @@ instance FromJSON MAPID
 instance ToJSON MAPID where
     toEncoding = genericToEncoding defaultOptions
 
+instance Display MAPID where 
+    display (MAPID x) = display x
+
 -- | Builder for the MAPDI
 mapIDBuilder :: MAPID -> Builder
 mapIDBuilder (MAPID x) = word8 x
@@ -323,6 +326,11 @@ instance Serialise TransmissionMode
 instance FromJSON TransmissionMode
 instance ToJSON TransmissionMode where
     toEncoding = genericToEncoding defaultOptions
+
+instance Display TransmissionMode where 
+    display AD = "AD"
+    display BD = "BD"
+
 
 -- | Builder for the 'TransmissionMode'
 transmissionModeBuilder :: TransmissionMode -> Builder
@@ -509,6 +517,8 @@ instance ToJSON SourceID where
     toEncoding = genericToEncoding defaultOptions
 instance NFData SourceID
 
+instance Display SourceID where 
+    display (SourceID x) = display x
 
 -- | A buidler for the VCID
 sourceIDBuilder :: SourceID -> Builder
@@ -563,7 +573,7 @@ instance ToJSON PTC where
     toEncoding = genericToEncoding defaultOptions
 
 instance Display PTC where
-    textDisplay = T.pack . show
+    display (PTC x) = display x
 
 
 newtype PFC = PFC Int
@@ -575,7 +585,7 @@ instance ToJSON PFC where
     toEncoding = genericToEncoding defaultOptions
 
 instance Display PFC where
-    textDisplay = T.pack . show
+    display (PFC x) = display x
 
 
 data EduVCID =

@@ -12,6 +12,7 @@ This module provides some general data types and functions operating on them
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module General.Types
     ( Endian(..)
+    , endianBuilder
     , ByteOffset(..)
     , BitOffset(..)
     , Offset
@@ -85,7 +86,7 @@ import           Data.Char                      ( ord
                                                 , isHexDigit
                                                 )
 import           Text.Read                      ( Read(..) )
-
+import qualified Text.Builder                  as TB
 import           Codec.Serialise               as S
 import           Codec.Serialise.Encoding      as SE
 import           Codec.Serialise.Decoding      as SE
@@ -108,6 +109,15 @@ instance FromJSON Endian
 instance ToJSON Endian where
     toEncoding = genericToEncoding defaultOptions
 instance NFData Endian
+
+instance Display Endian where
+    display BiE = "BE"
+    display LiE = "LE"
+
+endianBuilder :: Endian -> TB.Builder
+endianBuilder BiE = TB.text "BE"
+endianBuilder LiE = TB.text "LE"
+
 
 -- | A byte offset
 newtype ByteOffset = ByteOffset Int

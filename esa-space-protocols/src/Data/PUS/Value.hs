@@ -14,6 +14,8 @@ module Data.PUS.Value
     , getUnalignedValue
     , isStorableWord64
     , isGettableUnaligned
+    , valueBuilder
+    , valueHeaderLine
     , B8(..)
     ) where
 
@@ -76,19 +78,8 @@ import           Data.PUS.EncTime               ( cucTimeLen
 
 import           General.SizeOf                 ( BitSizes(..) )
 
-import           General.Padding                ( leftPaddedC
-                                                , rightPadded
-                                                , rightPaddedC
-                                                )
 import           General.Hexdump                ( hexdumpLineBS )
-import           General.Types                  ( BitSize(BitSize)
-                                                , bytesToBitSize
-                                                , mkBitSize
-                                                , mkByteSize
-                                                , ByteOffset
-                                                , Endian(..)
-                                                , Offset
-                                                )
+import           General.Types                  
 import           General.PUSTypes               ( PFC(..)
                                                 , PTC(..)
                                                 )
@@ -107,7 +98,13 @@ import           General.GetBitField            ( GetValue(getValue)
                                                 , getValueOctet
                                                 , getValueOctetLen
                                                 )
-
+import           General.Padding                ( leftPaddedC
+                                                , rightPadded
+                                                , rightPaddedC
+                                                , padFromRight
+                                                )
+import           General.Chunks
+import qualified Text.Builder                  as TB
 import           Refined
 
 -- | Refinement type for the bit width of the values. Allowed are numbers 1 to 7
@@ -129,31 +126,31 @@ instance Serialise B8 where
 
 -- | Refinement type for the bit width of the values. Allowed are numbers 1 to 15
 --   (for the bit widths of 1 to 15 bit)
-newtype B16 = B16 (Refined (And (Not (LessThan 1)) (Not (GreaterThan 15))) Word16)
+newtype B16 = B16 (Refined (And (Not (LessThan 1)) (Not (GreaterThan 15))) Word8)
     deriving(Eq, Show, Read, ToJSON, FromJSON, NFData, Generic)
 
-unB16 :: B16 -> Word16
+unB16 :: B16 -> Word8
 unB16 (B16 x) = unrefine x
 
 instance Serialise B16 where
-    encode (B16 x) = encodeWord16 (unrefine x)
+    encode (B16 x) = encodeWord8 (unrefine x)
     decode = do
-        x <- decodeWord16
+        x <- decodeWord8
         B16 <$> refineFail x
 
 
 -- | Refinement type for the bit width of the values. Allowed are numbers 1 to 31
 --   (for the bit widths of 1 to 31 bit)
-newtype B32 = B32 (Refined (And (Not (LessThan 1)) (Not (GreaterThan 31))) Word32)
+newtype B32 = B32 (Refined (And (Not (LessThan 1)) (Not (GreaterThan 31))) Word8)
     deriving(Eq, Show, Read, ToJSON, FromJSON, NFData, Generic)
 
-unB32 :: B32 -> Word32
+unB32 :: B32 -> Word8
 unB32 (B32 x) = unrefine x
 
 instance Serialise B32 where
-    encode (B32 x) = encodeWord32 (unrefine x)
+    encode (B32 x) = encodeWord8 (unrefine x)
     decode = do
-        x <- decodeWord32
+        x <- decodeWord8
         B32 <$> refineFail x
 
 
@@ -162,53 +159,49 @@ instance Serialise Word24 where
     encode x = encodeWord32 (fromIntegral x)
     decode = fromIntegral <$> decodeWord32
 
-instance Serialise Int24 where 
+instance Serialise Int24 where
     encode x = encodeInt32 (fromIntegral x)
     decode = fromIntegral <$> decodeInt32
 
-instance ToJSON Word24 where 
+instance ToJSON Word24 where
     toJSON x =
         let y :: Word32
             y = fromIntegral x
-        in
-        object ["value" .= y]
+        in  object ["value" .= y]
     toEncoding x =
         let y :: Word32
             y = fromIntegral x
-        in
-        pairs ("value" .= y)
+        in  pairs ("value" .= y)
 
-instance ToJSON Int24 where 
+instance ToJSON Int24 where
     toJSON x =
         let y :: Int32
             y = fromIntegral x
-        in
-        object ["value" .= y]
+        in  object ["value" .= y]
     toEncoding x =
         let y :: Int32
             y = fromIntegral x
-        in
-        pairs ("value" .= y)
+        in  pairs ("value" .= y)
 
 
 
-instance FromJSON Word24 where 
+instance FromJSON Word24 where
     parseJSON (AE.Object o) = do
         x <- o .: "value"
         return (fromIntegral (x :: Word32))
     parseJSON _ = fail "FromJSON Word24: expected JSON object"
 
-instance FromJSON Int24 where 
+instance FromJSON Int24 where
     parseJSON (AE.Object o) = do
         x <- o .: "value"
         return (fromIntegral (x :: Int32))
     parseJSON _ = fail "FromJSON Int24: expected JSON object"
 
 
-instance Display Word24 where 
+instance Display Word24 where
     display x = display (fromIntegral x :: Word32)
 
-instance Display Int24 where 
+instance Display Int24 where
     display x = display (fromIntegral x :: Int32)
 
 
@@ -435,11 +428,15 @@ instance AE.ToJSON Value where
 
 instance FromJSON Value where
     parseJSON (AE.Object o) = case HM.lookup "valType" o of
-        Just (AE.String "ValInt8"  ) -> ValInt8 <$> o .: "value"
-        Just (AE.String "ValInt16" ) -> ValInt16 <$> o .: "endian" <*> o .: "value"
-        Just (AE.String "ValInt24" ) -> ValInt24 <$> o .: "endian" <*> o .: "value"
-        Just (AE.String "ValInt32" ) -> ValInt32 <$> o .: "endian" <*> o .: "value"
-        Just (AE.String "ValInt64" ) -> ValInt64 <$> o .: "endian" <*> o .: "value"
+        Just (AE.String "ValInt8") -> ValInt8 <$> o .: "value"
+        Just (AE.String "ValInt16") ->
+            ValInt16 <$> o .: "endian" <*> o .: "value"
+        Just (AE.String "ValInt24") ->
+            ValInt24 <$> o .: "endian" <*> o .: "value"
+        Just (AE.String "ValInt32") ->
+            ValInt32 <$> o .: "endian" <*> o .: "value"
+        Just (AE.String "ValInt64") ->
+            ValInt64 <$> o .: "endian" <*> o .: "value"
         Just (AE.String "ValUInt8X") -> do
             ValUInt8X <$> o .: "width" <*> o .: "value"
         Just (AE.String "ValUInt8") -> ValUInt8 <$> o .: "value"
@@ -456,7 +453,8 @@ instance FromJSON Value where
         Just (AE.String "ValString") -> ValString . encodeUtf8 <$> o .: "value"
         Just (AE.String "ValFixedString") ->
             ValFixedString <$> o .: "width" <*> (encodeUtf8 <$> o .: "value")
-        Just (AE.String "ValOctet") -> ValOctet . getByteString64 <$> o .: "value"
+        Just (AE.String "ValOctet") ->
+            ValOctet . getByteString64 <$> o .: "value"
         Just (AE.String "ValFixedOctet") ->
             ValFixedOctet
                 <$> o
@@ -464,7 +462,7 @@ instance FromJSON Value where
                 <*> (getByteString64 <$> o .: "value")
         Just (AE.String "ValCUCTime"  ) -> ValCUCTime <$> o .: "value"
         Just (AE.String "ValUndefined") -> pure ValUndefined
-        _                            -> pure ValUndefined
+        _                               -> pure ValUndefined
     parseJSON _ = pure ValUndefined
 
 
@@ -901,3 +899,133 @@ isGettableUnaligned ValInt16{}  = True
 isGettableUnaligned ValInt32{}  = True
 isGettableUnaligned ValInt64{}  = True
 isGettableUnaligned _           = False
+
+--     | ValOctet !ByteString
+--     | ValFixedOctet !Word16 !ByteString
+--     | ValCUCTime CUCTime
+--     | ValUndefined
+
+
+typeColumn :: Int
+typeColumn = 12
+
+endianColumn :: Int
+endianColumn = 3
+
+val1Column :: Int
+val1Column = 21
+
+
+emptyEndian :: TB.Builder 
+emptyEndian = foldMap TB.char (replicate endianColumn ' ')
+
+
+valueHeaderLine :: TB.Builder 
+valueHeaderLine = 
+    let len = typeColumn + endianColumn + val1Column
+    in
+    padFromRight typeColumn ' ' (TB.text "Type")
+        <> padFromRight endianColumn ' ' (TB.text "BO")
+        <> padFromRight val1Column   ' ' (TB.text "Value")
+
+buildEndianUnsigned :: Integral a => Text -> Endian -> a -> TB.Builder 
+buildEndianUnsigned typ b x = 
+    padFromRight typeColumn ' ' (TB.text typ)
+        <> padFromRight endianColumn ' ' (endianBuilder b)
+        <> padFromRight val1Column   ' ' (TB.unsignedDecimal x)
+        <> TB.text " (0x"
+        <> TB.hexadecimal x
+        <> TB.text ")"
+
+builderUnsigned :: Integral a => Word8 -> a -> TB.Builder 
+builderUnsigned width x = 
+    padFromRight typeColumn ' ' (TB.text "UINT" <> TB.decimal width)
+        <> emptyEndian
+        <> padFromRight val1Column   ' ' (TB.unsignedDecimal x)
+        <> TB.text " (0x"
+        <> TB.hexadecimal x
+        <> TB.text ")"
+
+builderSigned :: Integral a => Word8 -> a -> TB.Builder 
+builderSigned width x = 
+    padFromRight typeColumn ' ' (TB.text "INT" <> TB.decimal width)
+        <> emptyEndian
+        <> padFromRight val1Column   ' ' (TB.decimal x)
+
+
+buildEndianSigned :: Integral a => Text -> Endian -> a -> TB.Builder 
+buildEndianSigned typ b x = 
+    padFromRight typeColumn ' ' (TB.text typ)
+        <> padFromRight endianColumn ' ' (endianBuilder b)
+        <> padFromRight val1Column   ' ' (TB.decimal x)
+
+
+builderReal :: Text -> Endian -> Double -> TB.Builder 
+builderReal typ b x = 
+    padFromRight typeColumn ' ' (TB.text typ)
+        <> padFromRight endianColumn ' ' (endianBuilder b)
+        <> TB.fixedDouble 16 x
+
+octetBuilder x = 
+    let chunks = chunkedByBS 4 x 
+        
+        convChunk = mconcat . map byteToHex . B.unpack
+        converted = map convChunk chunks 
+
+        values = chunksIntersperse 2 ["\n"] converted
+
+        byteToHex :: Word8 -> TB.Builder 
+        byteToHex x = TB.padFromLeft 2 '0' (TB.hexadecimal x)
+    in
+    mconcat (mconcat values)
+
+
+
+valueBuilder :: Value -> TB.Builder
+valueBuilder (ValUInt16 b x) = buildEndianUnsigned "UINT16" b x 
+valueBuilder (ValUInt24 b x) = buildEndianUnsigned "UINT24" b x 
+valueBuilder (ValUInt32 b x) = buildEndianUnsigned "UINT32" b x 
+valueBuilder (ValUInt64 b x) = buildEndianUnsigned "UINT64" b x 
+
+valueBuilder (ValInt16 b x) = buildEndianSigned "INT16" b x 
+valueBuilder (ValInt24 b x) = buildEndianSigned "INT24" b x 
+valueBuilder (ValInt32 b x) = buildEndianSigned "INT32" b x 
+valueBuilder (ValInt64 b x) = buildEndianSigned "INT64" b x 
+
+valueBuilder (ValUInt8X w x) = builderUnsigned (unB8 w) x 
+valueBuilder (ValUInt8 x) = builderUnsigned 8 x 
+valueBuilder (ValUInt16X w x) = builderUnsigned (unB16 w) x 
+valueBuilder (ValUInt32X w x) = builderUnsigned (unB32 w) x 
+valueBuilder (ValInt8 x) = builderSigned 8 x
+
+valueBuilder (ValDouble b x) = builderReal "DOUBLE" b x 
+
+valueBuilder (ValString x) = 
+    padFromRight typeColumn ' ' (TB.text "STRING")
+        <> emptyEndian
+        <> TB.asciiByteString x
+
+valueBuilder (ValFixedString l x) = 
+    padFromRight typeColumn ' ' (TB.text "STRING" <> TB.decimal l)
+        <> emptyEndian
+        <> TB.asciiByteString x
+
+valueBuilder (ValOctet x) = 
+    padFromRight typeColumn ' ' (TB.text "STRING")
+        <> emptyEndian
+        <> octetBuilder x 
+
+valueBuilder (ValFixedOctet l x) = 
+    padFromRight typeColumn ' ' (TB.text "STRING" <> TB.decimal l)
+        <> emptyEndian
+        <> octetBuilder x
+
+valueBuilder (ValCUCTime x) = 
+    padFromRight typeColumn ' ' (TB.text "CUC_4_2")
+        <> emptyEndian
+        <> TB.text (textDisplay x)
+
+valueBuilder ValUndefined = 
+    TB.text "UNDEFINED"
+
+

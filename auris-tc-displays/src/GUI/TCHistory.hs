@@ -8,27 +8,42 @@ module GUI.TCHistory
     ) where
 
 import           RIO
-
+import qualified RIO.Text                      as T
 import           Control.Lens                   ( makeLenses
                                                 , (?~)
                                                 , ix
                                                 )
-
+import qualified Data.Text.Short               as ST
 import           GI.Gtk                        as Gtk
-import           Data.GI.Gtk.ModelView.SeqStore
-import           Data.GI.Base.Attributes
-import           GI.Gdk.Structs.RGBA
+import           Data.GI.Gtk.ModelView.SeqStore ( seqStoreGetSize
+                                                , seqStoreGetValue
+                                                , seqStoreSetValue
+                                                , SeqStore
+                                                )
+import           Data.GI.Base.Attributes        ( AttrOpTag(AttrSet) )
+import           GI.Gdk.Structs.RGBA            ( RGBA )
 
-import           GUI.Utils
-import           GUI.Colors
-import           GUI.ScrollingTable
+import           GUI.Utils                      ( getObject )
+import           GUI.Colors                     ( black
+                                                , green
+                                                , orange
+                                                , paleYellow
+                                                , red
+                                                , white
+                                                )
+import           GUI.ScrollingTable             ( addRowScrollingTable
+                                                , setTreeViewCallback
+                                                , createScrollingTableSimple
+                                                )
+import           GUI.TextView                   ( textViewSetText )
 
-import           General.Time
+import           General.Time                   ( SunTime )
 import           General.PUSTypes               ( RequestID )
 
 import           Data.PUS.TCRequest
 import           Verification.Verification
 
+import           Text.Show.Pretty
 
 
 
@@ -42,29 +57,54 @@ makeLenses ''Row
 
 
 data TCHistory = TCHistory
-    { guiParent   :: !Window
-    , guiTreeView :: !TreeView
-    , guiModel    :: SeqStore Row
+    { guiParent        :: !Window
+    , guiTreeView      :: !TreeView
+    , guiModel         :: SeqStore Row
+    , guiTCName        :: !Entry
+    , guiTCDescription :: !TextView
+    , guiTCRequestID   :: !Entry
+    , guiTCSource      :: !Entry
+    , guiTCReleaseTime :: !Entry
+    , guiTCVCID        :: !Entry
+    , guiTCSCID        :: !Entry
+    , guiVerifR        :: !CheckButton
+    , guiVerifG        :: !CheckButton
+    , guiVerifT        :: !CheckButton
+    , guiVerifO        :: !CheckButton
+    , guiVerifA        :: !CheckButton
+    , guiVerifS        :: !CheckButton
+    , guiVerifC        :: !CheckButton
+    , guiDetails       :: !TextView
     }
-
-
-create :: Window -> TreeView -> SeqStore Row -> TCHistory
-create window tv model =
-    TCHistory { guiParent = window, guiTreeView = tv, guiModel = model }
-
 
 
 createTCHistory :: Window -> Gtk.Builder -> IO TCHistory
 createTCHistory window builder = do
-    treeView <- getObject builder "treeViewTCHistory" TreeView
+    treeView         <- getObject builder "treeViewTCHistory" TreeView
+    entryName        <- getObject builder "entryTCReqName" Entry
+    entryRequestID   <- getObject builder "entryTCReqRequestID" Entry
+    entrySource      <- getObject builder "entryTCReqSource" Entry
+    entryReleaseTime <- getObject builder "entryTCReqReleaseTime" Entry
+    entryVCID        <- getObject builder "entryTCReqVCID" Entry
+    entrySCID        <- getObject builder "entryTCReqSCID" Entry
+
+    tvDescription    <- getObject builder "textviewTCReqDescription" TextView
+    tvDetails        <- getObject builder "textViewTCReqDetails" TextView
+
+    cbR              <- getObject builder "checkbuttonTCReqVerifR" CheckButton
+    cbG              <- getObject builder "checkbuttonTCReqVerifG" CheckButton
+    cbT              <- getObject builder "checkbuttonTCReqVerifT" CheckButton
+    cbO              <- getObject builder "checkbuttonTCReqVerifO" CheckButton
+    cbA              <- getObject builder "checkbuttonTCReqVerifA" CheckButton
+    cbS              <- getObject builder "checkbuttonTCReqVerifS" CheckButton
+    cbC              <- getObject builder "checkbuttonTCReqVerifC" CheckButton
 
     let verifColumnWidth = 15
 
-    createScrollingTable
+    model <- createScrollingTableSimple
         treeView
-        (create window)
-        [ ( "Name"
-          , 70
+        [ ( "Name" :: Text
+          , 70 :: Int32
           , \row -> [#text := textDisplay (row ^. rowRqst . tcReqName)]
           )
         , ( "Description"
@@ -94,8 +134,68 @@ createTCHistory window builder = do
         , ("5" , verifColumnWidth, displayTMProgress 5)
         , (" " , verifColumnWidth, displayEmptyText)
         , ("C" , verifColumnWidth, displayTM verTMComplete)
-        , ("Status", 50, \row -> [#text := textDisplay (row ^. rowVerifications . verStatus)])
+        , ( "Status"
+          , 50
+          , \row -> [#text := textDisplay (row ^. rowVerifications . verStatus)]
+          )
         ]
+
+    let gui = TCHistory { guiParent        = window
+                        , guiTreeView      = treeView
+                        , guiModel         = model
+                        , guiTCName        = entryName
+                        , guiTCDescription = tvDescription
+                        , guiTCRequestID   = entryRequestID
+                        , guiTCSource      = entrySource
+                        , guiTCReleaseTime = entryReleaseTime
+                        , guiTCVCID        = entryVCID
+                        , guiTCSCID        = entrySCID
+                        , guiVerifR        = cbR
+                        , guiVerifG        = cbG
+                        , guiVerifT        = cbT
+                        , guiVerifO        = cbO
+                        , guiVerifA        = cbA
+                        , guiVerifS        = cbS
+                        , guiVerifC        = cbC
+                        , guiDetails       = tvDetails
+                        }
+
+
+    setTreeViewCallback gui guiTreeView guiModel (treeViewCB gui)
+
+    return gui
+
+
+treeViewCB :: TCHistory -> Row -> IO ()
+treeViewCB gui row = do
+    let rqst = row ^. rowRqst
+
+    entrySetText (guiTCName gui)      (ST.toText (rqst ^. tcReqName))
+    entrySetText (guiTCRequestID gui) (textDisplay (rqst ^. tcReqRequestID))
+    entrySetText (guiTCSource gui)    (ST.toText (rqst ^. tcReqSource))
+    entrySetText (guiTCVCID gui)      (textDisplay (rqst ^. tcReqVCID))
+    entrySetText (guiTCSCID gui)      (textDisplay (rqst ^. tcReqSCID))
+
+    let relTime = maybe "Not Released" textDisplay (rqst ^. tcReqReleaseTime)
+    entrySetText (guiTCReleaseTime gui) relTime
+
+    toggleButtonSetActive (guiVerifR gui) True
+
+    let verif = rqst ^. tcReqVerifications
+    toggleButtonSetActive (guiVerifG gui) (isGroundGExpected verif)
+    toggleButtonSetActive (guiVerifT gui) (isGroundTExpected verif)
+    toggleButtonSetActive (guiVerifO gui) (isGroundOExpected verif)
+
+    toggleButtonSetActive (guiVerifA gui) (isTMAExpected verif)
+    toggleButtonSetActive (guiVerifS gui) (isTMSExpected verif)
+    toggleButtonSetActive (guiVerifC gui) (isTMCExpected verif)
+
+    textViewSetText (guiTCDescription gui)
+                    (ST.toText (rqst ^. tcReqDescription))
+
+    textViewSetText (guiDetails gui) (textDisplay (rqst ^. tcReqPayload))
+
+    return ()
 
 
 displayReleaseTime :: Row -> [AttrOp CellRendererText 'AttrSet]
@@ -149,7 +249,9 @@ displayTM l row =
 displayTMProgress :: Int -> Row -> [AttrOp CellRendererText 'AttrSet]
 displayTMProgress idx row =
     [ #text := textDisplay
-        (fromMaybe StTmDisabled (row ^. rowVerifications . verTMProgress ^? ix idx))
+        (fromMaybe StTmDisabled
+                   (row ^. rowVerifications . verTMProgress ^? ix idx)
+        )
     , #backgroundSet := True
     , #backgroundRgba := row ^. rowBGColor
     , #foregroundSet := True

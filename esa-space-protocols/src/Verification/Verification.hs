@@ -39,6 +39,9 @@ module Verification.Verification
     , isGroundTimeout
     , isGroundFail
     , isGroundDisabled
+    , isGroundGExpected
+    , isGroundTExpected
+    , isGroundOExpected
     , isOBAExpected
     , isSuccess
     , isTimeout
@@ -526,10 +529,24 @@ isGroundDisabled Verification {..} =
     && (_verGroundOBR == StGDisabled)
 
 isGroundExpected :: Verification -> Bool 
-isGroundExpected Verification {..} =
-    ((_verGroundReception == StGExpected) || (_verGroundReception == StGPending))
-    || ((_verGroundTransmission == StGExpected) || (_verGroundTransmission == StGPending))
-    || ((_verGroundOBR == StGExpected) || (_verGroundOBR == StGPending))
+isGroundExpected verif =
+    isGroundGExpected verif
+    || isGroundTExpected verif
+    || isGroundOExpected verif 
+
+
+isGroundGExpected :: Verification -> Bool 
+isGroundGExpected Verification {..} = 
+    (_verGroundReception == StGExpected) || (_verGroundReception == StGPending)
+
+isGroundTExpected :: Verification -> Bool 
+isGroundTExpected Verification {..} = 
+    (_verGroundTransmission == StGExpected) || (_verGroundTransmission == StGPending)
+
+isGroundOExpected :: Verification -> Bool 
+isGroundOExpected Verification {..} = 
+    (_verGroundOBR == StGExpected) || (_verGroundOBR == StGPending)
+
 
 isGroundFail :: Verification -> Bool 
 isGroundFail Verification {..} =

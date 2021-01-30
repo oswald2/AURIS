@@ -85,6 +85,11 @@ instance FromJSON ProtocolLevel
 instance ToJSON ProtocolLevel where
     toEncoding = genericToEncoding defaultOptions
 
+instance Display ProtocolLevel where 
+    display ProtLevelPacket = "PACKET"
+    display ProtLevelFrame = "FRAME"
+    display ProtLevelCltu = "CLTU"
+
 
 data DirectiveProtocolLevel =
   DirProtLevelFrame
@@ -96,6 +101,13 @@ instance Serialise DirectiveProtocolLevel
 instance FromJSON DirectiveProtocolLevel
 instance ToJSON DirectiveProtocolLevel where
     toEncoding = genericToEncoding defaultOptions
+
+instance Display DirectiveProtocolLevel where 
+    display DirProtLevelFrame = "FRAME"
+    display DirProtLevelCltu = "CLTU"
+
+
+
 
 -- | Determines if the 'TCRequest' is a spacecraft command or a command destined 
 -- for a SCOE. Space commands are encoded slightly different in most protocols.
@@ -111,6 +123,11 @@ instance Serialise CommandType
 instance FromJSON CommandType
 instance ToJSON CommandType where
     toEncoding = genericToEncoding defaultOptions
+
+instance Display CommandType where 
+    display (Space level) = "SPACE (" <> display level <> ")"
+    display SCOE = "SCOE"
+
 
 -- | Specifies the destination, where the command should be sent to. This can be 
 -- the given interfaces (currently NCTRS, C&C and EDEN). For EDEN also the type 
@@ -128,6 +145,12 @@ instance FromJSON Destination
 instance ToJSON Destination where
     toEncoding = genericToEncoding defaultOptions
 
+instance Display Destination where 
+    display (DestNctrs i) = display i 
+    display (DestCnc i) = display i 
+    display (DestEden i t) = display i <> " (" <> display t <> ")"
+
+
 -- | The destination a 'TCDirective' can have. Since directives only make sense 
 -- in spacecraft links and not SCOE links, the destination is different from the 
 -- 'TCRequest' destination ('Destination'). 
@@ -141,6 +164,10 @@ instance Serialise DirectiveDestination
 instance FromJSON DirectiveDestination
 instance ToJSON DirectiveDestination where
     toEncoding = genericToEncoding defaultOptions
+
+instance Display DirectiveDestination where 
+    display (DirDestNctrs i) = display i
+    display (DirDestEden i l) = display i <> " (" <> display l <> ")"
 
 
 -- | Destination for SCOE commands. SCOE commands are special CCSDS packets which 
@@ -157,6 +184,10 @@ instance Serialise ScoeDestination
 instance FromJSON ScoeDestination
 instance ToJSON ScoeDestination where
     toEncoding = genericToEncoding defaultOptions
+
+instance Display ScoeDestination where 
+    display (ScoeDestCnc i) = display i 
+    display (ScoeDestEden i) = display i
 
 
 -- | The body of the 'TCRequest'. Currently, can be either a TC (basicall a 'TCPacket'
@@ -264,3 +295,28 @@ instance ToJSON TCRequest where
 
 
 
+-- data TCRequestBody =
+--     TCCommand {
+--         _tcReqMAPID :: !MAPID
+--         , _tcReqTransMode :: !TransmissionMode
+--         , _tcDestination :: !Destination
+--         , _tcReqPacket :: !TCPacket
+--         }
+--     | TCScoeCommand {
+--       _tcReqDestination :: !ScoeDestination
+--       , _tcReqCommand :: !TCScoe
+--     }
+--     | TCDir {
+--         _tcDirDirective :: !TCDirective
+--         , _tcDirDestination :: !DirectiveDestination
+--     } deriving (Show, Read, Generic)
+
+instance Display TCRequestBody where 
+    display TCCommand {..} = 
+        "Destination: " <> display _tcDestination
+            <> "  MAPID: " <> display _tcReqMAPID
+            <> "  Transmission Mode: " <> display _tcReqTransMode
+            <> "\n" <> display _tcReqPacket
+
+    display TCScoeCommand {} = undefined 
+    display TCDir {} = undefined 

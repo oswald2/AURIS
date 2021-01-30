@@ -11,14 +11,14 @@ This module is used for drawing the table widget. A table is associated with
 a 'ScrollingTableModel', which holds the data to be displayed
 -}
 module GUI.ScrollingTable
-  ( addRowSeqStore
-  , addRowScrollingTable
-  , addRowSeqStoreAppend
-  , setRowsSeqStore
-  , setTreeViewCallback
-  , createScrollingTable
-  )
-where
+    ( addRowSeqStore
+    , addRowScrollingTable
+    , addRowSeqStoreAppend
+    , setRowsSeqStore
+    , setTreeViewCallback
+    , createScrollingTable
+    , createScrollingTableSimple
+    ) where
 
 import           RIO
 
@@ -36,36 +36,36 @@ import           GUI.TreeView
 -- this limit is reached, the oldest row will be removed first.
 addRowSeqStore :: SeqStore a -> a -> IO ()
 addRowSeqStore model val = do
-  n <- seqStoreGetSize model
-  when (n > defMaxRowTM) $ do
-    seqStoreRemove model (n - 1)
-  seqStorePrepend model val
+    n <- seqStoreGetSize model
+    when (n > defMaxRowTM) $ do
+        seqStoreRemove model (n - 1)
+    seqStorePrepend model val
 
 
 -- | Generic GTK function for adding a new row in a 'SeqStore a'. This is 
 -- intended for the live-view as only 'defMaxRowTM' rows will be added. When
 -- this limit is reached, the oldest row will be removed first.
 -- Additionally, this functions scrolls to the top, when a row was added 
-addRowScrollingTable :: TreeView -> SeqStore a -> a -> IO () 
-addRowScrollingTable tv model val = do 
-  addRowSeqStore model val 
-  scrollToTop tv 
+addRowScrollingTable :: TreeView -> SeqStore a -> a -> IO ()
+addRowScrollingTable tv model val = do
+    addRowSeqStore model val
+    scrollToTop tv
 
 
 addRowSeqStoreAppend :: SeqStore a -> a -> IO ()
 addRowSeqStoreAppend model val = do
-  n <- seqStoreGetSize model
-  when (n > defMaxRowTM) $ do
-    seqStoreRemove model (n - 1)
-  void $ seqStoreAppend model val
+    n <- seqStoreGetSize model
+    when (n > defMaxRowTM) $ do
+        seqStoreRemove model (n - 1)
+    void $ seqStoreAppend model val
 
 
 -- | Set the model to the given list of values, ignoring maximum size. This is 
 -- intended for retrieval mode.
 setRowsSeqStore :: SeqStore a -> [a] -> IO ()
 setRowsSeqStore model values = do
-  seqStoreClear model
-  mapM_ (seqStorePrepend model) values
+    seqStoreClear model
+    mapM_ (seqStorePrepend model) values
 
 
 -- | Setup a callback for the double-click on a table. 
@@ -73,16 +73,16 @@ setRowsSeqStore model values = do
 -- functions to extract a 'TreeView' and a 'SeqStore' from the @gui@ element.
 -- @action@ is the callback to be called with the row which was double-clicked.
 setTreeViewCallback
-  :: a -> (a -> TreeView) -> (a -> SeqStore b) -> (b -> IO ()) -> IO ()
+    :: a -> (a -> TreeView) -> (a -> SeqStore b) -> (b -> IO ()) -> IO ()
 setTreeViewCallback g getTV getModel action = do
-  void $ Gtk.on (getTV g) #rowActivated $ \path _col -> do
-    ipath <- treePathGetIndices path
-    forM_ ipath $ \idxs -> do
-      case idxs of
-        (idx : _) -> do
-          val <- seqStoreGetValue (getModel g) idx
-          action val
-        [] -> return ()
+    void $ Gtk.on (getTV g) #rowActivated $ \path _col -> do
+        ipath <- treePathGetIndices path
+        forM_ ipath $ \idxs -> do
+            case idxs of
+                (idx : _) -> do
+                    val <- seqStoreGetValue (getModel g) idx
+                    action val
+                [] -> return ()
 
 
 -- | Create a scrolling table with only text in the columns. Takes the 'TreeView',
@@ -94,37 +94,46 @@ setTreeViewCallback g getTV getModel action = do
 -- model to a list of GTK attributes of the cell for the value to display 
 -- for element in this column.
 createScrollingTable
-  :: TreeView
-  -> (TreeView -> SeqStore a -> b)
-  -> [(Text, Int32, a -> [AttrOp CellRendererText 'AttrSet])]
-  -> IO b
+    :: TreeView
+    -> (TreeView -> SeqStore a -> b)
+    -> [(Text, Int32, a -> [AttrOp CellRendererText 'AttrSet])]
+    -> IO b
 createScrollingTable tv constr attribs = do
-  model <- seqStoreNew []
+    model <- createScrollingTableSimple tv attribs
+    return $ constr tv model
 
-  treeViewSetModel tv (Just model)
 
-  treeViewSetHeadersVisible tv True
+createScrollingTableSimple
+    :: TreeView
+    -> [(Text, Int32, row -> [AttrOp CellRendererText 'AttrSet])]
+    -> IO (SeqStore row)
+createScrollingTableSimple tv attribs = do
+    model <- seqStoreNew []
 
-  mapM_ (createColumn model) attribs
+    treeViewSetModel tv (Just model)
 
-  -- try to set fixed height mode for more speed
-  treeViewSetFixedHeightMode tv True 
+    treeViewSetHeadersVisible tv True
 
-  return $ constr tv model
+    mapM_ (createColumn model) attribs
 
- where
-  createColumn model (name, width, attr) = do
-    col <- treeViewColumnNew
-    treeViewColumnSetFixedWidth col width
-    treeViewColumnSetSizing col TreeViewColumnSizingFixed
-    treeViewColumnSetResizable col True 
-    treeViewColumnSetReorderable col True
-    treeViewColumnSetTitle col name
-    renderer <- cellRendererTextNew
-    cellLayoutPackStart col renderer True
-    cellLayoutSetAttributes col renderer model attr
-    void $ treeViewAppendColumn tv col
-    return (name, col, renderer)
+    -- try to set fixed height mode for more speed
+    treeViewSetFixedHeightMode tv True
+
+    return model
+
+  where
+    createColumn model (name, width, attr) = do
+        col <- treeViewColumnNew
+        treeViewColumnSetFixedWidth col width
+        treeViewColumnSetSizing col TreeViewColumnSizingFixed
+        treeViewColumnSetResizable col True
+        treeViewColumnSetReorderable col True
+        treeViewColumnSetTitle col name
+        renderer <- cellRendererTextNew
+        cellLayoutPackStart col renderer True
+        cellLayoutSetAttributes col renderer model attr
+        void $ treeViewAppendColumn tv col
+        return (name, col, renderer)
 
 
 

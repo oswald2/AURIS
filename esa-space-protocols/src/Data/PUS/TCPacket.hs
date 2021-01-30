@@ -62,3 +62,11 @@ instance ToJSON TCPacket where
   toEncoding = genericToEncoding defaultOptions
 
 
+instance Display TCPacket where 
+  display TCPacket {..} = "TC Packet:\n" 
+    <> "APID: " <> display _tcpAPID 
+    <> "  Type: " <> display _tcpType
+    <> "  SubType: " <> display _tcpSubType 
+    <> "  Source ID: " <> display _tcpSourceID
+    <> "\nParameters:\n"
+    <> display _tcpParams

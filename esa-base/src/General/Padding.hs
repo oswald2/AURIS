@@ -22,12 +22,14 @@ module General.Padding
     , rightPadded
     , leftPaddedC
     , rightPaddedC
-    )
-where
+    , padFromRight
+    ) where
 
 import           RIO
 import qualified RIO.ByteString                as B
 import qualified Data.ByteString.Char8         as BC
+
+import           Text.Builder                  as TB
 
 
 -- | clips a 'ByteString' to the length given in the first parameter
@@ -68,3 +70,13 @@ rightPaddedC pad width content =
     content' <> BC.replicate (width - B.length content') pad
     where content' = clip width content
 
+
+-- | Helper function for 'Text.Builder' as there is only a left pad function
+-- in the library
+padFromRight :: Int -> Char -> TB.Builder -> TB.Builder
+padFromRight padLen padChar builder =
+    let builderLen = TB.length builder
+    in  if padLen <= builderLen
+            then builder
+            else builder
+                <> foldMap char (replicate (padLen - builderLen) padChar)
