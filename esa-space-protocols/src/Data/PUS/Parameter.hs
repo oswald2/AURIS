@@ -116,6 +116,7 @@ parameterHeaderBuilder :: TB.Builder
 parameterHeaderBuilder = 
     padFromRight nameColumnWidth ' ' (TB.text "Name")
       <> valueHeaderLine
+      <> TB.char '\n'
 
 instance Display Parameter where
     textDisplay param = TB.run (parameterBuilder param)
