@@ -33,3 +33,10 @@ instance Serialise TCScoe
 instance FromJSON TCScoe
 instance ToJSON TCScoe where
   toEncoding = genericToEncoding defaultOptions
+
+
+instance Display TCScoe where 
+  display TCScoe {..} = 
+    display ("APID: " :: Text) <> display _tccAPID 
+      <> "\nContent:\n"
+      <> display _tccParams

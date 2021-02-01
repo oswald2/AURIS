@@ -295,28 +295,16 @@ instance ToJSON TCRequest where
 
 
 
--- data TCRequestBody =
---     TCCommand {
---         _tcReqMAPID :: !MAPID
---         , _tcReqTransMode :: !TransmissionMode
---         , _tcDestination :: !Destination
---         , _tcReqPacket :: !TCPacket
---         }
---     | TCScoeCommand {
---       _tcReqDestination :: !ScoeDestination
---       , _tcReqCommand :: !TCScoe
---     }
---     | TCDir {
---         _tcDirDirective :: !TCDirective
---         , _tcDirDestination :: !DirectiveDestination
---     } deriving (Show, Read, Generic)
-
 instance Display TCRequestBody where 
     display TCCommand {..} = 
         "Destination: " <> display _tcDestination
             <> "  MAPID: " <> display _tcReqMAPID
             <> "  Transmission Mode: " <> display _tcReqTransMode
-            <> "\n" <> display _tcReqPacket
+            <> "\n\n" <> display _tcReqPacket
 
-    display TCScoeCommand {} = undefined 
-    display TCDir {} = undefined 
+    display TCScoeCommand {..} = 
+        "Destination: " <> display _tcReqDestination  
+            <> "\n\n" <> display _tcReqCommand 
+    display TCDir {..} = 
+        "Destination: " <> display _tcDirDestination 
+            <> "  Directive: " <> display _tcDirDirective

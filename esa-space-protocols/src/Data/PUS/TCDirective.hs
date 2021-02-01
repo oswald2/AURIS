@@ -57,3 +57,8 @@ directiveParser = do
             _   <- A.anyWord8
             SetVR <$> A.anyWord8
         _ -> return DNop
+
+instance Display TCDirective where 
+    display Unlock = "UNLOCK"
+    display (SetVR x) = "SET V(R) = " <> display x
+    display DNop = "NOP"
