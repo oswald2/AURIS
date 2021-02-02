@@ -72,53 +72,6 @@ handleEdenMessage
            ExtractedPacket
            m
            (Either Text (HashMap VCID Word8))
-handleEdenMessage missionSpecific interf counters eden@EdenMessage { _edenType = EdenTMType }
-    = do
-        case eden ^. edenDataField of
-          -- handle TM via EDEN
-            dat@EdenTM {..} -> do
-                logDebug $ "Received TM Data: " <> display
-                    (hexdumpBS (toBS _edenTmData))
-                case handleEdenPacket missionSpecific interf dat counters of
-                    Left err -> do
-                        env <- ask
-                        let
-                            msg =
-                                display
-                                        ("Error decoding EDEN PUS Packet: " :: Text
-                                        )
-                                    <> display err
-                                    <> display (" " :: Text)
-                                    <> displayShow eden
-                        logError msg
-                        liftIO $ raiseEvent env $ EVAlarms $ EVPacketAlarm
-                            (utf8BuilderToText msg)
-                        return (Left (utf8BuilderToText msg))
-                    Right (pkt, newCounters) -> do
-                        yield pkt
-                        return (Right newCounters)
-            dat@EdenSCOETM {..} -> do
-                logDebug $ "Received TM Data: " <> display
-                    (hexdumpBS (toBS _edenTmScoeData))
-                case handleEdenPacket missionSpecific interf dat counters of
-                    Left err -> do
-                        env <- ask
-                        let
-                            msg =
-                                display
-                                        ("Error decoding EDEN PUS Packet: " :: Text
-                                        )
-                                    <> display err
-                                    <> display (" " :: Text)
-                                    <> displayShow eden
-                        logError msg
-                        liftIO $ raiseEvent env $ EVAlarms $ EVPacketAlarm
-                            (utf8BuilderToText msg)
-                        return (Left (utf8BuilderToText msg))
-                    Right (pkt, newCounters) -> do
-                        yield pkt
-                        return (Right newCounters)
-            _ -> return (Right counters)
 handleEdenMessage _missionSpecific _interf counters eden@EdenMessage { _edenType = EdenTCAType }
     = do
         let status = eden ^. edenField2
@@ -138,18 +91,36 @@ handleEdenMessage _missionSpecific _interf counters eden@EdenMessage { _edenType
         -- and we're done 
         return (Right counters)
 
-handleEdenMessage _missionSpecific _interf counters eden@EdenMessage { _edenType = EdenTCEType }
+handleEdenMessage missionSpecific interf counters eden
     = do
-        logDebug $ display ("TC Echo:\n" :: Text) <> displayShow eden
-        return (Right counters)
-
-handleEdenMessage _missionSpecific _interf counters eden = do
-    logDebug
-        $  display ("EDEN Message: Type: " :: Text)
-        <> displayShow (eden ^. edenType)
-        <> display (" SubType: " :: Text)
-        <> displayShow (eden ^. edenSubType)
-    return (Right counters)
+        case getEdenPacketData (eden ^. edenDataField) of
+          -- handle TM via EDEN
+            Just dat -> do
+                logDebug $ "Received Data: " <> display
+                    (hexdumpBS (toBS dat))
+                case handleEdenPacket missionSpecific interf (eden ^. edenDataField) counters of
+                    Left err -> do
+                        env <- ask
+                        let
+                            msg =
+                                display
+                                        ("Error decoding EDEN PUS Packet: " :: Text
+                                        )
+                                    <> display err
+                                    <> display (" " :: Text)
+                                    <> displayShow eden
+                        logError msg
+                        liftIO $ raiseEvent env $ EVAlarms $ EVPacketAlarm
+                            (utf8BuilderToText msg)
+                        return (Left (utf8BuilderToText msg))
+                    Right (pkt, newCounters) -> do
+                        yield pkt
+                        return (Right newCounters)
+            Nothing -> do
+                logDebug $ "Received EDEN packet with no known structure:\n"  
+                    <> displayShow eden 
+                    <> "\n" <> display (hexdumpBS (toBS (getEdenRawData (eden ^. edenDataField))))
+                return (Right counters)
 
 
 handleEdenPacket
@@ -218,5 +189,61 @@ handleEdenPacket missionSpecific interf EdenSCOETM {..} counters = do
                     vcid      = IsSCOE
                     gap       = Nothing
                 in  Right (extracted, counters)
+handleEdenPacket missionSpecific interf EdenSpaceTC {..} counters = do
+    case
+            parseOnly (match (pusPktParser missionSpecific interf))
+                      (toBS _edenSpaceData)
+        of
+            Left err -> Left (T.pack err)
+            Right (oct, packet) ->
+                let
+                    epu = ExtractedDU { _epQuality = toFlag Good True
+                                      , _epERT     = time
+                                      , _epGap     = Nothing
+                                      , _epSource  = interf
+                                      , _epVCID    = IsVCID vcid
+                                      , _epDU      = packet ^. protContent
+                                      }
+                    time =
+                        case
+                                A.parseOnly
+                                    edenTimeParser
+                                    (_edenSpaceSecHeader ^. edenSecTime)
+                            of
+                                Left  _ -> nullTime
+                                Right t -> t
+                    extracted = ExtractedPacket oct epu
+                    vcid      = VCID (_edenSpaceSecHeader ^. edenSecChannel)
+                in
+                    Right (extracted, counters)
+
+handleEdenPacket missionSpecific interf EdenSCOETC {..} counters = do
+    case
+            parseOnly (match (pusPktParser missionSpecific interf))
+                      (toBS _edenScoeData)
+        of
+            Left err -> Left (T.pack err)
+            Right (oct, packet) ->
+                let
+                    epu = ExtractedDU { _epQuality = toFlag Good True
+                                      , _epERT     = time
+                                      , _epGap     = Nothing
+                                      , _epSource  = interf
+                                      , _epVCID    = vcid
+                                      , _epDU      = packet ^. protContent
+                                      }
+                    time =
+                        case
+                                A.parseOnly
+                                    edenTimeParser
+                                    (_edenSCOESecHeader ^. edenSecScoeTime)
+                            of
+                                Left  _ -> nullTime
+                                Right t -> t
+                    extracted = ExtractedPacket oct epu
+                    vcid      = IsSCOE
+                in
+                    Right (extracted, counters)
+
 handleEdenPacket _missionSpecific _ _ _counters = undefined
 

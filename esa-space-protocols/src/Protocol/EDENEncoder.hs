@@ -36,15 +36,12 @@ import           General.Time                   ( SunTime
                                                 , edenTime
                                                 , getCurrentTime
                                                 )
-import           General.PUSTypes               ( VCID(..)
+import           General.PUSTypes               ( getMAPID
+                                                , getRqstID
                                                 , getVCID
                                                 , mkMAPID
-                                                , MAPID(..)
-                                                , getMAPID
-                                                , RequestID(..)
-                                                , getRqstID
                                                 )
-import           General.Types
+import           General.Types                  ( HexBytes(HexBytes) )
 
 
 

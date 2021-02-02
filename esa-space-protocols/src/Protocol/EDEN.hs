@@ -63,6 +63,8 @@ module Protocol.EDEN
     , edenDataField
     , edenEmptyField1
     , edenRqstID
+    , getEdenPacketData
+    , getEdenRawData
     ) where
 
 import           RIO                     hiding ( Builder )
@@ -231,6 +233,22 @@ data EdenData =
         _edenTmScoeData :: HexBytes
     } deriving (Show, Read)
 makeLenses ''EdenData
+
+
+getEdenPacketData :: EdenData -> Maybe HexBytes 
+getEdenPacketData EdenSpaceTC {..} = Just _edenSpaceData
+getEdenPacketData EdenSCOETC {..} = Just _edenScoeData
+getEdenPacketData EdenTM {..} = Just _edenTmData
+getEdenPacketData EdenSCOETM {..} = Just _edenTmScoeData
+getEdenPacketData EdenRawData {} = Nothing 
+
+getEdenRawData :: EdenData -> HexBytes 
+getEdenRawData EdenSpaceTC {..} = _edenSpaceData
+getEdenRawData EdenSCOETC {..} = _edenScoeData
+getEdenRawData EdenTM {..} = _edenTmData
+getEdenRawData EdenSCOETM {..} = _edenTmScoeData
+getEdenRawData EdenRawData {..} = _edenRawData
+
 
 
 -- | Eden Message structure used for the EDEN protocol

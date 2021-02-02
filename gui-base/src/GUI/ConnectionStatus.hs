@@ -35,14 +35,7 @@ newConnectionStatus
     :: ProtocolInterface -> Text -> Text -> Word16 -> IO ConnectionStatus
 newConnectionStatus interface connType host port = do
 
-    frame <- frameNew (Just (interf interface connType))
-    -- t     <- getFrameLabelWidget frame
-    -- case t of
-    --     Nothing -> return ()
-    --     Just t2 -> do
-    --         castTo Label t2 >>= \case
-    --             Nothing         -> return ()
-    --             Just titleLabel -> labelSetUseMarkup titleLabel True
+    frame     <- frameNew (Just (interf interface connType))
 
     grid      <- gridNew
 
@@ -79,12 +72,9 @@ newConnectionStatus interface connType host port = do
     return g
 
   where
-    -- interf (IfNctrs _x) t = "<b>" <> t <> "</b>"
-    -- interf (IfCnc   _x) t = "<b>" <> t <> "</b>"
-    -- interf (IfEden  x ) _ = "<b>EDEN " <> textDisplay x <> "</b>"
-    interf (IfNctrs _x) t = t
-    interf (IfCnc   _x) t = t
-    interf (IfEden  x ) _ = "EDEN " <> textDisplay x
+    interf (IfNctrs x) t = t <> " (" <> textDisplay x <> ")"
+    interf (IfCnc   x) t = t <> " (" <> textDisplay x <> ")"
+    interf (IfEden  x) _ = "EDEN " <> textDisplay x
 
 
 setConnectionState :: ConnectionStatus -> ConnectionState -> IO ()
