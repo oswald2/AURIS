@@ -8,6 +8,7 @@
                 "cfgCncPortTM": 10000,
                 "cfgCncHost": "localhost",
                 "cfgCncPortTC": 11000,
+                "cfgCncName": "SCOE 1",
                 "cfgCncID": 1
             }
         ],
@@ -36,6 +37,7 @@
                 "cfgNctrsPortTC": 20009,
                 "cfgNctrsID": 1,
                 "cfgNctrsHost": "localhost",
+                "cfgNctrsName": "NCTRS A",
                 "cfgNctrsPortADM": 20010,
                 "cfgNctrsPortTM": 2502
             }
@@ -44,6 +46,7 @@
         "cfgCltuBlockSize": "CltuBS_8",
         "cfgEDEN": [
             {
+                "cfgEdenName": "EDEN 1",
                 "cfgEdenID": 1,
                 "cfgEdenHost": "localhost",
                 "cfgEdenPort": 40300

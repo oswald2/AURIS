@@ -47,11 +47,12 @@ import           Protocol.ProtocolInterfaces
 
 
 data NctrsConfig = NctrsConfig {
-  cfgNctrsID :: Word16
-  , cfgNctrsHost :: Text
-  , cfgNctrsPortTC :: Word16
-  , cfgNctrsPortTM :: Word16
-  , cfgNctrsPortADM :: Word16
+  cfgNctrsID :: !Word16
+  , cfgNctrsName :: !Text
+  , cfgNctrsHost :: !Text
+  , cfgNctrsPortTC :: !Word16
+  , cfgNctrsPortTM :: !Word16
+  , cfgNctrsPortADM :: !Word16
 } deriving (Eq, Generic)
 
 instance FromJSON NctrsConfig
@@ -61,16 +62,18 @@ instance ToJSON NctrsConfig where
 
 data CncConfig = CncConfig {
   -- | A numerical ID, which needs to be unique for this C&C connection
-  cfgCncID :: Word16
+  cfgCncID :: !Word16
+  -- | A name for the connection to be displayed in the GUI
+  , cfgCncName :: !Text 
   -- | The host where to connect to 
-  , cfgCncHost :: Text
+  , cfgCncHost :: !Text
   -- | The TM port to connect to 
-  , cfgCncPortTM :: Word16
+  , cfgCncPortTM :: !Word16
   -- | The TC port to connect to 
-  , cfgCncPortTC :: Word16
+  , cfgCncPortTC :: !Word16
     -- | Configures, if packets on the C&C protocol link should 
     -- be CRC checked or not 
-  , cfgCncHasCRC :: Bool
+  , cfgCncHasCRC :: !Bool
 } deriving (Eq, Generic)
 
 instance FromJSON CncConfig
@@ -81,11 +84,13 @@ instance ToJSON CncConfig where
 -- | Configuration for an EDEN connection. 
 data EDENConfig = EDENConfig {
     -- | A numerical ID, which needs to be unique for this C&C connection
-    cfgEdenID :: Word16
+    cfgEdenID :: !Word16
+  -- | A name for the connection to be displayed in the GUI
+    , cfgEdenName :: !Text 
     -- | The host where to connect to 
-    , cfgEdenHost :: Text
+    , cfgEdenHost :: !Text
     -- | The port where to connect to 
-    , cfgEdenPort :: Word16
+    , cfgEdenPort :: !Word16
     }
     deriving (Eq, Generic)
 
@@ -99,15 +104,15 @@ instance ToJSON EDENConfig where
 data VerificationConfig = VerificationConfig {
   -- | Specifies the timeout for the G and T stage. Both are set 
   -- together with he same timeout (ground reception and transmission)
-  cfgTimeoutGT :: Word16
+  cfgTimeoutGT :: !Word16
   -- | Specifies the timeout for the O (on-board arrival) stage.
-  , cfgTimeoutO :: Word16
+  , cfgTimeoutO :: !Word16
   -- | Specifies the timeout for the A (acceptance) stage.
-  , cfgTimeoutA :: Word16 
+  , cfgTimeoutA :: !Word16 
   -- | Specifies the timeout for the S (start execution) stage.
-  , cfgTimeoutS :: Word16
+  , cfgTimeoutS :: !Word16
   -- | Specifies the timeout for the C (execution complete) stage.
-  , cfgTimeoutC :: Word16 
+  , cfgTimeoutC :: !Word16 
 } deriving (Eq, Generic)
 
 instance FromJSON VerificationConfig
@@ -127,7 +132,7 @@ defaultVerifConfig = VerificationConfig {
 -- | The configuration of the PUS functionality
 data Config = Config {
     -- | The block size that is used to encode/decode the CLTU
-    cfgCltuBlockSize :: CltuBlockSize
+    cfgCltuBlockSize :: !CltuBlockSize
     -- | If the socket interface is used, specifies Just portnumber, else Nothing
     , cfgInterfacePort :: Maybe Word16
     -- | If the TC randomization is enabled by default
@@ -190,6 +195,7 @@ cltuBlockSizeAsWord8 CltuBS_8 = 8
 
 defaultEdenConfig :: EDENConfig
 defaultEdenConfig = EDENConfig { cfgEdenID   = 1
+                               , cfgEdenName = "EDEN 1"
                                , cfgEdenHost = "localhost"
                                , cfgEdenPort = 40300
                                }
@@ -197,6 +203,7 @@ defaultEdenConfig = EDENConfig { cfgEdenID   = 1
 
 defaultNctrsConfig :: NctrsConfig
 defaultNctrsConfig = NctrsConfig { cfgNctrsID      = 1
+                                 , cfgNctrsName    = "NCTRS A"
                                  , cfgNctrsHost    = "localhost"
                                  , cfgNctrsPortTC  = 20009
                                  , cfgNctrsPortTM  = 2502
@@ -205,6 +212,7 @@ defaultNctrsConfig = NctrsConfig { cfgNctrsID      = 1
 
 defaultCncConfig :: CncConfig
 defaultCncConfig = CncConfig { cfgCncID     = 1
+                             , cfgCncName   = "SCOE 1" 
                              , cfgCncHost   = "localhost"
                              , cfgCncPortTM = 10000
                              , cfgCncPortTC = 11000

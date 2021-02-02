@@ -58,15 +58,13 @@ import           ByteString.StrictBuilder       ( asciiIntegral
                                                 )
 
 import           Codec.Serialise                ( Serialise(..) )
-import           Codec.Serialise.Encoding       ( encodeWord8
-                                                , encodeWord16
+import           Codec.Serialise.Encoding       ( encodeInt32
                                                 , encodeWord32
-                                                , encodeInt32
+                                                , encodeWord8
                                                 )
-import           Codec.Serialise.Decoding       ( decodeWord8
-                                                , decodeWord16
+import           Codec.Serialise.Decoding       ( decodeInt32
                                                 , decodeWord32
-                                                , decodeInt32
+                                                , decodeWord8
                                                 )
 
 import           Data.PUS.EncTime               ( cucTimeLen
@@ -79,7 +77,7 @@ import           Data.PUS.EncTime               ( cucTimeLen
 import           General.SizeOf                 ( BitSizes(..) )
 
 import           General.Hexdump                ( hexdumpLineBS )
-import           General.Types                  
+import           General.Types
 import           General.PUSTypes               ( PFC(..)
                                                 , PTC(..)
                                                 )
@@ -900,11 +898,6 @@ isGettableUnaligned ValInt32{}  = True
 isGettableUnaligned ValInt64{}  = True
 isGettableUnaligned _           = False
 
---     | ValOctet !ByteString
---     | ValFixedOctet !Word16 !ByteString
---     | ValCUCTime CUCTime
---     | ValUndefined
-
 
 typeColumn :: Int
 typeColumn = 12
@@ -916,20 +909,18 @@ val1Column :: Int
 val1Column = 21
 
 
-emptyEndian :: TB.Builder 
+emptyEndian :: TB.Builder
 emptyEndian = foldMap TB.char (replicate endianColumn ' ')
 
 
-valueHeaderLine :: TB.Builder 
-valueHeaderLine = 
-    let len = typeColumn + endianColumn + val1Column
-    in
+valueHeaderLine :: TB.Builder
+valueHeaderLine =
     padFromRight typeColumn ' ' (TB.text "Type")
         <> padFromRight endianColumn ' ' (TB.text "BO")
         <> padFromRight val1Column   ' ' (TB.text "Value")
 
-buildEndianUnsigned :: Integral a => Text -> Endian -> a -> TB.Builder 
-buildEndianUnsigned typ b x = 
+buildEndianUnsigned :: Integral a => Text -> Endian -> a -> TB.Builder
+buildEndianUnsigned typ b x =
     padFromRight typeColumn ' ' (TB.text typ)
         <> padFromRight endianColumn ' ' (endianBuilder b)
         <> padFromRight val1Column   ' ' (TB.unsignedDecimal x)
@@ -937,95 +928,93 @@ buildEndianUnsigned typ b x =
         <> TB.hexadecimal x
         <> TB.text ")"
 
-builderUnsigned :: Integral a => Word8 -> a -> TB.Builder 
-builderUnsigned width x = 
+builderUnsigned :: Integral a => Word8 -> a -> TB.Builder
+builderUnsigned width x =
     padFromRight typeColumn ' ' (TB.text "UINT" <> TB.decimal width)
         <> emptyEndian
-        <> padFromRight val1Column   ' ' (TB.unsignedDecimal x)
+        <> padFromRight val1Column ' ' (TB.unsignedDecimal x)
         <> TB.text " (0x"
         <> TB.hexadecimal x
         <> TB.text ")"
 
-builderSigned :: Integral a => Word8 -> a -> TB.Builder 
-builderSigned width x = 
+builderSigned :: Integral a => Word8 -> a -> TB.Builder
+builderSigned width x =
     padFromRight typeColumn ' ' (TB.text "INT" <> TB.decimal width)
         <> emptyEndian
-        <> padFromRight val1Column   ' ' (TB.decimal x)
+        <> padFromRight val1Column ' ' (TB.decimal x)
 
 
-buildEndianSigned :: Integral a => Text -> Endian -> a -> TB.Builder 
-buildEndianSigned typ b x = 
+buildEndianSigned :: Integral a => Text -> Endian -> a -> TB.Builder
+buildEndianSigned typ b x =
     padFromRight typeColumn ' ' (TB.text typ)
         <> padFromRight endianColumn ' ' (endianBuilder b)
         <> padFromRight val1Column   ' ' (TB.decimal x)
 
 
-builderReal :: Text -> Endian -> Double -> TB.Builder 
-builderReal typ b x = 
+builderReal :: Text -> Endian -> Double -> TB.Builder
+builderReal typ b x =
     padFromRight typeColumn ' ' (TB.text typ)
         <> padFromRight endianColumn ' ' (endianBuilder b)
         <> TB.fixedDouble 16 x
 
-octetBuilder x = 
-    let chunks = chunkedByBS 4 x 
-        
+octetBuilder :: ByteString -> TB.Builder
+octetBuilder x =
+    let chnks    = chunkedByBS 4 x
+
         convChunk = mconcat . map byteToHex . B.unpack
-        converted = map convChunk chunks 
+        converted = map convChunk chnks
 
-        values = chunksIntersperse 2 ["\n"] converted
+        values    = chunksIntersperse 2 ["\n"] converted
 
-        byteToHex :: Word8 -> TB.Builder 
-        byteToHex x = TB.padFromLeft 2 '0' (TB.hexadecimal x)
-    in
-    mconcat (mconcat values)
+        byteToHex :: Word8 -> TB.Builder
+        byteToHex a = TB.padFromLeft 2 '0' (TB.hexadecimal a)
+    in  mconcat (mconcat values)
 
 
 
 valueBuilder :: Value -> TB.Builder
-valueBuilder (ValUInt16 b x) = buildEndianUnsigned "UINT16" b x 
-valueBuilder (ValUInt24 b x) = buildEndianUnsigned "UINT24" b x 
-valueBuilder (ValUInt32 b x) = buildEndianUnsigned "UINT32" b x 
-valueBuilder (ValUInt64 b x) = buildEndianUnsigned "UINT64" b x 
+valueBuilder (ValUInt16 b x ) = buildEndianUnsigned "UINT16" b x
+valueBuilder (ValUInt24 b x ) = buildEndianUnsigned "UINT24" b x
+valueBuilder (ValUInt32 b x ) = buildEndianUnsigned "UINT32" b x
+valueBuilder (ValUInt64 b x ) = buildEndianUnsigned "UINT64" b x
 
-valueBuilder (ValInt16 b x) = buildEndianSigned "INT16" b x 
-valueBuilder (ValInt24 b x) = buildEndianSigned "INT24" b x 
-valueBuilder (ValInt32 b x) = buildEndianSigned "INT32" b x 
-valueBuilder (ValInt64 b x) = buildEndianSigned "INT64" b x 
+valueBuilder (ValInt16  b x ) = buildEndianSigned "INT16" b x
+valueBuilder (ValInt24  b x ) = buildEndianSigned "INT24" b x
+valueBuilder (ValInt32  b x ) = buildEndianSigned "INT32" b x
+valueBuilder (ValInt64  b x ) = buildEndianSigned "INT64" b x
 
-valueBuilder (ValUInt8X w x) = builderUnsigned (unB8 w) x 
-valueBuilder (ValUInt8 x) = builderUnsigned 8 x 
-valueBuilder (ValUInt16X w x) = builderUnsigned (unB16 w) x 
-valueBuilder (ValUInt32X w x) = builderUnsigned (unB32 w) x 
-valueBuilder (ValInt8 x) = builderSigned 8 x
+valueBuilder (ValUInt8X w x ) = builderUnsigned (unB8 w) x
+valueBuilder (ValUInt8 x    ) = builderUnsigned 8 x
+valueBuilder (ValUInt16X w x) = builderUnsigned (unB16 w) x
+valueBuilder (ValUInt32X w x) = builderUnsigned (unB32 w) x
+valueBuilder (ValInt8 x     ) = builderSigned 8 x
 
-valueBuilder (ValDouble b x) = builderReal "DOUBLE" b x 
+valueBuilder (ValDouble b x ) = builderReal "DOUBLE" b x
 
-valueBuilder (ValString x) = 
+valueBuilder (ValString x) =
     padFromRight typeColumn ' ' (TB.text "STRING")
         <> emptyEndian
         <> TB.asciiByteString x
 
-valueBuilder (ValFixedString l x) = 
+valueBuilder (ValFixedString l x) =
     padFromRight typeColumn ' ' (TB.text "STRING" <> TB.decimal l)
         <> emptyEndian
         <> TB.asciiByteString x
 
-valueBuilder (ValOctet x) = 
+valueBuilder (ValOctet x) =
     padFromRight typeColumn ' ' (TB.text "STRING")
         <> emptyEndian
-        <> octetBuilder x 
+        <> octetBuilder x
 
-valueBuilder (ValFixedOctet l x) = 
+valueBuilder (ValFixedOctet l x) =
     padFromRight typeColumn ' ' (TB.text "STRING" <> TB.decimal l)
         <> emptyEndian
         <> octetBuilder x
 
-valueBuilder (ValCUCTime x) = 
-    padFromRight typeColumn ' ' (TB.text "CUC_4_2")
-        <> emptyEndian
-        <> TB.text (textDisplay x)
+valueBuilder (ValCUCTime x) =
+    padFromRight typeColumn ' ' (TB.text "CUC_4_2") <> emptyEndian <> TB.text
+        (textDisplay x)
 
-valueBuilder ValUndefined = 
-    TB.text "UNDEFINED"
+valueBuilder ValUndefined = TB.text "UNDEFINED"
 
 

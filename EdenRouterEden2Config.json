@@ -31,15 +31,24 @@
         "cfgEDEN": [
             {
                 "cfgEdenID": 1,
+                "cfgEdenName": "CCS EDEN",
                 "cfgEdenHost": "localhost",
                 "cfgEdenType": "SCOE",
                 "cfgEdenPort": 40300
             },
             {
                 "cfgEdenID": 2,
+                "cfgEdenName": "TSC EDEN",
                 "cfgEdenHost": "localhost",
                 "cfgEdenType": "SCOE",
                 "cfgEdenPort": 40301
+            },
+            {
+                "cfgEdenID": 3,
+                "cfgEdenName": "Simulator",
+                "cfgEdenHost": "localhost",
+                "cfgEdenType": "SCOE",
+                "cfgEdenPort": 40302
             }
         ],
         "cfgTMSegLength": "TMSegment65536",

@@ -8,14 +8,16 @@
                 "cfgCncPortTM": 10000,
                 "cfgCncHost": "localhost",
                 "cfgCncPortTC": 11000,
-                "cfgCncID": 1
+                "cfgCncID": 1,
+                "cfgCncName": "CCS C&amp;C"
             },
             {
                 "cfgCncHasCRC": true,
                 "cfgCncPortTM": 10001,
                 "cfgCncHost": "localhost",
                 "cfgCncPortTC": 11001,
-                "cfgCncID": 2
+                "cfgCncID": 2,
+                "cfgCncName": "TSC C&amp;C"
             }
         ],
         "cfgUnknownSPID": 5071,
@@ -43,6 +45,13 @@
         "cfgMaxTMFrameLen": 1115,
         "cfgCltuBlockSize": "CltuBS_8",
         "cfgEDEN": [
+            {
+                "cfgEdenID": 1,
+                "cfgEdenName": "Simulator",
+                "cfgEdenHost": "localhost",
+                "cfgEdenType": "SCOE",
+                "cfgEdenPort": 40300
+            }
         ],
         "cfgTMSegLength": "TMSegment65536",
         "cfgTMFrameHasCRC": true

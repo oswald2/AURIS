@@ -31,6 +31,7 @@
         "cfgEDEN": [
             {
                 "cfgEdenID": 1,
+                "cfgEdenName": "CCS EDEN",
                 "cfgEdenHost": "localhost",
                 "cfgEdenType": "SCOE",
                 "cfgEdenPort": 40300
