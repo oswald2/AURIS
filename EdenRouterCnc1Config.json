@@ -50,7 +50,7 @@
                 "cfgEdenName": "Simulator",
                 "cfgEdenHost": "localhost",
                 "cfgEdenType": "SCOE",
-                "cfgEdenPort": 40300
+                "cfgEdenPort": 40302
             }
         ],
         "cfgTMSegLength": "TMSegment65536",
