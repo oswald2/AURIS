@@ -29,6 +29,7 @@ module Control.PUS.Classes
     , setDataModel
     , HasRaiseEvent(..)
     , HasVerif(..)
+    , HasDatabase(..)
     ) where
 
 import           RIO                     hiding ( to
@@ -58,6 +59,10 @@ import           Verification.Verification
 -- | This class specifies how to get a configuration
 class HasConfig env where
     getConfig :: Getter env Config
+
+-- | This class specifies how to get database path
+class HasDatabase env where
+    getDatabasePath :: Getter env (Maybe FilePath)
 
 -- | Class for getting the application state
 class HasPUSState env where
@@ -116,6 +121,7 @@ class HasVerif env where
 
 -- | Class for accessing the global state
 class (HasConfig env,
+    HasDatabase env,
     HasPUSState env,
     HasFOPState env,
     HasMissionSpecific env,
@@ -130,6 +136,9 @@ class (HasConfig env,
 
 instance HasConfig GlobalState where
     getConfig = to glsConfig
+
+instance HasDatabase GlobalState where
+  getDatabasePath = to glsDatabasePath
 
 instance HasPUSState GlobalState where
     appStateG = to glsState

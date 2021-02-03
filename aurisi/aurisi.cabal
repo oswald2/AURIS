@@ -63,6 +63,7 @@ Executable AURISi
     lens,
     containers,
     esa-base,
+    esa-db,
     esa-space-protocols,
     esa-mib,
     gui-base,

@@ -166,6 +166,8 @@ data Config = Config {
     , cfgEDEN :: [EDENConfig]
     -- | Specifies default values for TC verifications
     , cfgVerification :: VerificationConfig
+    , cfgStoreTMFrames :: Bool
+    , cfgDataBasePath :: FilePath
 } deriving (Eq, Generic)
 
 
@@ -238,6 +240,8 @@ defaultConfig = Config { cfgCltuBlockSize        = CltuBS_8
                        , cfgCnC                  = [defaultCncConfig]
                        , cfgEDEN                 = [defaultEdenConfig]
                        , cfgVerification         = defaultVerifConfig
+                       , cfgStoreTMFrames        = True
+                       , cfgDataBasePath         = "AURISDB.sqlite"
                        }
 
 

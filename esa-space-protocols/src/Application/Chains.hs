@@ -21,12 +21,12 @@ import           Data.Conduit.TQueue            ( sinkTBQueue
 import           Conduit.SocketConnector        ( runGeneralTCPReconnectClient )
 
 import           Data.PUS.Config
-import           Data.PUS.GlobalState           ( GlobalState )
+import           Data.PUS.GlobalState           
 import           Data.PUS.MissionSpecific.Definitions
                                                 ( PUSMissionSpecific )
 import           Data.PUS.TMFrameExtractor      ( setupFrameSwitcher
-                                                , storeFrameC
                                                 , tmFrameSwitchVC
+                                                , frameDbSink
                                                 )
 import           Data.PUS.TMPacketProcessing    ( packetProcessorC
                                                 , raiseTMPacketC
@@ -109,13 +109,23 @@ runTMNctrsChain :: NctrsConfig -> TBQueue ExtractedPacket -> RIO GlobalState ()
 runTMNctrsChain cfg pktQueue = do
     logDebug "runTMNctrsChain entering"
 
+
+    dbConfig <- view getDatabasePath
+    storeTMFrames <- cfgStoreTMFrames . glsConfig <$> ask
+
+    let dbSink = case (dbConfig, storeTMFrames) of
+            (Just dbPath, True) -> frameDbSink dbPath
+            _                   -> sinkNull
+
     (_thread, vcMap) <- setupFrameSwitcher (IfNctrs (cfgNctrsID cfg)) pktQueue
 
     let chain =
             receiveTmNcduC
                 .| ncduToTMFrameC
-                .| storeFrameC
-                .| tmFrameSwitchVC vcMap
+                .| getZipSink
+                    (  ZipSink dbSink
+                    *> ZipSink (tmFrameSwitchVC vcMap)
+                    )
 
     runGeneralTCPReconnectClient
         (clientSettings (fromIntegral (cfgNctrsPortTM cfg))
@@ -248,8 +258,6 @@ runAdminNctrsChain cfg = do
                     <> displayShow e
                 throwM e
             Right _ -> return ()
-
-
 
 
 runTMCnCChain

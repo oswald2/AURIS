@@ -17,6 +17,8 @@ import           Interface.CoreProcessor
 
 import           AurisConfig
 
+import           Persistence.Logging            ( withDatabaseLogger )
+
 import           System.Directory
 import           System.FilePath
 
@@ -45,6 +47,7 @@ runProcessing cfg missionSpecific mibPath interface mainWindow coreQueue = do
     withLogFunc logOptions $ \logFunc -> do
         let logf =
                 logFunc <> messageAreaLogFunc (mainWindow ^. mwMessageDisplay)
+        --let dbPath = ((home </> configPath) </>) <$> aurisDatabase cfg
         state <- newGlobalState (aurisPusConfig cfg)
                                 missionSpecific
                                 logf
@@ -81,6 +84,15 @@ runProcessing cfg missionSpecific mibPath interface mainWindow coreQueue = do
 
 
 
+-- withLogging :: AurisConfig -> MainWindow -> (LogFunc -> IO ()) -> IO ()
+-- withLogging cfg mainWindow app = do
+--   defLogOptions <- logOptionsHandle stdout True
+--   let logOptions =
+--         setLogMinLevel (convLogLevel (aurisLogLevel cfg)) defLogOptions
 
-
-
+--   withLogFunc logOptions $ \logFn -> do
+--     let logFn' = logFn <> messageAreaLogFunc mainWindow
+--     case (aurisDatabase cfg, aurisDbLogLevel cfg) of
+--       (Just dbPath, Just logLvl) -> withDatabaseLogger
+--         dbPath (convLogLevel logLvl) $ app . mappend logFn'
+--       _ -> app logFn'
