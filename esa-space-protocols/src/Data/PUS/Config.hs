@@ -11,24 +11,23 @@ This module contains the data structure for configuration. The configuration can
 JSON (via the aeson library)
 -}
 module Data.PUS.Config
-  (
+    (
     -- | The config data type itself
-    Config(..)
+      Config(..)
     -- | Type for the CLTU code block size. Restricted to be 5 .. 8
-  , CltuBlockSize(..)
-  , NctrsConfig(..)
-  , CncConfig(..)
-  , EDENConfig(..)
-  , VerificationConfig(..)
-  , cltuBlockSizeAsWord8
-  , defaultConfig
+    , CltuBlockSize(..)
+    , NctrsConfig(..)
+    , CncConfig(..)
+    , EDENConfig(..)
+    , VerificationConfig(..)
+    , cltuBlockSizeAsWord8
+    , defaultConfig
     -- , writeConfigString
-  , writeConfigJSON
+    , writeConfigJSON
     -- , loadConfigString
-  , loadConfigJSON
-  , getInterfaces
-  )
-where
+    , loadConfigJSON
+    , getInterfaces
+    ) where
 
 
 import           RIO
@@ -45,48 +44,54 @@ import           General.Time
 
 import           Protocol.ProtocolInterfaces
 
+import           Data.DbConfig
 
-data NctrsConfig = NctrsConfig {
-  cfgNctrsID :: !Word16
-  , cfgNctrsName :: !Text
-  , cfgNctrsHost :: !Text
-  , cfgNctrsPortTC :: !Word16
-  , cfgNctrsPortTM :: !Word16
-  , cfgNctrsPortADM :: !Word16
-} deriving (Eq, Generic)
+
+data NctrsConfig = NctrsConfig
+    { cfgNctrsID      :: !Word16
+    , cfgNctrsName    :: !Text
+    , cfgNctrsHost    :: !Text
+    , cfgNctrsPortTC  :: !Word16
+    , cfgNctrsPortTM  :: !Word16
+    , cfgNctrsPortADM :: !Word16
+    }
+    deriving (Eq, Generic)
 
 instance FromJSON NctrsConfig
 instance ToJSON NctrsConfig where
-  toEncoding = genericToEncoding defaultOptions
+    toEncoding = genericToEncoding defaultOptions
 
 
-data CncConfig = CncConfig {
+data CncConfig = CncConfig
+    {
   -- | A numerical ID, which needs to be unique for this C&C connection
-  cfgCncID :: !Word16
+      cfgCncID     :: !Word16
   -- | A name for the connection to be displayed in the GUI
-  , cfgCncName :: !Text 
+    , cfgCncName   :: !Text
   -- | The host where to connect to 
-  , cfgCncHost :: !Text
+    , cfgCncHost   :: !Text
   -- | The TM port to connect to 
-  , cfgCncPortTM :: !Word16
+    , cfgCncPortTM :: !Word16
   -- | The TC port to connect to 
-  , cfgCncPortTC :: !Word16
+    , cfgCncPortTC :: !Word16
     -- | Configures, if packets on the C&C protocol link should 
     -- be CRC checked or not 
-  , cfgCncHasCRC :: !Bool
-} deriving (Eq, Generic)
+    , cfgCncHasCRC :: !Bool
+    }
+    deriving (Eq, Generic)
 
 instance FromJSON CncConfig
 instance ToJSON CncConfig where
-  toEncoding = genericToEncoding defaultOptions
+    toEncoding = genericToEncoding defaultOptions
 
 
 -- | Configuration for an EDEN connection. 
-data EDENConfig = EDENConfig {
+data EDENConfig = EDENConfig
+    {
     -- | A numerical ID, which needs to be unique for this C&C connection
-    cfgEdenID :: !Word16
+      cfgEdenID   :: !Word16
   -- | A name for the connection to be displayed in the GUI
-    , cfgEdenName :: !Text 
+    , cfgEdenName :: !Text
     -- | The host where to connect to 
     , cfgEdenHost :: !Text
     -- | The port where to connect to 
@@ -96,84 +101,87 @@ data EDENConfig = EDENConfig {
 
 instance FromJSON EDENConfig
 instance ToJSON EDENConfig where
-  toEncoding = genericToEncoding defaultOptions
+    toEncoding = genericToEncoding defaultOptions
 
 
 -- | Configuration data for the TC verifications. All timeouts 
 -- are specified in seconds
-data VerificationConfig = VerificationConfig {
+data VerificationConfig = VerificationConfig
+    {
   -- | Specifies the timeout for the G and T stage. Both are set 
   -- together with he same timeout (ground reception and transmission)
-  cfgTimeoutGT :: !Word16
+      cfgTimeoutGT :: !Word16
   -- | Specifies the timeout for the O (on-board arrival) stage.
-  , cfgTimeoutO :: !Word16
+    , cfgTimeoutO  :: !Word16
   -- | Specifies the timeout for the A (acceptance) stage.
-  , cfgTimeoutA :: !Word16 
+    , cfgTimeoutA  :: !Word16
   -- | Specifies the timeout for the S (start execution) stage.
-  , cfgTimeoutS :: !Word16
+    , cfgTimeoutS  :: !Word16
   -- | Specifies the timeout for the C (execution complete) stage.
-  , cfgTimeoutC :: !Word16 
-} deriving (Eq, Generic)
+    , cfgTimeoutC  :: !Word16
+    }
+    deriving (Eq, Generic)
 
 instance FromJSON VerificationConfig
 instance ToJSON VerificationConfig where
-  toEncoding = genericToEncoding defaultOptions
+    toEncoding = genericToEncoding defaultOptions
 
 defaultVerifConfig :: VerificationConfig
-defaultVerifConfig = VerificationConfig {
-  cfgTimeoutGT = 20
-  , cfgTimeoutO = 20
-  , cfgTimeoutA = 30
-  , cfgTimeoutS = 30 
-  , cfgTimeoutC = 30 
-}
+defaultVerifConfig = VerificationConfig { cfgTimeoutGT = 20
+                                        , cfgTimeoutO  = 20
+                                        , cfgTimeoutA  = 30
+                                        , cfgTimeoutS  = 30
+                                        , cfgTimeoutC  = 30
+                                        }
 
 
 -- | The configuration of the PUS functionality
-data Config = Config {
+data Config = Config
+    {
     -- | The block size that is used to encode/decode the CLTU
-    cfgCltuBlockSize :: !CltuBlockSize
+      cfgCltuBlockSize        :: !CltuBlockSize
     -- | If the socket interface is used, specifies Just portnumber, else Nothing
-    , cfgInterfacePort :: Maybe Word16
+    , cfgInterfacePort        :: Maybe Word16
     -- | If the TC randomization is enabled by default
-    , cfgRandomizerEnabled :: !Bool
+    , cfgRandomizerEnabled    :: !Bool
     -- | The start value of the randomizer used for standard ESA TC randomization
     , cfgRandomizerStartValue :: !Word8
     -- | The spacecraft ID used
-    , cfgSCID :: SCID
+    , cfgSCID                 :: SCID
     -- | A list of available virtual channels.
-    , cfgVCIDs :: [VCID]
+    , cfgVCIDs                :: [VCID]
     -- | The maximum TM Frame length. This length is used in parsing
     -- the frame data, so it needs to be accurate. Default is by
     -- PUS Standard a value 1115 (1024 bytes data)
-    , cfgMaxTMFrameLen :: Closed 128 2040
+    , cfgMaxTMFrameLen        :: Closed 128 2040
     -- | Indicates, if a TM frame does contain a CRC value
-    , cfgTMFrameHasCRC :: Bool
+    , cfgTMFrameHasCRC        :: Bool
     -- | The configured segment length for TM Frames
-    , cfgTMSegLength :: !TMSegmentLen
+    , cfgTMSegLength          :: !TMSegmentLen
     -- | Specifies the time epoch to be used for time handling
-    , cfgEpoch :: EpochType
+    , cfgEpoch                :: EpochType
     -- | Specified the used leap seconds
-    , cfgLeapSeconds :: LeapSeconds
+    , cfgLeapSeconds          :: LeapSeconds
     -- | Packets, which cannot be identified will be given this 
     -- SPID
-    , cfgUnknownSPID :: SPID
+    , cfgUnknownSPID          :: SPID
     -- | Specifies the configurations for the available NCTRS connections
-    , cfgNCTRS :: [NctrsConfig]
+    , cfgNCTRS                :: [NctrsConfig]
     -- | Specifies the configurations of the available C&C connections
-    , cfgCnC :: [CncConfig]
+    , cfgCnC                  :: [CncConfig]
     -- | Specifies the configuration of the available EDEN connections
-    , cfgEDEN :: [EDENConfig]
+    , cfgEDEN                 :: [EDENConfig]
     -- | Specifies default values for TC verifications
-    , cfgVerification :: VerificationConfig
-    , cfgStoreTMFrames :: Bool
-    , cfgDataBasePath :: FilePath
-} deriving (Eq, Generic)
+    , cfgVerification         :: VerificationConfig
+    , cfgStoreTMFrames        :: Bool
+    , cfgDataBase             :: DbConfig
+    }
+    deriving (Eq, Generic)
 
 
 instance FromJSON Config
 instance ToJSON Config where
-  toEncoding = genericToEncoding defaultOptions
+    toEncoding = genericToEncoding defaultOptions
 
 -- | Specifies the CLTU block size. Since there are only very few
 -- values allowed (5,6,7,8), we do an enumeration
@@ -186,7 +194,7 @@ data CltuBlockSize =
 
 instance FromJSON CltuBlockSize
 instance ToJSON CltuBlockSize where
-  toEncoding = genericToEncoding defaultOptions
+    toEncoding = genericToEncoding defaultOptions
 
 cltuBlockSizeAsWord8 :: CltuBlockSize -> Word8
 cltuBlockSizeAsWord8 CltuBS_5 = 5
@@ -214,7 +222,7 @@ defaultNctrsConfig = NctrsConfig { cfgNctrsID      = 1
 
 defaultCncConfig :: CncConfig
 defaultCncConfig = CncConfig { cfgCncID     = 1
-                             , cfgCncName   = "SCOE 1" 
+                             , cfgCncName   = "SCOE 1"
                              , cfgCncHost   = "localhost"
                              , cfgCncPortTM = 10000
                              , cfgCncPortTC = 11000
@@ -226,7 +234,7 @@ defaultCncConfig = CncConfig { cfgCncID     = 1
 defaultConfig :: Config
 defaultConfig = Config { cfgCltuBlockSize        = CltuBS_8
                        , cfgInterfacePort        = Just 55555
-                       , cfgRandomizerEnabled    = False 
+                       , cfgRandomizerEnabled    = False
                        , cfgRandomizerStartValue = 0xFF
                        , cfgSCID                 = mkSCID 0
                        , cfgVCIDs                = [0, 1]
@@ -241,16 +249,16 @@ defaultConfig = Config { cfgCltuBlockSize        = CltuBS_8
                        , cfgEDEN                 = [defaultEdenConfig]
                        , cfgVerification         = defaultVerifConfig
                        , cfgStoreTMFrames        = True
-                       , cfgDataBasePath         = "AURISDB.sqlite"
+                       , cfgDataBase             = defaultDbConfig
                        }
 
 
 getInterfaces :: Config -> [ProtocolInterface]
 getInterfaces conf = getNctrs ++ getCnc ++ getEden
-  where 
+  where
     getNctrs = RIO.map (IfNctrs . cfgNctrsID) (cfgNCTRS conf)
-    getCnc = RIO.map (IfCnc . cfgCncID) (cfgCnC conf)
-    getEden = RIO.map (IfEden . cfgEdenID) (cfgEDEN conf)
+    getCnc   = RIO.map (IfCnc . cfgCncID) (cfgCnC conf)
+    getEden  = RIO.map (IfEden . cfgEdenID) (cfgEDEN conf)
 
 
 -- | write the config as a serialized string to a file. Uses the Show class for serizalization
@@ -276,7 +284,7 @@ writeConfigJSON cfg path = liftIO $ encodeFile path cfg
 -- | If there is an error on parsing, return 'Left error'
 loadConfigJSON :: MonadIO m => FilePath -> m (Either Text Config)
 loadConfigJSON path = do
-  content <- liftIO $ B.readFile path
-  case eitherDecode content of
-    Left  err -> return $ Left (T.pack err)
-    Right cfg -> return $ Right cfg
+    content <- liftIO $ B.readFile path
+    case eitherDecode content of
+        Left  err -> return $ Left (T.pack err)
+        Right cfg -> return $ Right cfg

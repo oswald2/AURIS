@@ -35,7 +35,6 @@ module Data.PUS.GlobalState
     , glsRaiseEvent
     , glsMissionSpecific
     , glsDataModel
-    , glsDatabasePath
     , glsTCRequestQueue
     , glsVerifCommandQueue
     , newGlobalState
@@ -123,7 +122,6 @@ newGlobalState cfg missionSpecific logErr raiseEvent = do
     let fop1 = HM.fromList $ zip vcids fopTVars
     rqstQueue  <- newTBQueueIO rqstQueueSize
     verifQueue <- newTBQueueIO 5000
-    let dbPath = cfgDataBasePath cfg
 
     let state = GlobalState { glsConfig            = cfg
                             , glsState             = tv
@@ -135,7 +133,6 @@ newGlobalState cfg missionSpecific logErr raiseEvent = do
                             , glsMissionSpecific   = missionSpecific
                             , glsTCRequestQueue    = rqstQueue
                             , glsVerifCommandQueue = verifQueue
-                            , glsDatabasePath      = Just dbPath
                             }
     pure state
 
