@@ -93,7 +93,7 @@ library
         Verification.Verification
         Verification.Commands
         Verification.Processor
-        Persistence.DbInterface
+        Persistence.Logging
         Persistence.Conversion.Types
         Persistence.Conversion.TMFrame
 
@@ -169,6 +169,7 @@ library
         , stm-conduit
         , stm-chans
         , thyme
+        , time
         , vector-binary-instances
         , bytestring-to-vector
         , timers-updatable

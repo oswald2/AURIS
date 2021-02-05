@@ -34,6 +34,7 @@
         "cfgSCID": 0,
         "cfgDataBase": {
             "cfgStoreTMFrames": true,
+            "cfgDbDebugLog": true,
             "cfgBackend": {
                 "tag": "PGConfig",
                 "contents": {

@@ -4,6 +4,7 @@ module Persistence.DbProcessing
     , storeTMFrame
     , storeTMFrames
     , allTMFrames
+    , storeLog
     ) where
 
 
@@ -27,13 +28,21 @@ dbQueueSize = 10000
 
 type DB a = ReaderT SqlBackend (NoLoggingT (ResourceT IO)) a
 
+data DbBackend = DbBackend {
+    _dbbTMFrameQueue :: TBQueue DbTMFrame
+    , _dbbEventQueue :: TBQueue DbLogEvent 
+    }
+
+
 
 startDbProcessing :: DbConfig -> IO DbBackend
 startDbProcessing cfg = do
     frameQueue <- Conc.newTBQueueIO dbQueueSize
+    eventQueue <- Conc.newTBQueueIO dbQueueSize
 
     let db = DbBackend {
                 _dbbTMFrameQueue = frameQueue
+                , _dbbEventQueue = eventQueue
                 }
 
     withDB cfg (runMigration migrateAll)
@@ -42,13 +51,23 @@ startDbProcessing cfg = do
                     PGConfig pgConfig -> withPostgres pgConfig
                     SQConfig sqConfig -> withSQLite sqConfig
 
-    _          <- async (tmFrameStoreThread cfg frameQueue with)
+    let tmFramesT = conc $ tmFrameStoreThread cfg frameQueue with
+        eventsT = conc $ eventStoreThread cfg eventQueue with 
+
+        threads = tmFramesT <> eventsT 
+
+    -- start all the threads    
+    _ <- async $ runConc threads
+
+    -- return the backend 
     return db
 
 
-newtype DbBackend = DbBackend {
-    _dbbTMFrameQueue :: TBQueue DbTMFrame
-    }
+
+
+storeLog :: DbBackend -> DbLogEvent -> IO () 
+storeLog DbBackend {..} event = do
+    RIO.atomically $ writeTBQueue _dbbEventQueue event 
 
 
 storeTMFrame :: DbBackend -> DbTMFrame -> IO () 
@@ -67,11 +86,15 @@ allTMFrames cfg _backend = do
 
 
 withDB :: DbConfig -> DB a -> IO a
-withDB DbConfig { cfgBackend = PGConfig pgConfig } action = do
+withDB DbConfig { cfgDbDebugLog = doLog, cfgBackend = PGConfig pgConfig } action = do
+    if doLog 
+        then withPostgresDebug pgConfig action
+        else withPostgres pgConfig action
     
-    withPostgres pgConfig action
-withDB DbConfig { cfgBackend = SQConfig sqConfig } action = do
-    withSQLite sqConfig action
+withDB DbConfig { cfgDbDebugLog = doLog, cfgBackend = SQConfig sqConfig } action = do
+    if doLog 
+        then withSQLiteDebug sqConfig action
+        else withSQLite sqConfig action
 
 
 withPostgres
@@ -79,6 +102,16 @@ withPostgres
     -> DB a
     -> IO a
 withPostgres pgConfig =
+    runNoLoggingT
+        . withPostgresqlPool (getConnString pgConfig)
+                             (fromIntegral (pgNumberConns pgConfig))
+        . liftSqlPersistMPool
+
+withPostgresDebug
+    :: PostgresConfig
+    -> DB a
+    -> IO a
+withPostgresDebug pgConfig =
     runStderrLoggingT
         . withPostgresqlPool (getConnString pgConfig)
                              (fromIntegral (pgNumberConns pgConfig))
@@ -88,11 +121,18 @@ withPostgres pgConfig =
 withSQLite
     :: SQLiteConfig -> DB a -> IO a
 withSQLite sqConfig =
-    runStderrLoggingT
+    runNoLoggingT
         . withSqlitePool (sqConnString sqConfig)
                          (fromIntegral (sqNumberConns sqConfig))
         . liftSqlPersistMPool
 
+withSQLiteDebug
+    :: SQLiteConfig -> DB a -> IO a
+withSQLiteDebug sqConfig =
+    runStderrLoggingT
+        . withSqlitePool (sqConnString sqConfig)
+                         (fromIntegral (sqNumberConns sqConfig))
+        . liftSqlPersistMPool
 
 
 tmFrameStoreThread :: DbConfig -> TBQueue DbTMFrame -> (DB () -> IO a) -> IO () 
@@ -102,17 +142,8 @@ tmFrameStoreThread _cfg frameQueue with = do
         with $ insertMany_ frames
 
 
-
-
--- data TMFrameQuery = 
---     AllTMFrames 
---     | TMFrameRange SunTime SunTime
-
-
--- tmFrameQueryThread :: TBQueue TMFrameQuery -> (DB a -> IO a) -> IO ()
--- tmFrameQueryThread queue with = do 
---     forever $ do 
---         query <- Conc.atomically (readTBQueue queue)
---         process query 
---     where 
---         process AllTMFrames = 
+eventStoreThread :: DbConfig -> TBQueue DbLogEvent -> (DB () -> IO a) -> IO () 
+eventStoreThread _cfg eventQueue with = do 
+    forever $ do 
+        events <- Conc.atomically (flushTBQueue eventQueue)
+        with $ insertMany_ events

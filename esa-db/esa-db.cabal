@@ -42,10 +42,7 @@ library
       Data.DbConfig 
       Data.DbConfig.Postgres
       Data.DbConfig.SQLite
-      Persistence.Logging
-      Persistence.TMFrame
       Persistence.TMFrameDefinitions
-      Persistence.Postgres 
       Persistence.DbProcessing
       Persistence.Definitions
   other-modules:
@@ -73,6 +70,7 @@ library
     , esa-base 
     , unliftio
     , resourcet
+    , thyme
 
 
   default-language: Haskell2010

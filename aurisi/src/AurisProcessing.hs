@@ -47,7 +47,7 @@ import           Application.DataModel          ( loadDataModelDef
                                                 )
 import           Verification.Processor         ( processVerification )
 import           Persistence.DbProcessing       ( startDbProcessing )
-
+import           Persistence.Logging
 
 
 runProcessing
@@ -62,17 +62,19 @@ runProcessing cfg missionSpecific mibPath interface mainWindow coreQueue = do
     defLogOptions <- logOptionsHandle stdout True
     let logOptions =
             setLogMinLevel (convLogLevel (aurisLogLevel cfg)) defLogOptions
-    
+
     -- start with the logging 
     withLogFunc logOptions $ \logFunc -> do
-    
+
         -- First, we create the databas
         dbBackend <- startDbProcessing (cfgDataBase (aurisPusConfig cfg))
-        
+
         -- Add the logging function to the GUI
-        let logf = logFunc
-                <> messageAreaLogFunc (mainWindow ^. mwMessageDisplay)
-            
+        let logf =
+                logFunc
+                    <> messageAreaLogFunc (mainWindow ^. mwMessageDisplay)
+                    <> mkLogFunc (logToDB dbBackend)
+
         -- Create a new 'GlobalState' for the processing
         state <- newGlobalState (aurisPusConfig cfg)
                                 missionSpecific

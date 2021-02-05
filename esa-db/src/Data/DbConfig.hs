@@ -17,6 +17,7 @@ data DbConfig = DbConfig
     {
     -- | Flag to specify if TM Frames should be stored in the database
       cfgStoreTMFrames :: !Bool
+    , cfgDbDebugLog    :: !Bool
     , cfgBackend       :: !DbBackendConfig
     }
     deriving (Eq, Read, Show, Generic, FromJSON, ToJSON)
@@ -31,6 +32,7 @@ data DbBackendConfig =
 
 defaultDbConfig :: DbConfig
 defaultDbConfig = DbConfig { cfgStoreTMFrames = True
+                           , cfgDbDebugLog = True
                            , cfgBackend       = PGConfig defaultPostgresConfig
                            }
 

@@ -9,22 +9,26 @@ module Persistence.Definitions
     ( DbTMFrame(..)
     , DbTMSegmentLen(..)
     , DbTMFrameId
+    , DbLogEvent(..)
+    , DbLogEventId
     , migrateAll
     ) where
 
 import           RIO
-import           Data.Word
--- import           Database.Persist
+--import           Data.Word
+import           Data.Time.Clock                ( UTCTime )
+
 import           Database.Persist.TH
 
 import           Persistence.TMFrameDefinitions
--- import           General.PUSTypes
-
-
-
 
 
 share [mkPersist sqlSettings, mkMigrate "migrateAll"] [persistUpperCase|
+DbLogEvent
+    timestamp UTCTime
+    source Text 
+    level Word8 
+    message Text
 DbTMFrame
     ert Int64 
     version Word8
