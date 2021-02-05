@@ -56,6 +56,7 @@ data ActionTable = ActionTable {
     , actionLogMessage :: LogSource -> LogLevel -> Utf8Builder -> IO ()
     , actionSendTCRequest :: TCRequest -> IO ()
     , actionSendTCGroup :: [TCRequest] -> IO ()
+    , actionRequestAllFrames :: IO ()
     }
 
 -- | Data type for the event handler.
@@ -81,6 +82,7 @@ actionTable queue = ActionTable
   , actionLogMessage    = \s l msg -> callAction queue (LogMsg s l msg)
   , actionSendTCRequest = callAction queue . SendTCRequest
   , actionSendTCGroup   = callAction queue . SendTCGroup
+  , actionRequestAllFrames = callAction queue RequestAllTMFrames
   }
 
 

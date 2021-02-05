@@ -3,6 +3,7 @@ module Persistence.DbProcessing
     , startDbProcessing
     , storeTMFrame
     , storeTMFrames
+    , allTMFrames
     ) where
 
 
@@ -40,8 +41,8 @@ startDbProcessing cfg = do
     let with = case cfgBackend cfg of 
                     PGConfig pgConfig -> withPostgres pgConfig
                     SQConfig sqConfig -> withSQLite sqConfig
-                    
-    _          <- async (tmStoreThread cfg frameQueue with)
+
+    _          <- async (tmFrameStoreThread cfg frameQueue with)
     return db
 
 
@@ -59,9 +60,15 @@ storeTMFrames DbBackend {..} frames = do
     RIO.atomically $ do 
         forM_ frames $ writeTBQueue _dbbTMFrameQueue
 
+allTMFrames :: DbConfig -> DbBackend -> IO [DbTMFrame]
+allTMFrames cfg _backend = do 
+    withDB cfg $ do 
+        map entityVal <$> selectList [] []
+
 
 withDB :: DbConfig -> DB a -> IO a
 withDB DbConfig { cfgBackend = PGConfig pgConfig } action = do
+    
     withPostgres pgConfig action
 withDB DbConfig { cfgBackend = SQConfig sqConfig } action = do
     withSQLite sqConfig action
@@ -88,8 +95,24 @@ withSQLite sqConfig =
 
 
 
-tmStoreThread :: DbConfig -> TBQueue DbTMFrame -> (DB () -> IO a) -> IO () 
-tmStoreThread _cfg frameQueue with = do
+tmFrameStoreThread :: DbConfig -> TBQueue DbTMFrame -> (DB () -> IO a) -> IO () 
+tmFrameStoreThread _cfg frameQueue with = do
     forever $ do
         frames <- Conc.atomically (flushTBQueue frameQueue)
         with $ insertMany_ frames
+
+
+
+
+-- data TMFrameQuery = 
+--     AllTMFrames 
+--     | TMFrameRange SunTime SunTime
+
+
+-- tmFrameQueryThread :: TBQueue TMFrameQuery -> (DB a -> IO a) -> IO ()
+-- tmFrameQueryThread queue with = do 
+--     forever $ do 
+--         query <- Conc.atomically (readTBQueue queue)
+--         process query 
+--     where 
+--         process AllTMFrames = 

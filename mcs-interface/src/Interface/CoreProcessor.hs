@@ -21,6 +21,7 @@ data InterfaceAction =
   | LogMsg LogSource LogLevel Utf8Builder
   | SendTCRequest TCRequest
   | SendTCGroup [TCRequest]
+  | RequestAllTMFrames
   deriving (Generic)
 
 
@@ -31,6 +32,7 @@ runCoreThread
      , HasDataModel env
      , HasLogFunc env
      , HasTCRqstQueue env
+     , HasDatabase env
      )
   => TBQueue InterfaceAction
   -> m ()
@@ -56,6 +58,7 @@ processMsg
      , HasDataModel env
      , HasLogFunc env
      , HasTCRqstQueue env
+     , HasDatabase env
      )
   => InterfaceAction
   -> m ()
@@ -68,6 +71,10 @@ processMsg (SendTCRequest rqst          ) = do
 processMsg (SendTCGroup group) = do 
   q <- view getRqstQueue
   atomically $ writeTBQueue q group 
+processMsg RequestAllTMFrames = do 
+  env <- ask
+  frames <- liftIO $ getAllFrames env
+  logInfo $ "Received Frames from DB:\n" <> displayShow frames
 
 
 importMIB

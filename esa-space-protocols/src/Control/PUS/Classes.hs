@@ -125,7 +125,7 @@ class HasDatabase env where
     getDbBackend :: env -> Maybe DbBackend
     storeTMFrame :: env -> TMStoreFrame -> IO ()
     storeTMFrames :: env -> [TMStoreFrame] -> IO ()
-
+    getAllFrames :: env -> IO [TMStoreFrame]
 
 
 -- | Class for accessing the global state
@@ -211,6 +211,13 @@ instance HasDatabase GlobalState where
         maybe (return ())
               (\db -> DB.storeTMFrames db (map toDB frames))
               (getDbBackend env)
+
+    getAllFrames env = do
+        let cfg = cfgDataBase (glsConfig env)
+        maybe (return [])
+              (fmap (map fromDB) . DB.allTMFrames cfg)
+              (getDbBackend env)
+
 
 instance HasGlobalState GlobalState
 
