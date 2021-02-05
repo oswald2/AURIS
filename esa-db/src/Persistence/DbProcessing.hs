@@ -3,7 +3,9 @@ module Persistence.DbProcessing
     , startDbProcessing
     , storeTMFrame
     , storeTMFrames
+    , eventsLastPage
     , allTMFrames
+    , tmFramesLastPage
     , storeLog
     ) where
 
@@ -69,6 +71,10 @@ storeLog :: DbBackend -> DbLogEvent -> IO ()
 storeLog DbBackend {..} event = do
     RIO.atomically $ writeTBQueue _dbbEventQueue event 
 
+eventsLastPage :: DbConfig -> Int -> Int -> IO [DbLogEvent]
+eventsLastPage cfg pageSize offset = do 
+    withDB cfg $ do 
+        map entityVal <$> selectList [] [Desc DbLogEventTimestamp, LimitTo pageSize, OffsetBy offset]
 
 storeTMFrame :: DbBackend -> DbTMFrame -> IO () 
 storeTMFrame DbBackend {..} frame = do 
@@ -83,6 +89,11 @@ allTMFrames :: DbConfig -> DbBackend -> IO [DbTMFrame]
 allTMFrames cfg _backend = do 
     withDB cfg $ do 
         map entityVal <$> selectList [] []
+
+tmFramesLastPage :: DbConfig -> Int -> Int -> IO [DbTMFrame]
+tmFramesLastPage cfg pageSize offset = do
+    withDB cfg $ do 
+        map entityVal <$> selectList [] [Desc DbTMFrameErt, LimitTo pageSize, OffsetBy offset]
 
 
 withDB :: DbConfig -> DB a -> IO a
@@ -147,3 +158,5 @@ eventStoreThread _cfg eventQueue with = do
     forever $ do 
         events <- Conc.atomically (flushTBQueue eventQueue)
         with $ insertMany_ events
+
+
