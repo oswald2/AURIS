@@ -146,6 +146,7 @@ main = do
             (defaultMissionSpecific defaultConfig)
             logFunc
             (\ev -> T.putStrLn ("Event: " <> T.pack (show ev)))
+            Nothing
 
         runRIO state $ do
             let chain =

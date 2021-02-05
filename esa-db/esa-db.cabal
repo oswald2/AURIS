@@ -44,8 +44,9 @@ library
       Data.DbConfig.SQLite
       Persistence.Logging
       Persistence.TMFrame
+      Persistence.TMFrameDefinitions
       Persistence.Postgres 
-      Persistence.DbInterface
+      Persistence.DbProcessing
       Persistence.Definitions
   other-modules:
       Persistence.Internals
@@ -70,6 +71,8 @@ library
     , aeson
     , monad-logger
     , esa-base 
+    , unliftio
+    , resourcet
 
 
   default-language: Haskell2010

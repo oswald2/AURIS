@@ -8,28 +8,46 @@ module AurisProcessing
 import           RIO
 import           Data.PUS.GlobalState
 import           Data.PUS.MissionSpecific.Definitions
+                                                ( PUSMissionSpecific )
+import           Data.PUS.Config                ( Config(cfgDataBase) )
+import           Control.PUS.Classes            ( setDataModel )
 
-import           Control.PUS.Classes
+import           Interface.Interface            ( Interface
+                                                , ifRaiseEvent
+                                                )
+import           Interface.Events               ( IfEvent(EventPUS) )
+import           Interface.CoreProcessor        ( runCoreThread
+                                                , InterfaceAction
+                                                )
 
-import           Interface.Interface
-import           Interface.Events
-import           Interface.CoreProcessor
+import           AurisConfig                    ( AurisConfig
+                                                    ( aurisLogLevel
+                                                    , aurisPusConfig
+                                                    )
+                                                , configPath
+                                                , defaultMIBFile
+                                                , convLogLevel
+                                                )
 
-import           AurisConfig
-
-import           Persistence.Logging            ( withDatabaseLogger )
-
-import           System.Directory
-import           System.FilePath
+import           System.Directory               ( getHomeDirectory )
+import           System.FilePath                ( (</>) )
 
 import           GUI.MessageDisplay             ( messageAreaLogFunc )
-import           GUI.MainWindow
+import           GUI.MainWindow                 ( MainWindow
+                                                , mwMessageDisplay
+                                                , mwInitialiseDataModel
+                                                )
 import           Data.GI.Gtk.Threading          ( postGUIASync )
+import           Application.Chains             ( runChains )
+import           Application.DataModel          ( loadDataModelDef
+                                                , LoadFrom
+                                                    ( LoadFromSerialized
+                                                    , LoadFromMIB
+                                                    )
+                                                )
+import           Verification.Processor         ( processVerification )
+import           Persistence.DbProcessing       ( startDbProcessing )
 
-import           Application.Chains
-import           Application.DataModel
-
-import           Verification.Processor
 
 
 runProcessing
@@ -44,14 +62,23 @@ runProcessing cfg missionSpecific mibPath interface mainWindow coreQueue = do
     defLogOptions <- logOptionsHandle stdout True
     let logOptions =
             setLogMinLevel (convLogLevel (aurisLogLevel cfg)) defLogOptions
+    
+    -- start with the logging 
     withLogFunc logOptions $ \logFunc -> do
-        let logf =
-                logFunc <> messageAreaLogFunc (mainWindow ^. mwMessageDisplay)
-        --let dbPath = ((home </> configPath) </>) <$> aurisDatabase cfg
+    
+        -- First, we create the databas
+        dbBackend <- startDbProcessing (cfgDataBase (aurisPusConfig cfg))
+        
+        -- Add the logging function to the GUI
+        let logf = logFunc
+                <> messageAreaLogFunc (mainWindow ^. mwMessageDisplay)
+            
+        -- Create a new 'GlobalState' for the processing
         state <- newGlobalState (aurisPusConfig cfg)
                                 missionSpecific
                                 logf
                                 (ifRaiseEvent interface . EventPUS)
+                                (Just dbBackend)
 
         void $ runRIO state $ do
           -- first, try to load a data model or import a MIB

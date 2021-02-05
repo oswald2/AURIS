@@ -1,4 +1,8 @@
 {
+    "aurisDbLogLevel": {
+        "tag": "LogLevelDebug"
+    },
+    "aurisDatabase": "auris.db",
     "aurisMIB": null,
     "aurisMission": "DEFAULT",
     "aurisPusConfig": {
@@ -32,6 +36,20 @@
             "fromLeaps": 17
         },
         "cfgSCID": 0,
+        "cfgDataBase": {
+            "cfgStoreTMFrames": true,
+            "cfgBackend": {
+                "tag": "PGConfig",
+                "contents": {
+                    "pgDbName": "active_session",
+                    "pgPort": 5432,
+                    "pgHost": "localhost",
+                    "pgPassword": "auris",
+                    "pgNumberConns": 10,
+                    "pgUser": "auris"
+                }
+            }
+        },
         "cfgNCTRS": [
             {
                 "cfgNctrsPortTC": 20009,

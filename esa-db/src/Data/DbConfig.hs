@@ -1,5 +1,6 @@
 module Data.DbConfig
     ( DbConfig(..)
+    , DbBackendConfig(..)
     , defaultDbConfig
     ) where
 
@@ -10,13 +11,27 @@ import           Data.Aeson
 import           Data.DbConfig.Postgres
 import           Data.DbConfig.SQLite
 
-data DbConfig =
+
+
+data DbConfig = DbConfig
+    {
+    -- | Flag to specify if TM Frames should be stored in the database
+      cfgStoreTMFrames :: !Bool
+    , cfgBackend       :: !DbBackendConfig
+    }
+    deriving (Eq, Read, Show, Generic, FromJSON, ToJSON)
+
+
+data DbBackendConfig =
   PGConfig PostgresConfig
   | SQConfig SQLiteConfig
   deriving(Eq, Read, Show, Generic, FromJSON, ToJSON)
 
 
 
-defaultDbConfig :: DbConfig 
-defaultDbConfig = PGConfig defaultPostgresConfig
+defaultDbConfig :: DbConfig
+defaultDbConfig = DbConfig { cfgStoreTMFrames = True
+                           , cfgBackend       = PGConfig defaultPostgresConfig
+                           }
+
 

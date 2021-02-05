@@ -14,7 +14,6 @@ import           Database.Selda
 import           Database.Selda.Backend.Internal ( runSeldaT )
 import           Database.Selda.SQLite           ( sqliteOpen, seldaClose )
 
-import           Control.Monad                   ( forever )
 import           Control.Concurrent.STM.TBQueue  ( flushTBQueue )
 
 

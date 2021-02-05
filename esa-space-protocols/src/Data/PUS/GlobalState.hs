@@ -37,6 +37,7 @@ module Data.PUS.GlobalState
     , glsDataModel
     , glsTCRequestQueue
     , glsVerifCommandQueue
+    , glsDatabase
     , newGlobalState
     , nextADCount
     ) where
@@ -69,6 +70,7 @@ import           General.Time
 
 import           Verification.Commands
 
+import           Persistence.DbProcessing
 
 
 -- | The AppState is just a type alias
@@ -100,7 +102,7 @@ data GlobalState = GlobalState
     , glsLogFunc           :: !LogFunc
     , glsTCRequestQueue    :: TBQueue [TCRequest]
     , glsVerifCommandQueue :: TBQueue VerifCommand
-    , glsDatabasePath      :: Maybe FilePath
+    , glsDatabase          :: Maybe DbBackend 
     }
 
 -- | Constructor for the global state. Takes a configuration, a
@@ -111,8 +113,9 @@ newGlobalState
     -> PUSMissionSpecific
     -> LogFunc
     -> (Event -> IO ())
+    -> Maybe DbBackend 
     -> IO GlobalState
-newGlobalState cfg missionSpecific logErr raiseEvent = do
+newGlobalState cfg missionSpecific logErr raiseEvent dbBackend = do
     st     <- defaultPUSState cfg
     tv     <- newTVarIO st
     cv     <- newTVarIO defaultCoeffs
@@ -133,6 +136,7 @@ newGlobalState cfg missionSpecific logErr raiseEvent = do
                             , glsMissionSpecific   = missionSpecific
                             , glsTCRequestQueue    = rqstQueue
                             , glsVerifCommandQueue = verifQueue
+                            , glsDatabase          = dbBackend
                             }
     pure state
 

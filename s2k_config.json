@@ -8,6 +8,7 @@
                 "cfgCncPortTM": 33333,
                 "cfgCncHost": "localhost",
                 "cfgCncPortTC": 22222,
+                "cfgCncName": "ParagonTT",
                 "cfgCncID": 1
             }
         ],
@@ -16,24 +17,40 @@
         "cfgInterfacePort": 55555,
         "cfgRandomizerEnabled": false,
         "cfgRandomizerStartValue": 255,
+        "cfgVerification": {
+            "cfgTimeoutC": 30,
+            "cfgTimeoutGT": 20,
+            "cfgTimeoutS": 30,
+            "cfgTimeoutA": 30,
+            "cfgTimeoutO": 20
+        },
         "cfgVCIDs": [
-            {
-                "getVCID": 0
-            },
-            {
-                "getVCID": 1
-            }
+            0,
+            1
         ],
         "cfgLeapSeconds": {
             "fromLeaps": 17
         },
-        "cfgSCID": {
-            "getSCID": 0
+        "cfgSCID": 0,
+        "cfgDataBase": {
+            "cfgStoreTMFrames": true,
+            "cfgBackend": {
+                "tag": "PGConfig",
+                "contents": {
+                    "pgDbName": "active_session",
+                    "pgPort": 5432,
+                    "pgHost": "localhost",
+                    "pgPassword": "auris",
+                    "pgNumberConns": 10,
+                    "pgUser": "auris"
+                }
+            }
         },
         "cfgNCTRS": [
             {
                 "cfgNctrsPortTC": 32111,
                 "cfgNctrsID": 1,
+                "cfgNctrsName": "ParagonTT",
                 "cfgNctrsHost": "localhost",
                 "cfgNctrsPortADM": 32110,
                 "cfgNctrsPortTM": 2502
@@ -44,6 +61,7 @@
         "cfgEDEN": [
             {
                 "cfgEdenID": 1,
+                "cfgEdenName": "ParagonTT",
                 "cfgEdenHost": "localhost",
                 "cfgEdenPort": 40300
             }

@@ -24,10 +24,7 @@ import           Data.PUS.Config
 import           Data.PUS.GlobalState           
 import           Data.PUS.MissionSpecific.Definitions
                                                 ( PUSMissionSpecific )
-import           Data.PUS.TMFrameExtractor      ( setupFrameSwitcher
-                                                , tmFrameSwitchVC
-                                                , frameDbSink
-                                                )
+import           Data.PUS.TMFrameExtractor      
 import           Data.PUS.TMPacketProcessing    ( packetProcessorC
                                                 , raiseTMPacketC
                                                 , raiseTMParameterC
@@ -109,26 +106,12 @@ runTMNctrsChain :: NctrsConfig -> TBQueue ExtractedPacket -> RIO GlobalState ()
 runTMNctrsChain cfg pktQueue = do
     logDebug "runTMNctrsChain entering"
 
-
-    -- dbConfig <- view getDatabasePath
-    -- storeTMFrames <- cfgStoreTMFrames . glsConfig <$> ask
-
-    -- let dbSink = case (dbConfig, storeTMFrames) of
-    --         (Just dbPath, True) -> frameDbSink dbPath
-    --         _                   -> sinkNull
-
     (_thread, vcMap) <- setupFrameSwitcher (IfNctrs (cfgNctrsID cfg)) pktQueue
 
-    -- let chain =
-    --         receiveTmNcduC
-    --             .| ncduToTMFrameC
-    --             .| getZipSink
-    --                 (  ZipSink dbSink
-    --                 *> ZipSink (tmFrameSwitchVC vcMap)
-    --                 )
     let chain =
             receiveTmNcduC
                 .| ncduToTMFrameC
+                .| storeTMFrameC
                 .| tmFrameSwitchVC vcMap
 
     runGeneralTCPReconnectClient

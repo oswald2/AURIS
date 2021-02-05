@@ -93,6 +93,7 @@ library
         Verification.Verification
         Verification.Commands
         Verification.Processor
+        Persistence.DbInterface
         Persistence.Conversion.Types
         Persistence.Conversion.TMFrame
 

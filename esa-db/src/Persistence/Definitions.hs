@@ -7,6 +7,7 @@
 #-}
 module Persistence.Definitions
     ( DbTMFrame(..)
+    , DbTMSegmentLen(..)
     , DbTMFrameId
     , migrateAll
     ) where
@@ -16,7 +17,9 @@ import           Data.Word
 -- import           Database.Persist
 import           Database.Persist.TH
 
+import           Persistence.TMFrameDefinitions
 -- import           General.PUSTypes
+
 
 
 
@@ -32,7 +35,7 @@ DbTMFrame
     dfh Bool
     sync Bool 
     order Bool 
-    segLen Int 
+    segLen DbTMSegmentLen 
     fhp Word16 
     ocf Word32 Maybe 
     frame ByteString 
