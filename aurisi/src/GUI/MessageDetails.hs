@@ -49,9 +49,6 @@ createMsgDetailWindow window builder = do
         widgetHide win
         return True
 
-    -- void $ Gtk.on win #destroy $ do 
-    --   widgetHide win 
-
     return gui
 
 

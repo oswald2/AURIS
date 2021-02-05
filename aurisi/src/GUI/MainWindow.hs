@@ -169,7 +169,7 @@ createMainWindow cfg = do
 
     -- create the tabs in the notebook
     tmfTab            <- createTMFTab builder
-    tmpTab            <- createTMPTab builder
+    tmpTab            <- createTMPTab window builder
     paramTab          <- createTMParamTab builder
     connTab           <- createConnectionTab (aurisPusConfig cfg) builder
     tcTab             <- createTCTab window builder

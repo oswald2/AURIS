@@ -23,10 +23,10 @@ import           GUI.TMPParamTable
 import           GUI.Utils
 
 import           Data.PUS.TMPacket
-import           General.Types
-import           General.APID
-import           General.PUSTypes
-import           Data.TM.TMPacketDef
+--import           General.Types
+--import           General.APID
+--import           General.PUSTypes
+--import           Data.TM.TMPacketDef
 
 data TMPacketTab = TMPacketTab
     { _tmpTable           :: TMPacketTable
@@ -53,10 +53,10 @@ tmpTabAddRow tab = tmPacketTableAddRow (_tmpTable tab)
 
 
 
-createTMPTab :: Gtk.Builder -> IO TMPacketTab
-createTMPTab builder = do
+createTMPTab :: Window -> Gtk.Builder -> IO TMPacketTab
+createTMPTab window builder = do
     table      <- createTMPacketTable builder
-    paramTable <- createTMPParamTable builder
+    paramTable <- createTMPParamTable window builder
 
     spid       <- getObject builder "entryTMPUSSPID" Entry
     mnemo      <- getObject builder "entryTMPUSMnemonic" Entry
