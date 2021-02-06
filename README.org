@@ -56,6 +56,10 @@ Connections Tab:
 #+CAPTION: Connections display
 [[file:screenshots/Connections.png]]
 
+** More Information 
+
+See also the [[https://github.com/oswald2/AURIS/wiki][wiki]] for more information.
+
 ** Building
    :PROPERTIES:
    :CUSTOM_ID: building
