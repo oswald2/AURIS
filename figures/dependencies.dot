@@ -1,0 +1,60 @@
+digraph AurisDependencies {
+  rankdir="BT";
+  label="AURIS Dependency Graph";
+
+  n0 [label="auris-control-displays"];
+  n1 [label="aurisi"];
+  n2 [label="auris-tc-displays"];
+  n3 [label="auris-tm-displays"];
+  n4 [label="esa-base"];
+  n5 [label="esa-db"];
+  n6 [label="esa-mib"];
+  n7 [label="esa-space-protocols"];
+  n8 [label="esa-tm-model"];
+  n9 [label="gui-base"];
+  n10 [label="mcs-interface"];
+
+  // aurisi
+  n1->n0;
+  n1->n2;
+  n1->n3;
+  n1->n7;
+  n1->n5;
+  n1->n4;
+  n1->n6;
+  n1->n9;
+  n1->n10;
+
+  // auris-control-displays
+  n0->n7;
+  n0->n9;
+
+  //auris-tc-displays
+  n2->n7;
+  n2->n9;
+  n2->n10;
+  n2->n4;
+
+  //auris-tm-displays
+  n3->n7;
+  n3->n4;
+  n3->n9;
+  n3->n10;
+
+  //esa-db 
+  n5->n4;
+
+  //esa-space-protocols
+  n7->n4;
+  n7->n5;
+  n7->n6;
+
+  //esa-tm-model
+  n8->n4;
+
+  //gui-base
+  n9->n7;
+
+  //mcs-interface
+  n10->n7;
+}
