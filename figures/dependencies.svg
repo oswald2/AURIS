@@ -9,7 +9,7 @@
 <g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 423)">
 <title>AurisDependencies</title>
 <polygon fill="white" stroke="transparent" points="-4,4 -4,-423 823.67,-423 823.67,4 -4,4"/>
-<text text-anchor="middle" x="409.84" y="-7.8" font-family="Times,serif" font-size="14.00">AURIS Dependency Graph</text>
+<text text-anchor="middle" x="409.84" y="-7.8" font-family="Times,serif" font-size="14.00">AURIS Libraries Dependency Graph</text>
 <!-- n0 -->
 <g id="node1" class="node">
 <title>n0</title>
