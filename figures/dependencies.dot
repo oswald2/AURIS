@@ -1,6 +1,6 @@
 digraph AurisDependencies {
   rankdir="BT";
-  label="AURIS Dependency Graph";
+  label="AURIS Libraries Dependency Graph";
 
   n0 [label="auris-control-displays"];
   n1 [label="aurisi"];
