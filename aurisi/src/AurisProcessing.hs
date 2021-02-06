@@ -6,6 +6,7 @@ module AurisProcessing
     ) where
 
 import           RIO
+import qualified Data.Text.IO                  as T
 import           Data.PUS.GlobalState
 import           Data.PUS.MissionSpecific.Definitions
                                                 ( PUSMissionSpecific )
@@ -67,7 +68,9 @@ runProcessing cfg missionSpecific mibPath interface mainWindow coreQueue = do
     withLogFunc logOptions $ \logFunc -> do
 
         -- First, we create the databas
+        T.putStrLn "Starting DB backend..."
         dbBackend <- startDbProcessing (cfgDataBase (aurisPusConfig cfg))
+        T.putStrLn "DB backend started..."
 
         -- Add the logging function to the GUI
         let logf =

@@ -45,9 +45,7 @@ library
       Persistence.TMFrameDefinitions
       Persistence.DbProcessing
       Persistence.Definitions
-  other-modules:
-      Persistence.Internals
-      Paths_esa_db
+  --other-modules:
   hs-source-dirs:
       src
   build-depends:
@@ -55,8 +53,6 @@ library
     , conduit
     , rio
     , bytestring
-    , selda
-    , selda-sqlite
     , stm
     , time
     , persistent 
@@ -71,6 +67,7 @@ library
     , unliftio
     , resourcet
     , thyme
+    , text
 
 
   default-language: Haskell2010
@@ -142,6 +139,4 @@ test-suite esa-db-test
     , esa-db
     , hspec
     , rio
-    , selda
-    , selda-sqlite
   default-language: Haskell2010

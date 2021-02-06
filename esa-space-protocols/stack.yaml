@@ -52,9 +52,7 @@ extra-deps:
 - attoparsec-time-1
 - bytestring-to-vector-0.3.0.1
 - hw-prim-bits-0.1.0.4
-- selda-sqlite-0.1.7.1@sha256:d750cb189dfd5049628cd1dd0a5d7abda95bdac4a451e0973fc9fde80e70ed17,1257
 - timers-updatable-0.2.0.2@sha256:8dc262bb1324c02eae4251f2b0f78109d1a6133754d5ae845778908abda43858,946
-- direct-sqlite-2.3.26@sha256:04e835402f1508abca383182023e4e2b9b86297b8533afbd4e57d1a5652e0c23,3718
 - refined-0.6.1@sha256:d5d713f0a2ad79d1c049d2d132fd8c2078b883b5ea3db876087eaec102843e57,2748
 - these-skinny-0.7.4@sha256:e29336a1a70a497e09d8266f8438efb30a807bafaa6b00f5a136f7493efb3160,1239
 
