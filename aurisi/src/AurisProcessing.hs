@@ -76,14 +76,14 @@ runProcessing cfg missionSpecific mibPath interface mainWindow coreQueue = do
         let logf =
                 logFunc
                     <> messageAreaLogFunc (mainWindow ^. mwMessageDisplay)
-                    <> mkLogFunc (logToDB dbBackend)
+                    <> maybe mempty (\db -> mkLogFunc (logToDB db)) dbBackend
 
         -- Create a new 'GlobalState' for the processing
         state <- newGlobalState (aurisPusConfig cfg)
                                 missionSpecific
                                 logf
                                 (ifRaiseEvent interface . EventPUS)
-                                (Just dbBackend)
+                                dbBackend
 
         void $ runRIO state $ do
           -- first, try to load a data model or import a MIB

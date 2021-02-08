@@ -67,7 +67,7 @@ main = do
             (defaultMissionSpecific defaultConfig)
             logFunc
             (\ev -> T.putStrLn ("Event: " <> T.pack (show ev)))
-            (Just dbBackend)
+            dbBackend
 
         runRIO state $ do
             env    <- ask

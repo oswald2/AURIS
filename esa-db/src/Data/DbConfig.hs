@@ -24,7 +24,8 @@ data DbConfig = DbConfig
 
 
 data DbBackendConfig =
-  PGConfig PostgresConfig
+  NoDB
+  | PGConfig PostgresConfig
   | SQConfig SQLiteConfig
   deriving(Eq, Read, Show, Generic, FromJSON, ToJSON)
 

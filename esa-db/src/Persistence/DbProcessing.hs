@@ -37,7 +37,8 @@ data DbBackend = DbBackend
 
 
 
-startDbProcessing :: DbConfig -> IO DbBackend
+startDbProcessing :: DbConfig -> IO (Maybe DbBackend)
+startDbProcessing DbConfig { cfgBackend = NoDB } = return Nothing
 startDbProcessing cfg = do
     frameQueue <- Conc.newTBQueueIO dbQueueSize
     eventQueue <- Conc.newTBQueueIO dbQueueSize
@@ -54,6 +55,7 @@ startDbProcessing cfg = do
     let with = case cfgBackend cfg of
             PGConfig pgConfig -> withPostgres pgConfig
             SQConfig sqConfig -> withSQLite sqConfig
+            _ -> \_ -> return ()
 
     let tmFramesT = conc $ tmFrameStoreThread cfg frameQueue with
         eventsT   = conc $ eventStoreThread cfg eventQueue with
@@ -64,7 +66,7 @@ startDbProcessing cfg = do
     _ <- async $ runConc threads
 
     -- return the backend 
-    return db
+    return (Just db)
 
 
 
@@ -114,7 +116,7 @@ withDB DbConfig { cfgDbDebugLog = doLog, cfgBackend = SQConfig sqConfig } action
         if doLog
             then withSQLiteDebug sqConfig action
             else withSQLite sqConfig action
-
+withDB _ _ = fail "Error: withDB called with not-supported DB backend"
 
 withPostgres :: PostgresConfig -> DB a -> IO a
 withPostgres pgConfig =
