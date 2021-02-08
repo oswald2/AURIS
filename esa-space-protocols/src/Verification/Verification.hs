@@ -33,6 +33,7 @@ module Verification.Verification
     , isTMExpected
     , isTMAExpected
     , isTMSExpected
+    , isTMPExpected
     , isTMCExpected
     , isGroundSuccess
     , isGroundExpected
@@ -506,6 +507,12 @@ isTMAExpected Verification {..} =
 isTMSExpected :: Verification -> Bool 
 isTMSExpected Verification {..} =
     (_verTMStart == StTmExpected) || (_verTMStart == StTmPending)
+
+isTMPExpected :: Verification -> Bool
+isTMPExpected verif = 
+    V.any expected (_verTMProgress verif)
+    where 
+        expected x = (x == StTmExpected) || (x == StTmPending)
 
 isTMCExpected :: Verification -> Bool 
 isTMCExpected Verification {..} =

@@ -48,6 +48,8 @@ module Data.PUS.PUSDfh
     , pusSetSrcID
     , pusDestID
     , pusAckFlags
+    , pusSetAckFlags
+    , dfhAckFlags
     , dfhLength
     , stdTmVersion
     , stdTmType
@@ -69,11 +71,12 @@ module Data.PUS.PUSDfh
     , dfhTypes
     , dfhSourceID
     , pusPktTime
-    )
-where
+    ) where
 
 
-import           RIO                     hiding ( Builder, (.~))
+import           RIO                     hiding ( Builder
+                                                , (.~)
+                                                )
 
 import           Control.Lens                   ( makeLenses
                                                 , (.~)
@@ -216,9 +219,39 @@ pusAckFlags PUSTCStdHeader {..} =
 pusAckFlags PUSTMStdHeader{} = (False, False, False, False)
 pusAckFlags PUSCnCTCHeader{} = (False, False, False, False)
 
+-- | Set the acknowledgement flags for the stages 
+pusSetAckFlags
+    :: DataFieldHeader -> (Bool, Bool, Bool, Bool) -> DataFieldHeader
+pusSetAckFlags PUSEmptyHeader       _ = PUSEmptyHeader
+pusSetAckFlags hdr@PUSTMStdHeader{} _ = hdr
+pusSetAckFlags hdr@PUSTCStdHeader{} (ack, start, prog, exec) =
+    hdr
+        &  stdFlagAcceptance
+        .~ ack
+        &  stdFlagStartExec
+        .~ start
+        &  stdFlagProgressExec
+        .~ prog
+        &  stdFlagExecComp
+        .~ exec
+pusSetAckFlags hdr@PUSCnCTCHeader{} (ack, start, prog, exec) = 
+    hdr
+        &  cncTcAcceptance
+        .~ ack
+        &  cncTcStart
+        .~ start
+        &  cncTcProgress
+        .~ prog
+        &  cncTcCompletion
+        .~ exec
+
+
+dfhAckFlags :: Lens' DataFieldHeader (Bool, Bool, Bool, Bool)
+dfhAckFlags = lens pusAckFlags pusSetAckFlags
+
 
 pusPktTime :: DataFieldHeader -> Maybe CUCTime
-pusPktTime PUSTMStdHeader {_stdTmOBTime = t} = Just t
+pusPktTime PUSTMStdHeader { _stdTmOBTime = t } = Just t
 pusPktTime _ = Nothing
 
 -- | returns the length of the data field header when encoded in bytes
@@ -236,20 +269,13 @@ instance SizeOf DataFieldHeader where
 -- | A builder for the data field header
 dfhBuilder :: DataFieldHeader -> Builder
 dfhBuilder PUSEmptyHeader = mempty
-dfhBuilder PUSTCStdHeader{..} =
-    let b1 = 0x10 
-            .|. (if _stdFlagAcceptance
-                    then 0x01
-                    else 0x00)
-            .|. (if _stdFlagStartExec
-                    then 0x02
-                    else 0x00) 
-            .|. (if _stdFlagProgressExec
-                    then 0x04
-                    else 0x00) 
-            .|. (if _stdFlagExecComp 
-                    then 0x08 
-                    else 0x00)
+dfhBuilder PUSTCStdHeader {..} =
+    let b1 =
+            0x10
+                .|. (if _stdFlagAcceptance then 0x01 else 0x00)
+                .|. (if _stdFlagStartExec then 0x02 else 0x00)
+                .|. (if _stdFlagProgressExec then 0x04 else 0x00)
+                .|. (if _stdFlagExecComp then 0x08 else 0x00)
     in  word8 b1
             <> pusTypeBuilder _stdType
             <> pusSubTypeBuilder _stdSubType
@@ -266,18 +292,11 @@ dfhBuilder x@PUSCnCTCHeader{} =
         <> pusSubTypeBuilder (_cncTcSubType x)
         <> sourceIDBuilder (_cncTcSourceID x)
   where
-    ackFlags = (if _cncTcAcceptance x
-            then 0x01
-            else 0) 
-        .|. (if _cncTcStart x
-                then 0x02
-                else 0) 
-        .|. (if _cncTcProgress x
-                then 0x40
-                else 0) 
-        .|. (if _cncTcCompletion x 
-                then 0x08 
-                else 0)
+    ackFlags =
+        (if _cncTcAcceptance x then 0x01 else 0)
+            .|. (if _cncTcStart x then 0x02 else 0)
+            .|. (if _cncTcProgress x then 0x40 else 0)
+            .|. (if _cncTcCompletion x then 0x08 else 0)
 
 
 
