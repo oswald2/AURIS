@@ -281,13 +281,13 @@ dfhBuilder PUSTCStdHeader {..} =
             <> pusSubTypeBuilder _stdSubType
             <> sourceIDBuilder _stdSrcID
 dfhBuilder x@PUSTMStdHeader{} =
-    word8 ((((_stdTmVersion x) .&. 0x07) `shiftL` 4))
+    word8 ((_stdTmVersion x .&. 0x07) `shiftL` 4)
         <> pusTypeBuilder (_stdTmType x)
         <> pusSubTypeBuilder (_stdTmSubType x)
         <> sourceIDBuilder (_stdTmDestinationID x)
         <> cucTimeBuilder (_stdTmOBTime x)
 dfhBuilder x@PUSCnCTCHeader{} =
-    word8 ((((_cncTcCrcFlags x) .&. 0x07) `shiftL` 4) .|. ackFlags)
+    word8 (((_cncTcCrcFlags x .&. 0x07) `shiftL` 4) .|. ackFlags)
         <> pusTypeBuilder (_cncTcType x)
         <> pusSubTypeBuilder (_cncTcSubType x)
         <> sourceIDBuilder (_cncTcSourceID x)
