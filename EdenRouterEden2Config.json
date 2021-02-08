@@ -26,6 +26,13 @@
         "cfgSCID": 0,
         "cfgNCTRS": [
         ],
+        "cfgDataBase": {
+            "cfgStoreTMFrames": true,
+            "cfgDbDebugLog": true,
+            "cfgBackend": {
+                "tag": "NoDB"
+            }
+        },
         "cfgMaxTMFrameLen": 1115,
         "cfgCltuBlockSize": "CltuBS_8",
         "cfgEDEN": [

@@ -70,7 +70,9 @@ runProcessing cfg missionSpecific mibPath interface mainWindow coreQueue = do
         -- First, we create the databas
         T.putStrLn "Starting DB backend..."
         dbBackend <- startDbProcessing (cfgDataBase (aurisPusConfig cfg))
-        T.putStrLn "DB backend started..."
+        case dbBackend of
+            Just _  -> T.putStrLn "DB backend started..."
+            Nothing -> T.putStrLn "No DB backend was configured."
 
         -- Add the logging function to the GUI
         let logf =

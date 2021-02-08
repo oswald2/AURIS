@@ -30,6 +30,7 @@ resolver: lts-16.31
 #   - wai
 packages:
 - hashtables-mo
+- timer-wheel
 - esa-base
 - esa-mib
 - esa-space-protocols
@@ -61,7 +62,6 @@ extra-deps:
 - bytestring-to-vector-0.3.0.1
 - hw-prim-bits-0.1.0.4
 - timers-updatable-0.2.0.2
-- direct-sqlite-2.3.26
 - Chart-cairo-1.9.3@sha256:f484a7194ca08ed67f02aa626e2f8f4d1a9b50624e0d50e3ced62958f7481cca,925
 - haskell-gi-base-0.24.4
 - haskell-gi-0.24.5
