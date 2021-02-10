@@ -29,6 +29,8 @@ data TMStoreFrame = TMStoreFrame {
     } deriving (Show, Generic)
 makeLenses ''TMStoreFrame
 
+instance NFData TMStoreFrame
+
 
 instance GetPayload TMStoreFrame where
   getPayload frame = frame ^. tmstFrame . tmFrameData

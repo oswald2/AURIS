@@ -91,12 +91,14 @@ library
     Data.Display.Graphical
     Data.PUS.TMFrame
     Data.PUS.TMFrameDfh
+    Data.PUS.TMStoreFrame
     Data.PUS.EncTime
     Data.PUS.PUSDfh
     Data.PUS.CRC
     Data.PUS.CLCW
     Data.PUS.MissionSpecific.Definitions
     Conduit.PayloadParser
+    Persistence.Conversion.Types
 
   -- Modules included in this library but not exported.
   -- other-modules:

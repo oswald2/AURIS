@@ -126,6 +126,7 @@ data FirstHeaderPtrVal =
     | FirstHeaderIdle
     deriving (Eq, Ord, Show, Read, Generic)
 
+instance NFData FirstHeaderPtrVal
 instance Serialise FirstHeaderPtrVal
 instance FromJSON FirstHeaderPtrVal
 instance ToJSON FirstHeaderPtrVal where
@@ -149,6 +150,7 @@ data TMFrameHeader = TMFrameHeader
     deriving (Show, Read, Generic)
 makeLenses ''TMFrameHeader
 
+instance NFData TMFrameHeader
 instance Serialise TMFrameHeader
 instance FromJSON TMFrameHeader
 instance ToJSON TMFrameHeader where
@@ -212,6 +214,7 @@ instance Display TMFrame where
             <> displayShow _tmFrameFECW
 
 
+instance NFData TMFrame 
 instance Serialise TMFrame
 instance FromJSON TMFrame where
     parseJSON = withObject "TMFrame" $ \v ->

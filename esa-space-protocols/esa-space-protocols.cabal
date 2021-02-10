@@ -63,7 +63,6 @@ library
         Data.PUS.TCCnc
         Data.PUS.Parameter
         Data.PUS.TMFrameExtractor
-        Data.PUS.TMStoreFrame
         Data.PUS.TMParameterExtraction
         Data.PUS.TMPacket
         Data.PUS.TMPacketProcessing
@@ -87,7 +86,6 @@ library
         Verification.Commands
         Verification.Processor
         Persistence.Logging
-        Persistence.Conversion.Types
         Persistence.Conversion.TMFrame
 
 

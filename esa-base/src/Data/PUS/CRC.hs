@@ -59,6 +59,7 @@ newtype CRC = CRC Word16
 instance Display CRC where
     textDisplay (CRC x) = sformat (left 4 '0' %. hex) x
 
+instance NFData CRC
 instance Serialise CRC
 instance FromJSON CRC
 instance ToJSON CRC where

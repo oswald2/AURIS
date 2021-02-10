@@ -536,6 +536,7 @@ data TMSegmentLen = TMSegment256
     | TMSegment65536
       deriving (Show, Read, Eq, Ord, Enum, Generic)
 
+instance NFData TMSegmentLen
 instance Serialise TMSegmentLen
 instance FromJSON TMSegmentLen
 instance ToJSON TMSegmentLen where

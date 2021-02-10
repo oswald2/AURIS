@@ -50,9 +50,24 @@ category:            Database
 extra-source-files:  CHANGELOG.md
 
 
+flag llvm
+    description:
+        build library with llvm
+    default: False
+
+flag optimize 
+    description: 
+      build library with optimization
+    default: False 
+
+
 library
   -- Modules exported by the library.
-  exposed-modules:     MyLib
+  exposed-modules:     
+    Data.Mongo.DbConfig
+    Data.Mongo.Processing
+    Data.Mongo.Conversion.TMFrame
+
 
   -- Modules included in this library but not exported.
   -- other-modules:
@@ -61,7 +76,20 @@ library
   -- other-extensions:
 
   -- Other library packages from which modules are imported.
-  build-depends:       base ^>=4.14.1.0
+  build-depends:
+      base >=4.7 && <5
+    , conduit
+    , rio
+    , bytestring
+    , stm
+    , time
+    , esa-base 
+    , unliftio
+    , resourcet
+    , text
+    , mongoDB
+    , bson
+    , attoparsec
 
   -- Directories containing source files.
   hs-source-dirs:      src
@@ -69,13 +97,107 @@ library
   -- Base language which the package is written in.
   default-language:    Haskell2010
 
+  default-extensions:
+      BangPatterns
+      BinaryLiterals
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveDataTypeable
+      DeriveFoldable
+      DeriveFunctor
+      DeriveGeneric
+      DeriveTraversable
+      DoAndIfThenElse
+      EmptyDataDecls
+      ExistentialQuantification
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      DeriveAnyClass
+      InstanceSigs
+      KindSignatures
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedStrings
+      PartialTypeSignatures
+      PatternGuards
+      PolyKinds
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      StandaloneDeriving
+      TupleSections
+      TypeFamilies
+      TypeSynonymInstances
+      TypeApplications
+      ViewPatterns
+      NumericUnderscores
 
-test-suite esa-db-mongodb-test
+  if flag(llvm)
+        ghc-options: -O2 -Wall -Wcompat -Widentities -Wincomplete-record-updates
+                     -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
+                     -funbox-strict-fields -fllvm -optlo-O3
+  else 
+    if flag(optimize) 
+        ghc-options: -O2 -Wall -Wcompat -Widentities -Wincomplete-record-updates
+                     -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
+                     -funbox-strict-fields
+    else 
+        ghc-options: -O0 -Wall -Wcompat -Widentities -Wincomplete-record-updates
+                     -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
+                     -funbox-strict-fields
+
+
+executable esa-db-mongodb-test
   -- Base language which the package is written in.
   default-language:    Haskell2010
-
+  default-extensions:
+      BangPatterns
+      BinaryLiterals
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveDataTypeable
+      DeriveFoldable
+      DeriveFunctor
+      DeriveGeneric
+      DeriveTraversable
+      DoAndIfThenElse
+      EmptyDataDecls
+      ExistentialQuantification
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      DeriveAnyClass
+      InstanceSigs
+      KindSignatures
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedStrings
+      PartialTypeSignatures
+      PatternGuards
+      PolyKinds
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      StandaloneDeriving
+      TupleSections
+      TypeFamilies
+      TypeSynonymInstances
+      TypeApplications
+      ViewPatterns
+      NumericUnderscores
   -- The interface type and version of the test suite.
-  type:                exitcode-stdio-1.0
+  --type:                exitcode-stdio-1.0
 
   -- The directory where the test specifications are found.
   hs-source-dirs:      test
@@ -84,5 +206,15 @@ test-suite esa-db-mongodb-test
   main-is:             MyLibTest.hs
 
   -- Test dependencies.
-  build-depends:       base ^>=4.14.1.0
+  build-depends:       
+    base >=4.7 && <5
+    , rio
+    , bytestring
+    , time
+    , esa-base 
+    , unliftio
+    , text
+    , mongoDB
+    , bson
+    , esa-db-mongodb
 
