@@ -89,6 +89,14 @@ library
     Data.TM.PIVals
     Data.TM.Synthetic
     Data.Display.Graphical
+    Data.PUS.TMFrame
+    Data.PUS.TMFrameDfh
+    Data.PUS.EncTime
+    Data.PUS.PUSDfh
+    Data.PUS.CRC
+    Data.PUS.CLCW
+    Data.PUS.MissionSpecific.Definitions
+    Conduit.PayloadParser
 
   -- Modules included in this library but not exported.
   -- other-modules:
@@ -118,7 +126,6 @@ library
         InstanceSigs
         KindSignatures
         LambdaCase
-        
         MultiParamTypeClasses
         MultiWayIf
         NamedFieldPuns
@@ -168,6 +175,7 @@ library
     , directory
     , filepath
     , word24
+    , closed
 
 
   -- Directories containing source files.
