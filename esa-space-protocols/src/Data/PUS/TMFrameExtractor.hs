@@ -88,7 +88,7 @@ tmFrameEncodeC
 tmFrameEncodeC = awaitForever $ \frame -> do
     cfg <- view getConfig
     let enc    = builderBytes (tmFrameBuilder frame)
-        result = tmFrameAppendCRC cfg enc
+        result = tmFrameAppendCRC (cfgTMFrame cfg) enc
     yield result
 
 -- | Conduit to decode a 'TMFrame'. In case the frame cannot be parsed, a
@@ -106,7 +106,7 @@ tmFrameDecodeC = do
     env <- ask
     let cfg = env ^. getConfig
     awaitForever $ \(ert, x) -> do
-        case A.parseOnly (A.match (tmFrameParser cfg)) x of
+        case A.parseOnly (A.match (tmFrameParser (cfgTMFrame cfg))) x of
             Left err -> do
                 let msg = T.pack err
                 liftIO $ raiseEvent env (EVAlarms (EVIllegalTMFrame msg))
@@ -116,7 +116,7 @@ tmFrameDecodeC = do
                     $  display ("Received TM Frame: " :: Text)
                     <> displayShow frame
 
-                case tmFrameCheckCRC cfg bs of
+                case tmFrameCheckCRC (cfgTMFrame cfg) bs of
                     Left err -> liftIO
                         $ raiseEvent env (EVTelemetry (EVTMFailedCRC err))
                     Right () -> do
@@ -679,7 +679,7 @@ pusPacketDecodeC pIf = do
     st <- ask
     let missionSpecific = st ^. getMissionSpecific
         pktStore        = HM.empty
-        segLen          = cfgTMSegLength (st ^. getConfig)
+        segLen          = cfgTMSegLength (cfgTMFrame (st ^. getConfig))
 
     payloadParserC (segmentedPacketParser segLen)
         .| pktReconstructorC missionSpecific pIf segLen pktStore

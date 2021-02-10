@@ -85,7 +85,6 @@ module General.PUSTypes
 
 
 import           RIO                     hiding ( Builder )
-import qualified RIO.Text                      as T
 import qualified RIO.ByteString.Lazy           as BL
 import           Codec.Serialise                ( Serialise
                                                 , deserialiseOrFail

@@ -37,7 +37,7 @@ import           Data.PUS.TCPacketEncoder
 import           Data.PUS.TCPacket
 import           Data.PUS.Parameter
 import           Data.PUS.Value
-import           Data.PUS.MissionSpecific.Definitions
+import           Data.PUS.MissionSpecific.Default
 import           Data.PUS.Counter
 
 import           Protocol.NCTRSProcessor

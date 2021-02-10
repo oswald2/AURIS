@@ -36,13 +36,16 @@ import           Data.Aeson
 import           Data.ByteString.Lazy          as B
 import qualified Data.Text                     as T
 
-import           Closed
 
 import           General.PUSTypes
 
 import           General.Time
 
 import           Protocol.ProtocolInterfaces
+
+import           Data.PUS.TMFrame               ( TMFrameConfig
+                                                , defaultTMFrameConfig
+                                                )
 
 import           Data.DbConfig
 
@@ -150,14 +153,6 @@ data Config = Config
     , cfgSCID                 :: SCID
     -- | A list of available virtual channels.
     , cfgVCIDs                :: [VCID]
-    -- | The maximum TM Frame length. This length is used in parsing
-    -- the frame data, so it needs to be accurate. Default is by
-    -- PUS Standard a value 1115 (1024 bytes data)
-    , cfgMaxTMFrameLen        :: Closed 128 2040
-    -- | Indicates, if a TM frame does contain a CRC value
-    , cfgTMFrameHasCRC        :: Bool
-    -- | The configured segment length for TM Frames
-    , cfgTMSegLength          :: !TMSegmentLen
     -- | Specifies the time epoch to be used for time handling
     , cfgEpoch                :: EpochType
     -- | Specified the used leap seconds
@@ -166,6 +161,7 @@ data Config = Config
     -- SPID
     , cfgUnknownSPID          :: SPID
     -- | Specifies the configurations for the available NCTRS connections
+    , cfgTMFrame              :: TMFrameConfig
     , cfgNCTRS                :: [NctrsConfig]
     -- | Specifies the configurations of the available C&C connections
     , cfgCnC                  :: [CncConfig]
@@ -238,9 +234,7 @@ defaultConfig = Config { cfgCltuBlockSize        = CltuBS_8
                        , cfgRandomizerStartValue = 0xFF
                        , cfgSCID                 = mkSCID 0
                        , cfgVCIDs                = [0, 1]
-                       , cfgMaxTMFrameLen        = 1115
-                       , cfgTMFrameHasCRC        = True
-                       , cfgTMSegLength          = TMSegment65536
+                       , cfgTMFrame              = defaultTMFrameConfig
                        , cfgEpoch                = UnixTime
                        , cfgLeapSeconds          = 17
                        , cfgUnknownSPID          = SPID 5071

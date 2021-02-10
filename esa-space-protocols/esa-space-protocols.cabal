@@ -37,16 +37,13 @@ library
     exposed-modules:
         Control.PUS.Classes
         Conduit.SocketConnector
-        Conduit.PayloadParser
         Data.PUS.Config
         Data.PUS.PUSState
         Data.PUS.GlobalState
         Data.PUS.Events
-        Data.PUS.CRC
         Data.PUS.CLTU
         Data.PUS.CLTUEncoder
         Data.PUS.CLTUTable
-        Data.PUS.CLCW
         Data.PUS.Randomizer
         Data.PUS.TCFrameTypes
         Data.PUS.TCTransferFrame
@@ -56,7 +53,6 @@ library
         Data.PUS.TCPacketEncoder
         Data.PUS.PUSPacket
         Data.PUS.PUSPacketEncoder
-        Data.PUS.PUSDfh
         Data.PUS.COP1Types
         Data.PUS.FOP1
         Data.PUS.FARM1
@@ -66,9 +62,6 @@ library
         Data.PUS.TCDirective
         Data.PUS.TCCnc
         Data.PUS.Parameter
-        Data.PUS.EncTime
-        Data.PUS.TMFrame
-        Data.PUS.TMFrameDfh
         Data.PUS.TMFrameExtractor
         Data.PUS.TMStoreFrame
         Data.PUS.TMParameterExtraction
@@ -76,10 +69,10 @@ library
         Data.PUS.TMPacketProcessing
         Data.PUS.ExtractedDU
         Data.PUS.ExtractedPUSPacket
-        Data.PUS.MissionSpecific.Definitions
         Data.PUS.Value
         Data.PUS.NcduToTMFrame
         Data.PUS.Counter
+        Data.PUS.MissionSpecific.Default
         Protocol.NCTRS
         Protocol.NCTRSProcessor
         Protocol.EDEN

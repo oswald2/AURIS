@@ -13,7 +13,6 @@
 #-}
 module Data.PUS.MissionSpecific.Definitions
     ( PUSMissionSpecific(..)
-    , defaultMissionSpecific
     , pmsTCDataFieldHeader
     , pmsTMDataFieldHeader
     , pmsTMFrameDataFieldHeader
@@ -26,11 +25,8 @@ import           RIO
 import           Control.Lens                   ( makeLenses )
 
 import           Data.PUS.PUSDfh
-import           Data.PUS.EncTime
 import           Data.PUS.TMFrameDfh
-import           Data.PUS.Config
 
-import           General.PUSTypes
 import           General.Time
 
 
@@ -49,17 +45,3 @@ data PUSMissionSpecific = PUSMissionSpecific {
 } deriving (Show, Generic)
 makeLenses ''PUSMissionSpecific
 
--- | a default value for PUS compliant missions
-defaultMissionSpecific :: Config -> PUSMissionSpecific
-defaultMissionSpecific cfg = PUSMissionSpecific
-    { _pmsTCDataFieldHeader      = PUSTCStdHeader 0
-                                                  0
-                                                  (mkSourceID 0)
-                                                  True
-                                                  True
-                                                  False
-                                                  True
-    , _pmsTMDataFieldHeader = PUSTMStdHeader 0 0 0 (mkSourceID 0) nullCUCTime
-    , _pmsTMFrameDataFieldHeader = Nothing
-    , _pmsEpoch                  = epochUnix (cfgLeapSeconds cfg)
-    }
