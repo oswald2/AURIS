@@ -91,12 +91,12 @@ worker now n = do
             >>= rest
             )
     let res = force (last results)
+    liftIO $ T.putStrLn $ "TM Frame: " <> T.pack (show res)
     end2 <- liftIO getCurrentTime
 
     liftIO $ T.putStrLn $ "Time to insert: " <> textDisplay (end1 <-> start1)
     liftIO $ T.putStrLn $ "Time to retrieve: " <> textDisplay (end2 <-> start2)
 
-    liftIO $ T.putStrLn $ "TM Frame: " <> T.pack (show res)
     liftIO $ T.putStrLn $ "Count: " <> T.pack (show (length results))
 
     return ()
