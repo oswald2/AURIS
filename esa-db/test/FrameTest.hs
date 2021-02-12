@@ -1,34 +1,28 @@
-module Main
-    ( main
-    ) where
 
 import           RIO
-import           RIO.Partial                    ( read, fromJust )
+
+import           RIO.Partial                    ( read
+                                                )
 import qualified RIO.Text                      as T
 import qualified Data.Text.IO                  as T
 -- import           RIO.List                      ( repeat )
-import           Database.MongoDB
 import           RIO.List.Partial               ( last )
 
-import           Data.Mongo.Conversion.TMFrame
-
-
 import           Data.PUS.TMStoreFrame
-import Data.PUS.TMFrame
-    ( TMFrameHeader(TMFrameHeader, _tmFrameVersion, _tmFrameScID,
-                    _tmFrameVcID, _tmFrameOpControl, _tmFrameMCFC, _tmFrameVCFC,
-                    _tmFrameDfh, _tmFrameSync, _tmFrameOrder, _tmFrameSegID,
-                    _tmFrameFirstHeaderPtr),
-      TMFrame(TMFrame, _tmFrameHdr, _tmFrameData, _tmFrameOCF,
-              _tmFrameFECW),
-      defaultTMFrameConfig,
-      encodeFrame )
+import           Data.PUS.TMFrame
 import           General.PUSTypes
 import           General.Time
 import           Data.PUS.CLCW
 
 import           System.Environment
 
+
+import           Persistence.DbProcessing
+import           Persistence.Definitions
+import           Persistence.Conversion.Types
+import           Persistence.Conversion.TMFrame ( )
+import           Data.DbConfig.Postgres
+import           Database.Persist
 
 
 tmFrame :: SunTime -> TMStoreFrame
@@ -73,32 +67,24 @@ tmFrame now =
 
 main :: IO ()
 main = do
-    [n]  <- getArgs
+    [n] <- getArgs
+    now <- getCurrentTime
+    worker now (read n)
 
-    pipe <- connect (host "127.0.0.1")
-    now  <- getCurrentTime
-    e    <- access pipe master "active_session" (worker now (read n))
-    close pipe
-    T.putStrLn (T.pack (show e))
 
-worker :: SunTime -> Int -> Action IO ()
+worker :: SunTime -> Int -> IO ()
 worker now n = do
-    delete (select [] "tm_frames")
+    withPostgres defaultPostgresConfig (deleteWhere ([] :: [Filter DbTMFrame]))
 
     start1 <- liftIO getCurrentTime
-    replicateM_ n $ insertAll_ "tm_frames" (map toDB (replicate 1000 (tmFrame now)))
-    end1                              <- liftIO getCurrentTime
+    withPostgres defaultPostgresConfig $ do
+        replicateM_ n $ insertMany_ (map toDB (replicate 1000 (tmFrame now)))
+    end1     <- liftIO getCurrentTime
 
-    --liftIO $ T.putStrLn $ "IDs: " <> T.pack (show (length ids))
-
-    start2                            <- liftIO getCurrentTime
-    (results :: [TMStoreFrame]) <-
-        force
-        . map (fromJust . fromDB)
-        <$> (   find (select [] "tm_frames") 
-            >>= rest
-            )
-    let res = force (last results)
+    start2   <- liftIO getCurrentTime
+    results1 <- withPostgres defaultPostgresConfig $ selectList [] []
+    let results :: [TMStoreFrame] = force $ map (fromDB . entityVal) results1
+    let res                       = force (last results)
     liftIO $ T.putStrLn $ "TM Frame: " <> T.pack (show res)
     end2 <- liftIO getCurrentTime
 
@@ -108,3 +94,4 @@ worker now n = do
     liftIO $ T.putStrLn $ "Count: " <> T.pack (show (length results))
 
     return ()
+

@@ -86,7 +86,6 @@ library
         Verification.Commands
         Verification.Processor
         Persistence.Logging
-        Persistence.Conversion.TMFrame
 
 
     hs-source-dirs: src

@@ -45,6 +45,9 @@ library
       Persistence.TMFrameDefinitions
       Persistence.DbProcessing
       Persistence.Definitions
+      Persistence.Conversion.TMFrame 
+
+      
   --other-modules:
   hs-source-dirs:
       src
@@ -127,11 +130,8 @@ library
                      -funbox-strict-fields
 
 
-test-suite esa-db-test
-  type: exitcode-stdio-1.0
-  main-is: Spec.hs
-  other-modules:
-      Paths_esa_db
+executable esa-db-tmframe
+  main-is: FrameTest.hs
   hs-source-dirs:
       test
   ghc-options: -Wall -threaded -rtsopts -with-rtsopts=-N
@@ -140,4 +140,47 @@ test-suite esa-db-test
     , esa-db
     , hspec
     , rio
+    , text 
+    , esa-base
+    , persistent
   default-language: Haskell2010
+  default-extensions:
+      BangPatterns
+      BinaryLiterals
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveDataTypeable
+      DeriveFoldable
+      DeriveFunctor
+      DeriveGeneric
+      DeriveTraversable
+      DoAndIfThenElse
+      EmptyDataDecls
+      ExistentialQuantification
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      DeriveAnyClass
+      InstanceSigs
+      KindSignatures
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedStrings
+      PartialTypeSignatures
+      PatternGuards
+      PolyKinds
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      StandaloneDeriving
+      TupleSections
+      TypeFamilies
+      TypeSynonymInstances
+      TypeApplications
+      ViewPatterns
+      NumericUnderscores

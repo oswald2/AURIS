@@ -7,6 +7,12 @@ module Persistence.DbProcessing
     , allTMFrames
     , tmFramesLastPage
     , storeLog
+
+    , withDB
+    , withPostgres
+    , withPostgresDebug 
+    , withSQLite
+    , withSQLiteDebug
     ) where
 
 
