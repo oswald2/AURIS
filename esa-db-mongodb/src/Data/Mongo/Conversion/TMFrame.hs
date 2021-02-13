@@ -11,10 +11,7 @@ import           General.PUSTypes
 import           Data.PUS.TMFrame
 import           Data.PUS.TMStoreFrame
 
-
-class MongoDbConversion a b | a -> b where 
-  toDB :: a -> b 
-  fromDB :: b -> Maybe a
+import           Data.Mongo.Conversion.Class    ( MongoDbConversion(..) )
 
 
 
@@ -24,12 +21,12 @@ instance MongoDbConversion TMStoreFrame Document where
         , "frame" =: toDB _tmstFrame
         , "binary" =: Binary _tmstBinary
         ]
-    fromDB doc = do 
-      ert <- lookup "ert" doc 
-      frame' <- lookup "frame" doc 
-      frame <- fromDB frame'
-      bin <- lookup "binary" doc 
-      return $ TMStoreFrame (microToTime ert False) frame bin
+    fromDB doc = do
+        ert    <- lookup "ert" doc
+        frame' <- lookup "frame" doc
+        frame  <- fromDB frame'
+        bin    <- lookup "binary" doc
+        return $ TMStoreFrame (microToTime ert False) frame bin
 
 
 
@@ -39,12 +36,12 @@ instance MongoDbConversion TMFrame Document where
         , "data" =: Binary _tmFrameData
         , "OCF" =: valMaybe ((fromIntegral <$> _tmFrameOCF) :: Maybe Int32)
         ]
-    fromDB doc = do 
-      hdr' <- lookup "header" doc 
-      hdr <- fromDB hdr'
-      d <- lookup "data" doc 
-      ocf <- lookup "OCF" doc 
-      return $ TMFrame hdr d ocf Nothing
+    fromDB doc = do
+        hdr' <- lookup "header" doc
+        hdr  <- fromDB hdr'
+        d    <- lookup "data" doc
+        ocf  <- lookup "OCF" doc
+        return $ TMFrame hdr d ocf Nothing
 
 
 instance MongoDbConversion TMFrameHeader Document where
@@ -117,11 +114,11 @@ instance Val Word32 where
     cast' _         = Nothing
 
 
-instance Val ByteString  where 
+instance Val ByteString  where
     val x = Bin (Binary x)
-    
+
     cast' (Bin (Binary x)) = Just x
-    cast' _ = Nothing
+    cast' _                = Nothing
 
 instance Val TMSegmentLen where
     val TMSegment256   = Int32 256

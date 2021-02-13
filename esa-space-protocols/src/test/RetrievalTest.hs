@@ -50,7 +50,9 @@ import           Verification.Verification
 import           Refined
 
 import           Control.PUS.Classes
-import           Persistence.DbProcessing
+import           Data.Mongo.Processing
+import           Data.DbConfig.MongoDB
+
 
 
 main :: IO ()
@@ -61,15 +63,16 @@ main = do
     defLogOptions <- logOptionsHandle stdout True
     let logOptions = setLogMinLevel LevelError defLogOptions
     withLogFunc logOptions $ \logFunc -> do
-        dbBackend <- startDbProcessing (cfgDataBase defaultConfig)
+        dbBackend <- startDbProcessing defaultMongoDBConfig
         state     <- newGlobalState
             defaultConfig
             (defaultMissionSpecific defaultConfig)
             logFunc
             (\ev -> T.putStrLn ("Event: " <> T.pack (show ev)))
-            dbBackend
+            (Just dbBackend)
 
         runRIO state $ do
             env    <- ask
             frames <- liftIO $ getAllFrames env
-            liftIO $ T.putStrLn $ "Received Frames from DB:\n" <> T.pack (show frames)
+            liftIO $ T.putStrLn $ "Received Frames from DB:\n" <> T.pack
+                (show frames)

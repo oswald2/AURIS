@@ -9,7 +9,7 @@ import           Data.PUS.TMStoreFrame
 
 import           General.Time
 import           General.PUSTypes
-import           General.SizeOf
+import General.SizeOf ( FixedSize(fixedSizeOf) )
 
 import           Persistence.Definitions        ( DbTMFrame(..) )
 import           Persistence.TMFrameDefinitions

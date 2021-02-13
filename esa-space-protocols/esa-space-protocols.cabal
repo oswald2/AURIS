@@ -85,7 +85,6 @@ library
         Verification.Verification
         Verification.Commands
         Verification.Processor
-        Persistence.Logging
 
 
     hs-source-dirs: src
@@ -498,7 +497,7 @@ executable RetrievalTest
     build-depends:
         esa-space-protocols
         , esa-base
-        , esa-db
+        , esa-db-mongodb
         , base
         , bytestring
         , conduit

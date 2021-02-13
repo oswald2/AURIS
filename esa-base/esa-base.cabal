@@ -99,6 +99,9 @@ library
     Data.PUS.MissionSpecific.Definitions
     Conduit.PayloadParser
     Persistence.Conversion.Types
+    Persistence.LogEvent
+    Persistence.Logging
+    Persistence.DbBackend
 
   -- Modules included in this library but not exported.
   -- other-modules:

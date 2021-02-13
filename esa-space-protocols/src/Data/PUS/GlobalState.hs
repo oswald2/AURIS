@@ -70,7 +70,7 @@ import           General.Time
 
 import           Verification.Commands
 
-import           Persistence.DbProcessing
+import           Persistence.DbBackend
 
 
 -- | The AppState is just a type alias

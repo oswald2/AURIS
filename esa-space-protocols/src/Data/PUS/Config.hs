@@ -47,8 +47,6 @@ import           Data.PUS.TMFrame               ( TMFrameConfig
                                                 , defaultTMFrameConfig
                                                 )
 
-import           Data.DbConfig
-
 
 data NctrsConfig = NctrsConfig
     { cfgNctrsID      :: !Word16
@@ -169,8 +167,7 @@ data Config = Config
     , cfgEDEN                 :: [EDENConfig]
     -- | Specifies default values for TC verifications
     , cfgVerification         :: VerificationConfig
-    -- | Configuration for the Database
-    , cfgDataBase             :: DbConfig
+    , cfgStoreTMFrames        :: !Bool
     }
     deriving (Eq, Generic)
 
@@ -242,7 +239,7 @@ defaultConfig = Config { cfgCltuBlockSize        = CltuBS_8
                        , cfgCnC                  = [defaultCncConfig]
                        , cfgEDEN                 = [defaultEdenConfig]
                        , cfgVerification         = defaultVerifConfig
-                       , cfgDataBase             = defaultDbConfig
+                       , cfgStoreTMFrames        = True
                        }
 
 

@@ -10,7 +10,7 @@ import qualified Data.Text.IO                  as T
 import           Data.PUS.GlobalState
 import           Data.PUS.MissionSpecific.Definitions
                                                 ( PUSMissionSpecific )
-import           Data.PUS.Config                ( Config(cfgDataBase) )
+-- import           Data.PUS.Config
 import           Control.PUS.Classes            ( setDataModel )
 
 import           Interface.Interface            ( Interface
@@ -21,14 +21,7 @@ import           Interface.CoreProcessor        ( runCoreThread
                                                 , InterfaceAction
                                                 )
 
-import           AurisConfig                    ( AurisConfig
-                                                    ( aurisLogLevel
-                                                    , aurisPusConfig
-                                                    )
-                                                , configPath
-                                                , defaultMIBFile
-                                                , convLogLevel
-                                                )
+import           AurisConfig                    
 
 import           System.Directory               ( getHomeDirectory )
 import           System.FilePath                ( (</>) )
@@ -47,7 +40,7 @@ import           Application.DataModel          ( loadDataModelDef
                                                     )
                                                 )
 import           Verification.Processor         ( processVerification )
-import           Persistence.DbProcessing       ( startDbProcessing )
+import           Data.Mongo.Processing          ( startDbProcessing )
 import           Persistence.Logging
 
 
@@ -69,10 +62,14 @@ runProcessing cfg missionSpecific mibPath interface mainWindow coreQueue = do
 
         -- First, we create the databas
         T.putStrLn "Starting DB backend..."
-        dbBackend <- startDbProcessing (cfgDataBase (aurisPusConfig cfg))
-        case dbBackend of
-            Just _  -> T.putStrLn "DB backend started..."
-            Nothing -> T.putStrLn "No DB backend was configured."
+        dbBackend <- case aurisDbConfig cfg of
+            Just dbCfg  -> do 
+                be <- startDbProcessing dbCfg
+                T.putStrLn "DB backend started..."
+                return (Just be)
+            Nothing -> do 
+                T.putStrLn "No DB backend was configured."
+                return Nothing
 
         -- Add the logging function to the GUI
         let logf =

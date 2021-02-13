@@ -63,8 +63,6 @@ import           Data.PUS.ExtractedPUSPacket
 import           Data.PUS.TMStoreFrame
 import           Data.PUS.EncTime
 
-import           Data.DbConfig
-
 import           General.Time
 
 import           Protocol.ProtocolInterfaces
@@ -131,7 +129,7 @@ storeTMFrameC
     => ConduitT TMStoreFrame TMStoreFrame m ()
 storeTMFrameC = do
     env <- ask
-    let cfg = cfgDataBase (env ^. getConfig)
+    let cfg = env ^. getConfig
     if cfgStoreTMFrames cfg
         then awaitForever $ \frame -> do
             liftIO $ storeTMFrame env frame

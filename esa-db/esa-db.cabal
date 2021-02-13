@@ -39,13 +39,13 @@ flag optimize
 
 library
   exposed-modules:
-      Data.DbConfig 
       Data.DbConfig.Postgres
       Data.DbConfig.SQLite
       Persistence.TMFrameDefinitions
       Persistence.DbProcessing
       Persistence.Definitions
       Persistence.Conversion.TMFrame 
+      Persistence.Conversion.LogEvent
 
       
   --other-modules:

@@ -54,9 +54,9 @@ import           General.Time
 import           Verification.Commands
 import           Verification.Verification
 
-import           Persistence.DbProcessing      as DB
-import           Persistence.Conversion.Types
-import           Persistence.Conversion.TMFrame ()
+import           Persistence.DbBackend         as DB
+import           Persistence.Conversion.Types   ( )
+import           Persistence.Conversion.TMFrame ( )
 
 
 
@@ -204,19 +204,13 @@ instance HasVerif GlobalState where
 
 instance HasDatabase GlobalState where
     getDbBackend env = glsDatabase env
-    storeTMFrame env frame = maybe (return ())
-                                   (\db -> DB.storeTMFrame db (toDB frame))
-                                   (getDbBackend env)
+    storeTMFrame env frame =
+        maybe (return ()) (`DB.storeTMFrame` frame) (getDbBackend env)
     storeTMFrames env frames =
-        maybe (return ())
-              (\db -> DB.storeTMFrames db (map toDB frames))
-              (getDbBackend env)
+        maybe (return ()) (`DB.storeTMFrames` frames) (getDbBackend env)
 
     getAllFrames env = do
-        let cfg = cfgDataBase (glsConfig env)
-        maybe (return [])
-              (fmap (map fromDB) . DB.allTMFrames cfg)
-              (getDbBackend env)
+        maybe (return []) DB.allTMFrames (getDbBackend env)
 
 
 instance HasGlobalState GlobalState

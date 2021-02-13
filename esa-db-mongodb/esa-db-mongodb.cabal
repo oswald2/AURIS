@@ -64,9 +64,11 @@ flag optimize
 library
   -- Modules exported by the library.
   exposed-modules:     
-    Data.Mongo.DbConfig
+    Data.DbConfig.MongoDB
     Data.Mongo.Processing
+    Data.Mongo.Conversion.Class
     Data.Mongo.Conversion.TMFrame
+    Data.Mongo.Conversion.LogEvent
 
 
   -- Modules included in this library but not exported.
@@ -90,6 +92,7 @@ library
     , mongoDB
     , bson
     , attoparsec
+    , aeson
 
   -- Directories containing source files.
   hs-source-dirs:      src

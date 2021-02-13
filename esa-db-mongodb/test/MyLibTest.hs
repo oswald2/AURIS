@@ -10,7 +10,8 @@ import qualified Data.Text.IO                  as T
 import           Database.MongoDB
 import           RIO.List.Partial               ( last )
 
-import           Data.Mongo.Conversion.TMFrame
+import           Data.Mongo.Conversion.Class
+import           Data.Mongo.Conversion.TMFrame ()
 
 
 import           Data.PUS.TMStoreFrame
