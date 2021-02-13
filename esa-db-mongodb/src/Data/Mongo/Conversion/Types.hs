@@ -5,6 +5,7 @@ import           RIO                     hiding ( lookup )
 
 import           Data.Bson
 
+import           General.Types
 import           General.PUSTypes
 import           General.APID
 import           Data.PUS.SegmentationFlags
@@ -97,33 +98,45 @@ instance Val APID where
     cast' _         = Nothing
 
 
-instance Val PUSPacketType where 
+instance Val PUSPacketType where
     val PUSTM = String "TM"
     val PUSTC = String "TC"
 
-    cast' (String "TM") = Just PUSTM 
-    cast' (String "TC") = Just PUSTC 
-    cast' _ = Nothing 
+    cast' (String "TM") = Just PUSTM
+    cast' (String "TC") = Just PUSTC
+    cast' _             = Nothing
 
 
-instance Val PUSType  where 
-    val (PUSType x) = val x 
+instance Val PUSType  where
+    val (PUSType x) = val x
 
     cast' (Int32 x) = Just (PUSType (fromIntegral x))
-    cast' _ = Nothing 
+    cast' _         = Nothing
 
 
-instance Val PUSSubType  where 
-    val (PUSSubType x) = val x 
+instance Val PUSSubType  where
+    val (PUSSubType x) = val x
 
     cast' (Int32 x) = Just (PUSSubType (fromIntegral x))
-    cast' _ = Nothing     
+    cast' _         = Nothing
 
 
-instance Val SourceID  where 
-    val (SourceID x) = val x 
+instance Val SourceID  where
+    val (SourceID x) = val x
 
     cast' (Int32 x) = Just (SourceID (fromIntegral x))
-    cast' _ = Nothing     
+    cast' _         = Nothing
 
 
+
+instance Val ByteOffset  where
+    val (ByteOffset x) = val x
+
+    cast' (Int32 x) = Just (ByteOffset (fromIntegral x))
+    cast' _         = Nothing
+
+instance Val BitSize  where
+    val (BitSize x) = val x
+
+    cast' (Int32 x) = Just (BitSize (fromIntegral x))
+    cast' _         = Nothing

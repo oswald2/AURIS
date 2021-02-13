@@ -6,7 +6,7 @@ import           RIO                     hiding ( lookup )
 
 import           Data.Bson
 
---import           General.Time
+import           General.Types
 import           General.PUSTypes
 
 import           Data.PUS.PUSPacket
@@ -48,5 +48,49 @@ instance MongoDbConversion PUSHeader Document where
 
 
 instance MongoDbConversion PUSPacket Document where
-    toDB PUSPacket {..} = ["header" =: toDB _pusHdr, "dfh" =: toDB _pusDfh]
+    toDB PUSPacket {..} =
+        [ "header" =: toDB _pusHdr
+        , "dfh" =: toDB _pusDfh
+        , "data" =: Binary (toBS _pusData)
+        , "piVals" =: _pusPIs
+        , "encodeCRC" =: _pusEncodeCRC
+        ]
     fromDB _ = undefined
+
+
+instance MongoDbConversion TMPIVal Document where
+    toDB TMPIVal {..} =
+        [ "value" =: _tmpiValue
+        , "offset" =: _tmpiOffset
+        , "tmpiWidth" =: _tmpiWidth
+        ]
+
+    fromDB doc = do
+        v <- lookup "value" doc
+        o <- lookup "offset" doc
+        w <- lookup "tmpiWidth" doc
+        return $ TMPIVal v o w
+
+instance Val TMPIVal where
+    val TMPIVal {..} = Doc
+        [ "value" =: _tmpiValue
+        , "offset" =: _tmpiOffset
+        , "tmpiWidth" =: _tmpiWidth
+        ]
+
+
+instance (MongoDbConversion a Document, Val a) => MongoDbConversion (a,a) Document where
+    toDB (x, y) = ["fst" =: toDB x, "snd" =: toDB y]
+
+    fromDB doc = do
+        f <- lookup "fst" doc
+        s <- lookup "s" doc
+        return (f, s)
+
+instance Val a => Val (a,a) where 
+    val (x, y) = Doc ["fst" =: val x, "snd" =: val y]
+
+
+instance MongoDbConversion (Maybe (TMPIVal, TMPIVal)) Document where
+    toDB Nothing  = ["TMPIVal" =: String "Nothing"]
+    toDB (Just v) = ["TMPIVal" =: v]
