@@ -93,10 +93,14 @@ library
     Data.PUS.TMFrameDfh
     Data.PUS.TMStoreFrame
     Data.PUS.EncTime
+    Data.PUS.PUSPacket
     Data.PUS.PUSDfh
     Data.PUS.CRC
     Data.PUS.CLCW
+    Data.PUS.SegmentationFlags
+    Data.PUS.ExtractedDU
     Data.PUS.MissionSpecific.Definitions
+    Protocol.ProtocolInterfaces
     Conduit.PayloadParser
     Persistence.Conversion.Types
     Persistence.LogEvent
@@ -181,6 +185,7 @@ library
     , filepath
     , word24
     , closed
+    , bytestring-to-vector
 
 
   -- Directories containing source files.

@@ -51,14 +51,12 @@ library
         Data.PUS.TCRequest
         Data.PUS.TCPacket
         Data.PUS.TCPacketEncoder
-        Data.PUS.PUSPacket
         Data.PUS.PUSPacketEncoder
         Data.PUS.COP1Types
         Data.PUS.FOP1
         Data.PUS.FARM1
         Data.PUS.Segment
         Data.PUS.SegmentEncoder
-        Data.PUS.SegmentationFlags
         Data.PUS.TCDirective
         Data.PUS.TCCnc
         Data.PUS.Parameter
@@ -66,7 +64,6 @@ library
         Data.PUS.TMParameterExtraction
         Data.PUS.TMPacket
         Data.PUS.TMPacketProcessing
-        Data.PUS.ExtractedDU
         Data.PUS.ExtractedPUSPacket
         Data.PUS.Value
         Data.PUS.NcduToTMFrame
@@ -78,7 +75,6 @@ library
         Protocol.EDENProcessor
         Protocol.EDENEncoder
         Protocol.CnC
-        Protocol.ProtocolInterfaces
         Protocol.ProtocolSwitcher
         Application.Chains
         Application.DataModel

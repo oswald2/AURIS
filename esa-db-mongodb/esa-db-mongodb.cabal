@@ -67,7 +67,12 @@ library
     Data.DbConfig.MongoDB
     Data.Mongo.Processing
     Data.Mongo.Conversion.Class
+    Data.Mongo.Conversion.Types
     Data.Mongo.Conversion.TMFrame
+    Data.Mongo.Conversion.PUSPacket
+    Data.Mongo.Conversion.PUSDfh
+    Data.Mongo.Conversion.ExtractedDU
+    Data.Mongo.Conversion.ProtocolInterface
     Data.Mongo.Conversion.LogEvent
 
 

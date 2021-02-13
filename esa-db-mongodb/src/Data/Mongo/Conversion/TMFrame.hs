@@ -12,7 +12,7 @@ import           Data.PUS.TMFrame
 import           Data.PUS.TMStoreFrame
 
 import           Data.Mongo.Conversion.Class    ( MongoDbConversion(..) )
-
+import           Data.Mongo.Conversion.Types    ( )
 
 
 instance MongoDbConversion TMStoreFrame Document where
@@ -83,42 +83,6 @@ instance MongoDbConversion TMFrameHeader Document where
                                fhp
 
 
-instance Val SCID where
-    val (SCID x) = Int32 (fromIntegral x)
-
-    cast' (Int32 x) = Just $ SCID (fromIntegral x)
-    cast' _         = Nothing
-
-instance Val VCID where
-    val (VCID x) = Int32 (fromIntegral x)
-
-    cast' (Int32 x) = Just $ VCID (fromIntegral x)
-    cast' _         = Nothing
-
-instance Val Word8 where
-    val x = Int32 (fromIntegral x)
-
-    cast' (Int32 x) = Just (fromIntegral x)
-    cast' _         = Nothing
-
-instance Val Word16 where
-    val x = Int32 (fromIntegral x)
-
-    cast' (Int32 x) = Just (fromIntegral x)
-    cast' _         = Nothing
-
-instance Val Word32 where
-    val x = Int32 (fromIntegral x)
-
-    cast' (Int32 x) = Just (fromIntegral x)
-    cast' _         = Nothing
-
-
-instance Val ByteString  where
-    val x = Bin (Binary x)
-
-    cast' (Bin (Binary x)) = Just x
-    cast' _                = Nothing
 
 instance Val TMSegmentLen where
     val TMSegment256   = Int32 256

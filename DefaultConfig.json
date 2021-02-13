@@ -1,6 +1,7 @@
 {
-    "aurisDbLogLevel": {
-        "tag": "LogLevelDebug"
+    "aurisDbConfig": {
+        "cfgMongoHost": "localhost",
+        "cfgMongoPort": null
     },
     "aurisDatabase": "auris.db",
     "aurisMIB": null,
@@ -17,6 +18,7 @@
             }
         ],
         "cfgUnknownSPID": 5071,
+        "cfgStoreTMFrames": true,
         "cfgRandomizerEnabled": false,
         "cfgVerification": {
             "cfgTimeoutC": 30,
@@ -36,21 +38,6 @@
             "fromLeaps": 17
         },
         "cfgSCID": 0,
-        "cfgDataBase": {
-            "cfgStoreTMFrames": true,
-            "cfgDbDebugLog": true,
-            "cfgBackend": {
-                "tag": "PGConfig",
-                "contents": {
-                    "pgDbName": "active_session",
-                    "pgPort": 5432,
-                    "pgHost": "localhost",
-                    "pgPassword": "auris",
-                    "pgNumberConns": 10,
-                    "pgUser": "auris"
-                }
-            }
-        },
         "cfgNCTRS": [
             {
                 "cfgNctrsPortTC": 20009,
@@ -61,7 +48,6 @@
                 "cfgNctrsPortTM": 2502
             }
         ],
-        "cfgMaxTMFrameLen": 1115,
         "cfgCltuBlockSize": "CltuBS_8",
         "cfgEDEN": [
             {
@@ -71,8 +57,11 @@
                 "cfgEdenPort": 40300
             }
         ],
-        "cfgTMSegLength": "TMSegment65536",
-        "cfgTMFrameHasCRC": true
+        "cfgTMFrame": {
+            "cfgMaxTMFrameLen": 1115,
+            "cfgTMSegLength": "TMSegment65536",
+            "cfgTMFrameHasCRC": true
+        }
     },
     "aurisLogLevel": {
         "tag": "LogLevelInfo"

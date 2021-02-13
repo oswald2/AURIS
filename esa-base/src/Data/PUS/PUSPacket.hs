@@ -40,6 +40,8 @@ module Data.PUS.PUSPacket
     , pusEncodeCRC
     , headPacket
     , chunkPackets
+    , packPktID
+    , packSeqFlags
     ) where
 
 
@@ -460,9 +462,10 @@ decodePktMissionSpecific pkt missionSpecific commIF
         Right (result, _pl, extractedCRC, calcdCRC) -> if result
             then case A.parse (pusPktParser missionSpecific commIF) pkt of
                 A.Fail _ _ err -> Left (T.pack err)
-                A.Partial f -> case f B.empty of 
+                A.Partial f    -> case f B.empty of
                     A.Fail _ _ err -> Left (T.pack err)
-                    A.Partial _ -> Left "PUS Packet: not enough input to parse PUS Packet"
+                    A.Partial _ ->
+                        Left "PUS Packet: not enough input to parse PUS Packet"
                     A.Done _ p -> Right p
                 A.Done _ p -> Right p
             else
@@ -532,12 +535,12 @@ pusPktParserPayload missionSpecific comm hdr = do
     dat <- A.take (fromIntegral (hdr ^. pusHdrTcLength + 1) - dfhLength dfh)
 
     let pl = case comm of
-          IfCnc _ -> case dfh of
-              PUSCnCTCHeader { _cncTcCrcFlags = val } -> if val == 1      -- the packet contains a CRC
-                  then B.take (B.length dat - crcLen) dat
-                  else dat
-              _ -> dat
-          _ -> B.take (B.length dat - crcLen) dat
+            IfCnc _ -> case dfh of
+                PUSCnCTCHeader { _cncTcCrcFlags = val } -> if val == 1      -- the packet contains a CRC
+                    then B.take (B.length dat - crcLen) dat
+                    else dat
+                _ -> dat
+            _ -> B.take (B.length dat - crcLen) dat
 
     --traceM (hexdumpBS pl)
 

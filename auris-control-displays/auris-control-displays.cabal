@@ -83,6 +83,7 @@ library
     , gi-gobject
     , gi-gdk
     , haskell-gi-base
+    , esa-base
     , esa-space-protocols
     , gui-base
 
