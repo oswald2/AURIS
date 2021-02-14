@@ -147,7 +147,7 @@ data TMFrameHeader = TMFrameHeader
     , _tmFrameSegID          :: !TMSegmentLen
     , _tmFrameFirstHeaderPtr :: !Word16
     }
-    deriving (Show, Read, Generic)
+    deriving (Eq, Show, Read, Generic)
 makeLenses ''TMFrameHeader
 
 instance NFData TMFrameHeader
@@ -198,7 +198,7 @@ data TMFrame = TMFrame
     , _tmFrameOCF  :: Maybe Word32
     , _tmFrameFECW :: Maybe CRC
     }
-    deriving (Show, Read, Generic)
+    deriving (Eq, Show, Read, Generic)
 makeLenses ''TMFrame
 
 instance GetPayload TMFrame where
