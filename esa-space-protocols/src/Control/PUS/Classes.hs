@@ -55,8 +55,6 @@ import           Verification.Commands
 import           Verification.Verification
 
 import           Persistence.DbBackend         as DB
-import           Persistence.Conversion.Types   ( )
-import           Persistence.Conversion.TMFrame ( )
 
 
 

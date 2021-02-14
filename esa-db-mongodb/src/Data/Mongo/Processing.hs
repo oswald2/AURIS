@@ -22,10 +22,17 @@ import           Data.Attoparsec.Text          as A
 import           UnliftIO.Exception            as E
 import           Database.MongoDB              as DB
 
+import           Data.PUS.ExtractedDU
+import           Data.PUS.PUSPacket
+
 import           Data.DbConfig.MongoDB
 import           Data.Mongo.Conversion.Class
 import           Data.Mongo.Conversion.TMFrame  ( )
 import           Data.Mongo.Conversion.LogEvent ( )
+import           Data.Mongo.Conversion.PUSPacket
+                                                ( )
+import           Data.Mongo.Conversion.ExtractedDU
+                                                ( )
 import           Data.PUS.TMStoreFrame
 
 import           Persistence.DbBackend
@@ -66,19 +73,17 @@ startDbProcessing :: DbConfigMongoDB -> IO DbBackend
 startDbProcessing cfg = do
     frameQueue <- newTBQueueIO dbQueueSize
     eventQueue <- newTBQueueIO dbQueueSize
+    pktQueue   <- newTBQueueIO dbQueueSize
 
     let tmFramesT = conc $ tmFrameThread cfg frameQueue
-        eventsT = conc $ eventStoreThread cfg eventQueue 
+        eventsT   = conc $ eventStoreThread cfg eventQueue
+        pktsT     = conc $ pusPacketThread cfg pktQueue
 
-        threads = tmFramesT <> eventsT
+        threads   = tmFramesT <> eventsT <> pktsT
 
     t <- async $ runConc threads
 
-    createDbBackend 
-        frameQueue 
-        eventQueue 
-        t
-        (getAllFrames cfg)
+    createDbBackend frameQueue eventQueue pktQueue t (getAllFrames cfg)
 
 
 portParser :: Parser PortID
@@ -119,13 +124,13 @@ runInConnection cfg worker = do
         worker' cfg pipe
 
 
-writeDB :: MonadIO m => Pipe -> [Document] -> m ()
-writeDB pipe dat = access pipe master "active_session" (go dat)
+writeDB :: MonadIO m => Pipe -> Collection -> [Document] -> m ()
+writeDB pipe collection dat = access pipe master "active_session" (go dat)
   where
     go []     = return ()
     go frames = do
         let (beg, r) = L.splitAt 1000 frames
-        insertAll_ "tm_frames" beg
+        insertAll_ collection beg
         go r
 
 
@@ -135,7 +140,7 @@ tmFrameThread cfg queue = do
   where
     worker _ pipe = forever $ do
         frames <- atomically $ flushTBQueue queue
-        writeDB pipe (map toDB frames)
+        writeDB pipe "tm_frames" (map toDB frames)
 
 eventStoreThread :: DbConfigMongoDB -> TBQueue LogEvent -> IO ()
 eventStoreThread cfg queue = do
@@ -143,20 +148,28 @@ eventStoreThread cfg queue = do
   where
     worker _ pipe = forever $ do
         logs <- atomically $ flushTBQueue queue
-        writeDB pipe (map toDB logs)
+        writeDB pipe "log_events" (map toDB logs)
+
+
+pusPacketThread :: DbConfigMongoDB -> TBQueue (ExtractedDU PUSPacket) -> IO ()
+pusPacketThread cfg queue = do
+    runInConnection cfg worker
+  where
+    worker _ pipe = forever $ do
+        pkts <- atomically $ flushTBQueue queue
+        writeDB pipe "pus_packets" (map toDB pkts)
 
 
 getAllFrames :: DbConfigMongoDB -> IO [TMStoreFrame]
-getAllFrames cfg = do 
+getAllFrames cfg = do
     res <- Data.Mongo.Processing.connect cfg
-    case res of 
+    case res of
         Left  _    -> return []
-        Right pipe -> do 
-            frames <- worker pipe             
+        Right pipe -> do
+            frames <- worker pipe
             DB.close pipe
             return frames
 
-    where 
-        worker pipe = access pipe master "active_session" query
-        query = catMaybes . map fromDB <$> 
-            (find (select [] "tm_frames") >>= rest)
+  where
+    worker pipe = access pipe master "active_session" query
+    query = catMaybes . map fromDB <$> (find (select [] "tm_frames") >>= rest)

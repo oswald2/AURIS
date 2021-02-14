@@ -167,7 +167,7 @@ library
         , sorted-list
         , deepseq
         , esa-base
-        , esa-db
+--        , esa-db
         , network
         , streaming-commons
         , text-short
