@@ -90,7 +90,8 @@ Executable AURISi
     gi-gobject,
     gi-glib,
     tar,
-    zlib
+    zlib,
+    stm
 
   default-extensions:
         
