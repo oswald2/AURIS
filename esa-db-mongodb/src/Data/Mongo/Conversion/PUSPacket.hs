@@ -78,6 +78,13 @@ instance Val TMPIVal where
         , "tmpiWidth" =: _tmpiWidth
         ]
 
+    cast' (Doc doc) = do 
+        v <- lookup "value" doc 
+        o <- lookup "offset" doc 
+        w <- lookup "tmpiWidth" doc 
+        return (TMPIVal v o w)
+    cast' _ = Nothing
+
 
 instance (MongoDbConversion a Document, Val a) => MongoDbConversion (a,a) Document where
     toDB (x, y) = ["fst" =: toDB x, "snd" =: toDB y]
@@ -90,7 +97,21 @@ instance (MongoDbConversion a Document, Val a) => MongoDbConversion (a,a) Docume
 instance Val a => Val (a,a) where 
     val (x, y) = Doc ["fst" =: val x, "snd" =: val y]
 
+    cast' (Doc doc) = do 
+        f <- lookup "fst" doc
+        s <- lookup "snd" doc 
+        return (f, s)
+    cast' _ = Nothing
+
 
 instance MongoDbConversion (Maybe (TMPIVal, TMPIVal)) Document where
     toDB Nothing  = ["TMPIVal" =: String "Nothing"]
     toDB (Just v) = ["TMPIVal" =: v]
+
+    fromDB doc = do 
+        t <- lookup "TMPIVal" doc
+        case t of 
+            String "Nothing" -> Just Nothing 
+            Doc doc2 -> fromDB doc2
+            _ -> Nothing
+

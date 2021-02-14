@@ -26,7 +26,7 @@ data TMStoreFrame = TMStoreFrame {
     _tmstTime :: !SunTime
     , _tmstFrame :: !TMFrame
     , _tmstBinary :: !ByteString
-    } deriving (Show, Generic)
+    } deriving (Eq, Show, Generic)
 makeLenses ''TMStoreFrame
 
 instance NFData TMStoreFrame
