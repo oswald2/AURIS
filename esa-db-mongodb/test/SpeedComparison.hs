@@ -3,7 +3,9 @@ module Main
     ) where
 
 import           RIO
-import           RIO.Partial                    ( read, fromJust )
+import           RIO.Partial                    ( read
+                                                , fromJust
+                                                )
 import qualified RIO.Text                      as T
 import qualified Data.Text.IO                  as T
 -- import           RIO.List                      ( repeat )
@@ -11,19 +13,11 @@ import           Database.MongoDB
 import           RIO.List.Partial               ( last )
 
 import           Data.Mongo.Conversion.Class
-import           Data.Mongo.Conversion.TMFrame ()
+import           Data.Mongo.Conversion.TMFrame  ( )
 
 
 import           Data.PUS.TMStoreFrame
-import Data.PUS.TMFrame
-    ( TMFrameHeader(TMFrameHeader, _tmFrameVersion, _tmFrameScID,
-                    _tmFrameVcID, _tmFrameOpControl, _tmFrameMCFC, _tmFrameVCFC,
-                    _tmFrameDfh, _tmFrameSync, _tmFrameOrder, _tmFrameSegID,
-                    _tmFrameFirstHeaderPtr),
-      TMFrame(TMFrame, _tmFrameHdr, _tmFrameData, _tmFrameOCF,
-              _tmFrameFECW),
-      defaultTMFrameConfig,
-      encodeFrame )
+import           Data.PUS.TMFrame
 import           General.PUSTypes
 import           General.Time
 import           Data.PUS.CLCW
@@ -87,18 +81,17 @@ worker now n = do
     delete (select [] "tm_frames")
 
     start1 <- liftIO getCurrentTime
-    replicateM_ n $ insertAll_ "tm_frames" (map toDB (replicate 1000 (tmFrame now)))
-    end1                              <- liftIO getCurrentTime
+    replicateM_ n
+        $ insertAll_ "tm_frames" (map toDB (replicate 1000 (tmFrame now)))
+    end1                        <- liftIO getCurrentTime
 
     --liftIO $ T.putStrLn $ "IDs: " <> T.pack (show (length ids))
 
-    start2                            <- liftIO getCurrentTime
+    start2                      <- liftIO getCurrentTime
     (results :: [TMStoreFrame]) <-
         force
-        . map (fromJust . fromDB)
-        <$> (   find (select [] "tm_frames") 
-            >>= rest
-            )
+        .   map (fromJust . fromDB)
+        <$> (find (select [] "tm_frames") >>= rest)
     let res = force (last results)
     liftIO $ T.putStrLn $ "TM Frame: " <> T.pack (show res)
     end2 <- liftIO getCurrentTime

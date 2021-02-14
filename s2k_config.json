@@ -1,6 +1,10 @@
 {
     "aurisMIB": null,
     "aurisMission": "DEFAULT",
+    "aurisDbConfig": {
+        "cfgMongoHost": "localhost",
+        "cfgMongoPort": null
+    },
     "aurisPusConfig": {
         "cfgCnC": [
             {
@@ -57,7 +61,6 @@
                 "cfgNctrsPortTM": 2502
             }
         ],
-        "cfgMaxTMFrameLen": 1115,
         "cfgCltuBlockSize": "CltuBS_8",
         "cfgEDEN": [
             {
@@ -67,8 +70,13 @@
                 "cfgEdenPort": 40300
             }
         ],
-        "cfgTMSegLength": "TMSegment65536",
-        "cfgTMFrameHasCRC": true
+        "cfgStoreTMFrames": true,
+        "cfgStorePUSPackets": true,
+        "cfgTMFrame": {
+            "cfgMaxTMFrameLen": 1115,
+            "cfgTMSegLength": "TMSegment65536",
+            "cfgTMFrameHasCRC": true
+        }
     },
     "aurisLogLevel": {
         "tag": "LogLevelDebug"

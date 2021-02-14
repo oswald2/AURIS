@@ -54,7 +54,7 @@ createNameDescrTable mainBox sel values = do
   --treeViewSetModel tv (Just model)
 
   -- add a filter entry and a label 
-  filterEntry <- new Entry []
+  filterEntry <- new SearchEntry []
   filterLabel <- new Label [ #label := "Filter:"]
   box <- boxNew OrientationHorizontal 0 
   boxPackStart box filterLabel False False 5 
@@ -80,7 +80,7 @@ createNameDescrTable mainBox sel values = do
   treeViewSetModel tv (Just filterModel)
 
   -- set callback to retrigger the filtering 
-  void $ after filterEntry #keyReleaseEvent (const $ treeModelFilterRefilter filterModel >> return False)
+  void $ Gtk.on filterEntry #searchChanged (treeModelFilterRefilter filterModel)
 
   selection <- treeViewGetSelection tv 
 

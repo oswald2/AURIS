@@ -33,7 +33,10 @@ aurisEventHandler queue event = atomically $ writeTBQueue queue event
 
 eventProcessorThread :: MainWindow -> TBQueue IfEvent -> IO ()
 eventProcessorThread mainWindow queue = forever $ do
-    events <- atomically $ flushTBQueue queue
+    events <- atomically $ do
+      e <- readTBQueue queue 
+      es <- flushTBQueue queue
+      return (e:es)
     mapM_ (eventProcessor mainWindow) events
 
 eventProcessor :: MainWindow -> IfEvent -> IO ()
@@ -115,7 +118,7 @@ eventProcessor _ _ = pure ()
 initialiseInterface
     :: MainWindow -> IO (Interface, Async (), TBQueue InterfaceAction)
 initialiseInterface mainWindow = do
-    queue                  <- newTBQueueIO 1000
+    queue                  <- newTBQueueIO 5000
     (interface, coreQueue) <- createInterface (aurisEventHandler queue)
     eventThread            <- async (eventProcessorThread mainWindow queue)
     pure (interface, eventThread, coreQueue)

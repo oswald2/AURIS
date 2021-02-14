@@ -40,7 +40,7 @@ import           Application.DataModel          ( loadDataModelDef
                                                     )
                                                 )
 import           Verification.Processor         ( processVerification )
-import           Data.Mongo.Processing          ( startDbProcessing )
+import           Data.Mongo.Processing          
 import           Persistence.Logging
 
 
@@ -60,11 +60,16 @@ runProcessing cfg missionSpecific mibPath interface mainWindow coreQueue = do
     -- start with the logging 
     withLogFunc logOptions $ \logFunc -> do
 
+        let logf1 =
+                logFunc
+                    <> messageAreaLogFunc (mainWindow ^. mwMessageDisplay)
+
         -- First, we create the databas
         T.putStrLn "Starting DB backend..."
         dbBackend <- case aurisDbConfig cfg of
             Just dbCfg  -> do 
-                be <- startDbProcessing dbCfg
+                dbState <- newDbState logf1 
+                be <- runRIO dbState $ startDbProcessing dbCfg
                 T.putStrLn "DB backend started..."
                 return (Just be)
             Nothing -> do 
@@ -73,9 +78,7 @@ runProcessing cfg missionSpecific mibPath interface mainWindow coreQueue = do
 
         -- Add the logging function to the GUI
         let logf =
-                logFunc
-                    <> messageAreaLogFunc (mainWindow ^. mwMessageDisplay)
-                    <> maybe mempty (\db -> mkLogFunc (logToDB db)) dbBackend
+                logf1 <> maybe mempty (\db -> mkLogFunc (logToDB db)) dbBackend
 
         -- Create a new 'GlobalState' for the processing
         state <- newGlobalState (aurisPusConfig cfg)

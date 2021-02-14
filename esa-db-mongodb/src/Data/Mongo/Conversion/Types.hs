@@ -2,7 +2,6 @@
 module Data.Mongo.Conversion.Types where
 
 import           RIO                     hiding ( lookup )
-
 import           Data.Bson
 
 import           General.Types
@@ -64,6 +63,12 @@ instance Val ByteString  where
     cast' (Bin (Binary x)) = Just x
     cast' _                = Nothing
 
+
+instance Val HexBytes where 
+    val (HexBytes x) = Bin (Binary x)
+
+    cast' (Bin (Binary x)) = Just (HexBytes x)
+    cast' _ = Nothing
 
 
 instance MongoDbConversion EduVCID Document where
@@ -140,3 +145,5 @@ instance Val BitSize  where
 
     cast' (Int32 x) = Just (BitSize (fromIntegral x))
     cast' _         = Nothing
+
+

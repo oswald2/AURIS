@@ -211,6 +211,7 @@ createMainWindow cfg = do
 
 
 
+
 mwTimerLabelCB :: MainWindow -> IO Bool
 mwTimerLabelCB window = do
     now <- getCurrentTime

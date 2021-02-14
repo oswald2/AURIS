@@ -71,10 +71,10 @@ processMsg (SendTCRequest rqst          ) = do
 processMsg (SendTCGroup group) = do 
   q <- view getRqstQueue
   atomically $ writeTBQueue q group 
-processMsg RequestAllTMFrames = do 
-  env <- ask
-  frames <- liftIO $ getAllFrames env
-  logInfo $ "Received Frames from DB:\n" <> displayShow frames
+-- processMsg RequestAllTMFrames = do 
+--   env <- ask
+--   frames <- liftIO $ allFrames env
+--   logInfo $ "Received Frames from DB:\n" <> displayShow frames
 
 
 importMIB

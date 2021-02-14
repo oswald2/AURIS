@@ -49,6 +49,7 @@
             }
         ],
         "cfgCltuBlockSize": "CltuBS_8",
+        "cfgStorePUSPackets": true,
         "cfgEDEN": [
             {
                 "cfgEdenName": "EDEN 1",

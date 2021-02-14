@@ -53,6 +53,17 @@ import           Control.PUS.Classes
 import           Data.Mongo.Processing
 import           Data.DbConfig.MongoDB
 
+import           Persistence.DbBackend
+
+
+logF :: LogSource -> LogLevel -> Utf8Builder -> IO ()
+logF source level builder = do
+    T.putStrLn
+        $  source
+        <> ": "
+        <> T.pack (show level)
+        <> ": "
+        <> utf8BuilderToText builder
 
 
 main :: IO ()
@@ -63,7 +74,8 @@ main = do
     defLogOptions <- logOptionsHandle stdout True
     let logOptions = setLogMinLevel LevelError defLogOptions
     withLogFunc logOptions $ \logFunc -> do
-        dbBackend <- startDbProcessing defaultMongoDBConfig
+        dbState   <- newDbState logFunc
+        dbBackend <- runRIO dbState $ startDbProcessing defaultMongoDBConfig
         state     <- newGlobalState
             defaultConfig
             (defaultMissionSpecific defaultConfig)
@@ -73,6 +85,7 @@ main = do
 
         runRIO state $ do
             env    <- ask
-            frames <- liftIO $ getAllFrames env
-            liftIO $ T.putStrLn $ "Received Frames from DB:\n" <> T.pack
-                (show frames)
+            frames <- allTMFrames defaultMongoDBConfig
+            liftIO $ T.putStrLn $ "Received Frames from DB:\n" 
+                <> T.pack (show (length frames)) <> " rows, last row:\n"
+                <> T.pack (show (last frames))

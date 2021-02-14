@@ -1,12 +1,13 @@
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 module Data.Mongo.Processing
     ( Data.Mongo.Processing.connect
+    , newDbState
+    , DbState
     , startDbProcessing
-    , withMongoDB
     ) where
 
 import           RIO
 import qualified RIO.Text                      as T
-import qualified Data.Text.IO                  as T
 import qualified RIO.List                      as L
 import           Prelude                        ( IOError )
 import           Control.Concurrent.STM.TBQueue ( flushTBQueue )
@@ -44,7 +45,12 @@ dbQueueSize :: Natural
 dbQueueSize = 10000
 
 
-connect :: DbConfigMongoDB -> IO (Either Text Pipe)
+instance DbBackendClass DbConfigMongoDB m where
+    allTMFrames       = getAllFrames
+    dropTMFramesTable = cleanFramesTable
+
+
+connect :: (MonadUnliftIO m) => DbConfigMongoDB -> m (Either Text Pipe)
 connect cfg = do
     let h    = T.unpack (cfgMongoHost cfg)
         port = case cfgMongoPort cfg of
@@ -58,7 +64,7 @@ connect cfg = do
         Left  err -> return (Left err)
         Right p   -> do
             let conn = Host h p
-            res <- E.try $ DB.connect conn
+            res <- E.try $ liftIO $ DB.connect conn
             case res of
                 Left e ->
                     return
@@ -69,11 +75,26 @@ connect cfg = do
                 Right c -> return $ Right c
 
 
-startDbProcessing :: DbConfigMongoDB -> IO DbBackend
+newtype DbState = DbState
+    { dbStLogFunc :: LogFunc
+    }
+
+newDbState :: LogFunc -> IO DbState
+newDbState logFunc = return DbState { dbStLogFunc = logFunc }
+
+instance HasLogFunc DbState where
+    logFuncL = lens dbStLogFunc (\c lf -> c { dbStLogFunc = lf })
+
+
+
+startDbProcessing
+    :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env)
+    => DbConfigMongoDB
+    -> m DbBackend
 startDbProcessing cfg = do
-    frameQueue <- newTBQueueIO dbQueueSize
-    eventQueue <- newTBQueueIO dbQueueSize
-    pktQueue   <- newTBQueueIO dbQueueSize
+    frameQueue <- liftIO $ newTBQueueIO dbQueueSize
+    eventQueue <- liftIO $ newTBQueueIO dbQueueSize
+    pktQueue   <- liftIO $ newTBQueueIO dbQueueSize
 
     let tmFramesT = conc $ tmFrameThread cfg frameQueue
         eventsT   = conc $ eventStoreThread cfg eventQueue
@@ -83,7 +104,51 @@ startDbProcessing cfg = do
 
     t <- async $ runConc threads
 
-    createDbBackend frameQueue eventQueue pktQueue t (getAllFrames cfg)
+    initDB cfg
+
+    createDbBackend frameQueue eventQueue pktQueue t
+
+
+
+initDB
+    :: (MonadReader env m, MonadUnliftIO m, HasLogFunc env)
+    => DbConfigMongoDB
+    -> m ()
+initDB cfg = do
+    runInConnection cfg worker
+  where
+    worker _ pipe = access pipe master "active_session" query
+    query = do
+        -- create index on "tm_frames" collection
+        let idx = Index { iColl               = "tm_frames"
+                        , iKey                = ["ert" =: (1 :: Int)]
+                        , iName               = "TMFrameIndex"
+                        , iUnique             = True
+                        , iDropDups           = False
+                        , iExpireAfterSeconds = Nothing
+                        }
+        ensureIndex idx
+
+        -- create index on "log_events" collection
+        let logIdx = Index { iColl               = "log_events"
+                           , iKey                = ["timestamp" =: (1 :: Int)]
+                           , iName               = "LogEventIndex"
+                           , iUnique             = True
+                           , iDropDups           = False
+                           , iExpireAfterSeconds = Nothing
+                           }
+        ensureIndex logIdx
+
+        -- create index on "log_events" collection
+        let pktIdx = Index { iColl               = "pus_packets"
+                           , iKey                = ["ert" =: (1 :: Int), "dfh.secHeader.time" =: (1 :: Int)]
+                           , iName               = "PUSPacketIndex"
+                           , iUnique             = True
+                           , iDropDups           = False
+                           , iExpireAfterSeconds = Nothing
+                           }
+        ensureIndex pktIdx
+
 
 
 portParser :: Parser PortID
@@ -91,35 +156,32 @@ portParser = do
     A.try (PortNumber <$> decimal) <|> UnixSocket . T.unpack <$> takeText
 
 
-withMongoDB
-    :: DbConfigMongoDB
-    -> (Either Text Pipe -> IO (Either Text ()))
-    -> IO (Either Text ())
-withMongoDB cfg action = do
-    bracket (Data.Mongo.Processing.connect cfg) shutdown action
-
-  where
-    shutdown (Left  err) = return (Left err)
-    shutdown (Right _  ) = return (Right ())
-
 
 runInConnection
-    :: DbConfigMongoDB -> (DbConfigMongoDB -> Pipe -> IO ()) -> IO ()
+    :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env)
+    => DbConfigMongoDB
+    -> (DbConfigMongoDB -> Pipe -> m ())
+    -> m ()
 runInConnection cfg worker = do
-    bracket
+    e <- E.try $ bracket
         (Data.Mongo.Processing.connect cfg)
         (\case
             Left  _    -> return ()
-            Right pipe -> DB.close pipe
+            Right pipe -> liftIO $ DB.close pipe
         )
         (process worker)
+    case e of
+        Left err ->
+            logError $ "Exception during database processing: " <> displayShow
+                (err :: SomeException)
+        Right _ -> return ()
   where
     process _ (Left err) = do
-        T.putStrLn
+        logError
             $  "Could not connect to MongoDB: "
-            <> err
+            <> display err
             <> "\nConfig: "
-            <> T.pack (show cfg)
+            <> displayShow cfg
     process worker' (Right pipe) = do
         worker' cfg pipe
 
@@ -134,42 +196,100 @@ writeDB pipe collection dat = access pipe master "active_session" (go dat)
         go r
 
 
-tmFrameThread :: DbConfigMongoDB -> TBQueue TMStoreFrame -> IO ()
+tmFrameThread
+    :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env)
+    => DbConfigMongoDB
+    -> TBQueue TMStoreFrame
+    -> m ()
 tmFrameThread cfg queue = do
     runInConnection cfg worker
   where
-    worker _ pipe = forever $ do
-        frames <- atomically $ flushTBQueue queue
-        writeDB pipe "tm_frames" (map toDB frames)
+    worker _ pipe = do
+        logDebug "TM Frame Store Thread started"
+        forever $ do
+            logDebug "tmFrameThread waiting for frames..."
+            frames <- atomically $ do
+                f  <- readTBQueue queue
+                fs <- flushTBQueue queue
+                return (f : fs)
+            liftIO $ writeDB pipe "tm_frames" (map toDB frames)
+            logInfo ("Stored " <> display (length frames) <> " TM Frames.")
 
-eventStoreThread :: DbConfigMongoDB -> TBQueue LogEvent -> IO ()
+eventStoreThread
+    :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env)
+    => DbConfigMongoDB
+    -> TBQueue LogEvent
+    -> m ()
 eventStoreThread cfg queue = do
     runInConnection cfg worker
   where
-    worker _ pipe = forever $ do
-        logs <- atomically $ flushTBQueue queue
-        writeDB pipe "log_events" (map toDB logs)
+    worker _ pipe = do
+        logDebug "Log Event Store Thread started"
+        forever $ do
+            logs <- atomically $ do
+                e  <- readTBQueue queue
+                es <- flushTBQueue queue
+                return (e : es)
+            liftIO $ writeDB pipe "log_events" (map toDB logs)
+            logDebug $ "Stored " <> display (length logs) <> " Log Events."
 
 
-pusPacketThread :: DbConfigMongoDB -> TBQueue (ExtractedDU PUSPacket) -> IO ()
+pusPacketThread
+    :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env)
+    => DbConfigMongoDB
+    -> TBQueue (ExtractedDU PUSPacket)
+    -> m ()
 pusPacketThread cfg queue = do
     runInConnection cfg worker
   where
-    worker _ pipe = forever $ do
-        pkts <- atomically $ flushTBQueue queue
-        writeDB pipe "pus_packets" (map toDB pkts)
+    worker _ pipe = do
+        logDebug "PUS Packet Store Thread started"
+        forever $ do
+            pkts <- atomically $ do
+                p  <- readTBQueue queue
+                ps <- flushTBQueue queue
+                return (p : ps)
+            liftIO $ writeDB pipe "pus_packets" (map toDB pkts)
+            logDebug $ "Stored " <> display (length pkts) <> " PUS Packets."
 
 
-getAllFrames :: DbConfigMongoDB -> IO [TMStoreFrame]
+
+
+getAllFrames
+    :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env)
+    => DbConfigMongoDB
+    -> m [TMStoreFrame]
 getAllFrames cfg = do
     res <- Data.Mongo.Processing.connect cfg
     case res of
-        Left  _    -> return []
+        Left err -> do
+            logWarn $ "Could not connect to DB: " <> display err
+            return []
         Right pipe -> do
-            frames <- worker pipe
-            DB.close pipe
+            frames <- liftIO $ worker pipe
+            liftIO $ DB.close pipe
             return frames
 
   where
     worker pipe = access pipe master "active_session" query
     query = catMaybes . map fromDB <$> (find (select [] "tm_frames") >>= rest)
+
+
+cleanFramesTable
+    :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env)
+    => DbConfigMongoDB
+    -> m ()
+cleanFramesTable cfg = do
+    res <- Data.Mongo.Processing.connect cfg
+    case res of
+        Left err -> do
+            logWarn $ "Could not connect to DB: " <> display err
+            return ()
+        Right pipe -> do
+            logDebug "Removing TM Frames table..."
+            frames <- liftIO $ worker pipe
+            liftIO $ DB.close pipe
+            return frames
+  where
+    worker pipe = access pipe master "active_session" query
+    query = void $ dropCollection "tm_frames"

@@ -47,6 +47,8 @@ import           Data.PUS.GlobalState
 import           Data.PUS.MissionSpecific.Definitions
                                                 ( PUSMissionSpecific )
 import           Data.PUS.TCRequest
+import           Data.PUS.ExtractedDU           ( ExtractedDU )
+import           Data.PUS.PUSPacket             ( PUSPacket )
 
 import           General.PUSTypes
 import           General.Time
@@ -123,8 +125,7 @@ class HasDatabase env where
     getDbBackend :: env -> Maybe DbBackend
     storeTMFrame :: env -> TMStoreFrame -> IO ()
     storeTMFrames :: env -> [TMStoreFrame] -> IO ()
-    getAllFrames :: env -> IO [TMStoreFrame]
-
+    storePUSPacket :: env -> ExtractedDU PUSPacket -> IO ()
 
 -- | Class for accessing the global state
 class (HasConfig env,
@@ -206,9 +207,9 @@ instance HasDatabase GlobalState where
         maybe (return ()) (`DB.storeTMFrame` frame) (getDbBackend env)
     storeTMFrames env frames =
         maybe (return ()) (`DB.storeTMFrames` frames) (getDbBackend env)
+    storePUSPacket env pkt =
+        maybe (return ()) (`DB.storePUSPacket` pkt) (getDbBackend env)
 
-    getAllFrames env = do
-        maybe (return []) DB.allTMFrames (getDbBackend env)
 
 
 instance HasGlobalState GlobalState

@@ -167,7 +167,13 @@ data Config = Config
     , cfgEDEN                 :: [EDENConfig]
     -- | Specifies default values for TC verifications
     , cfgVerification         :: VerificationConfig
+    -- | Determines, whether incoming TM Frames are stored in the DB. This
+    -- can be useful for replays of TM
     , cfgStoreTMFrames        :: !Bool
+    -- | Determines, whether incoming raw PUS Packst are stored in the DB.
+    -- This can be usefull for replays of TM when no TM Frames are available
+    -- (e.g. C&C or EDEN connections)
+    , cfgStorePUSPackets      :: !Bool
     }
     deriving (Eq, Generic)
 
@@ -240,6 +246,7 @@ defaultConfig = Config { cfgCltuBlockSize        = CltuBS_8
                        , cfgEDEN                 = [defaultEdenConfig]
                        , cfgVerification         = defaultVerifConfig
                        , cfgStoreTMFrames        = True
+                       , cfgStorePUSPackets      = True
                        }
 
 

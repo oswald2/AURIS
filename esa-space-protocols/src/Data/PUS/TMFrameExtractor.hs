@@ -27,6 +27,7 @@ module Data.PUS.TMFrameExtractor
     , raisePUSPacketC
     , raiseFrameC
     , pusPacketGapCheckC
+    , pusPacketStoreC
     ) where
 
 import           RIO                     hiding ( view
@@ -125,13 +126,14 @@ tmFrameDecodeC = do
 
 
 storeTMFrameC
-    :: (MonadIO m, MonadReader env m, HasDatabase env, HasConfig env)
+    :: (MonadIO m, MonadReader env m, HasDatabase env, HasConfig env, HasLogFunc env)
     => ConduitT TMStoreFrame TMStoreFrame m ()
 storeTMFrameC = do
     env <- ask
     let cfg = env ^. getConfig
     if cfgStoreTMFrames cfg
         then awaitForever $ \frame -> do
+            logDebug "Storing TM Frame to DB..."
             liftIO $ storeTMFrame env frame
             yield frame
         else awaitForever yield
@@ -683,6 +685,19 @@ pusPacketDecodeC pIf = do
         .| pktReconstructorC missionSpecific pIf segLen pktStore
 
 
+-- | Stores the extracted packet in the database and then yields it
+pusPacketStoreC
+    :: (MonadIO m, MonadReader env m, HasDatabase env, HasLogFunc env)
+    => ConduitT ExtractedPacket ExtractedPacket m ()
+pusPacketStoreC = awaitForever $ \pkt -> do
+    env <- ask
+    logDebug "Storing PUS Packet to DB..."
+    liftIO $ storePUSPacket env (pkt ^. extrPacket)
+    yield pkt
+
+
+
+
 pusPacketGapCheckC
     :: (Monad m) => ConduitT ExtractedPacket ExtractedPacket m ()
 pusPacketGapCheckC = worker Nothing
@@ -708,10 +723,7 @@ pusPacketGapCheckC = worker Nothing
                                     (  pkt
                                     &  extrPacket
                                     .  epGap
-                                    .~ Just
-                                           ( fromIntegral oldSSC
-                                           , fromIntegral ssc
-                                           )
+                                    ?~ (fromIntegral oldSSC, fromIntegral ssc)
                                     )
                         worker (Just (M.insert apid ssc old))
 
@@ -749,11 +761,20 @@ tmFrameExtraction interf = do
     st <- ask
     let missionSpecific = st ^. getMissionSpecific
 
-    checkFrameCountC interf
-        .| raiseFrameC
-        .| extractPktFromTMFramesC missionSpecific interf
-        .| pusPacketDecodeC interf
-        .| pusPacketGapCheckC
+    if cfgStorePUSPackets (st ^. getConfig)
+        then 
+            checkFrameCountC interf
+                .| raiseFrameC
+                .| extractPktFromTMFramesC missionSpecific interf
+                .| pusPacketDecodeC interf
+                .| pusPacketStoreC
+                .| pusPacketGapCheckC
+        else 
+            checkFrameCountC interf
+                .| raiseFrameC
+                .| extractPktFromTMFramesC missionSpecific interf
+                .| pusPacketDecodeC interf
+                .| pusPacketGapCheckC
 
 
 checkGapsValid :: TMSegmentLen -> IntermediatePacket -> PUSHeader -> Bool
