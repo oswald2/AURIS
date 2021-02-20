@@ -1,1 +1,84 @@
-../CssTest/style.css
+
+
+window {
+  background-color:#e0e0e0;
+}
+
+button {
+  margin: 4px;
+  border-radius: 10px;
+  background-color:#e0e0e0;
+  color: #000;
+  border: 1px solid rgba(255,255,255,0.20);
+  box-shadow:  4px 4px 4px 0 #9b9b9b, 
+              -4px -4px 4px 0 #ffffff;
+}
+
+button:focus {
+  margin: 4px;
+  border-radius: 10px;
+  background-color:#e0e0e0;
+  color: #000;
+  border: 1px solid rgba(0,255,34,0.60);
+  box-shadow:  4px 4px 4px 0 #9b9b9b, 
+              -4px -4px 4px 0 #ffffff;
+}
+
+button:active {
+  margin: 4px;
+  border-radius: 10px;
+  background-color:#e0e0e0;
+  color: #000;
+  border: 1px solid rgba(255,255,255,0.20);
+  box-shadow:  -4px -4px 4px 0 #9b9b9b, 
+               4px 4px 4px 0 #ffffff;
+}
+
+checkbutton 
+{ 
+  margin: 4px;
+  border-radius: 10px;
+  background-color:#e0e0e0;
+  color: #000;
+  border: 1px solid rgba(255,255,255,0.20);
+  box-shadow:  4px 4px 4px 0 #9b9b9b, 
+              -4px -4px 4px 0 #ffffff;
+}
+
+checkbutton:focus
+{ 
+  margin: 4px;
+  border-radius: 10px;
+  background-color:#e0e0e0;
+  color: #000;
+  border: 1px solid rgba(0, 255, 34, 0.6);
+  box-shadow:  4px 4px 4px 0 #9b9b9b, 
+              -4px -4px 4px 0 #ffffff;
+}
+
+/* checkbutton:checked
+{ 
+  margin: 4px;
+  border-radius: 10px;
+  background-color:#e0e0e0;
+  color: #000;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: -4px -4px 4px 0 #9b9b9b, 
+              4px 4px 4px 0 #ffffff;
+} */
+
+checkbutton check {
+  margin: 4px;
+  color:rgba(0, 255, 34, 0.8)
+}
+
+entry 
+{
+  margin: 4px;
+  border-radius: 10px;
+  background-color:#e0e0e0;
+  color: #000;
+  border: 1px solid rgba(255,255,255,0.20);
+  box-shadow: inset 4px 4px 4px 0 #9b9b9b, 
+              inset -4px -4px 4px 0 #ffffff;
+}
