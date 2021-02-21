@@ -1,70 +1,74 @@
 
+@define-color bg_color #e0e0e0; 
+@define-color dark_shadow #9b9b9b;
+@define-color light_shadow #ffffff;
+
 
 window {
-  background-color:#e0e0e0;
+  background-color:@bg_color;
 }
 
 button {
   margin: 4px;
   border-radius: 10px;
-  background-color:#e0e0e0;
+  background-color:@bg_color;
   color: #000;
   border: 1px solid rgba(255,255,255,0.20);
-  box-shadow:  4px 4px 4px 0 #9b9b9b, 
+  box-shadow:  4px 4px 4px 0 @dark_shadow, 
               -4px -4px 4px 0 #ffffff;
 }
 
 button:focus {
   margin: 4px;
   border-radius: 10px;
-  background-color:#e0e0e0;
+  background-color:@bg_color;
   color: #000;
   border: 1px solid rgba(0,255,34,0.60);
-  box-shadow:  4px 4px 4px 0 #9b9b9b, 
-              -4px -4px 4px 0 #ffffff;
+  box-shadow:  4px 4px 4px 0 @dark_shadow, 
+              -4px -4px 4px 0 @light_shadow;
 }
 
 button:active {
   margin: 4px;
   border-radius: 10px;
-  background-color:#e0e0e0;
+  background-color: @bg_color;
   color: #000;
   border: 1px solid rgba(255,255,255,0.20);
-  box-shadow:  -4px -4px 4px 0 #9b9b9b, 
-               4px 4px 4px 0 #ffffff;
+  box-shadow:  -4px -4px 4px 0 @dark_shadow, 
+               4px 4px 4px 0 @light_shadow;
 }
 
 checkbutton 
 { 
   margin: 4px;
   border-radius: 10px;
-  background-color:#e0e0e0;
+  background-color:@bg_color;
   color: #000;
   border: 1px solid rgba(255,255,255,0.20);
-  box-shadow:  4px 4px 4px 0 #9b9b9b, 
-              -4px -4px 4px 0 #ffffff;
+  box-shadow:  4px 4px 4px 0 @dark_shadow, 
+              -4px -4px 4px 0 @light_shadow;
 }
 
 checkbutton:focus
 { 
   margin: 4px;
   border-radius: 10px;
-  background-color:#e0e0e0;
+  background-color:@bg_color;
   color: #000;
   border: 1px solid rgba(0, 255, 34, 0.6);
-  box-shadow:  4px 4px 4px 0 #9b9b9b, 
-              -4px -4px 4px 0 #ffffff;
+  box-shadow:  4px 4px 4px 0 @dark_shadow, 
+              -4px -4px 4px 0 @light_shadow;
 }
 
 /* checkbutton:checked
 { 
   margin: 4px;
   border-radius: 10px;
-  background-color:#e0e0e0;
+  background-color:@bg_color;
   color: #000;
   border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: -4px -4px 4px 0 #9b9b9b, 
-              4px 4px 4px 0 #ffffff;
+  box-shadow: -4px -4px 4px 0 @dark_shadow, 
+              4px 4px 4px 0 @light_shadow;
 } */
 
 checkbutton check {
@@ -72,13 +76,169 @@ checkbutton check {
   color:rgba(0, 255, 34, 0.8)
 }
 
+checkbutton:disabled
+{ 
+  margin: 4px;
+  border-radius: 10px;
+  background-color:@bg_color;
+  color: #000;
+  border: 1px solid rgba(255,255,255,0.20);
+  box-shadow:  4px 4px 4px 0 @dark_shadow, 
+              -4px -4px 4px 0 @light_shadow;
+}
+
+
+
 entry 
 {
   margin: 4px;
   border-radius: 10px;
-  background-color:#e0e0e0;
+  background-color:@bg_color;
   color: #000;
   border: 1px solid rgba(255,255,255,0.20);
-  box-shadow: inset 4px 4px 4px 0 #9b9b9b, 
-              inset -4px -4px 4px 0 #ffffff;
+  box-shadow: inset 4px 4px 4px 0 @dark_shadow, 
+              inset -4px -4px 4px 0 @light_shadow;
+}
+
+/* notebook > header {
+  background-color: @bg_color;
+  border-radius: 4px;
+  color: #000;
+  border: 1px solid rgba(255,255,255,0.80);
+} */
+
+notebook > header > tabs {
+  margin: 4px;
+  background-color: @bg_color;
+  border-radius: 4px;
+  color: #000;
+  border: 1px solid rgba(255,255,255,0.60);
+  box-shadow: 2px 2px 4px 0 @dark_shadow, 
+              -2px -2px 4px 0 @light_shadow;
+}
+
+notebook > header > tabs > tab {
+  background-color: @bg_color;
+  border-radius: 4px;
+  color: #000;
+  border: 1px solid rgba(255,255,255,0.60);
+  /* box-shadow: 1px 1px 1px 0 @dark_shadow, 
+              -1px -1px 1px 0 @light_shadow; */
+}
+
+notebook > header > tabs > tab:checked {
+  background-color: @bg_color;
+  border-radius: 4px;
+  color: #000;
+  border: 1px solid rgba(255,255,255,0.20);
+  box-shadow: inset 4px 4px 4px 0 @dark_shadow, 
+              inset -4px -4px 4px 0 @light_shadow;
+}
+
+treeview.view header button {
+  margin: 2px; 
+  border-radius: 2px;
+  min-height: 0px;
+  background-color:@bg_color;
+  color: #000;
+  border: 1px solid rgba(255,255,255,0.20);
+  box-shadow:  2px 2px 2px 0 @dark_shadow, 
+              -2px -2px 2px 0 #ffffff;
+ 
+}
+
+
+#error-entry {
+  background-color: #ff0000;
+  color: white;
+  border: 1px solid rgba(255,255,255,0.60);
+  box-shadow: inset -4px -4px 4px 0 #990000, 
+              inset 4px 4px 4px 0 #ffffff;
+}
+
+#warn-entry {
+  background-color: #ffff00;
+  color: black;
+  border: 1px solid rgba(255,255,255,0.60);
+  box-shadow: inset -4px -4px 4px 0 #bbbb00, 
+              inset 4px 4px 4px 0 #ffffff;
+}
+
+#green-entry {
+  background-color: #00BB00;
+  color: black;
+  border: 1px solid rgba(255,255,255,0.60);
+  box-shadow: inset -4px -4px 4px 0 #008800, 
+              inset 4px 4px 4px 0 #ffffff;
+}
+
+
+frame border {
+  border-style: none;
+
+}
+
+frame {
+  margin: 4px;
+  border-radius: 4px;
+  background-color:@bg_color;
+  color: #000;
+  border: 1px solid rgba(255,255,255,0.20);
+  box-shadow: 4px 4px 4px 0 @dark_shadow, 
+              -4px -4px 4px 0 @light_shadow;
+}
+
+menubar {
+  margin: 4px;
+  border-radius: 4px;
+  background-color:@bg_color;
+  color: #000;
+  border: 1px solid rgba(255,255,255,0.20);
+  box-shadow: 4px 4px 4px 0 @dark_shadow, 
+              -4px -4px 4px 0 @light_shadow;
+}
+
+
+
+
+#description text {
+  margin: 4px;
+  border-radius: 10px;
+  background-color:@bg_color;
+  color: #000;
+  border: none;
+  border-color: rgba(0,0,0,0);
+  box-shadow: inset 4px 4px 4px 0 @dark_shadow, 
+              inset -4px -4px 4px 0 @light_shadow;
+}
+
+#description view {
+  margin: 4px;
+  border-radius: 10px;
+  background-color:@bg_color;
+  color: #000;
+  border: none;
+  border-color: rgba(0,0,0,0);
+  box-shadow: inset 4px 4px 4px 0 @dark_shadow, 
+              inset -4px -4px 4px 0 @light_shadow;
+}
+
+textview border {
+  background-color: @bg_color;
+  color: rgba(0,0,0,0);
+}
+
+.view:disabled {
+  border: none;
+}
+
+scrolledwindow {
+  margin: 4px;
+  border-radius: 10px;
+  background-color:@bg_color;
+  color: #000;
+  border: none;
+  border-color: rgba(0,0,0,0);
+  box-shadow: inset 4px 4px 4px 0 @dark_shadow, 
+              inset -4px -4px 4px 0 @light_shadow;
 }

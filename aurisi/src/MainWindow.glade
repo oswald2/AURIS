@@ -2229,6 +2229,9 @@ Author: Michael Oswald
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
                             <property name="label" translatable="yes">NCTRS Connections:</property>
+                            <attributes>
+                              <attribute name="weight" value="heavy"/>
+                            </attributes>
                           </object>
                         </child>
                       </object>
@@ -2265,6 +2268,9 @@ Author: Michael Oswald
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
                             <property name="label" translatable="yes">EDEN Connections:</property>
+                            <attributes>
+                              <attribute name="weight" value="heavy"/>
+                            </attributes>
                           </object>
                         </child>
                       </object>
@@ -2301,6 +2307,9 @@ Author: Michael Oswald
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
                             <property name="label" translatable="yes">C&amp;C Connections</property>
+                            <attributes>
+                              <attribute name="weight" value="heavy"/>
+                            </attributes>
                           </object>
                         </child>
                       </object>
@@ -2337,6 +2346,9 @@ Author: Michael Oswald
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
                             <property name="label" translatable="yes">SLE Connections:</property>
+                            <attributes>
+                              <attribute name="weight" value="heavy"/>
+                            </attributes>
                           </object>
                         </child>
                       </object>
@@ -2785,6 +2797,7 @@ Author: Michael Oswald
                                             <property name="shadow_type">in</property>
                                             <child>
                                               <object class="GtkTextView" id="textviewTCReqDescription">
+                                                <property name="name">description</property>
                                                 <property name="height_request">64</property>
                                                 <property name="visible">True</property>
                                                 <property name="can_focus">True</property>
@@ -2956,6 +2969,7 @@ Author: Michael Oswald
                         <property name="editable">False</property>
                         <property name="cursor_visible">False</property>
                         <property name="accepts_tab">False</property>
+                        <property name="monospace">True</property>
                       </object>
                     </child>
                   </object>

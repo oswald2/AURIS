@@ -64,19 +64,19 @@ createTMFrameTable builder = do
     tv
     TMFrameTable
     [ ("ERT", 190, \pkt -> [#text := textDisplay (pkt ^. epERT)])
-    , ( "S/C ID", 50
+    , ( "S/C ID", 55
       , \pkt -> [#text := textDisplay (pkt ^. epDU . tmFrameHdr . tmFrameScID)]
       )
-    , ( "V/C ID", 30
+    , ( "V/C ID", 50
       , \pkt -> [#text := textDisplay (pkt ^. epDU . tmFrameHdr . tmFrameVcID)]
       )
     , ( "VC FC", 50
       , \pkt -> [#text := textDisplay (pkt ^. epDU . tmFrameHdr . tmFrameVCFC)]
       )
-    , ( "MC FC", 50
+    , ( "MC FC", 55
       , \pkt -> [#text := textDisplay (pkt ^. epDU . tmFrameHdr . tmFrameMCFC)]
       )
-    , ( "DFH", 30
+    , ( "DFH", 44
       , \pkt ->
         [#text := if pkt ^. epDU . tmFrameHdr . tmFrameDfh then "T" else "F"]
       )

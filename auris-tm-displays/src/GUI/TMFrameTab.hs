@@ -243,6 +243,6 @@ setCLCWValues window clcw = do
 
 
 setupCallbacks :: TMFrameTab -> IO ()
-setupCallbacks g = do
+setupCallbacks _g = do
   return ()
 
