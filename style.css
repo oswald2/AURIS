@@ -223,6 +223,19 @@ menubar {
               inset -4px -4px 4px 0 @light_shadow;
 }
 
+monospace view {
+  font-family: 'Courier New', Courier, monospace;
+}
+
+#monotextview text {
+  font-family: 'Courier New', Courier, monospace;
+}
+
+#monotextview view {
+  font-family: 'Courier New', Courier, monospace;
+}
+
+
 textview border {
   background-color: @bg_color;
   color: rgba(0,0,0,0);
