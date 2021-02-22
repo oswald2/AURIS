@@ -28,7 +28,7 @@
                 , _tcDestination = DestCnc (IfCnc 1)
                 , _tcReqPacket =
                     TCPacket
-                      { _tcpAPID = APID 1000
+                      { _tcpAPID = APID 1696
                       , _tcpType = PUSType 8
                       , _tcpSubType = PUSSubType 1
                       , _tcpSourceID = SourceID 10

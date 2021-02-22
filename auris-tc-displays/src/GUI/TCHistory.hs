@@ -8,7 +8,7 @@ module GUI.TCHistory
     ) where
 
 import           RIO
-import qualified RIO.Text                      as T
+--import qualified RIO.Text                      as T
 import           Control.Lens                   ( makeLenses
                                                 , (?~)
                                                 , ix
@@ -41,9 +41,11 @@ import           General.Time                   ( SunTime )
 import           General.PUSTypes               ( RequestID )
 
 import           Data.PUS.TCRequest
+import           Data.PUS.TCPacket
+import           Data.PUS.TCCnc
 import           Verification.Verification
 
-import           Text.Show.Pretty
+--import           Text.Show.Pretty
 
 
 
@@ -116,6 +118,9 @@ createTCHistory window builder = do
           , 60
           , \row -> [#text := textDisplay (row ^. rowRqst . tcReqSource)]
           )
+        , ("APID", 50, displayAPID)
+        , ("T", 30, displayType)
+        , ("ST", 30, displaySubType)
         , ("R" , verifColumnWidth, displayRelease)
         , (" " , verifColumnWidth, displayEmptyText)
         , ("G" , verifColumnWidth, displayGround verGroundReception)
@@ -202,6 +207,22 @@ displayReleaseTime :: Row -> [AttrOp CellRendererText 'AttrSet]
 displayReleaseTime row = case row ^. rowRqst . tcReqReleaseTime of
     Just t  -> [#text := textDisplay t]
     Nothing -> [#text := ""]
+
+displayAPID :: Row -> [AttrOp CellRendererText 'AttrSet]
+displayAPID row = case row ^. rowRqst . tcReqPayload of
+    TCCommand {..} -> [#text := textDisplay (_tcpAPID _tcReqPacket)]
+    TCScoeCommand {..} -> [#text := textDisplay (_tccAPID _tcReqCommand)]
+    _ -> [#text := ""]
+
+displayType :: Row -> [AttrOp CellRendererText 'AttrSet]
+displayType row = case row ^. rowRqst . tcReqPayload of
+    TCCommand {..} -> [#text := textDisplay (_tcpType _tcReqPacket)]
+    _ -> [#text := ""]
+
+displaySubType :: Row -> [AttrOp CellRendererText 'AttrSet]
+displaySubType row = case row ^. rowRqst . tcReqPayload of
+    TCCommand {..} -> [#text := textDisplay (_tcpSubType _tcReqPacket)]
+    _ -> [#text := ""]
 
 
 displayEmptyText :: Row -> [AttrOp CellRendererText 'AttrSet]
