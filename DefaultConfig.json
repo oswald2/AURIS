@@ -3,7 +3,6 @@
         "cfgMongoHost": "localhost",
         "cfgMongoPort": null
     },
-    "aurisDatabase": "auris.db",
     "aurisMIB": null,
     "aurisMission": "DEFAULT",
     "aurisPusConfig": {

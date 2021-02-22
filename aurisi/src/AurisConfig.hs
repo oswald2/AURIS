@@ -62,11 +62,6 @@ data AurisConfig = AurisConfig
     , aurisMIB       :: Maybe Text
     , aurisLogLevel  :: ConfigLogLevel
     , aurisPusConfig :: Config
-    -- | Use esa-db package to store logs and various packets to database.
-    -- 'Nothing' means that storing to databse is disabled.
-    -- 'Just dbName' means that database file with that name will be created
-    -- somewhere in @configPath@.
-    , aurisDatabase  :: Maybe FilePath
     -- | Minimum level of log messages that should be stored to database.
     -- Set 'Nothing' to disable logging to database.
     , aurisDbConfig  :: Maybe DbConfigMongoDB
@@ -79,7 +74,6 @@ defaultConfig = AurisConfig { aurisPusConfig = Data.PUS.Config.defaultConfig
                             , aurisMission   = "DEFAULT"
                             , aurisLogLevel  = LogLevelInfo
                             , aurisMIB       = Nothing
-                            , aurisDatabase  = Just "auris.db"
                             , aurisDbConfig  = Just defaultMongoDBConfig
                             }
 
