@@ -2681,6 +2681,7 @@ Author: Michael Oswald
                                             <child>
                                               <object class="GtkCheckButton" id="checkbuttonTCReqVerifR">
                                                 <property name="label" translatable="yes">R</property>
+                                                <property name="name">activecheck</property>
                                                 <property name="visible">True</property>
                                                 <property name="sensitive">False</property>
                                                 <property name="can_focus">True</property>
@@ -2697,6 +2698,7 @@ Author: Michael Oswald
                                             <child>
                                               <object class="GtkCheckButton" id="checkbuttonTCReqVerifG">
                                                 <property name="label" translatable="yes">G</property>
+                                                <property name="name">activecheck</property>
                                                 <property name="visible">True</property>
                                                 <property name="sensitive">False</property>
                                                 <property name="can_focus">True</property>
@@ -2712,6 +2714,7 @@ Author: Michael Oswald
                                             <child>
                                               <object class="GtkCheckButton" id="checkbuttonTCReqVerifT">
                                                 <property name="label" translatable="yes">T</property>
+                                                <property name="name">activecheck</property>
                                                 <property name="visible">True</property>
                                                 <property name="sensitive">False</property>
                                                 <property name="can_focus">True</property>
@@ -2727,6 +2730,7 @@ Author: Michael Oswald
                                             <child>
                                               <object class="GtkCheckButton" id="checkbuttonTCReqVerifO">
                                                 <property name="label" translatable="yes">O</property>
+                                                <property name="name">activecheck</property>
                                                 <property name="visible">True</property>
                                                 <property name="sensitive">False</property>
                                                 <property name="can_focus">True</property>
@@ -2742,6 +2746,7 @@ Author: Michael Oswald
                                             <child>
                                               <object class="GtkCheckButton" id="checkbuttonTCReqVerifA">
                                                 <property name="label" translatable="yes">A</property>
+                                                <property name="name">activecheck</property>
                                                 <property name="visible">True</property>
                                                 <property name="sensitive">False</property>
                                                 <property name="can_focus">True</property>
@@ -2757,6 +2762,7 @@ Author: Michael Oswald
                                             <child>
                                               <object class="GtkCheckButton" id="checkbuttonTCReqVerifS">
                                                 <property name="label" translatable="yes">S</property>
+                                                <property name="name">activecheck</property>
                                                 <property name="visible">True</property>
                                                 <property name="sensitive">False</property>
                                                 <property name="can_focus">True</property>
@@ -2772,6 +2778,7 @@ Author: Michael Oswald
                                             <child>
                                               <object class="GtkCheckButton" id="checkbuttonTCReqVerifC">
                                                 <property name="label" translatable="yes">C</property>
+                                                <property name="name">activecheck</property>
                                                 <property name="visible">True</property>
                                                 <property name="sensitive">False</property>
                                                 <property name="can_focus">True</property>
