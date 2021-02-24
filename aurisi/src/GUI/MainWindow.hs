@@ -33,6 +33,7 @@ module GUI.MainWindow
 import           RIO
 import qualified RIO.Text                      as T
 import qualified Data.Text.Encoding            as T
+import qualified Data.Text.IO                  as T
 import qualified RIO.Vector                    as V
 import           RIO.List                       ( sortBy )
 import           Control.Lens                   ( makeLenses )
@@ -50,7 +51,6 @@ import           GUI.Logo
 import           GUI.MessageDisplay
 import           GUI.MessageDetails
 import           GUI.About
-import           GUI.TextView
 
 
 import           Data.PUS.TMPacket
@@ -70,6 +70,10 @@ import           General.PUSTypes               ( RequestID )
 import           Verification.Verification      ( Verification )
 
 import           GI.Gtk                        as Gtk
+import           GI.GtkSource
+import qualified GI.GtkSource.Objects.Buffer   as BUF
+                                                ( bufferNew )
+
 import           Data.FileEmbed
 
 import           AurisConfig
@@ -154,7 +158,7 @@ createMainWindow cfg = do
     aboutItem         <- getObject builder "menuitemAbout" MenuItem
     logo              <- getObject builder "logo" Image
     timeLabel         <- getObject builder "labelTime" Label
-    configTextView    <- getObject builder "textViewConfig" TextView
+    configTextView    <- getObject builder "sourceViewConfig" View
 
     menuItemQuit      <- getObject builder "menuItemQuit" MenuItem
     menuItemImportMIB <- getObject builder "menuItemImportMIB" MenuItem
@@ -205,7 +209,26 @@ createMainWindow cfg = do
     void $ Gtk.on menuItemSaveTC #activate $ tcTabSaveFile tcTab
     void $ Gtk.on menuItemSaveTCAs #activate $ tcTabSaveFileAs tcTab
 
-    textViewSetText configTextView (configPretty cfg)
+    --textViewSetText configTextView (configPretty cfg)
+    lm               <- languageManagerNew
+    styleViewMgr     <- styleSchemeManagerGetDefault
+
+    res              <- styleSchemeManagerGetSchemeIds styleViewMgr
+    T.putStrLn $ "Schemes:" <> T.pack (show res)
+
+    scheme <- styleSchemeManagerGetScheme styleViewMgr "cobalt"
+    configTextBuffer <- BUF.bufferNew (Nothing :: Maybe TextTagTable)
+    bufferSetStyleScheme configTextBuffer (Just scheme)
+    
+
+    let t = configPretty cfg
+
+    lang <- languageManagerGetLanguage lm "json"
+    bufferSetLanguage configTextBuffer lang
+
+    textBufferSetText configTextBuffer t (fromIntegral (T.length t))
+    textViewSetBuffer configTextView (Just configTextBuffer)
+
 
     return gui
 

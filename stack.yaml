@@ -66,9 +66,8 @@ extra-deps:
 - Chart-cairo-1.9.3@sha256:f484a7194ca08ed67f02aa626e2f8f4d1a9b50624e0d50e3ced62958f7481cca,925
 - refined-0.6.1@sha256:d5d713f0a2ad79d1c049d2d132fd8c2078b883b5ea3db876087eaec102843e57,2748
 - these-skinny-0.7.4@sha256:e29336a1a70a497e09d8266f8438efb30a807bafaa6b00f5a136f7493efb3160,1239
+- gi-gtksource-3.0.23@sha256:f3676124cf9dc64bfff11576fb99462abdbb2eed3cc80d606acf4db15020079b,7765
 
-# Override default flag values for local packages and extra-deps
-# flags:
 
 ghc-options: 
   "$targets": -freverse-errors 

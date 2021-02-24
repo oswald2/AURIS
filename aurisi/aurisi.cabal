@@ -89,6 +89,7 @@ Executable AURISi
     gi-gdkpixbuf,
     gi-gobject,
     gi-glib,
+    gi-gtksource,
     tar,
     zlib,
     stm

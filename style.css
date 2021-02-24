@@ -206,7 +206,7 @@ menubar {
 
 
 
-#description text {
+textview#description text {
   margin: 4px;
   border-radius: 10px;
   background-color:@bg_color;
@@ -217,7 +217,7 @@ menubar {
               inset -4px -4px 4px 0 @light_shadow;
 }
 
-#description view {
+textview#description view {
   margin: 4px;
   border-radius: 10px;
   background-color:@bg_color;
@@ -228,22 +228,9 @@ menubar {
               inset -4px -4px 4px 0 @light_shadow;
 }
 
-monospace view {
-  font-family: 'Courier New', Courier, monospace;
-}
 
-#monotextview text {
-  font-family: 'Courier New', Courier, monospace;
-}
-
-#monotextview view {
-  font-family: 'Courier New', Courier, monospace;
-}
-
-
-textview border {
-  background-color: @bg_color;
-  color: rgba(0,0,0,0);
+textview {
+  font-family: monospace;
 }
 
 .view:disabled {
