@@ -7,17 +7,16 @@ import           Data.Bson
 
 import           Protocol.ProtocolInterfaces
 
-import           Data.Mongo.Conversion.Class    ( MongoDbConversion(..) )
 import           Data.Mongo.Conversion.Types    ( )
 
 
 
-instance MongoDbConversion ProtocolInterface Document where
-    toDB (IfNctrs x) = ["if" =: String "NCTRS", "nr" := val x]
-    toDB (IfCnc   x) = ["if" =: String "CnC", "nr" := val x]
-    toDB (IfEden  x) = ["if" =: String "EDEN", "nr" := val x]
+instance Val ProtocolInterface where
+    val (IfNctrs x) = Doc ["if" =: String "NCTRS", "nr" := val x]
+    val (IfCnc   x) = Doc ["if" =: String "CnC", "nr" := val x]
+    val (IfEden  x) = Doc ["if" =: String "EDEN", "nr" := val x]
 
-    fromDB doc = do
+    cast' (Doc doc) = do
         v <- lookup "if" doc
         n <- lookup "nr" doc
         case v of
@@ -25,3 +24,4 @@ instance MongoDbConversion ProtocolInterface Document where
             String "CnC"   -> Just (IfNctrs n)
             String "EDEN"  -> Just (IfNctrs n)
             _              -> Nothing
+    cast' _ = Nothing

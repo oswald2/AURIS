@@ -25,12 +25,15 @@ import           Database.MongoDB              as DB
 
 import           Data.PUS.ExtractedDU
 import           Data.PUS.PUSPacket
+import           Data.PUS.TMPacket
 
 import           Data.DbConfig.MongoDB
 import           Data.Mongo.Conversion.Class
 import           Data.Mongo.Conversion.TMFrame  ( )
 import           Data.Mongo.Conversion.LogEvent ( )
 import           Data.Mongo.Conversion.PUSPacket
+                                                ( )
+import           Data.Mongo.Conversion.TMPacket
                                                 ( )
 import           Data.Mongo.Conversion.ExtractedDU
                                                 ( )
@@ -95,18 +98,20 @@ startDbProcessing cfg = do
     frameQueue <- liftIO $ newTBQueueIO dbQueueSize
     eventQueue <- liftIO $ newTBQueueIO dbQueueSize
     pktQueue   <- liftIO $ newTBQueueIO dbQueueSize
+    tmPktQueue <- liftIO $ newTBQueueIO dbQueueSize
 
     let tmFramesT = conc $ tmFrameThread cfg frameQueue
         eventsT   = conc $ eventStoreThread cfg eventQueue
         pktsT     = conc $ pusPacketThread cfg pktQueue
-
-        threads   = tmFramesT <> eventsT <> pktsT
+        tmPktsT   = conc $ tmPacketThread cfg tmPktQueue
+        
+        threads   = tmFramesT <> eventsT <> pktsT <> tmPktsT
 
     t <- async $ runConc threads
 
     initDB cfg
 
-    createDbBackend frameQueue eventQueue pktQueue t
+    createDbBackend frameQueue eventQueue pktQueue tmPktQueue t
 
 
 
@@ -139,15 +144,30 @@ initDB cfg = do
                            }
         ensureIndex logIdx
 
-        -- create index on "log_events" collection
-        let pktIdx = Index { iColl               = "pus_packets"
-                           , iKey                = ["ert" =: (1 :: Int), "dfh.secHeader.time" =: (1 :: Int)]
-                           , iName               = "PUSPacketIndex"
-                           , iUnique             = True
-                           , iDropDups           = False
-                           , iExpireAfterSeconds = Nothing
-                           }
+        -- create index on "pus_packets" collection
+        let pktIdx = Index
+                { iColl               = "pus_packets"
+                , iKey                = [ "ert" =: (1 :: Int)
+                                        , "dfh.secHeader.time" =: (1 :: Int)
+                                        ]
+                , iName               = "PUSPacketIndex"
+                , iUnique             = True
+                , iDropDups           = False
+                , iExpireAfterSeconds = Nothing
+                }
         ensureIndex pktIdx
+
+        -- create index on "tm_packets" collection
+        let tmPktIdx = Index
+                { iColl               = "tm_packets"
+                , iKey                = [ "timestamp" =: (1 :: Int)
+                                        ]
+                , iName               = "TMPacketIndex"
+                , iUnique             = True
+                , iDropDups           = False
+                , iExpireAfterSeconds = Nothing
+                }
+        ensureIndex tmPktIdx
 
 
 
@@ -252,6 +272,24 @@ pusPacketThread cfg queue = do
             liftIO $ writeDB pipe "pus_packets" (map toDB pkts)
             logDebug $ "Stored " <> display (length pkts) <> " PUS Packets."
 
+
+tmPacketThread
+    :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env)
+    => DbConfigMongoDB
+    -> TBQueue TMPacket
+    -> m ()
+tmPacketThread cfg queue = do
+    runInConnection cfg worker
+  where
+    worker _ pipe = do
+        logDebug "TM Packet Store Thread started"
+        forever $ do
+            pkts <- atomically $ do
+                p  <- readTBQueue queue
+                ps <- flushTBQueue queue
+                return (p : ps)
+            liftIO $ writeDB pipe "tm_packets" (map toDB pkts)
+            logDebug $ "Stored " <> display (length pkts) <> " TM Packets."
 
 
 

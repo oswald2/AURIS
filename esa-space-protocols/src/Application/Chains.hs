@@ -27,6 +27,7 @@ import           Data.PUS.MissionSpecific.Definitions
 import           Data.PUS.TMFrameExtractor      
 import           Data.PUS.TMPacketProcessing    ( packetProcessorC
                                                 , raiseTMPacketC
+                                                , storeTMPacketC
                                                 , raiseTMParameterC
                                                 )
 import           Data.PUS.NcduToTMFrame         ( ncduToTMFrameC )
@@ -445,6 +446,7 @@ runTMChain missionSpecific pktQueue = do
     let chain =
             sourceTBQueue pktQueue
                 .| packetProcessorC
+                .| storeTMPacketC
                 .| raiseTMPacketC
                 .| raiseTMParameterC
                 .| sinkNull

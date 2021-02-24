@@ -43,7 +43,7 @@ import qualified Hedgehog.Gen                  as Gen
 import qualified Hedgehog.Range                as Range
 
 import           Foreign                 hiding ( peek )
-
+import           Refined
 --import General.Hexdump
 
 
@@ -194,7 +194,8 @@ rqst n = TCRequest
                   (List params Empty)
         )
     )
-    where params = replicate n (Parameter "X" (ValUInt3 0b101))
+  where
+    params = replicate n (Parameter "X" (ValUInt8X (B8 $$(refineTH 3)) 0b101))
 
 
 

@@ -68,6 +68,7 @@ library
     Data.Mongo.Processing
     Data.Mongo.Conversion.Class
     Data.Mongo.Conversion.Types
+    Data.Mongo.Conversion.TMPacket
     Data.Mongo.Conversion.TMFrame
     Data.Mongo.Conversion.PUSPacket
     Data.Mongo.Conversion.PUSDfh
@@ -98,6 +99,7 @@ library
     , bson
     , attoparsec
     , aeson
+    , text-short
 
   -- Directories containing source files.
   hs-source-dirs:      src
@@ -225,6 +227,7 @@ executable mongodb-speed-test
     , mongoDB
     , bson
     , esa-db-mongodb
+    , text-short
 
 
 

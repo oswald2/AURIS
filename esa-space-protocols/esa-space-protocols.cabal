@@ -62,7 +62,6 @@ library
         Data.PUS.Parameter
         Data.PUS.TMFrameExtractor
         Data.PUS.TMParameterExtraction
-        Data.PUS.TMPacket
         Data.PUS.TMPacketProcessing
         Data.PUS.ExtractedPUSPacket
         Data.PUS.Value
@@ -250,7 +249,8 @@ test-suite CLTUTest
         text -any,
         mtl -any,
         vector -any,
-        rio -any
+        rio -any,
+        refined 
 
 
 
@@ -395,6 +395,7 @@ test-suite TCEncodeTests
         , sorted-list
         , vector
         , bytestring-to-vector
+        , refined
 
 test-suite TMExtractionTest
     type: exitcode-stdio-1.0

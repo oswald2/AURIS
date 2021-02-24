@@ -3,12 +3,16 @@ module Data.Mongo.Conversion.Types where
 
 import           RIO                     hiding ( lookup )
 import           Data.Bson
+import           Data.Text.Short               as ST
 
 import           General.Types
 import           General.PUSTypes
 import           General.APID
+import           General.Time
+
+import           Data.TM.Value                 as TM
+import           Data.TM.Validity
 import           Data.PUS.SegmentationFlags
-import           Data.Mongo.Conversion.Class    ( MongoDbConversion(..) )
 
 
 
@@ -64,24 +68,24 @@ instance Val ByteString  where
     cast' _                = Nothing
 
 
-instance Val HexBytes where 
+instance Val HexBytes where
     val (HexBytes x) = Bin (Binary x)
 
     cast' (Bin (Binary x)) = Just (HexBytes x)
-    cast' _ = Nothing
+    cast' _                = Nothing
 
 
-instance MongoDbConversion EduVCID Document where
-    toDB IsSCOE     = ["VCID" =: String "IsSCOE"]
-    toDB (IsVCID x) = ["VCID" =: x]
+instance Val EduVCID where
+    val IsSCOE     = Doc ["VCID" =: String "IsSCOE"]
+    val (IsVCID x) = Doc ["VCID" =: x]
 
-    fromDB doc = do
+    cast' (Doc doc) = do
         v <- lookup "VCID" doc
         case v of
             String "IsSCOE" -> Just IsSCOE
             Int32  vcid     -> Just (IsVCID (VCID (fromIntegral vcid)))
             _               -> Nothing
-
+    cast' _ = Nothing 
 
 instance Val SegmentationFlags where
     val SegmentStandalone = String "UNSEG"
@@ -147,3 +151,82 @@ instance Val BitSize  where
     cast' _         = Nothing
 
 
+instance Val SunTime where
+    val x = Doc ["value" =: Int64 (timeToMicro x), "delta" =: Bool (isDelta x)]
+
+    cast' (Doc doc) = do
+        v <- lookup "value" doc
+        d <- lookup "delta" doc
+        return (microToTime v d)
+    cast' _ = Nothing
+
+instance Val ShortText where
+    val x = String (ST.toText x)
+
+    cast' (String x) = Just (ST.fromText x)
+    cast' _          = Nothing
+
+
+instance Val TMValueSimple where
+    val (TMValInt x) = Doc ["type" =: String "Int", "value" =: Int64 x]
+    val (TMValUInt x) =
+        Doc ["type" =: String "UInt", "value" =: Int64 (fromIntegral x)]
+    val (TMValDouble x) = Doc ["type" =: String "Double", "value" =: Float x]
+    val (TMValTime   x) = Doc ["type" =: String "Time", "value" =: val x]
+    val (TMValString x) = Doc ["type" =: String "String", "value" =: val x]
+    val (TMValOctet x) =
+        Doc ["type" =: String "Octet", "value" =: Bin (Binary x)]
+    val TMValNothing = Doc ["type" =: String "Nothing", "value" =: Null]
+
+    cast' (Doc doc) = do
+        t <- lookup "type" doc
+        case t of
+            String "Int" -> do
+                v <- lookup "value" doc
+                return (TMValInt v)
+            String "UInt" -> do
+                v :: Int64 <- lookup "value" doc
+                return (TMValUInt (fromIntegral v))
+            String "Double" -> do
+                v <- lookup "value" doc
+                return (TMValDouble v)
+            String "Time" -> do
+                v <- lookup "value" doc
+                return (TMValTime v)
+            String "String" -> do
+                v <- lookup "value" doc
+                return (TMValString (ST.fromText v))
+            String "Octet" -> do
+                v <- lookup "value" doc
+                return (TMValOctet v)
+            String "Nothing" -> do
+                return TMValNothing
+            _ -> Nothing
+    cast' _ = Nothing
+
+instance Val Validity where
+    val x = Int32 (fromIntegral (getRawValidity x))
+
+    cast' (Int32 x) = Just (Validity (fromIntegral x))
+    cast' _         = Nothing
+
+
+instance Val TMValue where
+    val x =
+        Doc
+            [ "val" =: val (x ^. tmvalValue)
+            , "validity" =: val (x ^. tmvalValidity)
+            ]
+
+    cast' (Doc doc) = do
+        v <- lookup "val" doc 
+        va <- lookup "validity" doc 
+        return (TMValue v va)
+    cast' _ = Nothing 
+
+
+instance Val SPID where 
+    val (SPID x) = Int32 (fromIntegral x)
+
+    cast' (Int32 x) = Just (SPID (fromIntegral x))
+    cast' _ = Nothing 

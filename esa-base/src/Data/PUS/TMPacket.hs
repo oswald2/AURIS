@@ -3,7 +3,6 @@
 #-}
 module Data.PUS.TMPacket
   ( TMPacket(..)
-  , isUnknownPacket
   , tmpSPID
   , tmpMnemonic
   , tmpDescr
@@ -34,9 +33,7 @@ import           General.APID
 
 import           Data.TM.Parameter
 import           Data.TM.TMPacketDef            ( PIDEvent(..) )
-import           Data.PUS.Config
 
---import           General.Types
 import           General.Time
 
 import Protocol.ProtocolInterfaces ( ProtocolInterface )
@@ -57,7 +54,7 @@ data TMPacket = TMPacket {
     , _tmpEvent :: !PIDEvent
     , _tmpSource :: !ProtocolInterface
     , _tmpParams :: Vector TMParameter
-    } deriving (Show, Generic)
+    } deriving (Eq, Show, Generic)
 makeLenses ''TMPacket
 
 instance Serialise TMPacket
@@ -66,5 +63,3 @@ instance ToJSON TMPacket where
   toEncoding = genericToEncoding defaultOptions
 
 
-isUnknownPacket :: Config -> TMPacket -> Bool
-isUnknownPacket cfg pkt = _tmpSPID pkt == cfgUnknownSPID cfg

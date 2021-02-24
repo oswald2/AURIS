@@ -2,8 +2,10 @@
 module Data.PUS.TMPacketProcessing
     ( packetProcessorC
     , raiseTMPacketC
+    , storeTMPacketC
     , raiseTMParameterC
     , getPackeDefinition
+    , isUnknownPacket
     ) where
 
 
@@ -53,6 +55,8 @@ import           General.PUSTypes
 import           Verification.Verification
 
 
+isUnknownPacket :: Config -> TMPacket -> Bool
+isUnknownPacket cfg pkt = _tmpSPID pkt == cfgUnknownSPID cfg
 
 raiseTMPacketC
     :: (MonadIO m, MonadReader env m, HasGlobalState env)
@@ -70,6 +74,12 @@ raiseTMParameterC = awaitForever $ \pkt -> do
     env <- ask
     liftIO $ raiseEvent env (EVTelemetry (EVTMParameters (pkt ^. tmpParams)))
 
+
+storeTMPacketC :: (MonadIO m, MonadReader env m, HasDatabase env) => ConduitT TMPacket TMPacket m () 
+storeTMPacketC = awaitForever $ \pkt -> do 
+    env <- ask 
+    liftIO $ storeTMPacket env pkt
+    yield pkt 
 
 packetProcessorC
     :: (MonadIO m, MonadReader env m, HasGlobalState env)
@@ -164,6 +174,7 @@ packetProcessorC = awaitForever $ \pkt@(ExtractedPacket oct pusPkt) -> do
         performProcessing pusPkt def key payload = do
             -- process the packet and pass it on 
             yieldM $ processPacket def key (ExtractedPacket payload pusPkt)
+
 
 
 

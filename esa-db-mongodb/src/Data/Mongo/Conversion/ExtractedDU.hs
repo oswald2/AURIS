@@ -43,8 +43,8 @@ instance (MongoDbConversion a Document) => MongoDbConversion (ExtractedDU a) Doc
         [ "ert" =: timeToMicro _epERT
         , "quality" =: _epQuality
         , "gap" =: toDB _epGap
-        , "source" =: toDB _epSource
-        , "vcid" =: toDB _epVCID
+        , "source" =: _epSource
+        , "vcid" =: _epVCID
         , "DU" =: toDB _epDU
         ]
     fromDB doc = do
@@ -52,10 +52,8 @@ instance (MongoDbConversion a Document) => MongoDbConversion (ExtractedDU a) Doc
         quality <- lookup "quality" doc
         gap'    <- lookup "gap" doc
         gap     <- fromDB gap'
-        source' <- lookup "source" doc
-        source  <- fromDB source'
-        vcid'   <- lookup "vcid" doc
-        vcid    <- fromDB vcid'
+        source  <- lookup "source" doc
+        vcid    <- lookup "vcid" doc
         du'     <- lookup "DU" doc
         du      <- fromDB du'
         return $ ExtractedDU quality (microToTime ert False) gap source vcid du

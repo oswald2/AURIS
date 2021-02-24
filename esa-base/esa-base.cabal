@@ -90,6 +90,7 @@ library
     Data.TM.Synthetic
     Data.Display.Graphical
     Data.PUS.TMFrame
+    Data.PUS.TMPacket
     Data.PUS.TMFrameDfh
     Data.PUS.TMStoreFrame
     Data.PUS.EncTime

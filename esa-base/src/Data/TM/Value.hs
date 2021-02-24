@@ -201,6 +201,30 @@ nullValueSimple = TMValUInt 0
 instance NFData TMValueSimple
 instance Serialise TMValueSimple
 
+-- | Compare two values. Since we also cover non-numeric values,
+-- the function returns a 'Maybe' 'Ordering'. If the values cannot
+-- be compared, Nothing is returned.
+{-# INLINABLE compareVal #-}
+compareVal :: TMValueSimple -> TMValueSimple -> Maybe Ordering
+compareVal (TMValInt    x) (TMValInt    y) = Just $ compare x y
+compareVal (TMValUInt   x) (TMValUInt   y) = Just $ compare x y
+compareVal (TMValDouble x) (TMValDouble y) = Just $ compare x y
+compareVal (TMValTime   x) (TMValTime   y) = Just $ compare x y
+compareVal (TMValString x) (TMValString y) = Just $ compare x y
+compareVal (TMValOctet  x) (TMValOctet  y) = Just $ compare x y
+
+compareVal (TMValInt    x) (TMValDouble y) = Just $ compare (fromIntegral x) y
+compareVal (TMValUInt   x) (TMValDouble y) = Just $ compare (fromIntegral x) y
+compareVal (TMValDouble x) (TMValInt    y) = Just $ compare x (fromIntegral y)
+compareVal (TMValDouble x) (TMValUInt   y) = Just $ compare x (fromIntegral y)
+
+compareVal _               _               = Nothing
+
+instance Eq TMValueSimple where
+  val1 == val2 = case compareVal val1 val2 of
+    Just EQ -> True
+    _       -> False
+
 instance FromJSON TMValueSimple where
   parseJSON = withObject "TMValueSimple" $ \o -> asum
     [ TMValInt <$> o .: "tmValInt"
@@ -311,7 +335,7 @@ strToByteString ls' =
 data TMValue = TMValue {
     _tmvalValue :: !TMValueSimple
     , _tmvalValidity :: !Validity
-    } deriving (Show, Generic)
+    } deriving (Eq, Show, Generic)
 makeLenses ''TMValue
 
 instance NFData TMValue
@@ -394,30 +418,8 @@ setValidity (TMValue val validity) f = TMValue val (f validity)
 --     if y < 0 then GT else compare x (fromIntegral y)
 
 
--- | Compare two values. Since we also cover non-numeric values,
--- the function returns a 'Maybe' 'Ordering'. If the values cannot
--- be compared, Nothing is returned.
-{-# INLINABLE compareVal #-}
-compareVal :: TMValueSimple -> TMValueSimple -> Maybe Ordering
-compareVal (TMValInt    x) (TMValInt    y) = Just $ compare x y
-compareVal (TMValUInt   x) (TMValUInt   y) = Just $ compare x y
-compareVal (TMValDouble x) (TMValDouble y) = Just $ compare x y
-compareVal (TMValTime   x) (TMValTime   y) = Just $ compare x y
-compareVal (TMValString x) (TMValString y) = Just $ compare x y
-compareVal (TMValOctet  x) (TMValOctet  y) = Just $ compare x y
-
-compareVal (TMValInt    x) (TMValDouble y) = Just $ compare (fromIntegral x) y
-compareVal (TMValUInt   x) (TMValDouble y) = Just $ compare (fromIntegral x) y
-compareVal (TMValDouble x) (TMValInt    y) = Just $ compare x (fromIntegral y)
-compareVal (TMValDouble x) (TMValUInt   y) = Just $ compare x (fromIntegral y)
-
-compareVal _               _               = Nothing
 
 
-instance Eq TMValueSimple where
-  val1 == val2 = case compareVal val1 val2 of
-    Just EQ -> True
-    _       -> False
 
 
 

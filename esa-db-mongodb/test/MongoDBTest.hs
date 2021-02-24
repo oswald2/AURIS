@@ -1,5 +1,6 @@
 import           RIO
 import qualified RIO.ByteString                as B
+import qualified RIO.Vector                    as V
 import           RIO.Partial                    ( read
                                                 , fromJust
                                                 )
@@ -24,13 +25,20 @@ import           General.Time
 import           General.APID
 import           Data.PUS.EncTime
 import           Data.PUS.CLCW
+import           Data.PUS.TMPacket
 import           Persistence.LogEvent
+import           Data.TM.Parameter
+import           Data.TM.Value
+import           Data.TM.Validity
+import           Data.TM.TMPacketDef         ( PIDEvent(..) )
+import           Protocol.ProtocolInterfaces
 
 import qualified Data.Time.Clock               as T
 import           System.Environment
 import           Data.Mongo.Conversion.LogEvent
 import           Data.Mongo.Conversion.TMFrame
 import           Data.Mongo.Conversion.PUSPacket
+import           Data.Mongo.Conversion.TMPacket
 
 import           Test.Hspec
 
@@ -119,7 +127,7 @@ main = hspec $ do
             isJust back `shouldBe` True
             pusHdr `shouldBe` fromJust back
 
-        it "PUS DFH Conversion" $ do 
+        it "PUS DFH Conversion" $ do
             let pusDfh = PUSTMStdHeader 0 3 25 (mkSourceID 0) nullCUCTime
 
             let doc  = toDB pusDfh
@@ -128,22 +136,22 @@ main = hspec $ do
             isJust back `shouldBe` True
             pusDfh `shouldBe` fromJust back
 
-        it "PUS TMPIVal Conversion" $ do 
+        it "PUS TMPIVal Conversion" $ do
             let val1 :: Maybe (TMPIVal, TMPIVal)
-                val1 = Nothing 
-                val2 = Just (tmpi1, tmpi2)
-                
+                val1  = Nothing
+                val2  = Just (tmpi1, tmpi2)
+
                 tmpi1 = TMPIVal 1001 (ByteOffset 23) (BitSize 32)
                 tmpi2 = TMPIVal 123456789123456 (ByteOffset 768) (BitSize 17)
 
-            let docTmpi1  = val tmpi1 
-                docTmpi2  = val tmpi2 
-                back1 = cast' docTmpi1
-                back2 = cast' docTmpi2
+            let docTmpi1 = val tmpi1
+                docTmpi2 = val tmpi2
+                back1    = cast' docTmpi1
+                back2    = cast' docTmpi2
 
-                doc1 = toDB val1 
+                doc1     = toDB val1
                 backDoc1 = fromDB doc1
-                doc2 = toDB val2
+                doc2     = toDB val2
                 backDoc2 = fromDB doc2
 
             -- T.putStrLn $ "docTmpi1: " <> T.pack (show docTmpi1)
@@ -165,15 +173,15 @@ main = hspec $ do
             isJust backDoc2 `shouldBe` True
             val2 `shouldBe` fromJust backDoc2
 
-        it "HexBytes Conversion" $ do 
+        it "HexBytes Conversion" $ do
             let payload = HexBytes $ B.pack (take 4096 (cycle [0 .. 255]))
 
-                doc = val payload
-                back = cast' doc 
+                doc     = val payload
+                back    = cast' doc
 
             isJust back `shouldBe` True
             payload `shouldBe` fromJust back
-            
+
 
         it "PUS Packet Conversion" $ do
             now <- getCurrentTime
@@ -199,3 +207,46 @@ main = hspec $ do
 
             isJust back `shouldBe` True
             fromJust back `shouldBe` pusPkt
+
+        it "TM Packet Conversion" $ do
+            now <- getCurrentTime
+            let pkt = TMPacket { _tmpSPID      = SPID 10
+                               , _tmpMnemonic  = "Mnemonic"
+                               , _tmpDescr     = "Description"
+                               , _tmpAPID      = APID 11
+                               , _tmpType      = PUSType 3
+                               , _tmpSubType   = PUSSubType 25
+                               , _tmpPI1       = 0
+                               , _tmpPI2       = 0
+                               , _tmpERT       = now
+                               , _tmpTimeStamp = now
+                               , _tmpVCID      = IsVCID (VCID 1)
+                               , _tmpSSC       = mkSSC 12345
+                               , _tmpEvent     = PIDNo
+                               , _tmpSource    = IfNctrs 1
+                               , _tmpParams    = params
+                               }
+                params = V.fromList [ TMParameter
+                        { _pName  = "Param1"
+                        , _pTime  = now
+                        , _pValue = TMValue (TMValUInt 0xffffffffffffffff)
+                                            clearValidity
+                        , _pEngValue = Nothing 
+                        }
+                    , TMParameter
+                        { _pName  = "Param2"
+                        , _pTime  = now
+                        , _pValue = TMValue (TMValDouble 3.1415) clearValidity
+                        , _pEngValue = Just (TMValue (TMValOctet payl) clearValidity)
+                        }
+                    ]
+                payl = B.pack [1..255]
+
+            let doc  = val pkt
+                back = cast' doc
+
+            -- T.putStrLn $ "doc: " <> T.pack (show doc)
+            -- T.putStrLn $ "back: " <> T.pack (show back)
+
+            isJust back `shouldBe` True
+            fromJust back `shouldBe` pkt

@@ -17,6 +17,8 @@ module Data.PUS.Value
     , valueBuilder
     , valueHeaderLine
     , B8(..)
+    , B16(..)
+    , B32(..)
     ) where
 
 import           RIO
