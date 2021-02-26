@@ -42,7 +42,7 @@ ui cfg app = do
     window <- createMainWindow cfg
     Gtk.set (window ^. mwWindow) [#application := app]
     --Gtk.applicationSetMenubar app (Just (window ^.mwMenuBar))
-    void $ Gtk.onWidgetDestroy (_mwWindow window) Gtk.mainQuit
+    void $ Gtk.onWidgetDestroy (_mwWindow window) (Gio.applicationQuit app)
     Gtk.widgetShowAll (_mwWindow window)
     pure window
 
