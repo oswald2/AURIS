@@ -18,7 +18,7 @@ button {
   color: #000;
   border: 1px solid rgba(255,255,255,0.20);
   box-shadow:  4px 4px 4px 0 @dark_shadow, 
-              -4px -4px 4px 0 #ffffff;
+              -4px -4px 4px 0 @light_shadow;
 }
 
 button:focus {
@@ -29,7 +29,7 @@ button:focus {
   border-radius: 8px;
   background-color:@bg_color;
   color: #000;
-  border: 1px solid rgba(0,255,34,0.60);
+  border: 1px solid rgba(0,255,34,0.80);
   box-shadow:  4px 4px 4px 0 @dark_shadow, 
               -4px -4px 4px 0 @light_shadow;
 }
@@ -46,6 +46,98 @@ button:active {
   box-shadow:  -4px -4px 4px 0 @dark_shadow, 
                4px 4px 4px 0 @light_shadow;
 }
+
+button.toggle {
+  min-height: 11px;
+  min-width: 12px;
+  padding: 3px;
+  margin: 4px;
+  border-radius: 8px;
+  background-color: @bg_color;
+  color: #000;
+  border: 1px solid rgba(255,255,255,0.20);
+  box-shadow:  4px 4px 4px 0 @dark_shadow, 
+              -4px -4px 4px 0 @light_shadow;
+}
+
+button.toggle:focus {
+  min-height: 11px;
+  min-width: 12px;
+  padding: 3px;
+  margin: 4px;
+  border-radius: 8px;
+  background-color: @bg_color;
+  color: #000;
+  border: 1px solid rgba(0,255,34,0.80);
+  box-shadow:  4px 4px 4px 0 @dark_shadow, 
+              -4px -4px 4px 0 @light_shadow;
+}
+
+button.toggle:checked {
+  min-height: 11px;
+  min-width: 12px;
+  padding: 3px;
+  margin: 4px;
+  border-radius: 8px;
+  background-color: @bg_color;
+  color: #000;
+  border: 1px solid rgba(255,255,255,0.20);
+  box-shadow:  4px 4px 4px 0 @light_shadow, 
+              -4px -4px 4px 0 @dark_shadow;
+}
+
+button.toggle:active {
+  min-height: 11px;
+  min-width: 12px;
+  padding: 3px;
+  margin: 4px;
+  border-radius: 8px;
+  background-color: @bg_color;
+  color: #000;
+  border: 1px solid rgba(255,255,255,0.20);
+  box-shadow:  4px 4px 4px 0 @light_shadow, 
+              -4px -4px 4px 0 @dark_shadow;
+}
+
+
+button.toggle:checked#playtoggle {
+  min-height: 11px;
+  min-width: 12px;
+  padding: 3px;
+  margin: 4px;
+  border-radius: 8px;
+  background-color: #00BB00;
+  color: #000;
+  border: 1px solid rgba(255,255,255,0.20);
+  box-shadow:  4px 4px 4px 0 @light_shadow, 
+              -4px -4px 4px 0 @dark_shadow;
+}
+
+
+#playtoggle:insensitive * {
+  background-color: #00BB00;
+  color: #000;
+}
+
+
+button.toggle:checked#stoptoggle {
+  min-height: 11px;
+  min-width: 12px;
+  padding: 3px;
+  margin: 4px;
+  border-radius: 8px;
+  background-color: #ff0000;
+  color: #000;
+  border: 1px solid rgba(255,255,255,0.20);
+  box-shadow:  4px 4px 4px 0 @light_shadow, 
+              -4px -4px 4px 0 @dark_shadow;
+}
+
+#stoptoggle:insensitive * {
+  background-color: #ff0000;
+  color: #000;
+}
+
 
 checkbutton 
 { 

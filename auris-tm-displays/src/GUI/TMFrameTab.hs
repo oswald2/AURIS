@@ -6,13 +6,13 @@ module GUI.TMFrameTab
     , TMFrameTab(..)
     , createTMFTab
     , tmfTabAddRow
-    , setupCallbacks
+    , GUI.TMFrameTab.setupCallbacks
     ) where
 
 import           RIO
 import qualified RIO.Text                      as T
 import           Control.Lens                   ( makeLenses )
-
+import qualified Data.Text.IO                  as T
 import           GI.Gtk                        as Gtk
 
 import           GUI.TMFrameTable
@@ -61,6 +61,7 @@ data TMFrameTab = TMFrameTab
     , _tmfCLCW          :: !CLCWStatus
     , _tmfDump          :: !TextView
     , _tmfLiveCtrlBox   :: !Box
+    , _tmfLiveCtrl      :: !LiveControl
     }
 makeLenses ''TMFrameTab
 
@@ -178,6 +179,7 @@ createTMFTab builder = do
                        , _tmfCLCW          = clcwDisp
                        , _tmfDump          = content
                        , _tmfLiveCtrlBox   = liveCtrl
+                       , _tmfLiveCtrl      = lc
                        }
     tmFrameTableSetCallback (g ^. tmfFrameTable) (tmfTabDetailsSetValues g)
     return g
@@ -260,6 +262,31 @@ setCLCWValues window clcw = do
 
 
 setupCallbacks :: TMFrameTab -> IO ()
-setupCallbacks _g = do
+setupCallbacks g = do
+    GUI.LiveControls.setupCallbacks (g ^. tmfLiveCtrl)
+                                    (PlayCB (tmfTabPlayCB g))
+                                    (StopCB (tmfTabStopCB g))
+                                    (RetrieveCB (tmfTabRetrieveCB g))
+                                    (RewindCB (tmfTabRewindCB g))
+                                    (ForwardCB (tmfTabForwardCB g))
+
+
+tmfTabPlayCB :: TMFrameTab -> IO ()
+tmfTabPlayCB _g = do
+    T.putStrLn "PlayCB"
     return ()
 
+tmfTabStopCB :: TMFrameTab -> IO ()
+tmfTabStopCB _g = do
+    T.putStrLn "StopCB"
+    return ()
+
+
+tmfTabRetrieveCB :: TMFrameTab -> IO ()
+tmfTabRetrieveCB _g = return ()
+
+tmfTabRewindCB :: TMFrameTab -> IO ()
+tmfTabRewindCB _g = return ()
+
+tmfTabForwardCB :: TMFrameTab -> IO ()
+tmfTabForwardCB _g = return ()
