@@ -39,6 +39,7 @@ import           Data.PUS.Parameter
 import           Data.PUS.Value
 import           Data.PUS.MissionSpecific.Default
 import           Data.PUS.Counter
+import           Data.PUS.Events                ( EventFlag(..) )
 
 import           Protocol.NCTRSProcessor
 import           Protocol.ProtocolInterfaces
@@ -81,11 +82,15 @@ main = do
             (defaultMissionSpecific defaultConfig)
             logFunc
             (\ev -> T.putStrLn ("Event: " <> T.pack (show ev)))
+            [EVFlagAll]
             (Just dbBackend)
 
         runRIO state $ do
             env    <- ask
             frames <- allTMFrames defaultMongoDBConfig
-            liftIO $ T.putStrLn $ "Received Frames from DB:\n" 
-                <> T.pack (show (length frames)) <> " rows, last row:\n"
+            liftIO
+                $  T.putStrLn
+                $  "Received Frames from DB:\n"
+                <> T.pack (show (length frames))
+                <> " rows, last row:\n"
                 <> T.pack (show (last frames))

@@ -10,6 +10,7 @@ import qualified Data.Text.IO                  as T
 import           Data.PUS.GlobalState
 import           Data.PUS.MissionSpecific.Definitions
                                                 ( PUSMissionSpecific )
+import           Data.PUS.Events                ( EventFlag(..) )
 -- import           Data.PUS.Config
 import           Control.PUS.Classes            ( setDataModel )
 
@@ -79,13 +80,14 @@ runProcessing cfg missionSpecific mibPath interface mainWindow coreQueue = do
 
         -- Add the logging function to the GUI
         let logf =
-                logf1 <> maybe mempty (\db -> mkLogFunc (logToDB db)) dbBackend
+                logf1 <> maybe mempty (mkLogFunc . logToDB)  dbBackend
 
         -- Create a new 'GlobalState' for the processing
         state <- newGlobalState (aurisPusConfig cfg)
                                 missionSpecific
                                 logf
                                 (ifRaiseEvent interface . EventPUS)
+                                [EVFlagAll]
                                 dbBackend
 
         void $ runRIO state $ do

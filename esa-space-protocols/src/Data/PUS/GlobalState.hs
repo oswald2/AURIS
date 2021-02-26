@@ -59,11 +59,17 @@ import           Data.PUS.PUSState              ( defaultPUSState
                                                 , nextADCnt
                                                 , PUSState
                                                 )
-import           Data.PUS.Events                ( Event )
+import           Data.PUS.Events                ( Event
+                                                , EventFlag
+                                                )
 import           Data.PUS.COP1Types
 import           Data.PUS.MissionSpecific.Definitions
                                                 ( PUSMissionSpecific )
 import           Data.PUS.TCRequest             ( TCRequest )
+import           Data.PUS.EventHandler          ( filteredRaiseEvent
+                                                , createEventConfig
+                                                , cfgEvAll
+                                                )
 
 import           General.PUSTypes
 import           General.Time
@@ -115,13 +121,14 @@ newGlobalState
     -> PUSMissionSpecific
     -> LogFunc
     -> (Event -> IO ())
+    -> [EventFlag]
     -> Maybe DbBackend
     -> IO GlobalState
-newGlobalState cfg missionSpecific logErr raiseEvent dbBackend = do
+newGlobalState cfg missionSpecific logErr raiseEvent eventFlags dbBackend = do
     st     <- defaultPUSState cfg
     tv     <- newTVarIO st
     cv     <- newTVarIO defaultCoeffs
-    model <- compact Data.DataModel.empty
+    model  <- compact Data.DataModel.empty
     dmodel <- newTVarIO model
     let vcids = cfgVCIDs cfg
     fopTVars <- mapM (newTVarIO . initialFOPState) vcids
@@ -129,11 +136,16 @@ newGlobalState cfg missionSpecific logErr raiseEvent dbBackend = do
     rqstQueue  <- newTBQueueIO rqstQueueSize
     verifQueue <- newTBQueueIO 5000
 
+    let eventCfg = createEventConfig eventFlags
+        eventFn  = if eventCfg ^. cfgEvAll
+            then raiseEvent
+            else filteredRaiseEvent eventCfg raiseEvent
+
     let state = GlobalState { glsConfig            = cfg
                             , glsState             = tv
                             , glsCorrState         = cv
                             , glsFOP1              = fop1
-                            , glsRaiseEvent        = raiseEvent
+                            , glsRaiseEvent        = eventFn
                             , glsLogFunc           = logErr
                             , glsDataModel         = dmodel
                             , glsMissionSpecific   = missionSpecific

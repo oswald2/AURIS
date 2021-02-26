@@ -68,6 +68,7 @@ library
         Data.PUS.NcduToTMFrame
         Data.PUS.Counter
         Data.PUS.MissionSpecific.Default
+        Data.PUS.EventHandler
         Protocol.NCTRS
         Protocol.NCTRSProcessor
         Protocol.EDEN

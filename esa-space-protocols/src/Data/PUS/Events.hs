@@ -21,6 +21,7 @@ module Data.PUS.Events
     , EventTelemetry(..)
     , EventAlarm(..)
     , EventCOP1(..)
+    , EventFlag(..)
     ) where
 
 
@@ -39,14 +40,21 @@ import           Data.PUS.TMPacket              ( TMPacket )
 import           Data.PUS.TCRequest             ( TCRequest )
 import           Data.TM.Parameter
 
-import           Data.DataModel
+--import           Data.DataModel
 
 import           General.Time
 
 import           Protocol.ProtocolInterfaces
 import           Verification.Verification
 
-import           GHC.Compact
+
+data EventFlag = 
+    EVFlagCommanding
+    | EVFlagTelemetry 
+    | EVFlagAlarm 
+    | EVFlagCOP1
+    | EVFlagAll
+    deriving (Eq, Ord, Enum, Show, Generic)
 
 
 -- | The events themselves
