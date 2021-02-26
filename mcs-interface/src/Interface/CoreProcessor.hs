@@ -98,5 +98,5 @@ importMIB path serializePath = do
     Right model -> do
       setDataModel env model
       logDebug "Successfully loaded MIB"
-      liftIO $ raiseEvent env (EVAlarms (EVMIBLoaded model))
+      liftIO $ raiseEvent env (EVAlarms EVMIBLoaded)
 

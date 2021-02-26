@@ -72,6 +72,8 @@ import           Verification.Commands
 
 import           Persistence.DbBackend
 
+import           GHC.Compact
+
 
 -- | The AppState is just a type alias
 type AppState = TVar PUSState
@@ -96,13 +98,13 @@ data GlobalState = GlobalState
     , glsState             :: !AppState
     , glsFOP1              :: COP1State
     , glsCorrState         :: CorrelationVar
-    , glsDataModel         :: TVar DataModel
+    , glsDataModel         :: TVar (Compact DataModel)
     , glsMissionSpecific   :: PUSMissionSpecific
     , glsRaiseEvent        :: Event -> IO ()
     , glsLogFunc           :: !LogFunc
     , glsTCRequestQueue    :: TBQueue [TCRequest]
     , glsVerifCommandQueue :: TBQueue VerifCommand
-    , glsDatabase          :: Maybe DbBackend 
+    , glsDatabase          :: Maybe DbBackend
     }
 
 -- | Constructor for the global state. Takes a configuration, a
@@ -113,13 +115,14 @@ newGlobalState
     -> PUSMissionSpecific
     -> LogFunc
     -> (Event -> IO ())
-    -> Maybe DbBackend 
+    -> Maybe DbBackend
     -> IO GlobalState
 newGlobalState cfg missionSpecific logErr raiseEvent dbBackend = do
     st     <- defaultPUSState cfg
     tv     <- newTVarIO st
     cv     <- newTVarIO defaultCoeffs
-    dmodel <- newTVarIO Data.DataModel.empty
+    model <- compact Data.DataModel.empty
+    dmodel <- newTVarIO model
     let vcids = cfgVCIDs cfg
     fopTVars <- mapM (newTVarIO . initialFOPState) vcids
     let fop1 = HM.fromList $ zip vcids fopTVars

@@ -46,6 +46,9 @@ import           General.Time
 import           Protocol.ProtocolInterfaces
 import           Verification.Verification
 
+import           GHC.Compact
+
+
 -- | The events themselves
 data Event = EVCommanding EventCommanding
     | EVAlarms EventAlarm
@@ -102,7 +105,7 @@ data EventAlarm =
     | EVPacketInfo Text
     | EVPacketWarn Text
     | EVPacketAlarm Text
-    | EVMIBLoaded DataModel
+    | EVMIBLoaded 
     | EVMIBLoadError Text
     deriving (Show, Generic)
 

@@ -59,7 +59,7 @@ import           Verification.Verification
 
 import           Persistence.DbBackend         as DB
 
-
+import           GHC.Compact
 
 -- | This class specifies how to get a configuration
 class HasConfig env where
@@ -85,7 +85,7 @@ class HasCorrelationState env where
 
 -- | class for accessing the data model 
 class HasDataModel env where
-    getDataModelVar :: Getter env (TVar DataModel)
+    getDataModelVar :: Getter env (TVar (Compact DataModel))
 
 -- | class for injecting TC Requests into the system
 class HasTCRqstQueue env where
@@ -94,9 +94,10 @@ class HasTCRqstQueue env where
 
 getDataModel :: (MonadIO m) => HasDataModel env => env -> m DataModel
 getDataModel env = do
-    liftIO $ readTVarIO (env ^. getDataModelVar)
+    liftIO $ getCompact <$> readTVarIO (env ^. getDataModelVar)
 
-setDataModel :: (MonadIO m) => HasDataModel env => env -> DataModel -> m ()
+setDataModel
+    :: (MonadIO m) => HasDataModel env => env -> Compact DataModel -> m ()
 setDataModel env dm = do
     atomically $ writeTVar (env ^. getDataModelVar) dm
 

@@ -187,6 +187,7 @@ library
     , word24
     , closed
     , bytestring-to-vector
+    , ghc-compact
 
 
   -- Directories containing source files.

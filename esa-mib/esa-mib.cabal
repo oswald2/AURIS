@@ -157,6 +157,7 @@ library
     , mtl
     , hashtables-mo
     , colour
+    , ghc-compact
 
   -- Directories containing source files.
   hs-source-dirs:      src
@@ -235,7 +236,8 @@ executable LoadMIBTest
         hspec,
         pretty-show,
         vector,
-        hashtables-mo
+        hashtables-mo,
+        ghc-compact
 
 
 test-suite esa-mib-test

@@ -21,7 +21,7 @@ import           Interface.CoreProcessor        ( runCoreThread
                                                 , InterfaceAction
                                                 )
 
-import           AurisConfig                    
+import           AurisConfig
 
 import           System.Directory               ( getHomeDirectory )
 import           System.FilePath                ( (</>) )
@@ -40,8 +40,10 @@ import           Application.DataModel          ( loadDataModelDef
                                                     )
                                                 )
 import           Verification.Processor         ( processVerification )
-import           Data.Mongo.Processing          
+import           Data.Mongo.Processing
 import           Persistence.Logging
+
+import           GHC.Compact
 
 
 runProcessing
@@ -61,18 +63,17 @@ runProcessing cfg missionSpecific mibPath interface mainWindow coreQueue = do
     withLogFunc logOptions $ \logFunc -> do
 
         let logf1 =
-                logFunc
-                    <> messageAreaLogFunc (mainWindow ^. mwMessageDisplay)
+                logFunc <> messageAreaLogFunc (mainWindow ^. mwMessageDisplay)
 
         -- First, we create the databas
         T.putStrLn "Starting DB backend..."
         dbBackend <- case aurisDbConfig cfg of
-            Just dbCfg  -> do 
-                dbState <- newDbState logf1 
-                be <- runRIO dbState $ startDbProcessing dbCfg
+            Just dbCfg -> do
+                dbState <- newDbState logf1
+                be      <- runRIO dbState $ startDbProcessing dbCfg
                 T.putStrLn "DB backend started..."
                 return (Just be)
-            Nothing -> do 
+            Nothing -> do
                 T.putStrLn "No DB backend was configured."
                 return Nothing
 
@@ -102,7 +103,8 @@ runProcessing cfg missionSpecific mibPath interface mainWindow coreQueue = do
             setDataModel env model
 
             logInfo "Initialising User Interface with Data Model..."
-            liftIO $ postGUIASync $ mwInitialiseDataModel mainWindow model
+            liftIO $ postGUIASync $ mwInitialiseDataModel mainWindow
+                                                          (getCompact model)
 
             logInfo "Starting TM and TC chains..."
 

@@ -13,10 +13,10 @@
                 , _verGroundReception = StGExpected
                 , _verGroundTransmission = StGExpected
                 , _verGroundOBR = StGDisabled
-                , _verTMAcceptance = StTmDisabled
+                , _verTMAcceptance = StTmExpected
                 , _verTMStart = StTmDisabled
                 , _verTMProgress = []
-                , _verTMComplete = StTmDisabled
+                , _verTMComplete = StTmExpected
                 , _verStatus = VerifStatNominal
                 }
           , _tcReqSCID = SCID 533

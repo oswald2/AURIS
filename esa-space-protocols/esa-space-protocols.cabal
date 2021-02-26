@@ -179,6 +179,7 @@ library
         , timer-wheel
         , refined
         , word24
+        , ghc-compact
 
     if flag(llvm)
         ghc-options: -O2 -Wall -Wcompat -Widentities -Wincomplete-record-updates

@@ -92,7 +92,8 @@ Executable AURISi
     gi-gtksource,
     tar,
     zlib,
-    stm
+    stm,
+    ghc-compact
 
   default-extensions:
         

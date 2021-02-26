@@ -4,8 +4,7 @@ module Data.MIB.LoadMIB
     , loadSyntheticParameters
     , loadParameters
     , loadPackets
-    )
-where
+    ) where
 
 
 import           RIO
@@ -55,41 +54,58 @@ import           Data.Conversion.Types
 import           Data.Conversion.TMPacket
 import           Data.Conversion.GRD
 
+import           GHC.Compact
 
 -- | load the whole MIB into a data structure
 loadMIB
     :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env)
     => FilePath
-    -> m (Either Text DataModel)
+    -> m (Either Text (Compact DataModel))
 loadMIB mibPath = do
-    handleIO
-            (\e -> return $
-                    Left $"Error on loading MIB: " <> T.pack (displayException e)
+    res <- handleIO
+            (\e -> return $ Left $ "Error on loading MIB: " <> T.pack
+                (displayException e)
             )
-        $ runExceptT $ do
-          syns      <- loadSyntheticParameters mibPath      >>= liftEither
-          calibs    <- loadCalibs mibPath                   >>= liftEither
-          params    <- loadParameters mibPath calibs syns   >>= liftEither >>= logWarnings
-          vpds      <- VPD.loadFromFile mibPath             >>= liftEither
-          vpdLookup <- pure (generateVPDLookup vpds params) >>= liftEither
-          pics      <- PIC.loadFromFile mibPath             >>= liftEither
-          let !pIdx = picSeachIndexFromPIC pics
-          packets   <- loadPackets mibPath params vpdLookup >>= liftEither >>= logWarnings
-          grds      <- loadGRDs mibPath                     >>= liftEither
-          return $ DataModel
-              { _dmCalibrations    = calibs
-              , _dmSyntheticParams = syns
-              , _dmParameters      = params
-              , _dmPacketIdIdx     = pIdx
-              , _dmTMPackets       = packets
-              , _dmVPDStructs      = vpdLookup
-              , _dmGRDs = grds
-              }
+        $ runExceptT
+        $ do
+              syns   <- loadSyntheticParameters mibPath >>= liftEither
+              calibs <- loadCalibs mibPath >>= liftEither
+              params <-
+                  loadParameters mibPath calibs syns
+                  >>= liftEither
+                  >>= logWarnings
+              vpds      <- VPD.loadFromFile mibPath >>= liftEither
+              vpdLookup <- pure (generateVPDLookup vpds params) >>= liftEither
+              pics      <- PIC.loadFromFile mibPath >>= liftEither
+              let !pIdx = picSeachIndexFromPIC pics
+              packets <-
+                  loadPackets mibPath params vpdLookup
+                  >>= liftEither
+                  >>= logWarnings
+              grds <- loadGRDs mibPath >>= liftEither
+              let model = DataModel { _dmCalibrations    = calibs
+                                    , _dmSyntheticParams = syns
+                                    , _dmParameters      = params
+                                    , _dmPacketIdIdx     = pIdx
+                                    , _dmTMPackets       = packets
+                                    , _dmVPDStructs      = vpdLookup
+                                    , _dmGRDs            = grds
+                                    }
+              return model 
+    
+    case res of 
+        Left err -> return $ Left err 
+        Right model -> do 
+            cmodel <- liftIO $ try $ compact model
+            case cmodel of
+                Left e -> return $ Left $ "Error on compacting: " <> T.pack (show (e :: SomeException))
+                Right m -> return $ Right m
+
 
   where
     logWarnings = \case
         (Nothing, res) -> return res
-        (Just w, res) -> do
+        (Just w , res) -> do
             logWarn $ "On parameter import: " <> display w
             return res
 
@@ -195,15 +211,15 @@ loadSyntheticParameters path' = do
                     $  T.concat
                     $  ["Error parsing synthetic parameters: " :: Text]
                     <> intersperse "\n" (lefts ols)
-    where
-      loadHCsynths synths = do
+  where
+    loadHCsynths synths = do
         let path = path' </> "hcsynthetic"
         doesDirectoryExist path >>= \x -> if not x
             then
                 do
                     pure
                 $  Left
-                $  "Could not read  hard-coded synthetic parameters: directory '"
+                $ "Could not read  hard-coded synthetic parameters: directory '"
                 <> T.pack path
                 <> "' does not exist"
             else do
@@ -217,7 +233,8 @@ loadSyntheticParameters path' = do
                     then do
                         let syn = zipWith f files (rights ols)
                             f p ol = (fromString (takeFileName p), ol)
-                            !hm = foldl' (\h (n, s) -> HM.insert n s h) synths syn
+                            !hm =
+                                foldl' (\h (n, s) -> HM.insert n s h) synths syn
                         return (Right hm)
                     else
                         do
@@ -228,30 +245,38 @@ loadSyntheticParameters path' = do
                         <> intersperse "\n" (lefts ols)
 
 
-loadPackets :: (MonadIO m, MonadReader env m, HasLogFunc env)
-  => FilePath
-  -> IHashTable ShortText TMParameterDef
-  -> IHashTable Int VarParams
-  -> m (Either Text (Warnings, IHashTable TMPacketKey TMPacketDef))
+loadPackets
+    :: (MonadIO m, MonadReader env m, HasLogFunc env)
+    => FilePath
+    -> IHashTable ShortText TMParameterDef
+    -> IHashTable Int VarParams
+    -> m
+           ( Either
+                 Text
+                 (Warnings, IHashTable TMPacketKey TMPacketDef)
+           )
 loadPackets mibPath parameters vpdLookup = do
-  runExceptT $ do
-    -- load calibrations
-    pids' <- PID.loadFromFile mibPath
-    tpcfs' <- TPCF.loadFromFile mibPath
-    plfs' <- PLF.loadFromFile mibPath
+    runExceptT $ do
+      -- load calibrations
+        pids'  <- PID.loadFromFile mibPath
+        tpcfs' <- TPCF.loadFromFile mibPath
+        plfs'  <- PLF.loadFromFile mibPath
 
-    let pid = fromRight V.empty pids'
-        tpcf = fromRight V.empty tpcfs'
-        plf = fromRight V.empty plfs'
-        tpcfMap = TPCF.getTPCFMap tpcf
+        let pid     = fromRight V.empty pids'
+            tpcf    = fromRight V.empty tpcfs'
+            plf     = fromRight V.empty plfs'
+            tpcfMap = TPCF.getTPCFMap tpcf
 
-    (warnings, packets) <- liftEither $ convertPackets tpcfMap plf vpdLookup parameters pid
-    let key pkt = TMPacketKey (_tmpdApid pkt)
-            (_tmpdType pkt) (_tmpdSubType pkt)
-            (fromIntegral (_tmpdPI1Val pkt)) (fromIntegral (_tmpdPI2Val pkt))
-        lst = map (\x -> (key x, x)) (fixedTMPacketDefs ++ packets)
-    hm <- liftEither $ runST $ do
-      ht <- HTC.fromList lst
-      Right <$> HT.unsafeFreeze ht
+        (warnings, packets) <- liftEither
+            $ convertPackets tpcfMap plf vpdLookup parameters pid
+        let key pkt = TMPacketKey (_tmpdApid pkt)
+                                  (_tmpdType pkt)
+                                  (_tmpdSubType pkt)
+                                  (fromIntegral (_tmpdPI1Val pkt))
+                                  (fromIntegral (_tmpdPI2Val pkt))
+            lst = map (\x -> (key x, x)) (fixedTMPacketDefs ++ packets)
+        hm <- liftEither $ runST $ do
+            ht <- HTC.fromList lst
+            Right <$> HT.unsafeFreeze ht
 
-    return (warnings, hm)
+        return (warnings, hm)
