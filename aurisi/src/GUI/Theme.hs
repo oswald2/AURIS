@@ -2,6 +2,7 @@
 #-}
 module GUI.Theme
   ( setTheme
+  , setDarkTheme
   )
 where
 
@@ -51,17 +52,17 @@ checkDirectory homeDir = do
       return False
 
 
--- setTheme :: IO ()
--- setTheme = do
---   homeDir <- getHomeDirectory
---   exists  <- checkDirectory homeDir
---   unless exists $ do
---     extractTheme homeDir
+setDarkTheme :: IO ()
+setDarkTheme = do
+  homeDir <- getHomeDirectory
+  exists  <- checkDirectory homeDir
+  unless exists $ do
+    extractTheme homeDir
 
---   provider <- cssProviderGetNamed ("Numix-BLACK-SLATE" :: Text) Nothing 
---   screenGetDefault >>= \case
---     Nothing     -> T.putStrLn "Could not get screen"
---     Just screen -> styleContextAddProviderForScreen screen provider 600
+  provider <- cssProviderGetNamed ("Numix-BLACK-SLATE" :: Text) Nothing 
+  screenGetDefault >>= \case
+    Nothing     -> T.putStrLn "Could not get screen"
+    Just screen -> styleContextAddProviderForScreen screen provider 600
 
 
 setTheme :: IO() 

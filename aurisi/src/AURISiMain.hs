@@ -113,7 +113,10 @@ main = do
 
         -- create the main window
         mainWindow <- ui cfg
-        setTheme
+        case aurisTheme cfg of 
+          ThemeDark -> setDarkTheme
+          ThemeLight -> setTheme
+          
         mwSetMission mainWindow (aurisMission cfg)
 
         -- setup the interface
