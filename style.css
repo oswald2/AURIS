@@ -9,8 +9,11 @@ window {
 }
 
 button {
+  min-height: 11px;
+  min-width: 12px;
+  padding: 3px;
   margin: 4px;
-  border-radius: 10px;
+  border-radius: 8px;
   background-color:@bg_color;
   color: #000;
   border: 1px solid rgba(255,255,255,0.20);
@@ -19,8 +22,11 @@ button {
 }
 
 button:focus {
+  min-height: 11px;
+  min-width: 12px;
+  padding: 3px;
   margin: 4px;
-  border-radius: 10px;
+  border-radius: 8px;
   background-color:@bg_color;
   color: #000;
   border: 1px solid rgba(0,255,34,0.60);
@@ -29,8 +35,11 @@ button:focus {
 }
 
 button:active {
+  min-height: 11px;
+  min-width: 12px;
+  padding: 3px;
   margin: 4px;
-  border-radius: 10px;
+  border-radius: 8px;
   background-color: @bg_color;
   color: #000;
   border: 1px solid rgba(255,255,255,0.20);
@@ -40,8 +49,10 @@ button:active {
 
 checkbutton 
 { 
+  min-height: 16px;
+  min-width: 14px;
   margin: 4px;
-  border-radius: 10px;
+  border-radius: 4px;
   background-color:@bg_color;
   color: #000;
   border: 1px solid rgba(255,255,255,0.20);
@@ -51,11 +62,26 @@ checkbutton
 
 checkbutton:focus
 { 
+  min-height: 16px;
+  min-width: 14px;
   margin: 4px;
-  border-radius: 10px;
+  border-radius: 4px;
   background-color:@bg_color;
   color: #000;
   border: 1px solid rgba(0, 255, 34, 0.6);
+  box-shadow:  4px 4px 4px 0 @dark_shadow, 
+              -4px -4px 4px 0 @light_shadow;
+}
+
+checkbutton:disabled
+{ 
+  min-height: 16px;
+  min-width: 14px;
+  margin: 4px;
+  border-radius: 4px;
+  background-color:@bg_color;
+  color: #000;
+  border: 1px solid rgba(255,255,255,0.20);
   box-shadow:  4px 4px 4px 0 @dark_shadow, 
               -4px -4px 4px 0 @light_shadow;
 }
@@ -76,16 +102,6 @@ checkbutton check {
   color:rgba(0, 255, 34, 0.8)
 }
 
-checkbutton:disabled
-{ 
-  margin: 4px;
-  border-radius: 10px;
-  background-color:@bg_color;
-  color: #000;
-  border: 1px solid rgba(255,255,255,0.20);
-  box-shadow:  4px 4px 4px 0 @dark_shadow, 
-              -4px -4px 4px 0 @light_shadow;
-}
 
 checkbutton#activecheck label:disabled {
   color: #000;

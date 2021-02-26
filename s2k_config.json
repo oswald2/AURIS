@@ -1,6 +1,7 @@
 {
     "aurisMIB": null,
     "aurisMission": "DEFAULT",
+    "aurisTheme": "ThemeLight",
     "aurisDbConfig": {
         "cfgMongoHost": "localhost",
         "cfgMongoPort": null

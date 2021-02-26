@@ -60,9 +60,9 @@ import           GHC.Compact
 loadMIB
     :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env)
     => FilePath
-    -> m (Either Text (Compact DataModel))
+    -> m (Either Text DataModel)
 loadMIB mibPath = do
-    res <- handleIO
+    handleIO
             (\e -> return $ Left $ "Error on loading MIB: " <> T.pack
                 (displayException e)
             )
@@ -92,14 +92,7 @@ loadMIB mibPath = do
                                     , _dmGRDs            = grds
                                     }
               return model 
-    
-    case res of 
-        Left err -> return $ Left err 
-        Right model -> do 
-            cmodel <- liftIO $ try $ compact model
-            case cmodel of
-                Left e -> return $ Left $ "Error on compacting: " <> T.pack (show (e :: SomeException))
-                Right m -> return $ Right m
+   
 
 
   where

@@ -194,9 +194,9 @@ testLoadMIB mibPath = do
             T.putStrLn err
             exitFailure
         Right r -> do
-            pPrint (getCompact r)
+            pPrint r
             T.putStrLn "Writing data model..."
-            writeDataModel "/tmp/writemib.tmp" (getCompact r)
+            writeDataModel "/tmp/writemib.tmp" r
             T.putStrLn "Reading data model..."
             chk <- readDataModel "/tmp/writemib.tmp"
             case chk of

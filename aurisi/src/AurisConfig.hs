@@ -6,6 +6,7 @@
 #-}
 module AurisConfig
     ( AurisConfig(..)
+    , AurisTheme(..)
     , AurisConfig.writeConfigJSON
     , AurisConfig.loadConfigJSON
     , AurisConfig.defaultConfig
@@ -57,6 +58,14 @@ convLogLevel LogLevelError     = LevelError
 convLogLevel (LogLevelOther x) = LevelOther x
 
 
+data AurisTheme = ThemeDark | ThemeLight
+    deriving(Eq, Ord, Enum, Show, Read, Generic)
+
+instance FromJSON AurisTheme
+instance ToJSON AurisTheme where
+    toEncoding = genericToEncoding defaultOptions
+
+
 data AurisConfig = AurisConfig
     { aurisMission   :: Text
     , aurisMIB       :: Maybe Text
@@ -65,6 +74,7 @@ data AurisConfig = AurisConfig
     -- | Minimum level of log messages that should be stored to database.
     -- Set 'Nothing' to disable logging to database.
     , aurisDbConfig  :: Maybe DbConfigMongoDB
+    , aurisTheme     :: AurisTheme 
     }
     deriving (Eq, Generic)
 
@@ -75,6 +85,7 @@ defaultConfig = AurisConfig { aurisPusConfig = Data.PUS.Config.defaultConfig
                             , aurisLogLevel  = LogLevelInfo
                             , aurisMIB       = Nothing
                             , aurisDbConfig  = Just defaultMongoDBConfig
+                            , aurisTheme     = ThemeLight
                             }
 
 defaultConfigFileName :: FilePath

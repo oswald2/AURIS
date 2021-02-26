@@ -85,7 +85,7 @@ class HasCorrelationState env where
 
 -- | class for accessing the data model 
 class HasDataModel env where
-    getDataModelVar :: Getter env (TVar (Compact DataModel))
+    getDataModelVar :: Getter env (TVar DataModel)
 
 -- | class for injecting TC Requests into the system
 class HasTCRqstQueue env where
@@ -94,10 +94,10 @@ class HasTCRqstQueue env where
 
 getDataModel :: (MonadIO m) => HasDataModel env => env -> m DataModel
 getDataModel env = do
-    liftIO $ getCompact <$> readTVarIO (env ^. getDataModelVar)
+    liftIO $ readTVarIO (env ^. getDataModelVar)
 
 setDataModel
-    :: (MonadIO m) => HasDataModel env => env -> Compact DataModel -> m ()
+    :: (MonadIO m) => HasDataModel env => env -> DataModel -> m ()
 setDataModel env dm = do
     atomically $ writeTVar (env ^. getDataModelVar) dm
 

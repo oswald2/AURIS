@@ -104,7 +104,7 @@ data GlobalState = GlobalState
     , glsState             :: !AppState
     , glsFOP1              :: COP1State
     , glsCorrState         :: CorrelationVar
-    , glsDataModel         :: TVar (Compact DataModel)
+    , glsDataModel         :: TVar DataModel
     , glsMissionSpecific   :: PUSMissionSpecific
     , glsRaiseEvent        :: Event -> IO ()
     , glsLogFunc           :: !LogFunc
@@ -128,8 +128,7 @@ newGlobalState cfg missionSpecific logErr raiseEvent eventFlags dbBackend = do
     st     <- defaultPUSState cfg
     tv     <- newTVarIO st
     cv     <- newTVarIO defaultCoeffs
-    model  <- compact Data.DataModel.empty
-    dmodel <- newTVarIO model
+    dmodel <- newTVarIO Data.DataModel.empty
     let vcids = cfgVCIDs cfg
     fopTVars <- mapM (newTVarIO . initialFOPState) vcids
     let fop1 = HM.fromList $ zip vcids fopTVars

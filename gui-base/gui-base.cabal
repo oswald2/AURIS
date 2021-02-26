@@ -73,6 +73,7 @@ library
     GUI.ConnectionStatus
     GUI.MessageDialogs
     GUI.FileChooser
+    GUI.LiveControls
 
   -- Modules included in this library but not exported.
   -- other-modules:

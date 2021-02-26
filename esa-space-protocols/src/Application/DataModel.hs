@@ -34,7 +34,7 @@ data LoadFrom =
 loadDataModelDef
     :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env)
     => LoadFrom
-    -> m (Compact DataModel)
+    -> m DataModel
 loadDataModelDef (LoadFromMIB str serializedPath) = do
     res <- loadMIB str
     case res of
@@ -42,13 +42,13 @@ loadDataModelDef (LoadFromMIB str serializedPath) = do
             logError
                 $  display ("Error on importing MIB: " :: Text)
                 <> display err
-            liftIO $ compact Data.DataModel.empty
+            return Data.DataModel.empty
         Right model -> do
             logInfo $ display ("Successfully imported MIB." :: Text)
             liftIO $ createDirectoryIfMissing True
                                               (takeDirectory serializedPath)
             logInfo "Writing data model to disk..."
-            writeDataModel serializedPath (getCompact model)
+            writeDataModel serializedPath model
             logInfo "Data Model written."
             return model
 loadDataModelDef (LoadFromSerialized path) = do
@@ -64,16 +64,16 @@ loadDataModelDef (LoadFromSerialized path) = do
                         <> display (T.pack path)
                         <> display (": " :: Text)
                         <> display err
-                    liftIO $ compact Data.DataModel.empty
+                    return Data.DataModel.empty
                 Right model -> do
                     logInfo $ display ("Successfully loaded data model" :: Text)
-                    liftIO $ compact model
+                    return model
         else do
             logInfo
                 $  display ("Data model file '" :: Text)
                 <> display (T.pack path)
                 <> display ("' does not exist." :: Text)
-            liftIO $ compact Data.DataModel.empty
+            return Data.DataModel.empty
 
 
 
@@ -84,7 +84,7 @@ loadDataModelDef (LoadFromSerialized path) = do
 loadDataModel
     :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env)
     => LoadFrom
-    -> m (Either Text (Compact DataModel))
+    -> m (Either Text  DataModel)
 loadDataModel (LoadFromMIB str serializedPath) = do
     res <- loadMIB str
     case res of
@@ -94,7 +94,7 @@ loadDataModel (LoadFromMIB str serializedPath) = do
             liftIO $ createDirectoryIfMissing True
                                               (takeDirectory serializedPath)
             logDebug "Writing data model to disk..."
-            writeDataModel serializedPath (getCompact model)
+            writeDataModel serializedPath model
             logDebug "Data Model written."
             return (Right model)
 loadDataModel (LoadFromSerialized path) = do
@@ -102,14 +102,7 @@ loadDataModel (LoadFromSerialized path) = do
     if ex
         then do
             logDebug "calling readDataModel..."
-            res <- readDataModel path
-            case res of 
-              Left err -> return $ Left err 
-              Right model -> do
-                cmodel <- liftIO $ try $ compact model 
-                case cmodel of 
-                  Left e -> return $ Left $ "Error on compacting model: " <> T.pack (show (e :: SomeException))
-                  Right m -> return $ Right m                
+            readDataModel path
         else do
             return
                 $  Left

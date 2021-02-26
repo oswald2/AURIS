@@ -28,12 +28,12 @@ module GUI.MainWindow
     , mwTCTab
     , mwTCHistory
     , mwMenuItemImportMIB
+    , mwLiveState
     ) where
 
 import           RIO
 import qualified RIO.Text                      as T
 import qualified Data.Text.Encoding            as T
-import qualified Data.Text.IO                  as T
 import qualified RIO.Vector                    as V
 import           RIO.List                       ( sortBy )
 import           Control.Lens                   ( makeLenses )
@@ -57,6 +57,8 @@ import           Data.PUS.TMPacket
 import           Data.PUS.ExtractedDU
 import           Data.PUS.TMFrame
 import           Data.PUS.TCRequest             ( TCRequest )
+import           Data.PUS.LiveState
+
 import           Protocol.ProtocolInterfaces
 
 import           Data.DataModel
@@ -93,6 +95,7 @@ data MainWindow = MainWindow
     , _mwTCHistory         :: !TCHistory
     , _mwTimeLabel         :: !Label
     , _mwMenuItemImportMIB :: !Gtk.MenuItem
+    , _mwLiveState         :: TVar LiveState
     }
 makeLenses ''MainWindow
 
@@ -182,6 +185,8 @@ createMainWindow cfg = do
 
     setLogo logo 65 65
 
+    liveState <- newTVarIO defaultLiveState
+
     let gui = MainWindow { _mwWindow            = window
                          , _mwMission           = missionLabel
                          , _mwProgress          = progressBar
@@ -194,6 +199,7 @@ createMainWindow cfg = do
                          , _mwTCTab             = tcTab
                          , _mwTCHistory         = tcHistory
                          , _mwMenuItemImportMIB = menuItemImportMIB
+                         , _mwLiveState         = liveState
                          }
 
     void $ Gtk.on aboutItem #activate $ do
@@ -209,17 +215,16 @@ createMainWindow cfg = do
     void $ Gtk.on menuItemSaveTC #activate $ tcTabSaveFile tcTab
     void $ Gtk.on menuItemSaveTCAs #activate $ tcTabSaveFileAs tcTab
 
-    --textViewSetText configTextView (configPretty cfg)
-    lm               <- languageManagerNew
-    styleViewMgr     <- styleSchemeManagerGetDefault
+    lm           <- languageManagerNew
+    styleViewMgr <- styleSchemeManagerGetDefault
 
-    res              <- styleSchemeManagerGetSchemeIds styleViewMgr
-    T.putStrLn $ "Schemes:" <> T.pack (show res)
+    -- res          <- styleSchemeManagerGetSchemeIds styleViewMgr
+    -- T.putStrLn $ "Schemes:" <> T.pack (show res)
 
-    scheme <- styleSchemeManagerGetScheme styleViewMgr "cobalt"
+    scheme           <- styleSchemeManagerGetScheme styleViewMgr "cobalt"
     configTextBuffer <- BUF.bufferNew (Nothing :: Maybe TextTagTable)
     bufferSetStyleScheme configTextBuffer (Just scheme)
-    
+
 
     let t = configPretty cfg
 
