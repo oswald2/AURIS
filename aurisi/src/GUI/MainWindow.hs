@@ -23,6 +23,7 @@ module GUI.MainWindow
     , mwInitialiseDataModel
     , mwTimerLabelCB
     , mwWindow
+    , mwMenuBar
     , mwProgress
     , mwConnTab
     , mwTCTab
@@ -83,7 +84,8 @@ import           AurisConfig
 
 
 data MainWindow = MainWindow
-    { _mwWindow            :: !Gtk.Window
+    { _mwWindow            :: !Gtk.ApplicationWindow
+    , _mwMenuBar           :: !Gtk.MenuBar
     , _mwProgress          :: !Gtk.ProgressBar
     , _mwMessageDisplay    :: !MessageDisplay
     , _mwTMPTab            :: !TMPacketTab
@@ -155,7 +157,8 @@ createMainWindow cfg = do
     builder <- builderNewFromString gladeFile
                                     (fromIntegral (T.length gladeFile))
 
-    window            <- getObject builder "mainWindow" Window
+    window            <- getObject builder "mainWindow" ApplicationWindow
+    mainMenuBar       <- getObject builder "mainMenuBar" MenuBar
     missionLabel      <- getObject builder "labelMission" Label
     progressBar       <- getObject builder "progressBar" ProgressBar
     aboutItem         <- getObject builder "menuitemAbout" MenuItem
@@ -188,6 +191,7 @@ createMainWindow cfg = do
     liveState <- newTVarIO defaultLiveState
 
     let gui = MainWindow { _mwWindow            = window
+                         , _mwMenuBar           = mainMenuBar
                          , _mwMission           = missionLabel
                          , _mwProgress          = progressBar
                          , _mwMessageDisplay    = msgDisp
@@ -217,9 +221,6 @@ createMainWindow cfg = do
 
     lm           <- languageManagerNew
     styleViewMgr <- styleSchemeManagerGetDefault
-
-    -- res          <- styleSchemeManagerGetSchemeIds styleViewMgr
-    -- T.putStrLn $ "Schemes:" <> T.pack (show res)
 
     scheme           <- styleSchemeManagerGetScheme styleViewMgr "cobalt"
     configTextBuffer <- BUF.bufferNew (Nothing :: Maybe TextTagTable)

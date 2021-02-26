@@ -246,7 +246,7 @@ Author: Michael Oswald
                   </packing>
                 </child>
                 <child>
-                  <object class="GtkMenuBar">
+                  <object class="GtkMenuBar" id="mainMenuBar">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <child>
@@ -2368,6 +2368,31 @@ Author: Michael Oswald
                             <property name="position">4</property>
                           </packing>
                         </child>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                          </object>
+                          <packing>
+                            <property name="expand">True</property>
+                            <property name="fill">True</property>
+                            <property name="position">5</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkSourceStyleSchemeChooserButton" id="buttonStyleChooser">
+                            <property name="label" translatable="yes">Style</property>
+                            <property name="visible">True</property>
+                            <property name="sensitive">False</property>
+                            <property name="can_focus">True</property>
+                            <property name="receives_default">True</property>
+                          </object>
+                          <packing>
+                            <property name="expand">False</property>
+                            <property name="fill">True</property>
+                            <property name="position">6</property>
+                          </packing>
+                        </child>
                       </object>
                       <packing>
                         <property name="expand">False</property>
@@ -2381,10 +2406,18 @@ Author: Michael Oswald
                         <property name="can_focus">True</property>
                         <property name="shadow_type">in</property>
                         <child>
-                          <object class="GtkTextView" id="textViewTC">
+                          <object class="GtkSourceView" id="textViewTC">
                             <property name="visible">True</property>
                             <property name="can_focus">True</property>
-                            <property name="wrap_mode">word</property>
+                            <property name="left_margin">2</property>
+                            <property name="right_margin">2</property>
+                            <property name="monospace">True</property>
+                            <property name="show_line_numbers">True</property>
+                            <property name="show_line_marks">True</property>
+                            <property name="tab_width">4</property>
+                            <property name="auto_indent">True</property>
+                            <property name="insert_spaces_instead_of_tabs">True</property>
+                            <property name="highlight_current_line">True</property>
                           </object>
                         </child>
                       </object>

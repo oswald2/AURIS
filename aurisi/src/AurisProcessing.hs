@@ -81,7 +81,6 @@ runProcessing cfg missionSpecific mibPath interface mainWindow coreQueue = do
                 logf1 <> maybe mempty (mkLogFunc . logToDB)  dbBackend
 
         -- Create a new 'GlobalState' for the processing
-        T.putStrLn "Creating Global State..."
         state <- newGlobalState (aurisPusConfig cfg)
                                 missionSpecific
                                 logf
@@ -89,10 +88,8 @@ runProcessing cfg missionSpecific mibPath interface mainWindow coreQueue = do
                                 [EVFlagAll]
                                 dbBackend
 
-        T.putStrLn "Running RIO..."
         void $ runRIO state $ do
           -- first, try to load a data model or import a MIB
-            liftIO $ T.putStrLn "Loading Data Model..."
             logInfo "Loading Data Model..."
 
             home <- liftIO getHomeDirectory
@@ -105,11 +102,9 @@ runProcessing cfg missionSpecific mibPath interface mainWindow coreQueue = do
             env   <- ask
             setDataModel env model
 
-            liftIO $ T.putStrLn "Initialising User Interface with Data Model..."
             logInfo "Initialising User Interface with Data Model..."
             liftIO $ postGUIASync $ mwInitialiseDataModel mainWindow model
 
-            liftIO $ T.putStrLn "Starting TM and TC chains..."
             logInfo "Starting TM and TC chains..."
 
             -- Start the core processing thread (commands from GUI)

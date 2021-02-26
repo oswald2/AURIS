@@ -17,7 +17,7 @@ import           Data.TM.Parameter
 
 
 data TMParamDetailsWindow = TMParamDetailsWindow
-    { _tmpdParent   :: !Window
+    { _tmpdParent   :: !ApplicationWindow
     , _tmpdWindow   :: !Window
     , _tmpdName     :: !Entry
     , _tmpdTime     :: !Entry
@@ -25,7 +25,7 @@ data TMParamDetailsWindow = TMParamDetailsWindow
     }
 
 
-createTMParamDetailWindow :: Window -> Gtk.Builder -> IO TMParamDetailsWindow
+createTMParamDetailWindow :: ApplicationWindow -> Gtk.Builder -> IO TMParamDetailsWindow
 createTMParamDetailWindow window builder = do
     win   <- getObject builder "windowParameterDetail" Window
     eName <- getObject builder "entryParamDetailName" Entry

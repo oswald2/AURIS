@@ -31,7 +31,7 @@ tmpParamTableSetValues g values = do
   V.mapM_ (seqStoreAppend model) values
 
 
-createTMPParamTable :: Window -> Gtk.Builder -> IO TMPParamTable
+createTMPParamTable :: ApplicationWindow -> Gtk.Builder -> IO TMPParamTable
 createTMPParamTable window builder = do
   
   details <- createTMParamDetailWindow window builder 

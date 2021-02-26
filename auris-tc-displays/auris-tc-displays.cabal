@@ -85,6 +85,7 @@ library
     , gi-gtk-hs
     , gi-gobject
     , gi-gdk
+    , gi-gtksource
     , haskell-gi-base
     , pretty-show
     , esa-base

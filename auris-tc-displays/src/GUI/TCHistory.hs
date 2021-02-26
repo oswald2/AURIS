@@ -59,7 +59,7 @@ makeLenses ''Row
 
 
 data TCHistory = TCHistory
-    { guiParent        :: !Window
+    { guiParent        :: !ApplicationWindow
     , guiTreeView      :: !TreeView
     , guiModel         :: SeqStore Row
     , guiTCName        :: !Entry
@@ -80,7 +80,7 @@ data TCHistory = TCHistory
     }
 
 
-createTCHistory :: Window -> Gtk.Builder -> IO TCHistory
+createTCHistory :: ApplicationWindow -> Gtk.Builder -> IO TCHistory
 createTCHistory window builder = do
     treeView         <- getObject builder "treeViewTCHistory" TreeView
     entryName        <- getObject builder "entryTCReqName" Entry

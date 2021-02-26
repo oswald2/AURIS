@@ -15,7 +15,11 @@ module GUI.TCTab
 import           RIO
 import           RIO.Partial                    ( toEnum )
 import qualified RIO.Text                      as T
+
 import           GI.Gtk                        as Gtk
+import           GI.GtkSource
+import qualified GI.GtkSource.Objects.Buffer   as BUF
+
 import           Text.Show.Pretty               ( ppShow )
 import           Interface.Interface            ( Interface
                                                 , callInterface
@@ -27,10 +31,6 @@ import           Interface.Interface            ( Interface
                                                 )
 
 import           GUI.Utils                      ( getObject )
-import           GUI.TextView                   ( textViewClear
-                                                , textViewGetText
-                                                , textViewSetText
-                                                )
 import           GUI.MessageDialogs             ( warningDialog )
 import           GUI.FileChooser
 
@@ -69,8 +69,9 @@ import           System.FilePath
 
 
 data TCTab = TCTab
-    { _tcTabWindow             :: !Window
-    , _tcTabTextView           :: !TextView
+    { _tcTabWindow             :: !ApplicationWindow
+    , _tcTabTextView           :: !View
+    , _tcTabTextBuffer         :: !BUF.Buffer
     , _tcTabButtonInsert       :: !Button
     , _tcTabButtonInsertCc     :: !Button
     , _tcTabButtonInsertScoeCc :: !Button
@@ -81,9 +82,9 @@ data TCTab = TCTab
     }
 
 
-createTCTab :: Window -> Gtk.Builder -> IO TCTab
+createTCTab :: ApplicationWindow -> Gtk.Builder -> IO TCTab
 createTCTab window builder = do
-    textView       <- getObject builder "textViewTC" TextView
+    textView       <- getObject builder "textViewTC" View
     btInsert       <- getObject builder "buttonTCInsertTemplate" Button
     btCcInsert     <- getObject builder "buttonTCInsertCncTemplate" Button
     btCcScoeInsert <- getObject builder "buttonScoeTC" Button
@@ -93,8 +94,21 @@ createTCTab window builder = do
     ur <- newIORef Nothing 
     l <- newIORef Nothing
 
+    lm           <- languageManagerNew
+    styleViewMgr <- styleSchemeManagerGetDefault
+
+    scheme           <- styleSchemeManagerGetScheme styleViewMgr "cobalt"
+    textBuffer <- BUF.bufferNew (Nothing :: Maybe TextTagTable)
+    bufferSetStyleScheme textBuffer (Just scheme)
+
+    lang <- languageManagerGetLanguage lm "haskell"
+    bufferSetLanguage textBuffer lang
+
+    textViewSetBuffer textView (Just textBuffer)
+
     let g = TCTab { _tcTabWindow             = window
                   , _tcTabTextView           = textView
+                  , _tcTabTextBuffer         = textBuffer
                   , _tcTabButtonInsert       = btInsert
                   , _tcTabButtonClear        = btClear
                   , _tcTabButtonSend         = btSend
@@ -104,7 +118,7 @@ createTCTab window builder = do
                   , _tcTabLogFunc            = l
                   }
 
-    _ <- Gtk.on btClear #clicked $ textViewClear textView
+    _ <- Gtk.on btClear #clicked $ setText g "" 
     _ <- Gtk.on btInsert #clicked $ do
         let rqst =
                 [ RepeatN
@@ -134,7 +148,8 @@ createTCTab window builder = do
             params = RIO.replicate
                 10
                 (Parameter "X" (ValUInt8X (B8 $$(refineTH 3)) 0b101))
-        textViewSetText textView (T.pack (ppShow rqst))
+        setText g (T.pack (ppShow rqst))
+
     _ <- Gtk.on btCcInsert #clicked $ do
         let rqst =
                 [ RepeatN
@@ -164,7 +179,7 @@ createTCTab window builder = do
             params = RIO.replicate
                 10
                 (Parameter "X" (ValUInt8X (B8 $$(refineTH 3)) 0b101))
-        textViewSetText textView (T.pack (ppShow rqst))
+        setText g (T.pack (ppShow rqst))
     _ <- Gtk.on btCcScoeInsert #clicked $ do
         let
             rqst =
@@ -185,7 +200,7 @@ createTCTab window builder = do
                             )
                       ]
                 ]
-        textViewSetText textView (T.pack (ppShow rqst))
+        setText g (T.pack (ppShow rqst))
 
     return g
 
@@ -199,11 +214,23 @@ data TCAction =
 instance NFData TCAction
 
 
+setText :: TCTab -> Text -> IO () 
+setText gui txt = do 
+    textBufferSetText (_tcTabTextBuffer gui) txt (fromIntegral (T.length txt))
+
+
+getText :: TCTab -> IO Text 
+getText gui = do 
+    let buffer = _tcTabTextBuffer gui
+    (start, end) <- textBufferGetBounds buffer
+    textBufferGetText buffer start end False
+
+
 setupCallbacks :: TCTab -> Interface -> IO ()
 setupCallbacks gui interface = do
     -- Callback for the SEND button
     void $ Gtk.on (_tcTabButtonSend gui) #clicked $ do
-        text <- textViewGetText (_tcTabTextView gui)
+        text <- getText gui
         let actions = readMaybe (T.unpack text) :: Maybe [TCAction]
         case actions of
             Just a  -> mapM_ (processAction interface) (force a)
@@ -255,7 +282,7 @@ tcTabLoadFile gui = do
 tcTabLoadTCFile :: TCTab -> FilePath -> IO ()
 tcTabLoadTCFile gui file = do
     content <- readFileUtf8 file
-    textViewSetText (_tcTabTextView gui) content
+    setText gui content
 
 
 tcTabSaveFile :: TCTab -> IO ()
@@ -292,5 +319,5 @@ tcTabSaveFileAs gui = do
 
 tcTabSaveTCFile :: TCTab -> FilePath -> IO ()
 tcTabSaveTCFile gui file = do
-    content <- textViewGetText (_tcTabTextView gui)
+    content <- getText gui
     writeFileUtf8 file content

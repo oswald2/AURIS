@@ -53,7 +53,7 @@ tmpTabAddRow tab = tmPacketTableAddRow (_tmpTable tab)
 
 
 
-createTMPTab :: Window -> Gtk.Builder -> IO TMPacketTab
+createTMPTab :: ApplicationWindow -> Gtk.Builder -> IO TMPacketTab
 createTMPTab window builder = do
     table      <- createTMPacketTable builder
     paramTable <- createTMPParamTable window builder

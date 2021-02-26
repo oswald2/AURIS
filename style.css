@@ -114,7 +114,7 @@ button.toggle:checked#playtoggle {
 }
 
 
-#playtoggle:insensitive * {
+#playtoggle:disabled * {
   background-color: #00BB00;
   color: #000;
 }
@@ -133,7 +133,7 @@ button.toggle:checked#stoptoggle {
               -4px -4px 4px 0 @dark_shadow;
 }
 
-#stoptoggle:insensitive * {
+#stoptoggle:disabled * {
   background-color: #ff0000;
   color: #000;
 }

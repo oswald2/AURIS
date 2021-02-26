@@ -78,7 +78,9 @@ library
     gi-cairo-connector,
     gi-cairo-render,
     gi-gdk,
-    haskell-gi-base
+    haskell-gi-base,
+    keera-callbacks,
+    keera-hails-reactivevalues
 
 
   default-extensions:
