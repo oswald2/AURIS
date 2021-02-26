@@ -47,7 +47,6 @@ Executable AURISi
     GUI.MessageDisplay
     GUI.MessageDetails
     GUI.Logo
-    GUI.LogoXPM
     GUI.About
     GUI.Theme
     AurisInterface
