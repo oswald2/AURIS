@@ -145,17 +145,18 @@ mwInitialiseDataModel window model = do
     addGrdDefinitions (window ^. mwTMParamTab) (model ^. dmGRDs)
 
 
-gladeFile :: Text
-gladeFile =
-    T.decodeUtf8 $(makeRelativeToProject "src/MainWindow.glade" >>= embedFile)
+-- gladeFile :: Text
+-- gladeFile =
+--     T.decodeUtf8 $(makeRelativeToProject "src/MainWindow.glade" >>= embedFile)
 
 
 
 
 createMainWindow :: AurisConfig -> IO MainWindow
 createMainWindow cfg = do
-    builder <- builderNewFromString gladeFile
-                                    (fromIntegral (T.length gladeFile))
+    -- builder <- builderNewFromString gladeFile
+    --                                 (fromIntegral (T.length gladeFile))
+    builder           <- builderNewFromResource "/auris/src/MainWindow.glade"
 
     window            <- getObject builder "mainWindow" ApplicationWindow
     mainMenuBar       <- getObject builder "mainMenuBar" MenuBar
@@ -219,8 +220,8 @@ createMainWindow cfg = do
     void $ Gtk.on menuItemSaveTC #activate $ tcTabSaveFile tcTab
     void $ Gtk.on menuItemSaveTCAs #activate $ tcTabSaveFileAs tcTab
 
-    lm           <- languageManagerNew
-    styleViewMgr <- styleSchemeManagerGetDefault
+    lm               <- languageManagerNew
+    styleViewMgr     <- styleSchemeManagerGetDefault
 
     scheme           <- styleSchemeManagerGetScheme styleViewMgr "cobalt"
     configTextBuffer <- BUF.bufferNew (Nothing :: Maybe TextTagTable)
