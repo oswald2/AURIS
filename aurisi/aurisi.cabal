@@ -38,7 +38,6 @@ flag optimize
 Executable AURISi
   Main-Is: AURISiMain.hs
   c-sources: csrc/resources.c
-  pkg-config-dependencies: glib-2.0 >= 2.32
   Other-modules:
     GUI.MainWindow
     GUI.MainWindowCallbacks

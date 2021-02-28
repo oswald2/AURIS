@@ -105,7 +105,7 @@ import           System.IO.Unsafe
 paleYellow :: RGBA
 paleYellow = unsafePerformIO $ do
   col <- newZeroRGBA
-  void $ rGBAParse col "#ffff00"
+  void $ rGBAParse col "#ffff35"
   return col
 
 {-# NOINLINE black #-}
@@ -126,7 +126,7 @@ red = unsafePerformIO $ do
 green :: RGBA
 green = unsafePerformIO $ do
   col <- newZeroRGBA
-  res <- rGBAParse col "#00cc00"
+  res <- rGBAParse col "#00bb00"
   unless res $ error "Could not parse green!"
   return col
 

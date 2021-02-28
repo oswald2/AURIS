@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <gresources>
   <gresource prefix="/auris">
-    <file>src/AurisLogo_small.png</file>
-    <file>src/AurisLogo.png</file>
-    <file>src/AurisLogo.svg</file>
-    <file>src/MainWindow.glade</file>
+    <file>data/AurisLogo_small.png</file>
+    <file>data/AurisLogo.png</file>
+    <file>data/AurisLogo.svg</file>
+    <file>data/MainWindow.glade</file>
+    <file>data/style.css</file>
   </gresource>
 </gresources>

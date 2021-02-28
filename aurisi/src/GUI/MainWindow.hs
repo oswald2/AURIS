@@ -34,7 +34,7 @@ module GUI.MainWindow
 
 import           RIO
 import qualified RIO.Text                      as T
-import qualified Data.Text.Encoding            as T
+--import qualified Data.Text.Encoding            as T
 import qualified RIO.Vector                    as V
 import           RIO.List                       ( sortBy )
 import           Control.Lens                   ( makeLenses )
@@ -77,7 +77,7 @@ import           GI.GtkSource
 import qualified GI.GtkSource.Objects.Buffer   as BUF
                                                 ( bufferNew )
 
-import           Data.FileEmbed
+--import           Data.FileEmbed
 
 import           AurisConfig
 
@@ -156,7 +156,7 @@ createMainWindow :: AurisConfig -> IO MainWindow
 createMainWindow cfg = do
     -- builder <- builderNewFromString gladeFile
     --                                 (fromIntegral (T.length gladeFile))
-    builder           <- builderNewFromResource "/auris/src/MainWindow.glade"
+    builder           <- builderNewFromResource "/auris/data/MainWindow.glade"
 
     window            <- getObject builder "mainWindow" ApplicationWindow
     mainMenuBar       <- getObject builder "mainMenuBar" MenuBar

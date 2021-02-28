@@ -1199,9 +1199,10 @@ Author: Michael Oswald
                                         <property name="shadow_type">in</property>
                                         <child>
                                           <object class="GtkTextView" id="textviewFrameContent">
-                                            <property name="name">monotextview</property>
+                                            <property name="name">description</property>
                                             <property name="visible">True</property>
                                             <property name="can_focus">True</property>
+                                            <property name="editable">False</property>
                                             <property name="buffer">textbufferTMFrameDetails</property>
                                           </object>
                                         </child>
@@ -2860,7 +2861,7 @@ Author: Michael Oswald
                                         <property name="shadow_type">in</property>
                                         <child>
                                           <object class="GtkTextView" id="textViewTCReqDetails">
-                                            <property name="name">monotextview</property>
+                                            <property name="name">description</property>
                                             <property name="visible">True</property>
                                             <property name="can_focus">True</property>
                                             <property name="editable">False</property>
@@ -3070,6 +3071,7 @@ Author: Michael Oswald
                 <property name="can_focus">True</property>
                 <property name="editable">False</property>
                 <property name="width_chars">10</property>
+                <property name="xalign">0.5</property>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -3117,6 +3119,7 @@ Author: Michael Oswald
             <property name="shadow_type">in</property>
             <child>
               <object class="GtkTextView" id="textViewMessageDetail">
+                <property name="name">description</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="editable">False</property>
@@ -3217,6 +3220,7 @@ Author: Michael Oswald
             <property name="shadow_type">in</property>
             <child>
               <object class="GtkTextView" id="textviewParamDetail">
+                <property name="name">description</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="editable">False</property>
