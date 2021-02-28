@@ -76,7 +76,11 @@ main = do
     let logOptions = setLogMinLevel LevelError defLogOptions
     withLogFunc logOptions $ \logFunc -> do
         dbState   <- newDbState logFunc
-        dbBackend <- runRIO dbState $ startDbProcessing defaultMongoDBConfig
+
+        let resultFunc = \result -> liftIO $ T.putStrLn ("Result: " <> T.pack (show result))
+        queue <- newTBQueueIO 500
+
+        dbBackend <- runRIO dbState $ startDbProcessing defaultMongoDBConfig queue resultFunc
         state     <- newGlobalState
             defaultConfig
             (defaultMissionSpecific defaultConfig)

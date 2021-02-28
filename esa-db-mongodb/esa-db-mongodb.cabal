@@ -66,6 +66,7 @@ library
   exposed-modules:     
     Data.DbConfig.MongoDB
     Data.Mongo.Processing
+    Data.Mongo.DBQuery
     Data.Mongo.Conversion.Class
     Data.Mongo.Conversion.Types
     Data.Mongo.Conversion.TMPacket
@@ -100,6 +101,7 @@ library
     , attoparsec
     , aeson
     , text-short
+    , serialise
 
   -- Directories containing source files.
   hs-source-dirs:      src

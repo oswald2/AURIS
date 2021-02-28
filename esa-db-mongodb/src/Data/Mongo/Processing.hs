@@ -21,32 +21,45 @@ import           Data.Attoparsec.Text          as A
                                                 )
 
 import           UnliftIO.Exception            as E
+                                                ( try )
 import           Database.MongoDB              as DB
 
-import           Data.PUS.ExtractedDU
-import           Data.PUS.PUSPacket
-import           Data.PUS.TMPacket
+import           Data.PUS.ExtractedDU           ( ExtractedDU )
+import           Data.PUS.PUSPacket             ( PUSPacket )
+import           Data.PUS.TMPacket              ( TMPacket )
 
 import           Data.DbConfig.MongoDB
-import           Data.Mongo.Conversion.Class
+import           Data.Mongo.Conversion.Class    ( MongoDbConversion
+                                                    ( fromDB
+                                                    , toDB
+                                                    )
+                                                )
 import           Data.Mongo.Conversion.TMFrame  ( )
 import           Data.Mongo.Conversion.LogEvent ( )
 import           Data.Mongo.Conversion.PUSPacket
                                                 ( )
-import           Data.Mongo.Conversion.TMPacket
-                                                ( )
+import           Data.Mongo.Conversion.TMPacket ( )
 import           Data.Mongo.Conversion.ExtractedDU
                                                 ( )
-import           Data.PUS.TMStoreFrame
+import           Data.Mongo.DBQuery
+import           Data.PUS.TMStoreFrame          ( TMStoreFrame )
 
-import           Persistence.DbBackend
-import           Persistence.LogEvent
+import           Persistence.DbBackend          ( createDbBackend
+                                                , DbBackend
+                                                , DbBackendClass(..)
+                                                )
+import           Persistence.LogEvent           ( LogEvent )
 
 
 
 dbQueueSize :: Natural
 dbQueueSize = 10000
 
+dbName :: Text
+dbName = "active_session"
+
+tmFrameCollName :: Collection
+tmFrameCollName = "tm_frames"
 
 instance DbBackendClass DbConfigMongoDB m where
     allTMFrames       = getAllFrames
@@ -93,8 +106,10 @@ instance HasLogFunc DbState where
 startDbProcessing
     :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env)
     => DbConfigMongoDB
+    -> TBQueue DBQuery
+    -> (DBResult -> m ())
     -> m DbBackend
-startDbProcessing cfg = do
+startDbProcessing cfg queryQueue resultHandler = do
     frameQueue <- liftIO $ newTBQueueIO dbQueueSize
     eventQueue <- liftIO $ newTBQueueIO dbQueueSize
     pktQueue   <- liftIO $ newTBQueueIO dbQueueSize
@@ -104,8 +119,9 @@ startDbProcessing cfg = do
         eventsT   = conc $ eventStoreThread cfg eventQueue
         pktsT     = conc $ pusPacketThread cfg pktQueue
         tmPktsT   = conc $ tmPacketThread cfg tmPktQueue
-        
-        threads   = tmFramesT <> eventsT <> pktsT <> tmPktsT
+        queryT    = conc $ queryProcesser cfg resultHandler queryQueue
+
+        threads   = tmFramesT <> eventsT <> pktsT <> tmPktsT <> queryT
 
     t <- async $ runConc threads
 
@@ -122,10 +138,10 @@ initDB
 initDB cfg = do
     runInConnection cfg worker
   where
-    worker _ pipe = access pipe master "active_session" query
+    worker _ pipe = access pipe master dbName query
     query = do
-        -- create index on "tm_frames" collection
-        let idx = Index { iColl               = "tm_frames"
+        -- create index on tmFrameCollName collection
+        let idx = Index { iColl               = tmFrameCollName
                         , iKey                = ["ert" =: (1 :: Int)]
                         , iName               = "TMFrameIndex"
                         , iUnique             = True
@@ -158,15 +174,13 @@ initDB cfg = do
         ensureIndex pktIdx
 
         -- create index on "tm_packets" collection
-        let tmPktIdx = Index
-                { iColl               = "tm_packets"
-                , iKey                = [ "timestamp" =: (1 :: Int)
-                                        ]
-                , iName               = "TMPacketIndex"
-                , iUnique             = True
-                , iDropDups           = False
-                , iExpireAfterSeconds = Nothing
-                }
+        let tmPktIdx = Index { iColl               = "tm_packets"
+                             , iKey                = ["timestamp" =: (1 :: Int)]
+                             , iName               = "TMPacketIndex"
+                             , iUnique             = True
+                             , iDropDups           = False
+                             , iExpireAfterSeconds = Nothing
+                             }
         ensureIndex tmPktIdx
 
 
@@ -207,7 +221,7 @@ runInConnection cfg worker = do
 
 
 writeDB :: MonadIO m => Pipe -> Collection -> [Document] -> m ()
-writeDB pipe collection dat = access pipe master "active_session" (go dat)
+writeDB pipe collection dat = access pipe master dbName (go dat)
   where
     go []     = return ()
     go frames = do
@@ -232,7 +246,7 @@ tmFrameThread cfg queue = do
                 f  <- readTBQueue queue
                 fs <- flushTBQueue queue
                 return (f : fs)
-            liftIO $ writeDB pipe "tm_frames" (map toDB frames)
+            liftIO $ writeDB pipe tmFrameCollName (map toDB frames)
             logInfo ("Stored " <> display (length frames) <> " TM Frames.")
 
 eventStoreThread
@@ -309,8 +323,43 @@ getAllFrames cfg = do
             return frames
 
   where
-    worker pipe = access pipe master "active_session" query
-    query = catMaybes . map fromDB <$> (find (select [] "tm_frames") >>= rest)
+    worker pipe = access pipe master dbName query
+    query =
+        catMaybes . map fromDB <$> (find (select [] tmFrameCollName) >>= rest)
+
+
+queryProcesser
+    :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env)
+    => DbConfigMongoDB
+    -> (DBResult -> m ())
+    -> TBQueue DBQuery
+    -> m ()
+queryProcesser cfg resultHandler queryQueue = do
+    res <- Data.Mongo.Processing.connect cfg
+    case res of
+        Left err -> do
+            logWarn $ "Could not connect to DB: " <> display err
+        Right pipe -> forever $ do
+            query <- atomically $ readTBQueue queryQueue
+            queryHandler resultHandler pipe query
+
+
+queryHandler
+    :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env)
+    => (DBResult -> m ())
+    -> Pipe
+    -> DBQuery
+    -> m ()
+queryHandler _ _pipe DbGetTMFrames { dbFromTime = Nothing, dbToTime = Nothing } =
+    return ()
+queryHandler resultF pipe q@DbGetTMFrames { dbFromTime = Just start, dbToTime = Just stop }
+    = access pipe master dbName $ do
+        lift $ logDebug $ "QueryHandler: query=" <> displayShow q
+        cursor <- find (select ["ert" =: ["$gte" =: val start, "$lte" =: val stop]] tmFrameCollName) { sort = ["ert" =: Int32 (-1)]}
+        records <- catMaybes . map fromDB <$> rest cursor 
+        lift $ resultF $ DBResultTMFrames records
+queryHandler _ _ _ = return ()
+
 
 
 cleanFramesTable
@@ -329,5 +378,5 @@ cleanFramesTable cfg = do
             liftIO $ DB.close pipe
             return frames
   where
-    worker pipe = access pipe master "active_session" query
-    query = void $ dropCollection "tm_frames"
+    worker pipe = access pipe master dbName query
+    query = void $ dropCollection tmFrameCollName

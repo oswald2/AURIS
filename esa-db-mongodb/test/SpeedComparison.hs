@@ -8,7 +8,7 @@ import           RIO.Partial                    ( read
                                                 )
 import qualified RIO.Text                      as T
 import qualified Data.Text.IO                  as T
--- import           RIO.List                      ( repeat )
+
 import           Database.MongoDB
 import           RIO.List.Partial               ( last )
 
@@ -18,9 +18,11 @@ import           Data.Mongo.Conversion.TMFrame  ( )
 
 import           Data.PUS.TMStoreFrame
 import           Data.PUS.TMFrame
+import           Data.PUS.CLCW
+
 import           General.PUSTypes
 import           General.Time
-import           Data.PUS.CLCW
+import           General.Types
 
 import           System.Environment
 
@@ -29,8 +31,10 @@ import           System.Environment
 tmFrame :: SunTime -> TMStoreFrame
 tmFrame now =
     let
-        storeFrame =
-            TMStoreFrame now frame (encodeFrame defaultTMFrameConfig frame)
+        storeFrame = TMStoreFrame
+            now
+            frame
+            (HexBytes (encodeFrame defaultTMFrameConfig frame))
         frame = TMFrame
             { _tmFrameHdr  = TMFrameHeader { _tmFrameVersion        = 0
                                            , _tmFrameScID           = SCID 533

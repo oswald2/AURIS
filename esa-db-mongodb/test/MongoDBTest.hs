@@ -47,7 +47,7 @@ tmFrame :: SunTime -> TMStoreFrame
 tmFrame now =
     let
         storeFrame =
-            TMStoreFrame now frame (encodeFrame defaultTMFrameConfig frame)
+            TMStoreFrame now frame (HexBytes (encodeFrame defaultTMFrameConfig frame))
         frame = TMFrame
             { _tmFrameHdr  = TMFrameHeader { _tmFrameVersion        = 0
                                            , _tmFrameScID           = SCID 533

@@ -43,7 +43,7 @@ import           Application.DataModel          ( loadDataModelDef
 import           Verification.Processor         ( processVerification )
 import           Data.Mongo.Processing
 import           Persistence.Logging
-
+import           Persistence.DbResultProcessor
 
 runProcessing
     :: AurisConfig
@@ -65,11 +65,13 @@ runProcessing cfg missionSpecific mibPath interface mainWindow coreQueue = do
                 logFunc <> messageAreaLogFunc (mainWindow ^. mwMessageDisplay)
 
         -- First, we create the databas
+        queryQueue <- newTBQueueIO 100
+
         T.putStrLn "Starting DB backend..."
         dbBackend <- case aurisDbConfig cfg of
             Just dbCfg -> do
                 dbState <- newDbState logf1
-                be      <- runRIO dbState $ startDbProcessing dbCfg
+                be      <- runRIO dbState $ startDbProcessing dbCfg queryQueue dbResultFunc
                 T.putStrLn "DB backend started..."
                 return (Just be)
             Nothing -> do

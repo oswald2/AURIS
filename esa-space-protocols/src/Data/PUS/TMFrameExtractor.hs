@@ -65,6 +65,7 @@ import           Data.PUS.TMStoreFrame
 import           Data.PUS.EncTime
 
 import           General.Time
+import           General.Types
 
 import           Protocol.ProtocolInterfaces
 import           General.SizeOf
@@ -119,7 +120,7 @@ tmFrameDecodeC = do
                     Left err -> liftIO
                         $ raiseEvent env (EVTelemetry (EVTMFailedCRC err))
                     Right () -> do
-                        let f = TMStoreFrame time frame bs
+                        let f = TMStoreFrame time frame (HexBytes bs)
                             time =
                                 cdsTimeToSunTime (epoch1958 (LeapSeconds 0)) ert
                         yield f

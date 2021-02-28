@@ -425,7 +425,7 @@ instance (Eq k, Hashable k, FromJSON k, FromJSON v) => FromJSON (IHashTable k v)
 -- | A newtype wrapper around 'ByteString' for text-serialising a 'ByteString'
 -- into a hex-coded string value
 newtype HexBytes = HexBytes { toBS :: ByteString }
-  deriving(Eq)
+  deriving(Eq, Generic)
 
 
 hexLength :: HexBytes -> Int
@@ -441,7 +441,7 @@ parseByte = do
     b <- A.satisfy isHexDigit
     return $ fromIntegral (ord a `shiftL` 4 .|. ord b)
 
-
+instance NFData HexBytes
 
 instance Serialise HexBytes where
     encode (HexBytes b) = S.encode b

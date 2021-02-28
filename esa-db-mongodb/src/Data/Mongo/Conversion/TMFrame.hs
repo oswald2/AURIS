@@ -7,7 +7,7 @@ import           Data.Bson
 
 import           General.Time
 import           General.PUSTypes
-
+import           General.Types
 import           Data.PUS.TMFrame
 import           Data.PUS.TMStoreFrame
 
@@ -19,7 +19,7 @@ instance MongoDbConversion TMStoreFrame Document where
     toDB TMStoreFrame {..} =
         [ "ert" =: timeToMicro _tmstTime
         , "frame" =: toDB _tmstFrame
-        , "binary" =: Binary _tmstBinary
+        , "binary" =: Binary (toBS _tmstBinary)
         ]
     fromDB doc = do
         ert    <- lookup "ert" doc

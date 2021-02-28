@@ -21,6 +21,7 @@ module Data.PUS.Events
     , EventTelemetry(..)
     , EventAlarm(..)
     , EventCOP1(..)
+    , EventDB(..)
     , EventFlag(..)
     ) where
 
@@ -53,6 +54,7 @@ data EventFlag =
     | EVFlagTelemetry 
     | EVFlagAlarm 
     | EVFlagCOP1
+    | EVFlagDB
     | EVFlagAll
     deriving (Eq, Ord, Enum, Show, Generic)
 
@@ -62,6 +64,7 @@ data Event = EVCommanding EventCommanding
     | EVAlarms EventAlarm
     | EVTelemetry EventTelemetry
     | EVCOP1 EventCOP1
+    | EVDB EventDB
     deriving (Show, Generic)
 
 instance Serialise Event
@@ -152,4 +155,16 @@ data EventCOP1 =
 instance Serialise EventCOP1
 instance FromJSON EventCOP1
 instance ToJSON EventCOP1 where
+    toEncoding = genericToEncoding defaultOptions
+
+
+
+data EventDB = 
+    EVDBTMFrames [ExtractedDU TMFrame]
+    | EVDBEvents
+    deriving(Show, Generic)
+
+instance Serialise EventDB
+instance FromJSON EventDB
+instance ToJSON EventDB where
     toEncoding = genericToEncoding defaultOptions
