@@ -4,7 +4,7 @@
     <file>data/AurisLogo_small.png</file>
     <file>data/AurisLogo.png</file>
     <file>data/AurisLogo.svg</file>
-    <file>data/MainWindow.glade</file>
+    <file preprocess="xml-stripblanks">data/MainWindow.glade</file>
     <file>data/style.css</file>
   </gresource>
 </gresources>
