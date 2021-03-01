@@ -153,6 +153,13 @@ orange = unsafePerformIO $ do
   void $ rGBAParse col "#ffa500"
   return col
 
+{-# NOINLINE timeoutColor #-}
+timeoutColor :: RGBA 
+timeoutColor = unsafePerformIO $ do
+  col <- newZeroRGBA
+  void $ rGBAParse col "#ff5100"
+  return col
+
 
 
 -- mcsWindowSetColor :: Ref Window -> IO ()

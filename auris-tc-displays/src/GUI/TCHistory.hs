@@ -24,13 +24,7 @@ import           Data.GI.Base.Attributes        ( AttrOpTag(AttrSet) )
 import           GI.Gdk.Structs.RGBA            ( RGBA )
 
 import           GUI.Utils                      ( getObject )
-import           GUI.Colors                     ( black
-                                                , green
-                                                , orange
-                                                , paleYellow
-                                                , red
-                                                , white
-                                                )
+import           GUI.Colors                     
 import           GUI.ScrollingTable             ( addRowScrollingTable
                                                 , setTreeViewCallback
                                                 , createScrollingTableSimple
@@ -292,7 +286,7 @@ mkRow rqst verif =
 
 determineColor :: Verification -> (RGBA, RGBA)
 determineColor verif | isFailed verif  = (red, white)
-                     | isTimeout verif = (orange, black)
+                     | isTimeout verif = (timeoutColor, black)
                      | isSuccess verif = (green, black)
                      | otherwise       = (paleYellow, black)
 
