@@ -174,8 +174,8 @@ createMainWindow cfg = do
     menuItemSaveTC    <- getObject builder "menuItemSaveTCFile" MenuItem
     menuItemSaveTCAs  <- getObject builder "menuItemSaveTCFileAs" MenuItem
 
-    btStyle           <- getObject builder "btCfgStyle" StyleSchemeChooserButton
-    btApply           <- getObject builder "btCfgApply" Button
+    btApply           <- getObject builder "buttonConfigApplyStyle" Button
+    btStyle           <- getObject builder "buttonConfigSelectStyle" StyleSchemeChooserButton
 
     -- create the message display
     msgDetails        <- createMsgDetailWindow window builder
@@ -244,7 +244,7 @@ createMainWindow cfg = do
     void $ Gtk.on btApply #clicked $ do
         s <- styleSchemeChooserGetStyleScheme btStyle
         bufferSetStyleScheme configTextBuffer (Just s)
-
+ 
     return gui
 
 
