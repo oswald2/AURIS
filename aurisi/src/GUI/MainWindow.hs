@@ -174,6 +174,9 @@ createMainWindow cfg = do
     menuItemSaveTC    <- getObject builder "menuItemSaveTCFile" MenuItem
     menuItemSaveTCAs  <- getObject builder "menuItemSaveTCFileAs" MenuItem
 
+    btStyle           <- getObject builder "btCfgStyle" StyleSchemeChooserButton
+    btApply           <- getObject builder "btCfgApply" Button
+
     -- create the message display
     msgDetails        <- createMsgDetailWindow window builder
     msgDisp           <- createMessageDisplay msgDetails builder
@@ -223,10 +226,12 @@ createMainWindow cfg = do
     lm               <- languageManagerNew
     styleViewMgr     <- styleSchemeManagerGetDefault
 
-    scheme           <- styleSchemeManagerGetScheme styleViewMgr "cobalt"
+    -- schemeIds <- styleSchemeManagerGetSchemeIds styleViewMgr
+    -- T.putStrLn $ "Schemes: " <> T.pack (show schemeIds)
+
+    scheme           <- styleSchemeManagerGetScheme styleViewMgr "classic"
     configTextBuffer <- BUF.bufferNew (Nothing :: Maybe TextTagTable)
     bufferSetStyleScheme configTextBuffer (Just scheme)
-
 
     let t = configPretty cfg
 
@@ -236,6 +241,9 @@ createMainWindow cfg = do
     textBufferSetText configTextBuffer t (fromIntegral (T.length t))
     textViewSetBuffer configTextView (Just configTextBuffer)
 
+    void $ Gtk.on btApply #clicked $ do
+        s <- styleSchemeChooserGetStyleScheme btStyle
+        bufferSetStyleScheme configTextBuffer (Just s)
 
     return gui
 

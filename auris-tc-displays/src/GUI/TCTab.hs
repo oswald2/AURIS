@@ -16,9 +16,14 @@ import           RIO
 import           RIO.Partial                    ( toEnum )
 import qualified RIO.Text                      as T
 
+import qualified Data.Text.IO                  as T
+
+
 import           GI.Gtk                        as Gtk
 import           GI.GtkSource
 import qualified GI.GtkSource.Objects.Buffer   as BUF
+import           GI.GtkSource.Interfaces.StyleSchemeChooser
+                                                ( )
 
 import           Text.Show.Pretty               ( ppShow )
 import           Interface.Interface            ( Interface
@@ -26,7 +31,7 @@ import           Interface.Interface            ( Interface
                                                 , ActionTable
                                                     ( actionSendTCRequest
                                                     , actionSendTCGroup
-                                                    , actionLogMessage 
+                                                    , actionLogMessage
                                                     )
                                                 )
 
@@ -78,7 +83,8 @@ data TCTab = TCTab
     , _tcTabButtonClear        :: !Button
     , _tcTabButtonSend         :: !Button
     , _tcTabFileName           :: IORef (Maybe FilePath)
-    , _tcTabLogFunc            :: IORef (Maybe (LogSource -> LogLevel -> Utf8Builder -> IO ()))
+    , _tcTabLogFunc
+          :: IORef (Maybe (LogSource -> LogLevel -> Utf8Builder -> IO ()))
     }
 
 
@@ -90,21 +96,28 @@ createTCTab window builder = do
     btCcScoeInsert <- getObject builder "buttonScoeTC" Button
     btClear        <- getObject builder "buttonTCClear" Button
     btSend         <- getObject builder "buttonTCSend" Button
+    btStyle        <- getObject builder "buttonStyleChooser" StyleSchemeChooserButton
+    btApply        <- getObject builder "buttonApplyStyle" Button
 
-    ur <- newIORef Nothing 
-    l <- newIORef Nothing
+    ur             <- newIORef Nothing
+    l              <- newIORef Nothing
 
-    lm           <- languageManagerNew
-    styleViewMgr <- styleSchemeManagerGetDefault
+    lm             <- languageManagerNew
+    styleViewMgr   <- styleSchemeManagerGetDefault
 
-    scheme           <- styleSchemeManagerGetScheme styleViewMgr "cobalt"
-    textBuffer <- BUF.bufferNew (Nothing :: Maybe TextTagTable)
+    scheme         <- styleSchemeManagerGetScheme styleViewMgr "classic"
+    textBuffer     <- BUF.bufferNew (Nothing :: Maybe TextTagTable)
     bufferSetStyleScheme textBuffer (Just scheme)
 
     lang <- languageManagerGetLanguage lm "haskell"
     bufferSetLanguage textBuffer lang
 
     textViewSetBuffer textView (Just textBuffer)
+
+    void $ Gtk.on btApply #clicked $ do
+        s <- styleSchemeChooserGetStyleScheme btStyle
+        bufferSetStyleScheme textBuffer (Just s)
+
 
     let g = TCTab { _tcTabWindow             = window
                   , _tcTabTextView           = textView
@@ -118,7 +131,7 @@ createTCTab window builder = do
                   , _tcTabLogFunc            = l
                   }
 
-    _ <- Gtk.on btClear #clicked $ setText g "" 
+    _ <- Gtk.on btClear #clicked $ setText g ""
     _ <- Gtk.on btInsert #clicked $ do
         let rqst =
                 [ RepeatN
@@ -214,13 +227,13 @@ data TCAction =
 instance NFData TCAction
 
 
-setText :: TCTab -> Text -> IO () 
-setText gui txt = do 
+setText :: TCTab -> Text -> IO ()
+setText gui txt = do
     textBufferSetText (_tcTabTextBuffer gui) txt (fromIntegral (T.length txt))
 
 
-getText :: TCTab -> IO Text 
-getText gui = do 
+getText :: TCTab -> IO Text
+getText gui = do
     let buffer = _tcTabTextBuffer gui
     (start, end) <- textBufferGetBounds buffer
     textBufferGetText buffer start end False
@@ -238,14 +251,15 @@ setupCallbacks gui interface = do
 
     -- We need to store the log function here, because we cannot have an 
     -- interface on construction of a TCTab
-    writeIORef (_tcTabLogFunc gui) (Just (callInterface interface actionLogMessage))
+    writeIORef (_tcTabLogFunc gui)
+               (Just (callInterface interface actionLogMessage))
 
 
-tcTabLog :: TCTab -> LogSource -> LogLevel -> Utf8Builder -> IO () 
-tcTabLog gui source level content = do 
+tcTabLog :: TCTab -> LogSource -> LogLevel -> Utf8Builder -> IO ()
+tcTabLog gui source level content = do
     l <- readIORef (_tcTabLogFunc gui)
-    case l of 
-        Nothing -> return () 
+    case l of
+        Nothing     -> return ()
         Just action -> action source level content
 
 
@@ -275,7 +289,10 @@ tcTabLoadFile gui = do
             forM_ fileName $ \fn -> do
                 tcTabLoadTCFile gui fn
                 writeIORef (_tcTabFileName gui) (Just fn)
-                tcTabLog gui "Commanding" LevelInfo ("Loaded file '" <> display (T.pack fn) <> "'")
+                tcTabLog gui
+                         "Commanding"
+                         LevelInfo
+                         ("Loaded file '" <> display (T.pack fn) <> "'")
         _ -> return ()
 
 
@@ -286,13 +303,16 @@ tcTabLoadTCFile gui file = do
 
 
 tcTabSaveFile :: TCTab -> IO ()
-tcTabSaveFile gui = do 
+tcTabSaveFile gui = do
     file <- readIORef (_tcTabFileName gui)
-    case file of 
-        Just fn -> do 
+    case file of
+        Just fn -> do
             let filename = replaceExtension fn ".tc"
             tcTabSaveTCFile gui filename
-            tcTabLog gui "Commanding" LevelInfo ("Saved file '" <> display (T.pack filename) <> "'")
+            tcTabLog gui
+                     "Commanding"
+                     LevelInfo
+                     ("Saved file '" <> display (T.pack filename) <> "'")
         Nothing -> tcTabSaveFileAs gui
 
 
@@ -313,7 +333,11 @@ tcTabSaveFileAs gui = do
                 let filename = replaceExtension fn ".tc"
                 writeIORef (_tcTabFileName gui) (Just filename)
                 tcTabSaveTCFile gui filename
-                tcTabLog gui "Commanding" LevelInfo ("Saved file '" <> display (T.pack filename) <> "'")
+                tcTabLog
+                    gui
+                    "Commanding"
+                    LevelInfo
+                    ("Saved file '" <> display (T.pack filename) <> "'")
         _ -> return ()
 
 

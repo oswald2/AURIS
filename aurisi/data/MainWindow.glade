@@ -37,6 +37,7 @@ Author: Michael Oswald
   <!-- interface-description AURISi - AURIS Integrated MCS -->
   <!-- interface-copyright Michael Oswald -->
   <!-- interface-authors Michael Oswald -->
+  <object class="GtkAction" id="action1"/>
   <object class="GtkDialog" id="graphPropertiesDialog">
     <property name="can_focus">False</property>
     <property name="type_hint">dialog</property>
@@ -2384,7 +2385,6 @@ Author: Michael Oswald
                           <object class="GtkSourceStyleSchemeChooserButton" id="buttonStyleChooser">
                             <property name="label" translatable="yes">Style</property>
                             <property name="visible">True</property>
-                            <property name="sensitive">False</property>
                             <property name="can_focus">True</property>
                             <property name="receives_default">True</property>
                           </object>
@@ -2392,6 +2392,19 @@ Author: Michael Oswald
                             <property name="expand">False</property>
                             <property name="fill">True</property>
                             <property name="position">6</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkButton" id="buttonApplyStyle">
+                            <property name="label" translatable="yes">Apply</property>
+                            <property name="visible">True</property>
+                            <property name="can_focus">True</property>
+                            <property name="receives_default">True</property>
+                          </object>
+                          <packing>
+                            <property name="expand">False</property>
+                            <property name="fill">True</property>
+                            <property name="position">7</property>
                           </packing>
                         </child>
                       </object>
@@ -2920,24 +2933,75 @@ Author: Michael Oswald
                   </packing>
                 </child>
                 <child>
-                  <object class="GtkScrolledWindow">
+                  <object class="GtkBox">
                     <property name="visible">True</property>
-                    <property name="can_focus">True</property>
-                    <property name="shadow_type">in</property>
+                    <property name="can_focus">False</property>
+                    <property name="orientation">vertical</property>
                     <child>
-                      <object class="GtkSourceView" id="sourceViewConfig">
+                      <object class="GtkBox">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="editable">False</property>
-                        <property name="left_margin">2</property>
-                        <property name="right_margin">2</property>
-                        <property name="accepts_tab">False</property>
-                        <property name="monospace">True</property>
-                        <property name="show_line_numbers">True</property>
-                        <property name="show_line_marks">True</property>
-                        <property name="tab_width">4</property>
-                        <property name="insert_spaces_instead_of_tabs">True</property>
+                        <child>
+                          <object class="GtkButton" id="btCfgApply">
+                            <property name="label" translatable="yes">Apply</property>
+                            <property name="visible">True</property>
+                            <property name="can_focus">True</property>
+                            <property name="receives_default">True</property>
+                          </object>
+                          <packing>
+                            <property name="expand">False</property>
+                            <property name="fill">True</property>
+                            <property name="pack_type">end</property>
+                            <property name="position">0</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkSourceStyleSchemeChooserButton" id="btCfgStyle ">
+                            <property name="label" translatable="yes">Classic</property>
+                            <property name="visible">True</property>
+                            <property name="can_focus">True</property>
+                            <property name="receives_default">True</property>
+                          </object>
+                          <packing>
+                            <property name="expand">False</property>
+                            <property name="fill">True</property>
+                            <property name="pack_type">end</property>
+                            <property name="position">1</property>
+                          </packing>
+                        </child>
                       </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">0</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkScrolledWindow">
+                        <property name="visible">True</property>
+                        <property name="can_focus">True</property>
+                        <property name="shadow_type">in</property>
+                        <child>
+                          <object class="GtkSourceView" id="sourceViewConfig">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <property name="editable">False</property>
+                            <property name="left_margin">2</property>
+                            <property name="right_margin">2</property>
+                            <property name="accepts_tab">False</property>
+                            <property name="monospace">True</property>
+                            <property name="show_line_numbers">True</property>
+                            <property name="show_line_marks">True</property>
+                            <property name="tab_width">4</property>
+                            <property name="insert_spaces_instead_of_tabs">True</property>
+                          </object>
+                        </child>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">1</property>
+                      </packing>
                     </child>
                   </object>
                   <packing>
