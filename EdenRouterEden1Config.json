@@ -1,6 +1,8 @@
 {
     "aurisMIB": null,
     "aurisMission": "DEFAULT",
+    "aurisDbConfig": null,
+    "aurisTheme": "ThemeLight",
     "aurisPusConfig": {
         "cfgCnC": [
         ],

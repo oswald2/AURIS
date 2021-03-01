@@ -566,10 +566,13 @@ isOBAExpected Verification {..} =
     (_verGroundOBR == StGExpected) || (_verGroundOBR == StGPending)
 
 isSuccess :: Verification -> Bool
-isSuccess verif@Verification {..} =
-    (_verTMComplete == StTmSuccess)
-    || (not (isTMExpected verif) && isGroundSuccess verif)
-    || (isGroundDisabled verif && (_verRelease == StRSuccess))
+isSuccess verif@Verification {..} 
+    | _verTMComplete == StTmSuccess = True 
+    | isFailed verif = False 
+    | isTimeout verif = False 
+    | not (isTMExpected verif) && isGroundSuccess verif = True 
+    | isGroundDisabled verif && (_verRelease == StRSuccess) = True 
+    | otherwise = False 
 
 
 isTimeout :: Verification -> Bool 

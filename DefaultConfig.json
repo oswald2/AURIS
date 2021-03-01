@@ -4,6 +4,7 @@
         "cfgMongoPort": null
     },
     "aurisMIB": null,
+    "aurisTheme": "ThemeLight",
     "aurisMission": "DEFAULT",
     "aurisPusConfig": {
         "cfgCnC": [

@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeApplications 
+#-}
 module Data.MIB.LoadMIB
     ( loadMIB
     , loadCalibs
@@ -91,8 +93,8 @@ loadMIB mibPath = do
                                     , _dmVPDStructs      = vpdLookup
                                     , _dmGRDs            = grds
                                     }
-              return model 
-   
+              return model
+
 
 
   where
@@ -173,17 +175,18 @@ loadCalibs mibPath = do
 
 
 loadSyntheticParameters
-    :: (MonadIO m) => FilePath -> m (Either Text (HashMap ShortText Synthetic))
+    :: (MonadIO m, MonadReader env m, HasLogFunc env)
+    => FilePath
+    -> m (Either Text (HashMap ShortText Synthetic))
 loadSyntheticParameters path' = do
     let path = path' </> "synthetic"
     doesDirectoryExist path >>= \x -> if not x
-        then
-            do
-                pure
-            $  Left
-            $  "Could not read synthetic parameters: directory '"
-            <> T.pack path
-            <> "' does not exist"
+        then do
+            logWarn
+                $  display @Text "Could not read synthetic parameters: directory '"
+                <> display (T.pack path)
+                <> display @Text "' does not exist. No synthetic parameters loaded"
+            return $ Right HM.empty
         else do
             -- traceM ("Path: " <> (T.pack path))
             files' <- listDirectory path
@@ -208,13 +211,11 @@ loadSyntheticParameters path' = do
     loadHCsynths synths = do
         let path = path' </> "hcsynthetic"
         doesDirectoryExist path >>= \x -> if not x
-            then
-                do
-                    pure
-                $  Left
-                $ "Could not read  hard-coded synthetic parameters: directory '"
-                <> T.pack path
-                <> "' does not exist"
+            then do
+                logWarn $ display @Text "Could not read  hard-coded synthetic parameters: directory '"
+                        <> display (T.pack path)
+                        <> display @Text "' does not exist"
+                return $ Right HM.empty
             else do
                 -- traceM ("Path: " <> (T.pack path))
                 files' <- listDirectory path
