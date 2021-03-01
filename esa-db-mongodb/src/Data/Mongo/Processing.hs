@@ -3,7 +3,8 @@ module Data.Mongo.Processing
     ( Data.Mongo.Processing.connect
     , newDbState
     , DbState
-    , startDbProcessing
+    , startDbStoreThreads
+    , startDbQueryThreads
     ) where
 
 import           RIO
@@ -44,10 +45,7 @@ import           Data.Mongo.Conversion.ExtractedDU
 import           Data.Mongo.DBQuery
 import           Data.PUS.TMStoreFrame          ( TMStoreFrame )
 
-import           Persistence.DbBackend          ( createDbBackend
-                                                , DbBackend
-                                                , DbBackendClass(..)
-                                                )
+import           Persistence.DbBackend          
 import           Persistence.LogEvent           ( LogEvent )
 
 
@@ -102,14 +100,23 @@ instance HasLogFunc DbState where
     logFuncL = lens dbStLogFunc (\c lf -> c { dbStLogFunc = lf })
 
 
-
-startDbProcessing
+-- | This function starts threads in the background, which stream incoming data
+-- to the database. As this creates the 'DbBackend', this has to be run before
+-- the full processing of esa-space-protocols as the DbBackend is passed in to the 
+-- RIO state. This means, that the RIO functionality would not be available to this 
+-- functions (e.g. logging). Therefore, this functions is intended to be started with 
+-- the 'DbState' in the RIO monad, and the logging function will be the main one used 
+-- from esa-space-protocols (provided by 'withLogFunc'). 
+--
+-- As a second step, the query thread loop has to be run within the normal RIO processing
+-- from esa-space-protocols, so the startup is a two-step process, first calling this 
+-- function from it's own RIO context, then create the RIO context of the main processing
+-- and then calling the 'startDbQueryThreads' within the RIO context. 
+startDbStoreThreads
     :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env)
     => DbConfigMongoDB
-    -> TBQueue DBQuery
-    -> (DBResult -> m ())
     -> m DbBackend
-startDbProcessing cfg queryQueue resultHandler = do
+startDbStoreThreads cfg = do
     frameQueue <- liftIO $ newTBQueueIO dbQueueSize
     eventQueue <- liftIO $ newTBQueueIO dbQueueSize
     pktQueue   <- liftIO $ newTBQueueIO dbQueueSize
@@ -119,9 +126,8 @@ startDbProcessing cfg queryQueue resultHandler = do
         eventsT   = conc $ eventStoreThread cfg eventQueue
         pktsT     = conc $ pusPacketThread cfg pktQueue
         tmPktsT   = conc $ tmPacketThread cfg tmPktQueue
-        queryT    = conc $ queryProcesser cfg resultHandler queryQueue
 
-        threads   = tmFramesT <> eventsT <> pktsT <> tmPktsT <> queryT
+        threads   = tmFramesT <> eventsT <> pktsT <> tmPktsT
 
     t <- async $ runConc threads
 
@@ -327,14 +333,26 @@ getAllFrames cfg = do
     query =
         catMaybes . map fromDB <$> (find (select [] tmFrameCollName) >>= rest)
 
+-- | Start the query thread. This thread needs the config, a backend, the result function
+-- (which will probably be mapped to the raiseEvent function within the processing) and 
+-- a queue receiving the queries to execute.
+startDbQueryThreads :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env)
+    => DbConfigMongoDB
+    -> DbBackend 
+    -> (DBResult -> m ())
+    -> TBQueue DBQuery
+    -> m ()
+startDbQueryThreads cfg backend resultHandler queryQueue = do 
+    queryT <- async $ queryProcessor cfg resultHandler queryQueue 
+    rememberQueryThread backend queryT
 
-queryProcesser
+queryProcessor
     :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env)
     => DbConfigMongoDB
     -> (DBResult -> m ())
     -> TBQueue DBQuery
     -> m ()
-queryProcesser cfg resultHandler queryQueue = do
+queryProcessor cfg resultHandler queryQueue = do
     res <- Data.Mongo.Processing.connect cfg
     case res of
         Left err -> do

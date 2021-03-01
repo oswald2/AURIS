@@ -9,6 +9,7 @@ module Persistence.DbBackend
     , storeTMPacket
     , DbLogFunc
     , stopDbProcessing
+    , rememberQueryThread
     ) where
 
 import           RIO
@@ -37,25 +38,32 @@ data DbBackend = DbBackend
     , _dbbPUSPacketQueue :: TBQueue (ExtractedDU PUSPacket)
     , _dbbTMPacketQueue  :: TBQueue TMPacket
     , _dbbThread         :: Async ()
+    , _dbbQueryThread    :: TVar (Maybe (Async ()))
     }
 
 
 createDbBackend
-    :: (Monad m)
+    :: (MonadUnliftIO m)
     => TBQueue TMStoreFrame
     -> TBQueue LogEvent
     -> TBQueue (ExtractedDU PUSPacket)
     -> TBQueue TMPacket
     -> Async ()
     -> m DbBackend
-createDbBackend frameQueue eventQueue packetQueue tmPacketQueue thread = return DbBackend
-    { _dbbTMFrameQueue   = frameQueue
-    , _dbbEventQueue     = eventQueue
-    , _dbbPUSPacketQueue = packetQueue
-    , _dbbTMPacketQueue  = tmPacketQueue
-    , _dbbThread         = thread
-    }
+createDbBackend frameQueue eventQueue packetQueue tmPacketQueue thread = do
+    var <- newTVarIO Nothing
+    return DbBackend { _dbbTMFrameQueue   = frameQueue
+                     , _dbbEventQueue     = eventQueue
+                     , _dbbPUSPacketQueue = packetQueue
+                     , _dbbTMPacketQueue  = tmPacketQueue
+                     , _dbbThread         = thread
+                     , _dbbQueryThread    = var
+                     }
 
+
+rememberQueryThread :: (MonadIO m) => DbBackend -> Async () -> m () 
+rememberQueryThread backend t = do 
+    atomically $ writeTVar (_dbbQueryThread backend) (Just t)
 
 storeLog :: (MonadIO m) => DbBackend -> LogEvent -> m ()
 storeLog backend le = do
@@ -75,9 +83,9 @@ storePUSPacket backend pkt = do
     atomically $ writeTBQueue (_dbbPUSPacketQueue backend) pkt
 
 
-storeTMPacket :: (MonadIO m) => DbBackend -> TMPacket -> m () 
-storeTMPacket backend pkt = do 
-    atomically $ writeTBQueue (_dbbTMPacketQueue backend) pkt 
+storeTMPacket :: (MonadIO m) => DbBackend -> TMPacket -> m ()
+storeTMPacket backend pkt = do
+    atomically $ writeTBQueue (_dbbTMPacketQueue backend) pkt
 
 stopDbProcessing
     :: (MonadIO m, MonadReader env m, HasLogFunc env) => DbBackend -> m ()

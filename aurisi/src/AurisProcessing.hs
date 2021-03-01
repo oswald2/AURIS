@@ -64,14 +64,11 @@ runProcessing cfg missionSpecific mibPath interface mainWindow coreQueue = do
         let logf1 =
                 logFunc <> messageAreaLogFunc (mainWindow ^. mwMessageDisplay)
 
-        -- First, we create the databas
-        queryQueue <- newTBQueueIO 100
-
         T.putStrLn "Starting DB backend..."
         dbBackend <- case aurisDbConfig cfg of
             Just dbCfg -> do
                 dbState <- newDbState logf1
-                be      <- runRIO dbState $ startDbProcessing dbCfg queryQueue dbResultFunc
+                be      <- runRIO dbState $ startDbStoreThreads dbCfg
                 T.putStrLn "DB backend started..."
                 return (Just be)
             Nothing -> do
@@ -91,9 +88,18 @@ runProcessing cfg missionSpecific mibPath interface mainWindow coreQueue = do
                                 dbBackend
 
         void $ runRIO state $ do
+            case dbBackend of 
+                Nothing -> return ()
+                Just backend -> do 
+                    case aurisDbConfig cfg of 
+                        Nothing -> return ()
+                        Just dbCfg -> do 
+                            -- First, we create the databas
+                            queryQueue <- newTBQueueIO 100
+                            startDbQueryThreads dbCfg backend dbResultFunc queryQueue
+
           -- first, try to load a data model or import a MIB
             logInfo "Loading Data Model..."
-
             home <- liftIO getHomeDirectory
             let path = case mibPath of
                     Just p  -> LoadFromMIB p serializedPath
