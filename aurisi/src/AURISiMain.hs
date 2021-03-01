@@ -140,6 +140,13 @@ appActivateHandler cfg mibPath app = do
         ThemeDark  -> setDarkTheme
         ThemeLight -> setTheme
 
+    iconTheme <- Gtk.iconThemeGetDefault
+    Gtk.iconThemeAddResourcePath iconTheme "/auris/data"
+    --names <- Gtk.iconThemeListIcons iconTheme Nothing
+    --T.putStrLn $ "Icons: " <> T.pack (show names)
+    --icon <- Gtk.iconThemeLoadIcon iconTheme "AurisLogo" 48 [IconLookupFlagsForceSvg]
+    Gtk.windowSetIconName (mainWindow ^. mwWindow) (Just "AurisLogo")
+
     mwSetMission mainWindow (aurisMission cfg)
 
     -- setup the interface

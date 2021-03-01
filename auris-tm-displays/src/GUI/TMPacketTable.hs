@@ -1,11 +1,10 @@
 module GUI.TMPacketTable
-  ( TMPacketTable
-  , createTMPacketTable
-  , tmPacketTableAddRow
-  , tmPacketTableSetValues
-  , tmPacketTableSetCallback
-  )
-where
+    ( TMPacketTable
+    , createTMPacketTable
+    , tmPacketTableAddRow
+    , tmPacketTableSetValues
+    , tmPacketTableSetCallback
+    ) where
 
 import           RIO
 import qualified Data.Text.Short               as ST
@@ -21,10 +20,11 @@ import           GUI.ScrollingTable
 
 
 
-data TMPacketTable = TMPacketTable {
-  _tmptTable :: TreeView
-  , _tmptModel :: SeqStore TMPacket
-  }
+data TMPacketTable = TMPacketTable
+    { _tmptTable       :: TreeView
+    , _tmptModel       :: SeqStore TMPacket
+    , _tmptSortedModel :: TreeModelSort
+    }
 
 -- | Add a single row of a 'TMPacket'. Ensures, that 
 -- only 'defMaxRowTM' rows are present at maximum, removes old values if the
@@ -52,23 +52,55 @@ tmPacketTableSetCallback g = setTreeViewCallback g _tmptTable _tmptModel
 
 createTMPacketTable :: Gtk.Builder -> IO TMPacketTable
 createTMPacketTable builder = do
-  tv <- getObject builder "treeviewTMPUSPackets" TreeView
+    tv                    <- getObject builder "treeviewTMPUSPackets" TreeView
 
-  createScrollingTable
-    tv
-    TMPacketTable
-    [ ("SPID"           , 70, \pkt -> [#text := textDisplay (pkt ^. tmpSPID)])
-    , ("Mnemonic"       , 80, \pkt -> [#text := ST.toText (pkt ^. tmpMnemonic)])
-    , ("Description"    , 250, \pkt -> [#text := ST.toText (pkt ^. tmpDescr)])
-    , ("Generation Time", 190, \pkt -> [#text := textDisplay (pkt ^. tmpTimeStamp)])
-    , ("ERT"            , 190, \pkt -> [#text := textDisplay (pkt ^. tmpERT)])
-    , ("APID"           , 50, \pkt -> [#text := textDisplay (pkt ^. tmpAPID)])
-    , ("T"              , 30, \pkt -> [#text := textDisplay (pkt ^. tmpType)])
-    , ("ST"             , 30, \pkt -> [#text := textDisplay (pkt ^. tmpSubType)])
-    , ("SSC"            , 60, \pkt -> [#text := textDisplay (pkt ^. tmpSSC)])
-    , ("VC"             , 40, \pkt -> [#text := textDisplay (pkt ^. tmpVCID)])
-    , ("Source"         , 60, \pkt -> [#text := textDisplay (pkt ^. tmpSource)])
-    ]
+    (_, model, sortModel) <- createSortedScrollingTable
+        tv
+        [ ("SPID", 70, Nothing, \pkt -> [#text := textDisplay (pkt ^. tmpSPID)])
+        , ( "Mnemonic"
+          , 80
+          , Nothing
+          , \pkt -> [#text := ST.toText (pkt ^. tmpMnemonic)]
+          )
+        , ( "Description"
+          , 250
+          , Nothing
+          , \pkt -> [#text := ST.toText (pkt ^. tmpDescr)]
+          )
+        , ( "Generation Time"
+          , 190
+          , Just (0, compareTimestamp)
+          , \pkt -> [#text := textDisplay (pkt ^. tmpTimeStamp)]
+          )
+        , ( "ERT"
+          , 190
+          , Just (1, compareERT)
+          , \pkt -> [#text := textDisplay (pkt ^. tmpERT)]
+          )
+        , ("APID", 50, Nothing, \pkt -> [#text := textDisplay (pkt ^. tmpAPID)])
+        , ("T"   , 30, Nothing, \pkt -> [#text := textDisplay (pkt ^. tmpType)])
+        , ( "ST"
+          , 30
+          , Nothing
+          , \pkt -> [#text := textDisplay (pkt ^. tmpSubType)]
+          )
+        , ("SSC", 60, Nothing, \pkt -> [#text := textDisplay (pkt ^. tmpSSC)])
+        , ("VC" , 40, Nothing, \pkt -> [#text := textDisplay (pkt ^. tmpVCID)])
+        , ( "Source"
+          , 60
+          , Nothing
+          , \pkt -> [#text := textDisplay (pkt ^. tmpSource)]
+          )
+        ]
+
+    return $ TMPacketTable tv model sortModel
 
 
 
+compareTimestamp :: TMPacket -> TMPacket -> Ordering
+compareTimestamp pkt1 pkt2 =
+    compare (pkt1 ^. tmpTimeStamp) (pkt2 ^. tmpTimeStamp)
+
+
+compareERT :: TMPacket -> TMPacket -> Ordering
+compareERT pkt1 pkt2 = compare (pkt1 ^. tmpERT) (pkt2 ^. tmpERT)

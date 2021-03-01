@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=AURISi
+Icon=AurisLogo
+StartupNotify=true
+Exec=/home/oswald/.local/bin/AURISi

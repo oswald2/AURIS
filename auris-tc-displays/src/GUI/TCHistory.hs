@@ -24,11 +24,8 @@ import           Data.GI.Base.Attributes        ( AttrOpTag(AttrSet) )
 import           GI.Gdk.Structs.RGBA            ( RGBA )
 
 import           GUI.Utils                      ( getObject )
-import           GUI.Colors                     
-import           GUI.ScrollingTable             ( addRowScrollingTable
-                                                , setTreeViewCallback
-                                                , createScrollingTableSimple
-                                                )
+import           GUI.Colors
+import           GUI.ScrollingTable             
 import           GUI.TextView                   ( textViewSetText )
 
 import           General.Time                   ( SunTime )
@@ -56,6 +53,7 @@ data TCHistory = TCHistory
     { guiParent        :: !ApplicationWindow
     , guiTreeView      :: !TreeView
     , guiModel         :: SeqStore Row
+    , guiSortedModel   :: !TreeModelSort
     , guiTCName        :: !Entry
     , guiTCDescription :: !TextView
     , guiTCRequestID   :: !Entry
@@ -97,44 +95,52 @@ createTCHistory window builder = do
 
     let verifColumnWidth = 15
 
-    model <- createScrollingTableSimple
+    (model, sortedModel) <- createSortedScrollingTableSimple
         treeView
         [ ( "Name" :: Text
           , 70 :: Int32
+          , Nothing
           , \row -> [#text := textDisplay (row ^. rowRqst . tcReqName)]
           )
         , ( "Description"
           , 250
+          , Nothing
           , \row -> [#text := textDisplay (row ^. rowRqst . tcReqDescription)]
           )
-        , ("Release Time", 190, displayReleaseTime)
+        , ( "Release Time"
+          , 190
+          , Just (0, compareReleaseTime)
+          , displayReleaseTime
+          )
         , ( "Source"
           , 60
+          , Nothing
           , \row -> [#text := textDisplay (row ^. rowRqst . tcReqSource)]
           )
-        , ("APID", 50, displayAPID)
-        , ("T", 30, displayType)
-        , ("ST", 30, displaySubType)
-        , ("R" , verifColumnWidth, displayRelease)
-        , (" " , verifColumnWidth, displayEmptyText)
-        , ("G" , verifColumnWidth, displayGround verGroundReception)
-        , ("T" , verifColumnWidth, displayGround verGroundTransmission)
-        , ("O" , verifColumnWidth, displayGround verGroundOBR)
-        , (" " , verifColumnWidth, displayEmptyText)
-        , ("A" , verifColumnWidth, displayTM verTMAcceptance)
-        , (" " , verifColumnWidth, displayEmptyText)
-        , ("S" , verifColumnWidth, displayTM verTMStart)
-        , (" " , verifColumnWidth, displayEmptyText)
-        , ("0" , verifColumnWidth, displayTMProgress 0)
-        , ("1" , verifColumnWidth, displayTMProgress 1)
-        , ("2 ", verifColumnWidth, displayTMProgress 2)
-        , ("3" , verifColumnWidth, displayTMProgress 3)
-        , ("4" , verifColumnWidth, displayTMProgress 4)
-        , ("5" , verifColumnWidth, displayTMProgress 5)
-        , (" " , verifColumnWidth, displayEmptyText)
-        , ("C" , verifColumnWidth, displayTM verTMComplete)
+        , ("APID", 50              , Nothing, displayAPID)
+        , ("T"   , 30              , Nothing, displayType)
+        , ("ST"  , 30              , Nothing, displaySubType)
+        , ("R"   , verifColumnWidth, Nothing, displayRelease)
+        , (" "   , verifColumnWidth, Nothing, displayEmptyText)
+        , ("G"   , verifColumnWidth, Nothing, displayGround verGroundReception)
+        , ("T", verifColumnWidth, Nothing, displayGround verGroundTransmission)
+        , ("O"   , verifColumnWidth, Nothing, displayGround verGroundOBR)
+        , (" "   , verifColumnWidth, Nothing, displayEmptyText)
+        , ("A"   , verifColumnWidth, Nothing, displayTM verTMAcceptance)
+        , (" "   , verifColumnWidth, Nothing, displayEmptyText)
+        , ("S"   , verifColumnWidth, Nothing, displayTM verTMStart)
+        , (" "   , verifColumnWidth, Nothing, displayEmptyText)
+        , ("0"   , verifColumnWidth, Nothing, displayTMProgress 0)
+        , ("1"   , verifColumnWidth, Nothing, displayTMProgress 1)
+        , ("2 "  , verifColumnWidth, Nothing, displayTMProgress 2)
+        , ("3"   , verifColumnWidth, Nothing, displayTMProgress 3)
+        , ("4"   , verifColumnWidth, Nothing, displayTMProgress 4)
+        , ("5"   , verifColumnWidth, Nothing, displayTMProgress 5)
+        , (" "   , verifColumnWidth, Nothing, displayEmptyText)
+        , ("C"   , verifColumnWidth, Nothing, displayTM verTMComplete)
         , ( "Status"
           , 50
+          , Nothing
           , \row -> [#text := textDisplay (row ^. rowVerifications . verStatus)]
           )
         ]
@@ -142,6 +148,7 @@ createTCHistory window builder = do
     let gui = TCHistory { guiParent        = window
                         , guiTreeView      = treeView
                         , guiModel         = model
+                        , guiSortedModel   = sortedModel
                         , guiTCName        = entryName
                         , guiTCDescription = tvDescription
                         , guiTCRequestID   = entryRequestID
@@ -197,6 +204,12 @@ treeViewCB gui row = do
     return ()
 
 
+compareReleaseTime :: Row -> Row -> Ordering 
+compareReleaseTime r1 r2 = 
+    case (r1 ^. rowRqst . tcReqReleaseTime, r2 ^. rowRqst . tcReqReleaseTime) of
+        (Just rt1, Just rt2) -> compare rt1 rt2 
+        _ -> EQ
+
 displayReleaseTime :: Row -> [AttrOp CellRendererText 'AttrSet]
 displayReleaseTime row = case row ^. rowRqst . tcReqReleaseTime of
     Just t  -> [#text := textDisplay t]
@@ -204,19 +217,19 @@ displayReleaseTime row = case row ^. rowRqst . tcReqReleaseTime of
 
 displayAPID :: Row -> [AttrOp CellRendererText 'AttrSet]
 displayAPID row = case row ^. rowRqst . tcReqPayload of
-    TCCommand {..} -> [#text := textDisplay (_tcpAPID _tcReqPacket)]
+    TCCommand {..}     -> [#text := textDisplay (_tcpAPID _tcReqPacket)]
     TCScoeCommand {..} -> [#text := textDisplay (_tccAPID _tcReqCommand)]
-    _ -> [#text := ""]
+    _                  -> [#text := ""]
 
 displayType :: Row -> [AttrOp CellRendererText 'AttrSet]
 displayType row = case row ^. rowRqst . tcReqPayload of
     TCCommand {..} -> [#text := textDisplay (_tcpType _tcReqPacket)]
-    _ -> [#text := ""]
+    _              -> [#text := ""]
 
 displaySubType :: Row -> [AttrOp CellRendererText 'AttrSet]
 displaySubType row = case row ^. rowRqst . tcReqPayload of
     TCCommand {..} -> [#text := textDisplay (_tcpSubType _tcReqPacket)]
-    _ -> [#text := ""]
+    _              -> [#text := ""]
 
 
 displayEmptyText :: Row -> [AttrOp CellRendererText 'AttrSet]
