@@ -7,7 +7,11 @@ module AurisProcessing
 
 import           RIO
 import qualified Data.Text.IO                  as T
-import           Data.PUS.GlobalState
+import           Data.PUS.GlobalState           ( newGlobalState
+                                                , GlobalState
+                                                    ( glsVerifCommandQueue
+                                                    )
+                                                )
 import           Data.PUS.MissionSpecific.Definitions
                                                 ( PUSMissionSpecific )
 import           Data.PUS.Events                ( EventFlag(..) )
@@ -41,9 +45,13 @@ import           Application.DataModel          ( loadDataModelDef
                                                     )
                                                 )
 import           Verification.Processor         ( processVerification )
-import           Data.Mongo.Processing
-import           Persistence.Logging
-import           Persistence.DbResultProcessor
+import           Data.Mongo.Processing          ( newDbState
+                                                , startDbQueryThreads
+                                                , startDbStoreThreads
+                                                )
+import           Persistence.Logging            ( logToDB )
+import           Persistence.DbResultProcessor  ( dbResultFunc )
+import           Persistence.DBQuery
 
 runProcessing
     :: AurisConfig
@@ -52,83 +60,83 @@ runProcessing
     -> Interface
     -> MainWindow
     -> TBQueue InterfaceAction
+    -> TBQueue DBQuery
     -> IO ()
-runProcessing cfg missionSpecific mibPath interface mainWindow coreQueue = do
-    defLogOptions <- logOptionsHandle stdout True
-    let logOptions =
-            setLogMinLevel (convLogLevel (aurisLogLevel cfg)) defLogOptions
+runProcessing cfg missionSpecific mibPath interface mainWindow coreQueue queryQueue
+    = do
+        defLogOptions <- logOptionsHandle stdout True
+        let logOptions = setLogMinLevel (convLogLevel (aurisLogLevel cfg))
+                                        defLogOptions
 
-    -- start with the logging 
-    withLogFunc logOptions $ \logFunc -> do
+        -- start with the logging 
+        withLogFunc logOptions $ \logFunc -> do
 
-        let logf1 =
-                logFunc <> messageAreaLogFunc (mainWindow ^. mwMessageDisplay)
+            let
+                logf1 = logFunc
+                    <> messageAreaLogFunc (mainWindow ^. mwMessageDisplay)
 
-        T.putStrLn "Starting DB backend..."
-        dbBackend <- case aurisDbConfig cfg of
-            Just dbCfg -> do
-                dbState <- newDbState logf1
-                be      <- runRIO dbState $ startDbStoreThreads dbCfg
-                T.putStrLn "DB backend started..."
-                return (Just be)
-            Nothing -> do
-                T.putStrLn "No DB backend was configured."
-                return Nothing
+            T.putStrLn "Starting DB backend..."
+            dbBackend <- case aurisDbConfig cfg of
+                Just dbCfg -> do
+                    dbState <- newDbState logf1
+                    be      <- runRIO dbState $ startDbStoreThreads dbCfg
+                    T.putStrLn "DB backend started..."
+                    return (Just be)
+                Nothing -> do
+                    T.putStrLn "No DB backend was configured."
+                    return Nothing
 
-        -- Add the logging function to the GUI
-        let logf =
-                logf1 <> maybe mempty (mkLogFunc . logToDB)  dbBackend
+            -- Add the logging function to the GUI
+            let logf = logf1 <> maybe mempty (mkLogFunc . logToDB) dbBackend
 
+            -- Create a new 'GlobalState' for the processing
+            state <- newGlobalState (aurisPusConfig cfg)
+                                    missionSpecific
+                                    logf
+                                    (ifRaiseEvent interface . EventPUS)
+                                    [EVFlagAll]
+                                    dbBackend
+                                    queryQueue
 
-        -- create queue for the DB queries. It won't be used if the DB is 
-        -- not configured
-        queryQueue <- newTBQueueIO 100
+            void $ runRIO state $ do
+                case dbBackend of
+                    Nothing      -> return ()
+                    Just backend -> do
+                        case aurisDbConfig cfg of
+                            Nothing    -> return ()
+                            Just dbCfg -> do
+                                -- First, we create the databas
+                                startDbQueryThreads dbCfg
+                                                    backend
+                                                    dbResultFunc
+                                                    queryQueue
 
-        -- Create a new 'GlobalState' for the processing
-        state <- newGlobalState (aurisPusConfig cfg)
-                                missionSpecific
-                                logf
-                                (ifRaiseEvent interface . EventPUS)
-                                [EVFlagAll]
-                                dbBackend
-                                queryQueue
+              -- first, try to load a data model or import a MIB
+                logInfo "Loading Data Model..."
+                home <- liftIO getHomeDirectory
+                let path = case mibPath of
+                        Just p  -> LoadFromMIB p serializedPath
+                        Nothing -> LoadFromSerialized serializedPath
+                    serializedPath = home </> configPath </> defaultMIBFile
 
-        void $ runRIO state $ do
-            case dbBackend of 
-                Nothing -> return ()
-                Just backend -> do 
-                    case aurisDbConfig cfg of 
-                        Nothing -> return ()
-                        Just dbCfg -> do 
-                            -- First, we create the databas
-                            startDbQueryThreads dbCfg backend dbResultFunc queryQueue
+                model <- loadDataModelDef path
+                env   <- ask
+                setDataModel env model
 
-          -- first, try to load a data model or import a MIB
-            logInfo "Loading Data Model..."
-            home <- liftIO getHomeDirectory
-            let path = case mibPath of
-                    Just p  -> LoadFromMIB p serializedPath
-                    Nothing -> LoadFromSerialized serializedPath
-                serializedPath = home </> configPath </> defaultMIBFile
+                logInfo "Initialising User Interface with Data Model..."
+                liftIO $ postGUIASync $ mwInitialiseDataModel mainWindow model
 
-            model <- loadDataModelDef path
-            env   <- ask
-            setDataModel env model
+                logInfo "Starting TM and TC chains..."
 
-            logInfo "Initialising User Interface with Data Model..."
-            liftIO $ postGUIASync $ mwInitialiseDataModel mainWindow model
+                -- Start the core processing thread (commands from GUI)
+                void $ async $ runCoreThread coreQueue
 
-            logInfo "Starting TM and TC chains..."
+                -- Start the TC verification processor 
+                void $ async $ processVerification (glsVerifCommandQueue env)
 
-            -- Start the core processing thread (commands from GUI)
-            void $ async $ runCoreThread coreQueue
-
-            -- Start the TC verification processor 
-            void $ async $ processVerification (glsVerifCommandQueue env)
-
-            -- run all processing chains (TM and TC) as well as the 
-            -- interface threads 
-            runChains missionSpecific
+                -- run all processing chains (TM and TC) as well as the 
+                -- interface threads 
+                runChains missionSpecific
 
 
 

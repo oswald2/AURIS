@@ -150,7 +150,7 @@ appActivateHandler cfg mibPath app = do
     mwSetMission mainWindow (aurisMission cfg)
 
     -- setup the interface
-    (interface, _eventThread, coreQueue) <- initialiseInterface mainWindow
+    (interface, _eventThread, coreQueue, queryQueue) <- initialiseInterface mainWindow
 
     -- Setup the callbacks. Since we need the interface there, we can 
     -- do this only here
@@ -166,6 +166,7 @@ appActivateHandler cfg mibPath app = do
                                                interface
                                                mainWindow
                                                coreQueue
+                                               queryQueue
 
     void $ GI.timeoutAddSeconds GI.PRIORITY_DEFAULT
                                 1

@@ -78,23 +78,24 @@ callAction queue action = atomically $ writeTBQueue queue action
 
 
 
-actionTable :: TBQueue InterfaceAction -> ActionTable
-actionTable queue = ActionTable
+actionTable :: TBQueue InterfaceAction -> TBQueue DBQuery -> ActionTable
+actionTable queue queryQueue = ActionTable
     { actionQuit             = pure ()
     , actionImportMIB        = \p s -> callAction queue (ImportMIB p s)
     , actionLogMessage       = \s l msg -> callAction queue (LogMsg s l msg)
     , actionSendTCRequest    = callAction queue . SendTCRequest
     , actionSendTCGroup      = callAction queue . SendTCGroup
     , actionRequestAllFrames = callAction queue RequestAllTMFrames
-    , actionQueryDB          = callAction queue . QueryDB
+    , actionQueryDB          = atomically . writeTBQueue queryQueue
     }
 
 
 -- | creates the 'Interface' from the given 'EventHandler'.
-createInterface :: EventHandler -> IO (Interface, TBQueue InterfaceAction)
+createInterface :: EventHandler -> IO (Interface, TBQueue InterfaceAction, TBQueue DBQuery)
 createInterface handler = do
     queue <- newTBQueueIO 5000
-    pure (Interface (actionTable queue) (V.singleton handler), queue)
+    queryQueue <- newTBQueueIO 200
+    pure (Interface (actionTable queue queryQueue) (V.singleton handler), queue, queryQueue)
 
 -- | Adds a new event handler to the given 'Interface'. Only an event handler
 -- is added, the 'ActionTable' stays the same

@@ -75,14 +75,16 @@ makeLenses ''TMFrameTab
 
 tmfTabAddRow :: TMFrameTab -> ExtractedDU TMFrame -> IO ()
 tmfTabAddRow tab frame = do
+    -- This is for live mode, adding frames one by one
     st <- readTVarIO (tab ^. tmfLiveState)
     case st of
-        Live    -> return ()
-        Stopped -> tmFrameTableAddRow (tab ^. tmfFrameTable) frame
+        Live    -> tmFrameTableAddRow (tab ^. tmfFrameTable) frame
+        Stopped -> return () 
 
 
 tmfTabSetFrames :: TMFrameTab -> [ExtractedDU TMFrame] -> IO ()
 tmfTabSetFrames tab frames = do
+    -- Only in stopped mode 
     st <- readTVarIO (tab ^. tmfLiveState)
     case st of
         Live    -> return ()

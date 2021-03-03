@@ -10,21 +10,30 @@ module AurisInterface
 
 import           RIO
 import           Control.Concurrent.STM.TBQueue ( flushTBQueue )
-import           Interface.Interface
-import           Interface.Events
-import           Interface.CoreProcessor
+import           Interface.Interface            ( Interface
+                                                , createInterface
+                                                )
+import           Interface.Events               ( IfEvent(..) )
+import           Interface.CoreProcessor        ( InterfaceAction )
 
 import           Data.PUS.Events
-import           Data.PUS.PUSPacket
-import           Data.PUS.PUSDfh
-import           Data.PUS.LiveState
+import           Data.PUS.PUSPacket             ( pusDfh
+                                                , pusHdr
+                                                , pusHdrAPID
+                                                , pusHdrSSC
+                                                )
+import           Data.PUS.PUSDfh                ( pusSubType
+                                                , pusType
+                                                )
 
 import           GUI.MainWindow
-import           GUI.MainWindowActions
---import           GUI.Utils
+import           GUI.MainWindowActions          ( mwLogAlarm
+                                                , mwLogInfo
+                                                , mwLogWarn
+                                                )
 
 import           Data.GI.Gtk.Threading          ( postGUIASync )
-
+import           Persistence.DBQuery            ( DBQuery )
 
 
 
@@ -49,7 +58,7 @@ eventProcessor g (EventPUS (EVTelemetry (EVTMFrameReceived frame))) = do
 
 eventProcessor g (EventPUS (EVTelemetry (EVTMParameters params))) = do
     postGUIASync (mwAddTMParameters g params)
-   
+
 eventProcessor g (EventPUS (EVTelemetry (EVTMFrameGap old new))) = do
     let txt =
             utf8BuilderToText
@@ -116,17 +125,19 @@ eventProcessor g (EventPUS (EVCommanding (EVTCVerificationUpdate rqst verif)))
     = do
         postGUIASync (mwDisplayRqstVerification g rqst verif)
 
-eventProcessor g (EventPUS (EVDB (EVDBTMFrames frames))) = do 
+eventProcessor g (EventPUS (EVDB (EVDBTMFrames frames))) = do
     postGUIASync $ mwSetTMFrames g frames
-   
+
 
 eventProcessor _ _ = pure ()
 
 
 initialiseInterface
-    :: MainWindow -> IO (Interface, Async (), TBQueue InterfaceAction)
+    :: MainWindow
+    -> IO (Interface, Async (), TBQueue InterfaceAction, TBQueue DBQuery)
 initialiseInterface mainWindow = do
-    queue                  <- newTBQueueIO 5000
-    (interface, coreQueue) <- createInterface (aurisEventHandler queue)
-    eventThread            <- async (eventProcessorThread mainWindow queue)
-    pure (interface, eventThread, coreQueue)
+    queue                              <- newTBQueueIO 5000
+    (interface, coreQueue, queryQueue) <- createInterface
+        (aurisEventHandler queue)
+    eventThread <- async (eventProcessorThread mainWindow queue)
+    pure (interface, eventThread, coreQueue, queryQueue)
