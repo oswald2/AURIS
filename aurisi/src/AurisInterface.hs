@@ -34,30 +34,23 @@ aurisEventHandler queue event = atomically $ writeTBQueue queue event
 
 eventProcessorThread :: MainWindow -> TBQueue IfEvent -> IO ()
 eventProcessorThread mainWindow queue = forever $ do
-    (events, liveState) <- atomically $ do
+    events <- atomically $ do
         e  <- readTBQueue queue
         es <- flushTBQueue queue
-        ls <- readTVar (mainWindow ^. mwLiveState)
-        return (e : es, ls)
-    mapM_ (eventProcessor mainWindow liveState) events
+        return (e : es)
+    mapM_ (eventProcessor mainWindow) events
 
-eventProcessor :: MainWindow -> LiveState -> IfEvent -> IO ()
-eventProcessor g ls (EventPUS (EVTelemetry (EVTMPacketDecoded pkt))) = do
-    case ls ^. liStTelemetry of
-        Live -> postGUIASync (mwAddTMPacket g pkt)
-        _    -> return ()
+eventProcessor :: MainWindow -> IfEvent -> IO ()
+eventProcessor g (EventPUS (EVTelemetry (EVTMPacketDecoded pkt))) = do
+    postGUIASync (mwAddTMPacket g pkt)
 
-eventProcessor g ls (EventPUS (EVTelemetry (EVTMFrameReceived frame))) = do
-    case ls ^. liStTelemetry of
-        Live -> postGUIASync (mwAddTMFrame g frame)
-        _    -> return ()
+eventProcessor g (EventPUS (EVTelemetry (EVTMFrameReceived frame))) = do
+    postGUIASync (mwAddTMFrame g frame)
 
-eventProcessor g ls (EventPUS (EVTelemetry (EVTMParameters params))) = do
-    case ls ^. liStTelemetry of
-        Live -> postGUIASync (mwAddTMParameters g params)
-        _    -> return ()
+eventProcessor g (EventPUS (EVTelemetry (EVTMParameters params))) = do
+    postGUIASync (mwAddTMParameters g params)
    
-eventProcessor g _ (EventPUS (EVTelemetry (EVTMFrameGap old new))) = do
+eventProcessor g (EventPUS (EVTelemetry (EVTMFrameGap old new))) = do
     let txt =
             utf8BuilderToText
                 $  "Detected Frame Gap, old VC FC:"
@@ -65,14 +58,14 @@ eventProcessor g _ (EventPUS (EVTelemetry (EVTMFrameGap old new))) = do
                 <> ", new VC FC: "
                 <> display new
     postGUIASync $ mwLogWarn g txt
-eventProcessor g _ (EventPUS (EVTelemetry (EVTMRestartingVC vcid))) = do
+eventProcessor g (EventPUS (EVTelemetry (EVTMRestartingVC vcid))) = do
     let txt = utf8BuilderToText $ "Restarting Virtual Channel " <> display vcid
     postGUIASync $ mwLogWarn g txt
-eventProcessor g _ (EventPUS (EVTelemetry (EVTMRejectSpillOver _))) = do
+eventProcessor g (EventPUS (EVTelemetry (EVTMRejectSpillOver _))) = do
     postGUIASync $ mwLogWarn g "TM Packet Reconstruction: Rejected Spillover"
-eventProcessor g _ (EventPUS (EVTelemetry (EVTMGarbledSpillOver _))) = do
+eventProcessor g (EventPUS (EVTelemetry (EVTMGarbledSpillOver _))) = do
     postGUIASync $ mwLogWarn g "TM Packet Reconstruction: Rejected Spillover"
-eventProcessor g _ (EventPUS (EVTelemetry (EVTMRejectedSpillOverPkt pkt))) = do
+eventProcessor g (EventPUS (EVTelemetry (EVTMRejectedSpillOverPkt pkt))) = do
     let txt =
             utf8BuilderToText
                 $  "TM Packet Reconstruction: Rejected Spillover Packet: APID="
@@ -87,43 +80,47 @@ eventProcessor g _ (EventPUS (EVTelemetry (EVTMRejectedSpillOverPkt pkt))) = do
 
 
 
-eventProcessor g _ (EventPUS (EVAlarms (EVEConnection i l c))) =
+eventProcessor g (EventPUS (EVAlarms (EVEConnection i l c))) =
     postGUIASync (mwSetConnectionState g i l c)
-eventProcessor g _ (EventPUS (EVAlarms (EVPacketInfo txt))) = do
+eventProcessor g (EventPUS (EVAlarms (EVPacketInfo txt))) = do
     postGUIASync (mwLogInfo g txt)
-eventProcessor g _ (EventPUS (EVAlarms (EVPacketWarn txt))) = do
+eventProcessor g (EventPUS (EVAlarms (EVPacketWarn txt))) = do
     postGUIASync (mwLogWarn g txt)
-eventProcessor g _ (EventPUS (EVAlarms (EVPacketAlarm txt))) = do
+eventProcessor g (EventPUS (EVAlarms (EVPacketAlarm txt))) = do
     postGUIASync (mwLogAlarm g txt)
-eventProcessor g _ (EventPUS (EVAlarms (EVIllegalTCFrame txt))) = do
+eventProcessor g (EventPUS (EVAlarms (EVIllegalTCFrame txt))) = do
     postGUIASync (mwLogWarn g txt)
-eventProcessor g _ (EventPUS (EVAlarms (EVIllegalTMFrame txt))) = do
+eventProcessor g (EventPUS (EVAlarms (EVIllegalTMFrame txt))) = do
     postGUIASync (mwLogWarn g txt)
-eventProcessor g _ (EventPUS (EVAlarms (EVNCDUParseError txt))) = do
+eventProcessor g (EventPUS (EVAlarms (EVNCDUParseError txt))) = do
     postGUIASync (mwLogWarn g txt)
-eventProcessor g _ (EventPUS (EVAlarms (EVEDENParseError txt))) = do
+eventProcessor g (EventPUS (EVAlarms (EVEDENParseError txt))) = do
     postGUIASync (mwLogWarn g txt)
-eventProcessor g _ (EventPUS (EVAlarms (EVIllegalPUSPacket txt))) = do
+eventProcessor g (EventPUS (EVAlarms (EVIllegalPUSPacket txt))) = do
     postGUIASync (mwLogWarn g txt)
-eventProcessor g _ (EventPUS (EVAlarms (EVIllegalAction txt))) = do
+eventProcessor g (EventPUS (EVAlarms (EVIllegalAction txt))) = do
     postGUIASync (mwLogWarn g txt)
-eventProcessor g _ (EventPUS (EVAlarms (EVMIBLoadError txt))) = do
+eventProcessor g (EventPUS (EVAlarms (EVMIBLoadError txt))) = do
     postGUIASync (mwLogAlarm g txt)
-eventProcessor g _ (EventPUS (EVAlarms EVMIBLoaded)) = do
+eventProcessor g (EventPUS (EVAlarms EVMIBLoaded)) = do
     postGUIASync (mwLogInfo g "MIB loaded successfully")
 
 
-eventProcessor g _ (EventPUS (EVCommanding (EVTCVerificationNew rqst verif))) =
+eventProcessor g (EventPUS (EVCommanding (EVTCVerificationNew rqst verif))) =
     do
         postGUIASync (mwAddVerifRqst g rqst verif)
-eventProcessor g _ (EventPUS (EVCommanding (EVTCRelease rqstID releaseTime verif)))
+eventProcessor g (EventPUS (EVCommanding (EVTCRelease rqstID releaseTime verif)))
     = do
         postGUIASync (mwReleaseRqst g rqstID releaseTime verif)
-eventProcessor g _ (EventPUS (EVCommanding (EVTCVerificationUpdate rqst verif)))
+eventProcessor g (EventPUS (EVCommanding (EVTCVerificationUpdate rqst verif)))
     = do
         postGUIASync (mwDisplayRqstVerification g rqst verif)
 
-eventProcessor _ _ _ = pure ()
+eventProcessor g (EventPUS (EVDB (EVDBTMFrames frames))) = do 
+    postGUIASync $ mwSetTMFrames g frames
+   
+
+eventProcessor _ _ = pure ()
 
 
 initialiseInterface

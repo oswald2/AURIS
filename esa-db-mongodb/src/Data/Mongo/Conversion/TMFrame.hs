@@ -15,18 +15,18 @@ import           Data.Mongo.Conversion.Class    ( MongoDbConversion(..) )
 import           Data.Mongo.Conversion.Types    ( )
 
 
-instance MongoDbConversion TMStoreFrame Document where
-    toDB TMStoreFrame {..} =
-        [ "ert" =: timeToMicro _tmstTime
-        , "frame" =: toDB _tmstFrame
-        , "binary" =: Binary (toBS _tmstBinary)
-        ]
-    fromDB doc = do
-        ert    <- lookup "ert" doc
-        frame' <- lookup "frame" doc
-        frame  <- fromDB frame'
-        bin    <- lookup "binary" doc
-        return $ TMStoreFrame (microToTime ert False) frame bin
+-- instance MongoDbConversion TMStoreFrame Document where
+--     toDB TMStoreFrame {..} =
+--         [ "ert" =: timeToMicro _tmstTime
+--         , "frame" =: toDB _tmstFrame
+--         , "binary" =: Binary (toBS _tmstBinary)
+--         ]
+--     fromDB doc = do
+--         ert    <- lookup "ert" doc
+--         frame' <- lookup "frame" doc
+--         frame  <- fromDB frame'
+--         bin    <- lookup "binary" doc
+--         return $ TMStoreFrame (microToTime ert False) frame bin
 
 
 

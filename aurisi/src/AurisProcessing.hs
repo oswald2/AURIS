@@ -79,6 +79,11 @@ runProcessing cfg missionSpecific mibPath interface mainWindow coreQueue = do
         let logf =
                 logf1 <> maybe mempty (mkLogFunc . logToDB)  dbBackend
 
+
+        -- create queue for the DB queries. It won't be used if the DB is 
+        -- not configured
+        queryQueue <- newTBQueueIO 100
+
         -- Create a new 'GlobalState' for the processing
         state <- newGlobalState (aurisPusConfig cfg)
                                 missionSpecific
@@ -86,6 +91,7 @@ runProcessing cfg missionSpecific mibPath interface mainWindow coreQueue = do
                                 (ifRaiseEvent interface . EventPUS)
                                 [EVFlagAll]
                                 dbBackend
+                                queryQueue
 
         void $ runRIO state $ do
             case dbBackend of 
@@ -95,7 +101,6 @@ runProcessing cfg missionSpecific mibPath interface mainWindow coreQueue = do
                         Nothing -> return ()
                         Just dbCfg -> do 
                             -- First, we create the databas
-                            queryQueue <- newTBQueueIO 100
                             startDbQueryThreads dbCfg backend dbResultFunc queryQueue
 
           -- first, try to load a data model or import a MIB

@@ -49,6 +49,8 @@ data ExtractedDU a = ExtractedDU {
 } deriving (Eq, Show, Generic)
 makeLenses ''ExtractedDU
 
+
+instance NFData a => NFData (ExtractedDU a)
 instance Serialise a => Serialise (ExtractedDU a)
 instance FromJSON a => FromJSON (ExtractedDU a)
 instance ToJSON a => ToJSON (ExtractedDU a) where

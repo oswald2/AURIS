@@ -1,4 +1,4 @@
-module Data.Mongo.DBQuery
+module Persistence.DBQuery
     ( DBQuery(..)
     , DBResult(..)
     ) where
@@ -9,7 +9,8 @@ import           Codec.Serialise
 import           Data.Aeson
 import           General.Time
 
-import           Data.PUS.TMStoreFrame
+import           Data.PUS.TMFrame               ( TMFrame )
+import           Data.PUS.ExtractedDU
 
 
 data DBQuery = DbGetTMFrames
@@ -26,7 +27,7 @@ instance ToJSON DBQuery where
 
 
 data DBResult =
-    DBResultTMFrames [TMStoreFrame]
+    DBResultTMFrames [ExtractedDU TMFrame]
     | DBResultEvents
     deriving (Show, Generic)
 

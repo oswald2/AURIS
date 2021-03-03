@@ -5,12 +5,13 @@ module GUI.TMFrameTable
     ( TMFrameTable
     , createTMFrameTable
     , tmFrameTableAddRow
+    , tmFrameTableSetRows
     , tmFrameTableSetValues
     , tmFrameTableSetCallback
     ) where
 
 import           RIO
---import qualified RIO.Text                      as T
+import qualified RIO.Text                      as T
 
 import           GI.Gtk                        as Gtk
 import           Data.GI.Gtk.ModelView.SeqStore
@@ -38,6 +39,9 @@ data TMFrameTable = TMFrameTable
 -- telemetry.
 tmFrameTableAddRow :: TMFrameTable -> ExtractedDU TMFrame -> IO ()
 tmFrameTableAddRow g = addRowScrollingTable (_tmfrTable g) (_tmfrModel g)
+
+tmFrameTableSetRows :: TMFrameTable -> [ExtractedDU TMFrame] -> IO () 
+tmFrameTableSetRows g = setRowsSeqStore (_tmfrModel g)
 
 
 -- | Set the internal model to the list of given 'TMFrame' values. In contrast

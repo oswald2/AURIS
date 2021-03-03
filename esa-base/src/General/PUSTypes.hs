@@ -213,14 +213,26 @@ class FlagDisplay a where
 
 -- | 'Flag' for Ready/Not Ready
 data Ready = Ready
+    deriving Generic
 -- | 'Flag' for Enable/Disable
 data Enable = Enable
+    deriving Generic
 -- | 'Flag' for On/Off
 data OnOff = OnOff
+    deriving Generic
 -- | 'Flag' for Initial/Not Initial. Used in one-time initialisations
 data Initialized = Initialized
+    deriving Generic
 -- | 'Flag' for quality
 data Good = Good
+    deriving Generic
+
+instance NFData Good 
+instance NFData Ready 
+instance NFData Enable 
+instance NFData OnOff 
+instance NFData Initialized 
+
 
 instance FlagDisplay Ready where
     displayFlag True  = "READY"
@@ -247,6 +259,7 @@ instance FlagDisplay Good where
 newtype Flag a = MkFlag Bool
     deriving (Eq, Ord, Show, Read, Generic)
 
+instance NFData a => NFData (Flag a)
 instance Serialise (Flag a)
 instance FromJSON (Flag a)
 instance ToJSON (Flag a) where
@@ -593,7 +606,7 @@ data EduVCID =
   | IsSCOE
   deriving (Eq, Show, Generic)
 
-
+instance NFData EduVCID
 instance Serialise EduVCID
 instance FromJSON EduVCID
 instance ToJSON EduVCID where

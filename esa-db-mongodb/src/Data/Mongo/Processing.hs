@@ -42,11 +42,13 @@ import           Data.Mongo.Conversion.PUSPacket
 import           Data.Mongo.Conversion.TMPacket ( )
 import           Data.Mongo.Conversion.ExtractedDU
                                                 ( )
-import           Data.Mongo.DBQuery
-import           Data.PUS.TMStoreFrame          ( TMStoreFrame )
+import           Data.PUS.TMFrame
 
-import           Persistence.DbBackend          
+import           Persistence.DbBackend
 import           Persistence.LogEvent           ( LogEvent )
+import           Persistence.DBQuery
+
+import           General.Time
 
 
 
@@ -239,7 +241,7 @@ writeDB pipe collection dat = access pipe master dbName (go dat)
 tmFrameThread
     :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env)
     => DbConfigMongoDB
-    -> TBQueue TMStoreFrame
+    -> TBQueue (ExtractedDU TMFrame)
     -> m ()
 tmFrameThread cfg queue = do
     runInConnection cfg worker
@@ -316,7 +318,7 @@ tmPacketThread cfg queue = do
 getAllFrames
     :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env)
     => DbConfigMongoDB
-    -> m [TMStoreFrame]
+    -> m [ExtractedDU TMFrame]
 getAllFrames cfg = do
     res <- Data.Mongo.Processing.connect cfg
     case res of
@@ -336,14 +338,15 @@ getAllFrames cfg = do
 -- | Start the query thread. This thread needs the config, a backend, the result function
 -- (which will probably be mapped to the raiseEvent function within the processing) and 
 -- a queue receiving the queries to execute.
-startDbQueryThreads :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env)
+startDbQueryThreads
+    :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env)
     => DbConfigMongoDB
-    -> DbBackend 
+    -> DbBackend
     -> (DBResult -> m ())
     -> TBQueue DBQuery
     -> m ()
-startDbQueryThreads cfg backend resultHandler queryQueue = do 
-    queryT <- async $ queryProcessor cfg resultHandler queryQueue 
+startDbQueryThreads cfg backend resultHandler queryQueue = do
+    queryT <- async $ queryProcessor cfg resultHandler queryQueue
     rememberQueryThread backend queryT
 
 queryProcessor
@@ -368,15 +371,25 @@ queryHandler
     -> Pipe
     -> DBQuery
     -> m ()
-queryHandler _ _pipe DbGetTMFrames { dbFromTime = Nothing, dbToTime = Nothing } =
-    return ()
+queryHandler _ _pipe DbGetTMFrames { dbFromTime = Nothing, dbToTime = Nothing }
+    = return ()
 queryHandler resultF pipe q@DbGetTMFrames { dbFromTime = Just start, dbToTime = Just stop }
-    = access pipe master dbName $ do
-        lift $ logDebug $ "QueryHandler: query=" <> displayShow q
-        cursor <- find (select ["ert" =: ["$gte" =: val start, "$lte" =: val stop]] tmFrameCollName) { sort = ["ert" =: Int32 (-1)]}
-        records <- catMaybes . map fromDB <$> rest cursor 
-        lift $ resultF $ DBResultTMFrames records
+    = do
+        logDebug $ "QueryHandler: query=" <> displayShow q
+        frameFromTo resultF pipe start stop
 queryHandler _ _ _ = return ()
+
+frameFromTo
+    :: (MonadIO m) => (DBResult -> m ()) -> Pipe -> SunTime -> SunTime -> m ()
+frameFromTo resultF pipe start stop = access pipe master dbName $ do
+    cursor <- find
+        (select ["ert" =: ["$gte" =: timeToMicro start, "$lte" =: timeToMicro stop]]
+                tmFrameCollName
+            )
+            { sort = ["ert" =: Int32 (-1)]
+            }
+    records <- catMaybes . map fromDB <$> rest cursor
+    lift $ resultF $ DBResultTMFrames records
 
 
 

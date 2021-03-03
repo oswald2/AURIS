@@ -38,6 +38,7 @@ module Data.PUS.GlobalState
     , glsTCRequestQueue
     , glsVerifCommandQueue
     , glsDatabase
+    , glsQueryQueue
     , newGlobalState
     , nextADCount
     ) where
@@ -77,8 +78,9 @@ import           General.Time
 import           Verification.Commands
 
 import           Persistence.DbBackend
+import           Persistence.DBQuery
 
-import           GHC.Compact
+--import           GHC.Compact
 
 
 -- | The AppState is just a type alias
@@ -111,6 +113,7 @@ data GlobalState = GlobalState
     , glsTCRequestQueue    :: TBQueue [TCRequest]
     , glsVerifCommandQueue :: TBQueue VerifCommand
     , glsDatabase          :: Maybe DbBackend
+    , glsQueryQueue        :: TBQueue DBQuery
     }
 
 -- | Constructor for the global state. Takes a configuration, a
@@ -123,36 +126,39 @@ newGlobalState
     -> (Event -> IO ())
     -> [EventFlag]
     -> Maybe DbBackend
+    -> TBQueue DBQuery
     -> IO GlobalState
-newGlobalState cfg missionSpecific logErr raiseEvent eventFlags dbBackend = do
-    st     <- defaultPUSState cfg
-    tv     <- newTVarIO st
-    cv     <- newTVarIO defaultCoeffs
-    dmodel <- newTVarIO Data.DataModel.empty
-    let vcids = cfgVCIDs cfg
-    fopTVars <- mapM (newTVarIO . initialFOPState) vcids
-    let fop1 = HM.fromList $ zip vcids fopTVars
-    rqstQueue  <- newTBQueueIO rqstQueueSize
-    verifQueue <- newTBQueueIO 5000
+newGlobalState cfg missionSpecific logErr raiseEvent eventFlags dbBackend queryQueue
+    = do
+        st     <- defaultPUSState cfg
+        tv     <- newTVarIO st
+        cv     <- newTVarIO defaultCoeffs
+        dmodel <- newTVarIO Data.DataModel.empty
+        let vcids = cfgVCIDs cfg
+        fopTVars <- mapM (newTVarIO . initialFOPState) vcids
+        let fop1 = HM.fromList $ zip vcids fopTVars
+        rqstQueue  <- newTBQueueIO rqstQueueSize
+        verifQueue <- newTBQueueIO 5000
 
-    let eventCfg = createEventConfig eventFlags
-        eventFn  = if eventCfg ^. cfgEvAll
-            then raiseEvent
-            else filteredRaiseEvent eventCfg raiseEvent
+        let eventCfg = createEventConfig eventFlags
+            eventFn  = if eventCfg ^. cfgEvAll
+                then raiseEvent
+                else filteredRaiseEvent eventCfg raiseEvent
 
-    let state = GlobalState { glsConfig            = cfg
-                            , glsState             = tv
-                            , glsCorrState         = cv
-                            , glsFOP1              = fop1
-                            , glsRaiseEvent        = eventFn
-                            , glsLogFunc           = logErr
-                            , glsDataModel         = dmodel
-                            , glsMissionSpecific   = missionSpecific
-                            , glsTCRequestQueue    = rqstQueue
-                            , glsVerifCommandQueue = verifQueue
-                            , glsDatabase          = dbBackend
-                            }
-    pure state
+        let state = GlobalState { glsConfig            = cfg
+                                , glsState             = tv
+                                , glsCorrState         = cv
+                                , glsFOP1              = fop1
+                                , glsRaiseEvent        = eventFn
+                                , glsLogFunc           = logErr
+                                , glsDataModel         = dmodel
+                                , glsMissionSpecific   = missionSpecific
+                                , glsTCRequestQueue    = rqstQueue
+                                , glsVerifCommandQueue = verifQueue
+                                , glsDatabase          = dbBackend
+                                , glsQueryQueue        = queryQueue
+                                }
+        pure state
 
 -- | returns the next counter value for TC transfer frames
 -- in AD transmission mode

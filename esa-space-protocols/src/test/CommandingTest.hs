@@ -143,6 +143,7 @@ main = do
 
     defLogOptions <- logOptionsHandle stdout True
     let logOptions = setLogMinLevel LevelError defLogOptions
+    queue <- newTBQueueIO 200
     withLogFunc logOptions $ \logFunc -> do
         state <- newGlobalState
             defaultConfig
@@ -151,6 +152,7 @@ main = do
             (\ev -> T.putStrLn ("Event: " <> T.pack (show ev)))
             [EVFlagAll]
             Nothing
+            queue
 
         runRIO state $ do
             let chain =

@@ -128,7 +128,7 @@ tmFrameDecodeC = do
 
 storeTMFrameC
     :: (MonadIO m, MonadReader env m, HasDatabase env, HasConfig env, HasLogFunc env)
-    => ConduitT TMStoreFrame TMStoreFrame m ()
+    => ConduitT (ExtractedDU TMFrame) (ExtractedDU TMFrame) m ()
 storeTMFrameC = do
     env <- ask
     let cfg = env ^. getConfig
@@ -761,18 +761,26 @@ tmFrameExtraction
 tmFrameExtraction interf = do
     st <- ask
     let missionSpecific = st ^. getMissionSpecific
+        cfg = st ^. getConfig
 
-    if cfgStorePUSPackets (st ^. getConfig)
+        frameChain = if cfgStoreTMFrames cfg
+                        then 
+                            checkFrameCountC interf
+                                .| storeTMFrameC
+                                .| raiseFrameC
+                        else 
+                            checkFrameCountC interf
+                                .| raiseFrameC
+
+    if cfgStorePUSPackets cfg
         then 
-            checkFrameCountC interf
-                .| raiseFrameC
+            frameChain
                 .| extractPktFromTMFramesC missionSpecific interf
                 .| pusPacketDecodeC interf
                 .| pusPacketStoreC
                 .| pusPacketGapCheckC
         else 
-            checkFrameCountC interf
-                .| raiseFrameC
+            frameChain
                 .| extractPktFromTMFramesC missionSpecific interf
                 .| pusPacketDecodeC interf
                 .| pusPacketGapCheckC

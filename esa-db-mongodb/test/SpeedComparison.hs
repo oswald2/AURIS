@@ -14,27 +14,33 @@ import           RIO.List.Partial               ( last )
 
 import           Data.Mongo.Conversion.Class
 import           Data.Mongo.Conversion.TMFrame  ( )
-
+import           Data.Mongo.Conversion.ExtractedDU
+                                                ( )
 
 import           Data.PUS.TMStoreFrame
 import           Data.PUS.TMFrame
 import           Data.PUS.CLCW
+import           Data.PUS.ExtractedDU
 
 import           General.PUSTypes
 import           General.Time
 import           General.Types
 
 import           System.Environment
+import           Protocol.ProtocolInterfaces
 
 
 
-tmFrame :: SunTime -> TMStoreFrame
+tmFrame :: SunTime -> ExtractedDU TMFrame
 tmFrame now =
     let
-        storeFrame = TMStoreFrame
-            now
-            frame
-            (HexBytes (encodeFrame defaultTMFrameConfig frame))
+        storeFrame = ExtractedDU (toFlag Good True)
+                                 now
+                                 (Just (1, 2))
+                                 (IfNctrs 1)
+                                 (IsVCID 0)
+                                 frame
+            --(HexBytes (encodeFrame defaultTMFrameConfig frame))
         frame = TMFrame
             { _tmFrameHdr  = TMFrameHeader { _tmFrameVersion        = 0
                                            , _tmFrameScID           = SCID 533
@@ -77,6 +83,9 @@ main = do
     pipe <- connect (host "127.0.0.1")
     now  <- getCurrentTime
     e    <- access pipe master "active_session" (worker now (read n))
+
+    -- e2   <- access pipe master "active_session" getFrames
+
     close pipe
     T.putStrLn (T.pack (show e))
 
@@ -92,7 +101,7 @@ worker now n = do
     --liftIO $ T.putStrLn $ "IDs: " <> T.pack (show (length ids))
 
     start2                      <- liftIO getCurrentTime
-    (results :: [TMStoreFrame]) <-
+    (results :: [ExtractedDU TMFrame]) <-
         force
         .   map (fromJust . fromDB)
         <$> (find (select [] "tm_frames") >>= rest)
@@ -106,3 +115,24 @@ worker now n = do
     liftIO $ T.putStrLn $ "Count: " <> T.pack (show (length results))
 
     return ()
+
+
+-- getFrames :: Action IO () 
+-- getFrames = do 
+--     let start = nullTime 
+--     stop <- lift getCurrentTime 
+
+--     let stopVal = timeToMicro stop
+
+
+--     cursor <- find
+--         (select ["ert" =: ["$gte" =: Int64 0, "$lte" =: stopVal]]
+--                 "tm_frames"
+--             )
+--             -- { sort = ["ert" =: Int32 (-1)]
+--             -- }
+--     records <- rest cursor
+
+--     liftIO $ T.putStrLn $ "Records retrieved: " <> T.pack (show (length records))
+--     let recs :: [ExtractedDU TMFrame] = mapMaybe fromDB $ records 
+--     liftIO $ T.putStrLn $ "Records mapped: " <> T.pack (show (length recs))

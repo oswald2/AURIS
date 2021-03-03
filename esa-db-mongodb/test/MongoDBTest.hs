@@ -14,7 +14,8 @@ import           Data.Mongo.Conversion.Class
 import           Data.Mongo.Conversion.TMFrame  ( )
 
 
-import           Data.PUS.TMStoreFrame
+import           Data.PUS.TMFrame
+import           Data.PUS.ExtractedDU
 import           Data.PUS.TMFrame
 import           Data.PUS.PUSPacket
 import           Data.PUS.PUSDfh
@@ -30,7 +31,7 @@ import           Persistence.LogEvent
 import           Data.TM.Parameter
 import           Data.TM.Value
 import           Data.TM.Validity
-import           Data.TM.TMPacketDef         ( PIDEvent(..) )
+import           Data.TM.TMPacketDef            ( PIDEvent(..) )
 import           Protocol.ProtocolInterfaces
 
 import qualified Data.Time.Clock               as T
@@ -39,15 +40,21 @@ import           Data.Mongo.Conversion.LogEvent
 import           Data.Mongo.Conversion.TMFrame
 import           Data.Mongo.Conversion.PUSPacket
 import           Data.Mongo.Conversion.TMPacket
+import           Data.Mongo.Conversion.ExtractedDU
 
 import           Test.Hspec
 
 
-tmFrame :: SunTime -> TMStoreFrame
+tmFrame :: SunTime -> ExtractedDU TMFrame
 tmFrame now =
     let
-        storeFrame =
-            TMStoreFrame now frame (HexBytes (encodeFrame defaultTMFrameConfig frame))
+        storeFrame = ExtractedDU (toFlag Good True)
+                                 now
+                                 (Just (1, 2))
+                                 (IfNctrs 1)
+                                 (IsVCID 0)
+                                 frame
+            --(HexBytes (encodeFrame defaultTMFrameConfig frame))
         frame = TMFrame
             { _tmFrameHdr  = TMFrameHeader { _tmFrameVersion        = 0
                                            , _tmFrameScID           = SCID 533
@@ -226,21 +233,23 @@ main = hspec $ do
                                , _tmpSource    = IfNctrs 1
                                , _tmpParams    = params
                                }
-                params = V.fromList [ TMParameter
-                        { _pName  = "Param1"
-                        , _pTime  = now
-                        , _pValue = TMValue (TMValUInt 0xffffffffffffffff)
-                                            clearValidity
-                        , _pEngValue = Nothing 
+                params = V.fromList
+                    [ TMParameter
+                        { _pName     = "Param1"
+                        , _pTime     = now
+                        , _pValue    = TMValue (TMValUInt 0xffffffffffffffff)
+                                               clearValidity
+                        , _pEngValue = Nothing
                         }
                     , TMParameter
-                        { _pName  = "Param2"
-                        , _pTime  = now
+                        { _pName     = "Param2"
+                        , _pTime     = now
                         , _pValue = TMValue (TMValDouble 3.1415) clearValidity
-                        , _pEngValue = Just (TMValue (TMValOctet payl) clearValidity)
+                        , _pEngValue = Just
+                            (TMValue (TMValOctet payl) clearValidity)
                         }
                     ]
-                payl = B.pack [1..255]
+                payl = B.pack [1 .. 255]
 
             let doc  = val pkt
                 back = cast' doc

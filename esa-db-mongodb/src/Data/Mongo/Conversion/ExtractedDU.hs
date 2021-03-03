@@ -20,7 +20,7 @@ import           Data.Mongo.Conversion.ProtocolInterface
 
 
 instance MongoDbConversion (Maybe (Word32, Word32)) Document where
-    toDB Nothing = ["gap" =: String "Nothing"]
+    toDB Nothing = ["gap" =: Null]
     toDB (Just (low, high)) =
         [ "gap"
               =: [ "low" =: Int32 (fromIntegral low)
@@ -30,8 +30,8 @@ instance MongoDbConversion (Maybe (Word32, Word32)) Document where
     fromDB doc = do
         v <- lookup "gap" doc
         case v of
-            String "Nothing" -> Nothing
-            Doc    doc2      -> do
+            Null     -> Nothing
+            Doc doc2 -> do
                 low  <- lookup "low" doc2
                 high <- lookup "high" doc2
                 return (Just (low, high))

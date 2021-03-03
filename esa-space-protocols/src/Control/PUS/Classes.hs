@@ -42,7 +42,7 @@ import           Control.Lens.Getter
 import           Data.DataModel
 import           Data.PUS.Config
 import           Data.PUS.Events
-import           Data.PUS.TMStoreFrame
+import           Data.PUS.TMFrame               ( TMFrame )
 import           Data.PUS.GlobalState
 import           Data.PUS.MissionSpecific.Definitions
                                                 ( PUSMissionSpecific )
@@ -58,8 +58,9 @@ import           Verification.Commands
 import           Verification.Verification
 
 import           Persistence.DbBackend         as DB
+import           Persistence.DBQuery            ( DBQuery )
 
-import           GHC.Compact
+--import           GHC.Compact
 
 -- | This class specifies how to get a configuration
 class HasConfig env where
@@ -96,8 +97,7 @@ getDataModel :: (MonadIO m) => HasDataModel env => env -> m DataModel
 getDataModel env = do
     liftIO $ readTVarIO (env ^. getDataModelVar)
 
-setDataModel
-    :: (MonadIO m) => HasDataModel env => env -> DataModel -> m ()
+setDataModel :: (MonadIO m) => HasDataModel env => env -> DataModel -> m ()
 setDataModel env dm = do
     atomically $ writeTVar (env ^. getDataModelVar) dm
 
@@ -125,10 +125,12 @@ class HasVerif env where
 -- | This class specifies how to get database path
 class HasDatabase env where
     getDbBackend :: env -> Maybe DbBackend
-    storeTMFrame :: env -> TMStoreFrame -> IO ()
-    storeTMFrames :: env -> [TMStoreFrame] -> IO ()
+    storeTMFrame :: env -> ExtractedDU TMFrame -> IO ()
+    storeTMFrames :: env -> [ExtractedDU TMFrame] -> IO ()
     storePUSPacket :: env -> ExtractedDU PUSPacket -> IO ()
     storeTMPacket :: env -> TMPacket -> IO ()
+
+    queryDB :: env -> DBQuery -> IO ()
 
 -- | Class for accessing the global state
 class (HasConfig env,
@@ -215,7 +217,7 @@ instance HasDatabase GlobalState where
     storeTMPacket env pkt =
         maybe (return ()) (`DB.storeTMPacket` pkt) (getDbBackend env)
 
-
+    queryDB env query = atomically $ writeTBQueue (glsQueryQueue env) query
 
 instance HasGlobalState GlobalState
 

@@ -34,6 +34,7 @@ import           General.APID
 import           Data.PUS.EncTime
 import           Data.PUS.CLCW
 import           Data.PUS.CRC
+import           Data.PUS.Events
 --import           Data.PUS.TMFrameExtractor
 
 import           General.Types
@@ -75,7 +76,7 @@ makeStoreFrames
     -> [TMStoreFrame]
 makeStoreFrames cfg missionSpecific timestamp hdr pl =
     let frames      = makeTMFrames cfg missionSpecific hdr pl
-        bytes       = map (encodeFrame (cfgTMFrame cfg)) frames
+        bytes       = map (HexBytes . encodeFrame (cfgTMFrame cfg)) frames
         times       = iterate (<+> oneMicroSecond) timestamp
         storeFrames = zipWith3 TMStoreFrame times frames bytes
     in  storeFrames
@@ -83,20 +84,23 @@ makeStoreFrames cfg missionSpecific timestamp hdr pl =
 
 frameToStoreFrame :: Config -> SunTime -> TMFrame -> TMStoreFrame
 frameToStoreFrame cfg timestamp frame =
-    TMStoreFrame timestamp frame (encodeFrame (cfgTMFrame cfg) frame)
+    TMStoreFrame timestamp frame (HexBytes (encodeFrame (cfgTMFrame cfg) frame))
 
 
 runRIOTestAction :: RIO GlobalState b -> IO b
 runRIOTestAction action = do
     defLogOptions <- logOptionsHandle stdout True
     let logOptions = setLogMinLevel LevelError defLogOptions
+    queue <- newTBQueueIO 200
     withLogFunc logOptions $ \logFunc -> do
         state <- newGlobalState
             defaultConfig
             (defaultMissionSpecific defaultConfig)
             logFunc
             (\ev -> T.putStrLn ("Event: " <> T.pack (show ev)))
-            Nothing 
+            [EVFlagAll]
+            Nothing
+            queue
 
         runRIO state action
 
@@ -158,8 +162,9 @@ pusPacketExtraction cfg = do
 testFrameExtraction2 :: Config -> IO ()
 testFrameExtraction2 cfg = do
     now <- getCurrentTime
-    let storeFrame = TMStoreFrame now frame (encodeFrame (cfgTMFrame cfg) frame)
-        frame      = TMFrame
+    let storeFrame =
+            TMStoreFrame now frame (HexBytes (encodeFrame (cfgTMFrame cfg) frame))
+        frame = TMFrame
             { _tmFrameHdr  = TMFrameHeader { _tmFrameVersion        = 0
                                            , _tmFrameScID           = SCID 533
                                            , _tmFrameVcID           = VCID 0

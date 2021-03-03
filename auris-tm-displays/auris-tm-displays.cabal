@@ -60,6 +60,7 @@ library
     containers,
     esa-base,
     esa-space-protocols,
+    mcs-interface,
     gui-base,
     text-short,
     Chart,

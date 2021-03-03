@@ -6,6 +6,7 @@ module GUI.TMFrameTab
     , TMFrameTab(..)
     , createTMFTab
     , tmfTabAddRow
+    , tmfTabSetFrames
     , GUI.TMFrameTab.setupCallbacks
     ) where
 
@@ -16,7 +17,7 @@ import qualified Data.Text.IO                  as T
 import           GI.Gtk                        as Gtk
 
 import           GUI.TMFrameTable
---import           GUI.Colors
+
 import           GUI.Utils
 import           GUI.StatusEntry
 import           GUI.TextView
@@ -25,10 +26,15 @@ import           GUI.LiveControls
 import           Data.PUS.ExtractedDU
 import           Data.PUS.TMFrame
 import           Data.PUS.CLCW
+import           Data.PUS.LiveState
 
 import           General.Hexdump
 import           General.PUSTypes
+import           General.Time
 
+import           Interface.Interface
+
+import           Persistence.DBQuery
 
 
 data CLCWStatus = CLCWStatus
@@ -62,13 +68,25 @@ data TMFrameTab = TMFrameTab
     , _tmfDump          :: !TextView
     , _tmfLiveCtrlBox   :: !Box
     , _tmfLiveCtrl      :: !LiveControl
+    , _tmfLiveState     :: TVar LiveStateState
     }
 makeLenses ''TMFrameTab
 
 
 tmfTabAddRow :: TMFrameTab -> ExtractedDU TMFrame -> IO ()
 tmfTabAddRow tab frame = do
-    tmFrameTableAddRow (tab ^. tmfFrameTable) frame
+    st <- readTVarIO (tab ^. tmfLiveState)
+    case st of
+        Live    -> return ()
+        Stopped -> tmFrameTableAddRow (tab ^. tmfFrameTable) frame
+
+
+tmfTabSetFrames :: TMFrameTab -> [ExtractedDU TMFrame] -> IO ()
+tmfTabSetFrames tab frames = do
+    st <- readTVarIO (tab ^. tmfLiveState)
+    case st of
+        Live    -> return ()
+        Stopped -> tmFrameTableSetRows (tab ^. tmfFrameTable) frames
 
 txtNoBitlock :: Text
 txtNoBitlock = "NO BITLOCK"
@@ -162,6 +180,8 @@ createTMFTab builder = do
     lc       <- createLiveControl
     boxPackStart liveCtrl (liveControlGetWidget lc) False False 0
 
+    liveState <- newTVarIO Live
+
     let g = TMFrameTab { _tmfFrameTable    = frameTable
                        , _tmfOutputSCID    = scid
                        , _tmfOutputVCID    = vcid
@@ -180,6 +200,7 @@ createTMFTab builder = do
                        , _tmfDump          = content
                        , _tmfLiveCtrlBox   = liveCtrl
                        , _tmfLiveCtrl      = lc
+                       , _tmfLiveState     = liveState
                        }
     tmFrameTableSetCallback (g ^. tmfFrameTable) (tmfTabDetailsSetValues g)
     return g
@@ -261,29 +282,36 @@ setCLCWValues window clcw = do
         else statusEntrySetState (cl ^. clcwfRetransmit) ESGreen txtNoRetransmit
 
 
-setupCallbacks :: TMFrameTab -> IO ()
-setupCallbacks g = do
-    GUI.LiveControls.setupCallbacks (g ^. tmfLiveCtrl)
-                                    (PlayCB (tmfTabPlayCB g))
-                                    (StopCB (tmfTabStopCB g))
-                                    (RetrieveCB (tmfTabRetrieveCB g))
-                                    (RewindCB (tmfTabRewindCB g))
-                                    (ForwardCB (tmfTabForwardCB g))
+setupCallbacks :: TMFrameTab -> Interface -> IO ()
+setupCallbacks g interface = do
+    GUI.LiveControls.setupCallbacks
+        (g ^. tmfLiveCtrl)
+        (PlayCB (tmfTabPlayCB g))
+        (StopCB (tmfTabStopCB g))
+        (RetrieveCB (tmfTabRetrieveCB g interface))
+        (RewindCB (tmfTabRewindCB g))
+        (ForwardCB (tmfTabForwardCB g))
 
 
 tmfTabPlayCB :: TMFrameTab -> IO ()
-tmfTabPlayCB _g = do
+tmfTabPlayCB g = do
     T.putStrLn "PlayCB"
+    atomically $ writeTVar (g ^. tmfLiveState) Live 
     return ()
 
 tmfTabStopCB :: TMFrameTab -> IO ()
-tmfTabStopCB _g = do
+tmfTabStopCB g = do
     T.putStrLn "StopCB"
+    atomically $ writeTVar (g ^. tmfLiveState) Stopped 
     return ()
 
 
-tmfTabRetrieveCB :: TMFrameTab -> IO ()
-tmfTabRetrieveCB _g = return ()
+tmfTabRetrieveCB :: TMFrameTab -> Interface -> IO ()
+tmfTabRetrieveCB _g interface = do
+    now <- getCurrentTime
+    callInterface interface
+                  actionQueryDB
+                  (DbGetTMFrames (Just nullTime) (Just now))
 
 tmfTabRewindCB :: TMFrameTab -> IO ()
 tmfTabRewindCB _g = return ()

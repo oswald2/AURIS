@@ -36,21 +36,21 @@ import           Data.PUS.TCRequest
 import           Data.PUS.TCPacketEncoder
 import           Data.PUS.TCPacket
 import           Data.PUS.Parameter
-import           Data.PUS.Value
+--import           Data.PUS.Value
 import           Data.PUS.MissionSpecific.Default
-import           Data.PUS.Counter
+--import           Data.PUS.Counter
 import           Data.PUS.Events                ( EventFlag(..) )
 
-import           Protocol.NCTRSProcessor
-import           Protocol.ProtocolInterfaces
+--import           Protocol.NCTRSProcessor
+--import           Protocol.ProtocolInterfaces
 
 import           GHC.Conc.Sync
 
-import           Verification.Verification
+--import           Verification.Verification
 
-import           Refined
+--import           Refined
 
-import           Control.PUS.Classes
+--import           Control.PUS.Classes
 import           Data.Mongo.Processing
 import           Data.DbConfig.MongoDB
 
@@ -77,6 +77,7 @@ main = do
     withLogFunc logOptions $ \logFunc -> do
         dbState   <- newDbState logFunc
         dbBackend <- runRIO dbState $ startDbStoreThreads defaultMongoDBConfig
+        queryQueue <- newTBQueueIO 200
         state     <- newGlobalState
             defaultConfig
             (defaultMissionSpecific defaultConfig)
@@ -84,6 +85,7 @@ main = do
             (\ev -> T.putStrLn ("Event: " <> T.pack (show ev)))
             [EVFlagAll]
             (Just dbBackend)
+            queryQueue
 
         runRIO state $ do
             let resultFunc = \result -> liftIO $ T.putStrLn ("Result: " <> T.pack (show result))
@@ -91,7 +93,7 @@ main = do
 
             startDbQueryThreads defaultMongoDBConfig dbBackend resultFunc queue
 
-            env    <- ask
+            --env    <- ask
             frames <- allTMFrames defaultMongoDBConfig
             liftIO
                 $  T.putStrLn

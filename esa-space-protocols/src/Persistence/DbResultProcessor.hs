@@ -6,7 +6,7 @@ import           RIO
 
 import           Control.PUS.Classes
 
-import           Data.Mongo.DBQuery
+import           Persistence.DBQuery
 
 import           Data.PUS.Events
 
@@ -15,7 +15,8 @@ dbResultFunc
     :: (MonadIO m, MonadReader env m, HasLogFunc env, HasRaiseEvent env)
     => DBResult
     -> m ()
-dbResultFunc result = do
-    logDebug $ "Result: " <> displayShow result
+dbResultFunc (DBResultTMFrames frames)  = do
+    logDebug $ "Query Result: " <> display (length frames) <> " rows."
     env <- ask
-    liftIO $ raiseEvent env (EVDB (EVDBTMFrames []))
+    liftIO $ raiseEvent env (EVDB (EVDBTMFrames frames))
+dbResultFunc _ = return ()

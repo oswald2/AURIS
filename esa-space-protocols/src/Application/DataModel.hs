@@ -16,7 +16,7 @@ import           System.FilePath
 
 import           Text.Builder
 
-import           GHC.Compact
+--import           GHC.Compact
 
 -- | Specifies from where to load a 'DataModel'. 
 data LoadFrom =

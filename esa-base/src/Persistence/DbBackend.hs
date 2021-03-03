@@ -14,7 +14,7 @@ module Persistence.DbBackend
 
 import           RIO
 -- import qualified Data.Text.IO                  as T
-import           Data.PUS.TMStoreFrame
+import           Data.PUS.TMFrame
 import           Data.PUS.ExtractedDU
 import           Data.PUS.PUSPacket
 import           Data.PUS.TMPacket
@@ -28,12 +28,12 @@ type DbLogFunc = LogSource -> LogLevel -> Utf8Builder -> IO ()
 -- | This class is to be used for functions directly querying the DB and 
 -- returning a result. 
 class DbBackendClass a m where
-    allTMFrames :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env) => a -> m [TMStoreFrame]
+    allTMFrames :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env) => a -> m [(ExtractedDU TMFrame)]
     dropTMFramesTable :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env) => a -> m ()
 
 -- | This is the interface for asynchronous writes to the database (streaming)
 data DbBackend = DbBackend
-    { _dbbTMFrameQueue   :: TBQueue TMStoreFrame
+    { _dbbTMFrameQueue   :: TBQueue (ExtractedDU TMFrame)
     , _dbbEventQueue     :: TBQueue LogEvent
     , _dbbPUSPacketQueue :: TBQueue (ExtractedDU PUSPacket)
     , _dbbTMPacketQueue  :: TBQueue TMPacket
@@ -44,7 +44,7 @@ data DbBackend = DbBackend
 
 createDbBackend
     :: (MonadUnliftIO m)
-    => TBQueue TMStoreFrame
+    => TBQueue (ExtractedDU TMFrame)
     -> TBQueue LogEvent
     -> TBQueue (ExtractedDU PUSPacket)
     -> TBQueue TMPacket
@@ -69,11 +69,11 @@ storeLog :: (MonadIO m) => DbBackend -> LogEvent -> m ()
 storeLog backend le = do
     atomically $ writeTBQueue (_dbbEventQueue backend) le
 
-storeTMFrame :: (MonadIO m) => DbBackend -> TMStoreFrame -> m ()
+storeTMFrame :: (MonadIO m) => DbBackend -> (ExtractedDU TMFrame) -> m ()
 storeTMFrame backend frame = do
     atomically $ writeTBQueue (_dbbTMFrameQueue backend) frame
 
-storeTMFrames :: (MonadIO m) => DbBackend -> [TMStoreFrame] -> m ()
+storeTMFrames :: (MonadIO m) => DbBackend -> [(ExtractedDU TMFrame)] -> m ()
 storeTMFrames backend frames = do
     atomically $ do
         mapM_ (writeTBQueue (_dbbTMFrameQueue backend)) frames

@@ -112,7 +112,6 @@ runTMNctrsChain cfg pktQueue = do
     let chain =
             receiveTmNcduC
                 .| ncduToTMFrameC
-                .| storeTMFrameC
                 .| tmFrameSwitchVC vcMap
 
     runGeneralTCPReconnectClient

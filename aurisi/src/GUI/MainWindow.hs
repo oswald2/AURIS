@@ -11,6 +11,7 @@ module GUI.MainWindow
     , createMainWindow
     , mwAddTMPacket
     , mwAddTMFrame
+    , mwSetTMFrames
     , mwAddTMParameters
     , mwAddTMParameterDefinitions
     , mwAddVerifRqst
@@ -108,6 +109,9 @@ mwAddTMPacket window pkt = do
 
 mwAddTMFrame :: MainWindow -> ExtractedDU TMFrame -> IO ()
 mwAddTMFrame window = tmfTabAddRow (window ^. mwFrameTab)
+
+mwSetTMFrames :: MainWindow -> [ExtractedDU TMFrame] -> IO ()
+mwSetTMFrames window = tmfTabSetFrames (window ^. mwFrameTab)
 
 mwAddTMParameters :: MainWindow -> Vector TMParameter -> IO ()
 mwAddTMParameters window params = do
@@ -229,7 +233,7 @@ createMainWindow cfg = do
     -- schemeIds <- styleSchemeManagerGetSchemeIds styleViewMgr
     -- T.putStrLn $ "Schemes: " <> T.pack (show schemeIds)
 
-    scheme           <- styleSchemeManagerGetScheme styleViewMgr "classic"
+    scheme           <- styleSchemeManagerGetScheme styleViewMgr "kate"
     configTextBuffer <- BUF.bufferNew (Nothing :: Maybe TextTagTable)
     bufferSetStyleScheme configTextBuffer (Just scheme)
 
