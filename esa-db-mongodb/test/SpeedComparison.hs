@@ -28,6 +28,7 @@ import           General.Types
 
 import           System.Environment
 import           Protocol.ProtocolInterfaces
+import           Text.Show.Pretty               ( ppShow )
 
 
 
@@ -82,12 +83,13 @@ main = do
 
     pipe <- connect (host "127.0.0.1")
     now  <- getCurrentTime
-    e    <- access pipe master "active_session" (worker now (read n))
+    --e    <- access pipe master "active_session" (worker now (read n))
 
-    -- e2   <- access pipe master "active_session" getFrames
+    e2   <- access pipe master "active_session" getFrames
 
     close pipe
-    T.putStrLn (T.pack (show e))
+
+
 
 worker :: SunTime -> Int -> Action IO ()
 worker now n = do
@@ -117,22 +119,23 @@ worker now n = do
     return ()
 
 
--- getFrames :: Action IO () 
--- getFrames = do 
---     let start = nullTime 
---     stop <- lift getCurrentTime 
+getFrames :: Action IO () 
+getFrames = do 
+    let start = nullTime 
+    stop <- lift getCurrentTime 
 
---     let stopVal = timeToMicro stop
+    let stopVal = timeToMicro stop
 
 
---     cursor <- find
---         (select ["ert" =: ["$gte" =: Int64 0, "$lte" =: stopVal]]
---                 "tm_frames"
---             )
---             -- { sort = ["ert" =: Int32 (-1)]
---             -- }
---     records <- rest cursor
+    cursor <- find
+        (select ["ert" =: ["$gte" =: Int64 0, "$lte" =: stopVal]]
+                "tm_frames"
+            )
+            -- { sort = ["ert" =: Int32 (-1)]
+            -- }
+    records <- rest cursor
 
---     liftIO $ T.putStrLn $ "Records retrieved: " <> T.pack (show (length records))
---     let recs :: [ExtractedDU TMFrame] = mapMaybe fromDB $ records 
---     liftIO $ T.putStrLn $ "Records mapped: " <> T.pack (show (length recs))
+    liftIO $ T.putStrLn $ "Records retrieved: " <> T.pack (show (length records))
+    liftIO $ T.putStrLn $ "Records:\n" <> T.pack (ppShow records)
+    let recs :: [ExtractedDU TMFrame] = mapMaybe fromDB $ records 
+    liftIO $ T.putStrLn $ "Records mapped: " <> T.pack (show (length recs))

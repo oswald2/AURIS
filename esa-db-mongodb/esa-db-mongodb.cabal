@@ -229,6 +229,7 @@ executable mongodb-speed-test
     , bson
     , esa-db-mongodb
     , text-short
+    , pretty-show
 
 
 
