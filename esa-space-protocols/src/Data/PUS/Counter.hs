@@ -40,7 +40,7 @@ getNextSSC hm apid = do
   case HM.lookup apid hm of 
     Nothing -> do
       let ssc = mkSSC 0 
-      v <- newTVarIO ssc 
+      v <- newTVarIO (nextSSC ssc)
       let !newHM = HM.insert apid v hm 
       return (newHM, ssc)
     Just ctr -> do 

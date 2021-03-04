@@ -110,6 +110,7 @@ rqst n = TCRequest
         0
         BD
         (DestNctrs (IfNctrs 1))
+        (mkSSC 0)
         (TCPacket (APID 256)
                   (mkPUSType 2)
                   (mkPUSSubType 10)

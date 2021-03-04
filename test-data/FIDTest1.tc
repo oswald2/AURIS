@@ -26,6 +26,7 @@
                 { _tcReqMAPID = MAPID 0
                 , _tcReqTransMode = BD
                 , _tcDestination = DestCnc (IfCnc 1)
+                , _tcSSC = SSC 0
                 , _tcReqPacket =
                     TCPacket
                       { _tcpAPID = APID 1696

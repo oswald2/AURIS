@@ -17,7 +17,7 @@
 #
 # resolver: ./custom-snapshot.yaml
 # resolver: https://example.com/snapshots/2018-01-01.yaml
-resolver: lts-17.3
+resolver: lts-17.4
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -34,7 +34,8 @@ packages:
 - esa-base
 - esa-mib
 - esa-space-protocols
-- esa-db
+#- esa-db
+- esa-db-mongodb
 - esa-tm-model
 - mcs-interface
 - gui-base
@@ -63,19 +64,13 @@ extra-deps:
 - hw-prim-bits-0.1.0.4
 - timers-updatable-0.2.0.2
 - Chart-cairo-1.9.3@sha256:f484a7194ca08ed67f02aa626e2f8f4d1a9b50624e0d50e3ced62958f7481cca,925
-- haskell-gi-base-0.24.4
-- haskell-gi-0.24.5
-- gi-glib-2.0.24
-- gi-pango-1.0.23
-- gi-harfbuzz-0.0.3
-- gi-gtk-3.0.36
-- gi-gtk-hs-0.3.9
-- gi-atk-2.0.21
-- gi-cairo-render-0.1.0
-- gi-cairo-connector-0.1.0
-- gi-gobject-2.0.24
 - refined-0.6.1@sha256:d5d713f0a2ad79d1c049d2d132fd8c2078b883b5ea3db876087eaec102843e57,2748
 - these-skinny-0.7.4@sha256:e29336a1a70a497e09d8266f8438efb30a807bafaa6b00f5a136f7493efb3160,1239
+- gi-gtksource-3.0.23@sha256:f3676124cf9dc64bfff11576fb99462abdbb2eed3cc80d606acf4db15020079b,7765
+- keera-callbacks-0.1@sha256:8c0da05cfcbb056bd4ea4187f2a7e644fd92965e92952b7bae9c7ef4f041b992,1899
+- keera-hails-reactivevalues-0.7.0@sha256:dc04bc8823f4626a25f6a06b796694dd812c6c0b9e8d2231a991e4e20393e86c,3601
+
+
 ghc-options: 
   "$targets": -freverse-errors 
 
@@ -86,7 +81,7 @@ flags:
     optimize: true
   esa-mib:
     optimize: true
-  esa-db:
+  esa-db-mongodb:
     optimize: true
   esa-space-protocols:
     optimize: true

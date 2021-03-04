@@ -35,6 +35,7 @@ module Data.PUS.TCRequest
     , tcReqCommand
     , tcReqReleaseTime
     , tcReqMapID
+    , tcReqSetSSC
     , _TCCommand
     , _TCDir
     ) where
@@ -85,10 +86,10 @@ instance FromJSON ProtocolLevel
 instance ToJSON ProtocolLevel where
     toEncoding = genericToEncoding defaultOptions
 
-instance Display ProtocolLevel where 
+instance Display ProtocolLevel where
     display ProtLevelPacket = "PACKET"
-    display ProtLevelFrame = "FRAME"
-    display ProtLevelCltu = "CLTU"
+    display ProtLevelFrame  = "FRAME"
+    display ProtLevelCltu   = "CLTU"
 
 
 data DirectiveProtocolLevel =
@@ -102,9 +103,9 @@ instance FromJSON DirectiveProtocolLevel
 instance ToJSON DirectiveProtocolLevel where
     toEncoding = genericToEncoding defaultOptions
 
-instance Display DirectiveProtocolLevel where 
+instance Display DirectiveProtocolLevel where
     display DirProtLevelFrame = "FRAME"
-    display DirProtLevelCltu = "CLTU"
+    display DirProtLevelCltu  = "CLTU"
 
 
 
@@ -124,9 +125,9 @@ instance FromJSON CommandType
 instance ToJSON CommandType where
     toEncoding = genericToEncoding defaultOptions
 
-instance Display CommandType where 
+instance Display CommandType where
     display (Space level) = "SPACE (" <> display level <> ")"
-    display SCOE = "SCOE"
+    display SCOE          = "SCOE"
 
 
 -- | Specifies the destination, where the command should be sent to. This can be 
@@ -145,9 +146,9 @@ instance FromJSON Destination
 instance ToJSON Destination where
     toEncoding = genericToEncoding defaultOptions
 
-instance Display Destination where 
-    display (DestNctrs i) = display i 
-    display (DestCnc i) = display i 
+instance Display Destination where
+    display (DestNctrs i ) = display i
+    display (DestCnc   i ) = display i
     display (DestEden i t) = display i <> " (" <> display t <> ")"
 
 
@@ -165,8 +166,8 @@ instance FromJSON DirectiveDestination
 instance ToJSON DirectiveDestination where
     toEncoding = genericToEncoding defaultOptions
 
-instance Display DirectiveDestination where 
-    display (DirDestNctrs i) = display i
+instance Display DirectiveDestination where
+    display (DirDestNctrs i ) = display i
     display (DirDestEden i l) = display i <> " (" <> display l <> ")"
 
 
@@ -185,8 +186,8 @@ instance FromJSON ScoeDestination
 instance ToJSON ScoeDestination where
     toEncoding = genericToEncoding defaultOptions
 
-instance Display ScoeDestination where 
-    display (ScoeDestCnc i) = display i 
+instance Display ScoeDestination where
+    display (ScoeDestCnc  i) = display i
     display (ScoeDestEden i) = display i
 
 
@@ -198,10 +199,12 @@ data TCRequestBody =
         _tcReqMAPID :: !MAPID
         , _tcReqTransMode :: !TransmissionMode
         , _tcDestination :: !Destination
+        , _tcSSC :: !SSC
         , _tcReqPacket :: !TCPacket
         }
     | TCScoeCommand {
       _tcReqDestination :: !ScoeDestination
+      , _tcSSC :: !SSC
       , _tcReqCommand :: !TCScoe
     }
     | TCDir {
@@ -253,6 +256,13 @@ tcReqMapID rqst = rqst ^. tcReqPayload ^? tcReqMAPID
 tcReqTransmissionMode :: Getting r TCRequest TransmissionMode
 tcReqTransmissionMode = to tcReqGetTransmissionMode
 
+tcReqSetSSC :: TCRequest -> SSC -> TCRequest
+tcReqSetSSC rqst ssc = case _tcReqPayload rqst of
+    TCCommand{}     -> rqst & tcReqPayload . tcSSC .~ ssc
+    TCDir{}         -> rqst
+    TCScoeCommand{} -> rqst & tcReqPayload . tcSSC .~ ssc
+
+
 -- | Check, if this request should go to a spacecraft
 isSpaceTCRequest :: TCRequest -> Bool
 isSpaceTCRequest TCRequest { _tcReqPayload = TCCommand { _tcDestination = DestNctrs _ } }
@@ -295,16 +305,24 @@ instance ToJSON TCRequest where
 
 
 
-instance Display TCRequestBody where 
-    display TCCommand {..} = 
-        "Destination: " <> display _tcDestination
-            <> "  MAPID: " <> display _tcReqMAPID
-            <> "  Transmission Mode: " <> display _tcReqTransMode
-            <> "\n\n" <> display _tcReqPacket
+instance Display TCRequestBody where
+    display TCCommand {..} =
+        "Destination: "
+            <> display _tcDestination
+            <> "  MAPID: "
+            <> display _tcReqMAPID
+            <> "  Transmission Mode: "
+            <> display _tcReqTransMode
+            <> "\n\n"
+            <> display _tcReqPacket
 
-    display TCScoeCommand {..} = 
-        "Destination: " <> display _tcReqDestination  
-            <> "\n\n" <> display _tcReqCommand 
-    display TCDir {..} = 
-        "Destination: " <> display _tcDirDestination 
-            <> "  Directive: " <> display _tcDirDirective
+    display TCScoeCommand {..} =
+        "Destination: "
+            <> display _tcReqDestination
+            <> "\n\n"
+            <> display _tcReqCommand
+    display TCDir {..} =
+        "Destination: "
+            <> display _tcDirDestination
+            <> "  Directive: "
+            <> display _tcDirDirective

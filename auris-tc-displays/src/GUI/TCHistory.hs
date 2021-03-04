@@ -118,6 +118,7 @@ createTCHistory window builder = do
           , \row -> [#text := textDisplay (row ^. rowRqst . tcReqSource)]
           )
         , ("APID", 50              , Nothing, displayAPID)
+        , ("SSC", 50              , Nothing, displaySSC)
         , ("T"   , 30              , Nothing, displayType)
         , ("ST"  , 30              , Nothing, displaySubType)
         , ("R"   , verifColumnWidth, Nothing, displayRelease)
@@ -220,6 +221,14 @@ displayAPID row = case row ^. rowRqst . tcReqPayload of
     TCCommand {..}     -> [#text := textDisplay (_tcpAPID _tcReqPacket)]
     TCScoeCommand {..} -> [#text := textDisplay (_tccAPID _tcReqCommand)]
     _                  -> [#text := ""]
+
+displaySSC :: Row -> [AttrOp CellRendererText 'AttrSet]
+displaySSC row = case row ^. rowRqst . tcReqPayload of 
+    TCCommand {..}     -> [#text := textDisplay _tcSSC]
+    TCScoeCommand {..} -> [#text := textDisplay _tcSSC]
+    _                  -> [#text := "-"]
+
+
 
 displayType :: Row -> [AttrOp CellRendererText 'AttrSet]
 displayType row = case row ^. rowRqst . tcReqPayload of

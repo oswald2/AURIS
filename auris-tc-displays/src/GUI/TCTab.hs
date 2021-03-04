@@ -16,7 +16,7 @@ import           RIO
 import           RIO.Partial                    ( toEnum )
 import qualified RIO.Text                      as T
 
-import qualified Data.Text.IO                  as T
+--import qualified Data.Text.IO                  as T
 
 
 import           GI.Gtk                        as Gtk
@@ -54,6 +54,7 @@ import           General.PUSTypes               ( mkPUSSubType
                                                 , mkSCID
                                                 , mkSourceID
                                                 , mkVCID
+                                                , mkSSC
                                                 , TransmissionMode(BD)
                                                 )
 import           General.APID                   ( APID(APID) )
@@ -149,6 +150,7 @@ createTCTab window builder = do
                                 0
                                 BD
                                 (DestEden (IfEden 1) SCOE)
+                                (mkSSC 0)
                                 (TCPacket (APID 1540)
                                           (mkPUSType 2)
                                           (mkPUSSubType 10)
@@ -180,6 +182,7 @@ createTCTab window builder = do
                                 0
                                 BD
                                 (DestCnc (IfCnc 1))
+                                (mkSSC 0)
                                 (TCPacket (APID 1540)
                                           (mkPUSType 2)
                                           (mkPUSSubType 10)
@@ -209,6 +212,7 @@ createTCTab window builder = do
                             (mkVCID 1)
                             (TCScoeCommand
                                 (ScoeDestCnc (IfCnc 1))
+                                (mkSSC 0)
                                 (TCScoe (APID 1540) "TRANSFER LOCAL")
                             )
                       ]

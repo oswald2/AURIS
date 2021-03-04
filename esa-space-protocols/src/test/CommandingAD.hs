@@ -68,6 +68,7 @@ rqst1 = TCRequest
         0
         BD
         (DestNctrs (IfNctrs 1))
+        (mkSSC 0)
         (TCPacket (APID 1024) (PUSType 128) (PUSSubType 1) (SourceID 0) Empty)
     )
 
