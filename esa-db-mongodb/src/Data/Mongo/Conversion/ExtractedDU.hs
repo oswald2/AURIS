@@ -30,7 +30,7 @@ instance MongoDbConversion (Maybe (Word32, Word32)) Document where
     fromDB doc = do
         v <- lookup "gap" doc
         case v of
-            Null     -> Nothing
+            Null     -> return Nothing
             Doc doc2 -> do
                 low  <- lookup "low" doc2
                 high <- lookup "high" doc2

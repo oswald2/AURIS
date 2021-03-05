@@ -51,6 +51,7 @@ tmFrame now =
         storeFrame = ExtractedDU (toFlag Good True)
                                  now
                                  (Just (1, 2))
+                                 --Nothing
                                  (IfNctrs 1)
                                  (IsVCID 0)
                                  frame

@@ -37,7 +37,8 @@ tmFrame now =
     let
         storeFrame = ExtractedDU (toFlag Good True)
                                  now
-                                 (Just (1, 2))
+                                 --(Just (1, 2))
+                                 Nothing
                                  (IfNctrs 1)
                                  (IsVCID 0)
                                  frame
@@ -83,7 +84,7 @@ main = do
 
     pipe <- connect (host "127.0.0.1")
     now  <- getCurrentTime
-    --e    <- access pipe master "active_session" (worker now (read n))
+    e    <- access pipe master "active_session" (worker now (read n))
 
     e2   <- access pipe master "active_session" getFrames
 
