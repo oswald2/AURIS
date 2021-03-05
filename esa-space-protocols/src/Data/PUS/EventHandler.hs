@@ -5,10 +5,10 @@ module Data.PUS.EventHandler
     , EventConfig
     , defaultEventCfg
     , createEventConfig
-    , cfgEvCommanding 
-    , cfgEvTelemetry  
-    , cfgEvAlarm      
-    , cfgEvCOP1       
+    , cfgEvCommanding
+    , cfgEvTelemetry
+    , cfgEvAlarm
+    , cfgEvCOP1
     , cfgEvAll
     ) where
 
@@ -24,6 +24,7 @@ data EventConfig = EventConfig
     , _cfgEvTelemetry  :: !Bool
     , _cfgEvAlarm      :: !Bool
     , _cfgEvCOP1       :: !Bool
+    , _cfgEvDB         :: !Bool
     , _cfgEvAll        :: !Bool
     }
 makeLenses ''EventConfig
@@ -33,6 +34,7 @@ defaultEventCfg = EventConfig { _cfgEvCommanding = True
                               , _cfgEvTelemetry  = True
                               , _cfgEvAlarm      = True
                               , _cfgEvCOP1       = True
+                              , _cfgEvDB         = True
                               , _cfgEvAll        = True
                               }
 
@@ -42,8 +44,9 @@ createEventConfig = foldl' setFlag defaultEventCfg
   where
     setFlag cfg EVFlagCommanding = cfg & cfgEvCommanding .~ True
     setFlag cfg EVFlagTelemetry  = cfg & cfgEvTelemetry .~ True
-    setFlag cfg EVFlagAlarm      = cfg & cfgEvTelemetry .~ True
-    setFlag cfg EVFlagCOP1       = cfg & cfgEvTelemetry .~ True
+    setFlag cfg EVFlagAlarm      = cfg & cfgEvAlarm .~ True
+    setFlag cfg EVFlagCOP1       = cfg & cfgEvCOP1 .~ True
+    setFlag cfg EVFlagDB         = cfg & cfgEvDB .~ True
     setFlag cfg EVFlagAll =
         cfg
             &  cfgEvCommanding
@@ -67,3 +70,5 @@ filteredRaiseEvent cfg action e@EVAlarms{} = do
     when (_cfgEvAll cfg || _cfgEvAlarm cfg) $ action e
 filteredRaiseEvent cfg action e@EVCOP1{} = do
     when (_cfgEvAll cfg || _cfgEvCOP1 cfg) $ action e
+filteredRaiseEvent cfg action e@EVDB{} = do
+    when (_cfgEvAll cfg || _cfgEvDB cfg) $ action e
