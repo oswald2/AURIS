@@ -6,12 +6,14 @@ module GUI.TMFrameTable
     , createTMFrameTable
     , tmFrameTableAddRow
     , tmFrameTableSetRows
+    , tmFrameTableClearRows
     , tmFrameTableSetValues
     , tmFrameTableSetCallback
+    , tmFrameTableGetLatestERT
     ) where
 
 import           RIO
-import qualified RIO.Text                      as T
+--import qualified RIO.Text                      as T
 
 import           GI.Gtk                        as Gtk
 import           Data.GI.Gtk.ModelView.SeqStore
@@ -24,6 +26,7 @@ import           GUI.Utils
 import           GUI.Colors
 import           GUI.ScrollingTable
 
+import           General.Time
 
 
 data TMFrameTable = TMFrameTable
@@ -40,8 +43,11 @@ data TMFrameTable = TMFrameTable
 tmFrameTableAddRow :: TMFrameTable -> ExtractedDU TMFrame -> IO ()
 tmFrameTableAddRow g = addRowScrollingTable (_tmfrTable g) (_tmfrModel g)
 
-tmFrameTableSetRows :: TMFrameTable -> [ExtractedDU TMFrame] -> IO () 
+tmFrameTableSetRows :: TMFrameTable -> [ExtractedDU TMFrame] -> IO ()
 tmFrameTableSetRows g = setRowsSeqStore (_tmfrModel g)
+
+tmFrameTableClearRows :: TMFrameTable -> IO ()
+tmFrameTableClearRows g = seqStoreClear (_tmfrModel g)
 
 
 -- | Set the internal model to the list of given 'TMFrame' values. In contrast
@@ -57,6 +63,16 @@ tmFrameTableSetCallback
     :: TMFrameTable -> (ExtractedDU TMFrame -> IO ()) -> IO ()
 tmFrameTableSetCallback g = setTreeViewCallback g _tmfrTable _tmfrModel
 
+
+tmFrameTableGetLatestERT :: TMFrameTable -> IO SunTime
+tmFrameTableGetLatestERT g = do
+    now <- getCurrentTime
+    lst <- seqStoreToList (_tmfrModel g)
+    let !res = foldr minERT now lst
+    return res
+  where
+    minERT :: ExtractedDU TMFrame -> SunTime -> SunTime
+    minERT du t = let t1 = (du ^. epERT) in min t1 t
 
 
 -- | Create a 'TMFrameTable' from a 'Gtk.Builder'.
@@ -143,3 +159,5 @@ compareVCFC f1 f2 = compare (f1 ^. epDU . tmFrameHdr . tmFrameVCFC)
 compareMCFC :: ExtractedDU TMFrame -> ExtractedDU TMFrame -> Ordering
 compareMCFC f1 f2 = compare (f1 ^. epDU . tmFrameHdr . tmFrameMCFC)
                             (f2 ^. epDU . tmFrameHdr . tmFrameMCFC)
+
+

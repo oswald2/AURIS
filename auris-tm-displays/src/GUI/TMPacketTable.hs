@@ -8,7 +8,7 @@ module GUI.TMPacketTable
 
 import           RIO
 import qualified Data.Text.Short               as ST
-import qualified Data.Text.IO                  as T
+--import qualified Data.Text.IO                  as T
 
 import           GI.Gtk                        as Gtk
 import           Data.GI.Gtk.ModelView.SeqStore

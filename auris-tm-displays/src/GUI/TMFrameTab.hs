@@ -13,7 +13,7 @@ module GUI.TMFrameTab
 import           RIO
 import qualified RIO.Text                      as T
 import           Control.Lens                   ( makeLenses )
-import qualified Data.Text.IO                  as T
+--import qualified Data.Text.IO                  as T
 import           GI.Gtk                        as Gtk
 
 import           GUI.TMFrameTable
@@ -22,6 +22,8 @@ import           GUI.Utils
 import           GUI.StatusEntry
 import           GUI.TextView
 import           GUI.LiveControls
+import           GUI.Definitions
+import           GUI.FrameRetrieveDialog
 
 import           Data.PUS.ExtractedDU
 import           Data.PUS.TMFrame
@@ -69,6 +71,9 @@ data TMFrameTab = TMFrameTab
     , _tmfLiveCtrlBox   :: !Box
     , _tmfLiveCtrl      :: !LiveControl
     , _tmfLiveState     :: TVar LiveStateState
+    , _tmfPageNum       :: IOURef Word32
+    , _tmfLastERT       :: IORef SunTime
+    , _tmfRetrieveDiag  :: FrameRetrieveDialog
     }
 makeLenses ''TMFrameTab
 
@@ -79,7 +84,7 @@ tmfTabAddRow tab frame = do
     st <- readTVarIO (tab ^. tmfLiveState)
     case st of
         Live    -> tmFrameTableAddRow (tab ^. tmfFrameTable) frame
-        Stopped -> return () 
+        Stopped -> return ()
 
 
 tmfTabSetFrames :: TMFrameTab -> [ExtractedDU TMFrame] -> IO ()
@@ -153,8 +158,8 @@ initCLCW builder = do
     return g
 
 
-createTMFTab :: Gtk.Builder -> IO TMFrameTab
-createTMFTab builder = do
+createTMFTab :: ApplicationWindow -> Gtk.Builder -> IO TMFrameTab
+createTMFTab window builder = do
     clcwDisp   <- initCLCW builder
     frameTable <- createTMFrameTable builder
 
@@ -182,7 +187,12 @@ createTMFTab builder = do
     lc       <- createLiveControl
     boxPackStart liveCtrl (liveControlGetWidget lc) False False 0
 
-    liveState <- newTVarIO Live
+    retrieveDiag <- newFrameRetrieveDialog window builder
+
+    liveState    <- newTVarIO Live
+    pageNum      <- newURef 0
+    now          <- getCurrentTime
+    lastERT      <- newIORef now
 
     let g = TMFrameTab { _tmfFrameTable    = frameTable
                        , _tmfOutputSCID    = scid
@@ -203,6 +213,9 @@ createTMFTab builder = do
                        , _tmfLiveCtrlBox   = liveCtrl
                        , _tmfLiveCtrl      = lc
                        , _tmfLiveState     = liveState
+                       , _tmfPageNum       = pageNum
+                       , _tmfLastERT       = lastERT
+                       , _tmfRetrieveDiag  = retrieveDiag
                        }
     tmFrameTableSetCallback (g ^. tmfFrameTable) (tmfTabDetailsSetValues g)
     return g
@@ -291,32 +304,84 @@ setupCallbacks g interface = do
         (PlayCB (tmfTabPlayCB g))
         (StopCB (tmfTabStopCB g))
         (RetrieveCB (tmfTabRetrieveCB g interface))
-        (RewindCB (tmfTabRewindCB g))
-        (ForwardCB (tmfTabForwardCB g))
+        (RewindCB (tmfTabRewindCB g interface))
+        (ForwardCB (tmfTabForwardCB g interface))
 
 
 tmfTabPlayCB :: TMFrameTab -> IO ()
 tmfTabPlayCB g = do
-    T.putStrLn "PlayCB"
-    atomically $ writeTVar (g ^. tmfLiveState) Live 
+    tmFrameTableClearRows (g ^. tmfFrameTable)
+    atomically $ writeTVar (g ^. tmfLiveState) Live
     return ()
 
 tmfTabStopCB :: TMFrameTab -> IO ()
 tmfTabStopCB g = do
-    T.putStrLn "StopCB"
-    atomically $ writeTVar (g ^. tmfLiveState) Stopped 
+    atomically $ writeTVar (g ^. tmfLiveState) Stopped
+    lastERT <- getLatestFrameERT g
+    writeIORef (g ^. tmfLastERT) lastERT
     return ()
 
 
 tmfTabRetrieveCB :: TMFrameTab -> Interface -> IO ()
-tmfTabRetrieveCB _g interface = do
-    now <- getCurrentTime
-    callInterface interface
-                  actionQueryDB
-                  (DbGetTMFrames (Just nullTime) (Just now))
+tmfTabRetrieveCB g interface = do
+    res <- dialogRun (g ^. tmfRetrieveDiag . frameRetrieveDiag)
+    widgetHide (g ^. tmfRetrieveDiag . frameRetrieveDiag)
+    if res == fromIntegral (fromEnum ResponseTypeOk) 
+        then return () 
+        else return () 
 
-tmfTabRewindCB :: TMFrameTab -> IO ()
-tmfTabRewindCB _g = return ()
+    -- now <- getCurrentTime
+    -- callInterface interface
+    --               actionQueryDB
+    --               (FrRange (DbGetFrameRange (Just nullTime) (Just now)))
 
-tmfTabForwardCB :: TMFrameTab -> IO ()
-tmfTabForwardCB _g = return ()
+
+tmfTabRewindCB :: TMFrameTab -> Interface -> IO ()
+tmfTabRewindCB g interface = do
+    lastTime <- readIORef (g ^. tmfLastERT)
+    pageNum  <- getPageNumInc g
+    callInterface
+        interface
+        actionQueryDB
+        (FrLast (DbGetLastNFrames lastTime pageNum (fromIntegral defMaxRowTM)))
+
+
+tmfTabForwardCB :: TMFrameTab -> Interface -> IO ()
+tmfTabForwardCB g interface = do
+    pageNum <- getPageNumDec g
+    case pageNum of
+        Nothing -> do -- switch to live mode 
+            tmfTabPlayCB g
+        Just pn -> do
+            lastTime <- readIORef (g ^. tmfLastERT)
+            callInterface
+                interface
+                actionQueryDB
+                (FrLast
+                    (DbGetLastNFrames lastTime pn (fromIntegral defMaxRowTM))
+                )
+
+
+
+
+getLatestFrameERT :: TMFrameTab -> IO SunTime
+getLatestFrameERT g = tmFrameTableGetLatestERT (g ^. tmfFrameTable)
+
+
+getPageNumInc :: TMFrameTab -> IO Word32
+getPageNumInc g = do
+    val <- readURef (g ^. tmfPageNum)
+    let !newVal = val + 1
+    writeURef (g ^. tmfPageNum) newVal
+    return newVal
+
+
+getPageNumDec :: TMFrameTab -> IO (Maybe Word32)
+getPageNumDec g = do
+    val <- readURef (g ^. tmfPageNum)
+    if val == 0
+        then return Nothing
+        else do
+            let !newVal = val - 1
+            writeURef (g ^. tmfPageNum) newVal
+            return (Just newVal)

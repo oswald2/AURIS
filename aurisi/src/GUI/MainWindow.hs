@@ -186,7 +186,7 @@ createMainWindow cfg = do
     msgDisp           <- createMessageDisplay msgDetails builder
 
     -- create the tabs in the notebook
-    tmfTab            <- createTMFTab builder
+    tmfTab            <- createTMFTab window builder
     tmpTab            <- createTMPTab window builder
     paramTab          <- createTMParamTab builder
     connTab           <- createConnectionTab (aurisPusConfig cfg) builder

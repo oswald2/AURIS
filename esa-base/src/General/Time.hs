@@ -28,76 +28,78 @@ The time handling is based on 3 layers:
     , NoImplicitPrelude
 #-}
 module General.Time
-  ( TimeRepConversion(..)
-  , timeToWord64'
-  , word64ToTime'
-  , timeToMicro'
-  , microToTime'
-  , SunTime
-  , makeTime
-  , fromMilli
-  , tdsSecs
-  , tdsMicro
-  , nullTime
-  , nullRelTime
-  , oneMicroSecond
-  , oneSecond
-  , tdsNull
-  , secsInDay
-  , secsInYear
-  , milliSecsInDay
-  , microSecsInDay
-  , microSecInt
-  , microSecond
-  , displayRaw
-  , displayISO
-  , displayDouble
-  , General.Time.getCurrentTime
-  , fromDouble
-  , DeltaTime(..)
-  , edenTime
-  , edenTimeParser
-  , fromText
-  , sunTimeParser
-  , (<+>)
-  , (<->)
-  , addTimes
-  , subTimes
-  , addSpan
-  , subSpan
-  , negTime
-  , LeapSeconds(..)
-  , CorrelationCoefficients
-  , createCoeffs
-  , defaultCoeffs
-  , mcsTimeToOBT
-  , obtToMcsTim
-  , uttObtLeap
-  , obtUttLeap
-  , makeEpoch
-  , getEpoch
-  , nullEpochTime
-  , nullGPSTime
-  , nullTAITime
-  , nullEpochTimeRel
-  , nullGPSTimeRel
-  , nullTAITimeRel
-  , oneMicroSecondEpoch
-  , oneMicroSecondGPS
-  , defaultEpoch
-  , epoch1958
-  , epochGPS
-  , epochUnix
-  , epoch2000
-  , epochTimeToSunTime
-  , sunTimeToEpochTime
-  , Epoch
-  , EpochType(..)
-  , EpochTime(..)
-  , displayTimeMilli
-  , toUTCTime
-  )
-where
+    ( TimeRepConversion(..)
+    , timeToWord64'
+    , word64ToTime'
+    , timeToMicro'
+    , microToTime'
+    , SunTime
+    , makeTime
+    , fromMilli
+    , tdsSecs
+    , tdsMicro
+    , nullTime
+    , nullRelTime
+    , oneMicroSecond
+    , oneSecond
+    , oneHour
+    , tdsNull
+    , secsInDay
+    , secsInYear
+    , milliSecsInDay
+    , microSecsInDay
+    , microSecInt
+    , microSecond
+    , displayRaw
+    , displayISO
+    , displayDouble
+    , timeToComponents
+    , timeFromComponents
+    , General.Time.getCurrentTime
+    , fromDouble
+    , DeltaTime(..)
+    , edenTime
+    , edenTimeParser
+    , fromText
+    , sunTimeParser
+    , (<+>)
+    , (<->)
+    , addTimes
+    , subTimes
+    , addSpan
+    , subSpan
+    , negTime
+    , LeapSeconds(..)
+    , CorrelationCoefficients
+    , createCoeffs
+    , defaultCoeffs
+    , mcsTimeToOBT
+    , obtToMcsTim
+    , uttObtLeap
+    , obtUttLeap
+    , makeEpoch
+    , getEpoch
+    , nullEpochTime
+    , nullGPSTime
+    , nullTAITime
+    , nullEpochTimeRel
+    , nullGPSTimeRel
+    , nullTAITimeRel
+    , oneMicroSecondEpoch
+    , oneMicroSecondGPS
+    , defaultEpoch
+    , epoch1958
+    , epochGPS
+    , epochUnix
+    , epoch2000
+    , epochTimeToSunTime
+    , sunTimeToEpochTime
+    , Epoch
+    , EpochType(..)
+    , EpochTime(..)
+    , displayTimeMilli
+    , toUTCTime
+    ) where
 
 import           RIO
 import           RIO.Partial                    ( read )
@@ -159,44 +161,44 @@ class TimeRepConversion a where
 {-# INLINABLE timeToWord64' #-}
 timeToWord64' :: Int64 -> Int32 -> Bool -> Word64
 timeToWord64' sec usec _ =
-  let sec' :: Int64
-      sec' = sec `shiftL` 32
-  in  fromIntegral sec' .|. (fromIntegral usec .&. 0xFFFFFFFF)
+    let sec' :: Int64
+        sec' = sec `shiftL` 32
+    in  fromIntegral sec' .|. (fromIntegral usec .&. 0xFFFFFFFF)
 
 {-# INLINABLE word64ToTime' #-}
 word64ToTime' :: Word64 -> (Int64, Int32)
 word64ToTime' val' =
-  let val :: Int64
-      val = fromIntegral val'
-      sec = val `shiftR` 32
-      usec :: Int32
-      usec = fromIntegral (val .&. 0xFFFFFFFF)
-  in  (sec, usec)
+    let val :: Int64
+        val = fromIntegral val'
+        sec = val `shiftR` 32
+        usec :: Int32
+        usec = fromIntegral (val .&. 0xFFFFFFFF)
+    in  (sec, usec)
 
 
 {-# INLINABLE timeToMicro' #-}
 timeToMicro' :: Int64 -> Int32 -> Bool -> Int64
 timeToMicro' sec usec _ =
-  let sign = if sec < 0 || usec < 0 then (-1) else 1
-  in  sign * (abs (sec) * microSecs + fromIntegral (abs usec))
+    let sign = if sec < 0 || usec < 0 then (-1) else 1
+    in  sign * (abs (sec) * microSecs + fromIntegral (abs usec))
 
 
 {-# INLINABLE microToTime' #-}
 microToTime' :: Int64 -> (Int64, Int32)
 microToTime' x =
-  let sign        = signum x
-      absx        = abs x
-      (sec, usec) = absx `quotRem` microSecs
-  in  (sign * sec, fromIntegral (sign * usec))
+    let sign        = signum x
+        absx        = abs x
+        (sec, usec) = absx `quotRem` microSecs
+    in  (sign * sec, fromIntegral (sign * usec))
 
 
 -- | The basic sun data type. The sun time  is the general class on application
 -- level which is used in the system. It is used in all user interface interactions
 -- and is subject to time correlation and leap second correction (currently fixed leap
 -- seconds taken from the configuration).
-data SunTime = SunTime {
-    tdsTime :: !Int64,
-    tdsDelta :: !Bool
+data SunTime = SunTime
+    { tdsTime  :: !Int64
+    , tdsDelta :: !Bool
     }
     deriving (Eq, Show, Read, Generic)
 
@@ -204,13 +206,13 @@ instance NFData SunTime
 instance Serialise SunTime
 instance FromJSON SunTime
 instance ToJSON SunTime where
-  toEncoding = genericToEncoding defaultOptions
+    toEncoding = genericToEncoding defaultOptions
 
 
 -- | converts the time into a 'Double' represinting the seconds
 -- from the Unix epoch. The fractional part are the subseconds
 instance ToDouble SunTime where
-  toDouble (SunTime msecs _) = fromIntegral msecs / 1_000_000
+    toDouble (SunTime msecs _) = fromIntegral msecs / 1_000_000
 
 -- | Convert from a double to a time. The double is assumed to
 -- be in seconds
@@ -223,21 +225,21 @@ fromMilli :: Int64 -> Bool -> SunTime
 fromMilli milli = SunTime (milli * 1000)
 
 instance Ord SunTime where
-  SunTime t1  False `compare` SunTime t2  False = t1 `compare` t2
-  SunTime t1  True  `compare` SunTime t2  True  = t1 `compare` t2
-  SunTime _t1 False `compare` SunTime _t2 True  = GT
-  SunTime _t1 True  `compare` SunTime _t2 False = LT
+    SunTime t1  False `compare` SunTime t2  False = t1 `compare` t2
+    SunTime t1  True  `compare` SunTime t2  True  = t1 `compare` t2
+    SunTime _t1 False `compare` SunTime _t2 True  = GT
+    SunTime _t1 True  `compare` SunTime _t2 False = LT
 
 -- | Create a 'SunTime' out of seconds, microseconds and if it is a
 -- delta time (True) or not
 {-# INLINABLE makeTime #-}
 makeTime :: Int64 -> Int32 -> Bool -> SunTime
 makeTime sec usec delta =
-  let (restsec, usec') = abs usec `quotRem` fromIntegral microSecInt
-      sign             = if sec < 0 || usec < 0 then (-1) else 1
-      newSec           = (abs sec + fromIntegral restsec)
-      newMicro         = newSec * microSecInt + fromIntegral usec'
-  in  SunTime (sign * newMicro) delta
+    let (restsec, usec') = abs usec `quotRem` fromIntegral microSecInt
+        sign             = if sec < 0 || usec < 0 then (-1) else 1
+        newSec           = (abs sec + fromIntegral restsec)
+        newMicro         = newSec * microSecInt + fromIntegral usec'
+    in  SunTime (sign * newMicro) delta
 
 
 -- | returns the seconds of the 'SunTime'
@@ -272,6 +274,10 @@ oneMicroSecond = SunTime 1 True
 oneSecond :: SunTime
 oneSecond = SunTime 1_000_000 True
 
+
+{-# INLINABLE oneHour #-}
+oneHour :: SunTime 
+oneHour = SunTime (3600 * 1_000_000) True 
 
 
 -- | check if a time is a null time
@@ -313,154 +319,95 @@ microSecond = fromIntegral microSecInt
 {-# INLINABLE getCurrentTime #-}
 getCurrentTime :: IO SunTime
 getCurrentTime = do
-  t <- Data.Thyme.Clock.getCurrentTime
-  return (SunTime (t ^. posixTime . microseconds) False)
+    t <- Data.Thyme.Clock.getCurrentTime
+    return (SunTime (t ^. posixTime . microseconds) False)
 
 
 -- | show the low level internal data of a time
 {-# INLINABLE displayRaw #-}
 displayRaw :: SunTime -> Text
-displayRaw (SunTime mic delta) =
-  utf8BuilderToText ("SunTime " <> displayShow mic <> " " <> displayShow delta)
+displayRaw (SunTime mic delta) = utf8BuilderToText
+    ("SunTime " <> displayShow mic <> " " <> displayShow delta)
 
 
 toUTCTime :: SunTime -> TI.UTCTime
 toUTCTime (SunTime t _) =
-  let (seconds, micro      ) = t `quotRem` 1_000_000
-      (days   , timeSeconds) = seconds `quotRem` 86400
-      day :: TI.Day
-      day    = TI.addDays (fromIntegral days) systemEpochDay
-      micro' = timeSeconds * 1_000_000 + micro
-      pico   = micro' * 1_000_000
-      time :: TI.DiffTime
-      time = TI.picosecondsToDiffTime (fromIntegral pico)
-  in  TI.UTCTime day time
+    let (seconds, micro      ) = t `quotRem` 1_000_000
+        (days   , timeSeconds) = seconds `quotRem` 86400
+        day :: TI.Day
+        day    = TI.addDays (fromIntegral days) systemEpochDay
+        micro' = timeSeconds * 1_000_000 + micro
+        pico   = micro' * 1_000_000
+        time :: TI.DiffTime
+        time = TI.picosecondsToDiffTime (fromIntegral pico)
+    in  TI.UTCTime day time
 
 -- | Display a 'SunTime' in ISO format
 {-# INLINABLE displayISO #-}
 displayISO :: SunTime -> Text
 displayISO (SunTime t False) =
-  let t1 :: LocalTime
-      t1            = t ^. from microseconds . from posixTime . utcLocalTime utc
-      date          = localDay t1 ^. gregorian
-      time          = localTimeOfDay t1
-      (secs, micro) = fromEnum (todSec time) `quotRem` 1_000_000
-  in  sformat
-        ( (left 4 '0' %. int)
-        % "-"
-        % (left 2 '0' %. int)
-        % "-"
-        % (left 2 '0' %. int)
-        % "T"
-        % (left 2 '0' %. int)
-        % "."
-        % (left 2 '0' %. int)
-        % "."
-        % (left 2 '0' %. int)
-        % "."
-        % (left 6 '0' %. int)
-        )
-        (ymdYear date)
-        (ymdMonth date)
-        (ymdDay date)
-        (todHour time)
-        (todMin time)
-        secs
-        micro
+    let t1 :: LocalTime
+        t1 = t ^. from microseconds . from posixTime . utcLocalTime utc
+        date          = localDay t1 ^. gregorian
+        time          = localTimeOfDay t1
+        (secs, micro) = fromEnum (todSec time) `quotRem` 1_000_000
+    in  sformat
+            ( (left 4 '0' %. int)
+            % "-"
+            % (left 2 '0' %. int)
+            % "-"
+            % (left 2 '0' %. int)
+            % "T"
+            % (left 2 '0' %. int)
+            % "."
+            % (left 2 '0' %. int)
+            % "."
+            % (left 2 '0' %. int)
+            % "."
+            % (left 6 '0' %. int)
+            )
+            (ymdYear date)
+            (ymdMonth date)
+            (ymdDay date)
+            (todHour time)
+            (todMin time)
+            secs
+            micro
 displayISO (SunTime t True) =
-  let t1 :: LocalTime
-      t1            = t ^. from microseconds . from posixTime . utcLocalTime utc
-      date          = localDay t1 ^. gregorian
-      time          = localTimeOfDay t1
-      (secs, micro) = fromEnum (todSec time) `quotRem` 1_000_000
-      sign          = if t < 0 then '-' else '+'
-  in  sformat
-        ( Formatting.char
-        % (left 4 '0' %. int)
-        % "-"
-        % (left 2 '0' %. int)
-        % "-"
-        % (left 2 '0' %. int)
-        % "T"
-        % (left 2 '0' %. int)
-        % "."
-        % (left 2 '0' %. int)
-        % "."
-        % (left 2 '0' %. shown)
-        % "."
-        % (left 6 '0' %. int)
-        )
-        sign
-        (ymdYear date)
-        (ymdMonth date)
-        (ymdDay date)
-        (todHour time)
-        (todMin time)
-        secs
-        micro
+    let t1 :: LocalTime
+        t1 = t ^. from microseconds . from posixTime . utcLocalTime utc
+        date          = localDay t1 ^. gregorian
+        time          = localTimeOfDay t1
+        (secs, micro) = fromEnum (todSec time) `quotRem` 1_000_000
+        sign          = if t < 0 then '-' else '+'
+    in  sformat
+            ( Formatting.char
+            % (left 4 '0' %. int)
+            % "-"
+            % (left 2 '0' %. int)
+            % "-"
+            % (left 2 '0' %. int)
+            % "T"
+            % (left 2 '0' %. int)
+            % "."
+            % (left 2 '0' %. int)
+            % "."
+            % (left 2 '0' %. shown)
+            % "."
+            % (left 6 '0' %. int)
+            )
+            sign
+            (ymdYear date)
+            (ymdMonth date)
+            (ymdDay date)
+            (todHour time)
+            (todMin time)
+            secs
+            micro
 
 
 displayTimeMilli :: SunTime -> Text
 displayTimeMilli (SunTime t False) =
-  let t1 :: LocalTime
-      t1            = t ^. from microseconds . from posixTime . utcLocalTime utc
-      date          = localDay t1 ^. gregorian
-      time          = localTimeOfDay t1
-      dayOfYear     = odDay $ localDay t1 ^. ordinalDate
-      (secs, micro) = fromEnum (todSec time) `quotRem` 1_000_000
-  in  sformat
-        ( (left 4 '0' %. int)
-        % "."
-        % (left 3 '0' %. int)
-        % "."
-        % (left 2 '0' %. int)
-        % "."
-        % (left 2 '0' %. int)
-        % "."
-        % (left 2 '0' %. int)
-        % "."
-        % (left 3 '0' %. int)
-        )
-        (ymdYear date)
-        dayOfYear
-        (todHour time)
-        (todMin time)
-        secs
-        (micro `quot` 1000)
-displayTimeMilli tt =
-  let secs  = sec `rem` 60
-      mins  = sec `quot` 60 `rem` 60
-      hours = sec `quot` 3600 `rem` 24
-      days  = sec `quot` 86400 `rem` 365
-      years = sec `quot` (86400 * 365)
-      mic   = tdsMicro tt
-      sec   = tdsSecs tt
-      sign  = if sec < 0 then '-' else '+'
-  in  sformat
-        ( Formatting.char
-        % (left 4 '0' %. int)
-        % "."
-        % (left 3 '0' %. int)
-        % "."
-        % (left 2 '0' %. int)
-        % "."
-        % (left 2 '0' %. int)
-        % "."
-        % (left 2 '0' %. int)
-        % "."
-        % (left 3 '0' %. int)
-        )
-        sign
-        years
-        days
-        hours
-        mins
-        secs
-        ((abs mic) `quot` 1000)
-
-instance Display SunTime where
-  -- | display a 'SunTime' in SCOS format (with day of year)
-  textDisplay (SunTime t False) =
     let t1 :: LocalTime
         t1 = t ^. from microseconds . from posixTime . utcLocalTime utc
         date          = localDay t1 ^. gregorian
@@ -468,25 +415,25 @@ instance Display SunTime where
         dayOfYear     = odDay $ localDay t1 ^. ordinalDate
         (secs, micro) = fromEnum (todSec time) `quotRem` 1_000_000
     in  sformat
-          ( (left 4 '0' %. int)
-          % "."
-          % (left 3 '0' %. int)
-          % "."
-          % (left 2 '0' %. int)
-          % "."
-          % (left 2 '0' %. int)
-          % "."
-          % (left 2 '0' %. int)
-          % "."
-          % (left 6 '0' %. int)
-          )
-          (ymdYear date)
-          dayOfYear
-          (todHour time)
-          (todMin time)
-          secs
-          micro
-  textDisplay tt =
+            ( (left 4 '0' %. int)
+            % "."
+            % (left 3 '0' %. int)
+            % "."
+            % (left 2 '0' %. int)
+            % "."
+            % (left 2 '0' %. int)
+            % "."
+            % (left 2 '0' %. int)
+            % "."
+            % (left 3 '0' %. int)
+            )
+            (ymdYear date)
+            dayOfYear
+            (todHour time)
+            (todMin time)
+            secs
+            (micro `quot` 1000)
+displayTimeMilli tt =
     let secs  = sec `rem` 60
         mins  = sec `quot` 60 `rem` 60
         hours = sec `quot` 3600 `rem` 24
@@ -496,26 +443,105 @@ instance Display SunTime where
         sec   = tdsSecs tt
         sign  = if sec < 0 then '-' else '+'
     in  sformat
-          ( Formatting.char
-          % (left 4 '0' %. int)
-          % "."
-          % (left 3 '0' %. int)
-          % "."
-          % (left 2 '0' %. int)
-          % "."
-          % (left 2 '0' %. int)
-          % "."
-          % (left 2 '0' %. int)
-          % "."
-          % (left 6 '0' %. int)
-          )
-          sign
-          years
-          days
-          hours
-          mins
-          secs
-          (abs mic)
+            ( Formatting.char
+            % (left 4 '0' %. int)
+            % "."
+            % (left 3 '0' %. int)
+            % "."
+            % (left 2 '0' %. int)
+            % "."
+            % (left 2 '0' %. int)
+            % "."
+            % (left 2 '0' %. int)
+            % "."
+            % (left 3 '0' %. int)
+            )
+            sign
+            years
+            days
+            hours
+            mins
+            secs
+            ((abs mic) `quot` 1000)
+
+
+
+timeToComponents :: SunTime -> (Year, DayOfYear, Hour, Minute, Int, Int)
+timeToComponents (SunTime t _) =
+    let t1 :: LocalTime
+        t1 = t ^. from microseconds . from posixTime . utcLocalTime utc
+        date          = localDay t1 ^. gregorian
+        time          = localTimeOfDay t1
+        dayOfYear     = odDay $ localDay t1 ^. ordinalDate
+        (secs, micro) = fromEnum (todSec time) `quotRem` 1_000_000
+    in  (ymdYear date, dayOfYear, todHour time, todMin time, secs, micro)
+
+timeFromComponents :: Year -> DayOfYear -> Hour -> Minute -> Int -> Int -> SunTime 
+timeFromComponents y d h m s micro =  
+    let sec = daySegmToSeconds y d h m s
+    in
+    makeTime sec (fromIntegral micro) False
+
+
+
+instance Display SunTime where
+  -- | display a 'SunTime' in SCOS format (with day of year)
+    textDisplay (SunTime t False) =
+        let t1 :: LocalTime
+            t1 = t ^. from microseconds . from posixTime . utcLocalTime utc
+            date          = localDay t1 ^. gregorian
+            time          = localTimeOfDay t1
+            dayOfYear     = odDay $ localDay t1 ^. ordinalDate
+            (secs, micro) = fromEnum (todSec time) `quotRem` 1_000_000
+        in  sformat
+                ( (left 4 '0' %. int)
+                % "."
+                % (left 3 '0' %. int)
+                % "."
+                % (left 2 '0' %. int)
+                % "."
+                % (left 2 '0' %. int)
+                % "."
+                % (left 2 '0' %. int)
+                % "."
+                % (left 6 '0' %. int)
+                )
+                (ymdYear date)
+                dayOfYear
+                (todHour time)
+                (todMin time)
+                secs
+                micro
+    textDisplay tt =
+        let secs  = sec `rem` 60
+            mins  = sec `quot` 60 `rem` 60
+            hours = sec `quot` 3600 `rem` 24
+            days  = sec `quot` 86400 `rem` 365
+            years = sec `quot` (86400 * 365)
+            mic   = tdsMicro tt
+            sec   = tdsSecs tt
+            sign  = if sec < 0 then '-' else '+'
+        in  sformat
+                ( Formatting.char
+                % (left 4 '0' %. int)
+                % "."
+                % (left 3 '0' %. int)
+                % "."
+                % (left 2 '0' %. int)
+                % "."
+                % (left 2 '0' %. int)
+                % "."
+                % (left 2 '0' %. int)
+                % "."
+                % (left 6 '0' %. int)
+                )
+                sign
+                years
+                days
+                hours
+                mins
+                secs
+                (abs mic)
 
 -- | Display a SunTime as a floating point value (in seconds)
 {-# INLINABLE displayDouble #-}
@@ -528,48 +554,48 @@ displayDouble t = utf8BuilderToText $ displayShow (toDouble t) <> " s"
 {-# INLINABLE edenTime #-}
 edenTime :: SunTime -> ByteString
 edenTime (SunTime t _) =
-  let t1 :: LocalTime
-      t1            = t ^. from microseconds . from posixTime . utcLocalTime utc
-      date          = localDay t1 ^. gregorian
-      time          = localTimeOfDay t1
-      dayOfYear     = odDay $ localDay t1 ^. ordinalDate
-      (secs, micro) = fromEnum (todSec time) `quotRem` 1_000_000
-      str =
-          TB.run
-            $  TB.padFromLeft 4 '0' (TB.decimal (ymdYear date))
-            <> TB.char ' '
-            <> TB.padFromLeft 3 '0' (TB.decimal dayOfYear)
-            <> TB.char ':'
-            <> TB.padFromLeft 2 '0' (TB.decimal (todHour time))
-            <> TB.char ':'
-            <> TB.padFromLeft 2 '0' (TB.decimal (todMin time))
-            <> TB.char ':'
-            <> TB.padFromLeft 2 '0' (TB.decimal secs)
-            <> TB.char '.'
-            <> TB.padFromLeft 3 '0' (TB.decimal (micro `quot` 1_000))
-            <> TB.char ' '
-  in  encodeUtf8 str
+    let t1 :: LocalTime
+        t1 = t ^. from microseconds . from posixTime . utcLocalTime utc
+        date          = localDay t1 ^. gregorian
+        time          = localTimeOfDay t1
+        dayOfYear     = odDay $ localDay t1 ^. ordinalDate
+        (secs, micro) = fromEnum (todSec time) `quotRem` 1_000_000
+        str =
+            TB.run
+                $  TB.padFromLeft 4 '0' (TB.decimal (ymdYear date))
+                <> TB.char ' '
+                <> TB.padFromLeft 3 '0' (TB.decimal dayOfYear)
+                <> TB.char ':'
+                <> TB.padFromLeft 2 '0' (TB.decimal (todHour time))
+                <> TB.char ':'
+                <> TB.padFromLeft 2 '0' (TB.decimal (todMin time))
+                <> TB.char ':'
+                <> TB.padFromLeft 2 '0' (TB.decimal secs)
+                <> TB.char '.'
+                <> TB.padFromLeft 3 '0' (TB.decimal (micro `quot` 1_000))
+                <> TB.char ' '
+    in  encodeUtf8 str
 
 
 {-# INLINABLE edenTimeParser #-}
 edenTimeParser :: A.Parser SunTime
 edenTimeParser = do
-  years <- A.decimal
-  void $ A.char ' '
-  days <- A.decimal
-  void $ A.char ':'
-  hours <- A.decimal
-  void $ A.char ':'
-  minutes <- A.decimal
-  void $ A.char ':'
-  seconds <- A.decimal
-  void $ A.char '.'
-  subSeconds <- A.decimal
-  void $ A.char ' '
+    years <- A.decimal
+    void $ A.char ' '
+    days <- A.decimal
+    void $ A.char ':'
+    hours <- A.decimal
+    void $ A.char ':'
+    minutes <- A.decimal
+    void $ A.char ':'
+    seconds <- A.decimal
+    void $ A.char '.'
+    subSeconds <- A.decimal
+    void $ A.char ' '
 
-  let sec = daySegmToSeconds years days hours minutes seconds
+    let sec = daySegmToSeconds years days hours minutes seconds
 
-  return $ makeTime sec (subSeconds * 1000) False
+    return $ makeTime sec (subSeconds * 1000) False
 
 
 
@@ -578,95 +604,104 @@ edenTimeParser = do
 -- format YYY.DDD.hh.mm.ss.mmmmmm
 fromText :: Text -> Either Text SunTime
 fromText str = case parse sunTimeParser "" str of
-  Left  err -> Left (T.pack (show err))
-  Right x   -> Right x
+    Left  err -> Left (T.pack (show err))
+    Right x   -> Right x
 
 
 
 -- | the time parser
 sunTimeParser :: Parser SunTime
 sunTimeParser = do
-  Text.Megaparsec.Char.space
-  -- option 0 sign
-  sign <- optional
-    (choice [Text.Megaparsec.Char.char '-', Text.Megaparsec.Char.char '+'])
-  year <- read <$> Text.Megaparsec.some digitChar
-  void $ Text.Megaparsec.Char.char '.'
-  day <- read <$> count 3 digitChar
-  void $ Text.Megaparsec.Char.char '.'
-  hour <- read <$> count 2 digitChar
-  void $ Text.Megaparsec.Char.char '.'
-  minute <- read <$> count 2 digitChar
-  void $ Text.Megaparsec.Char.char '.'
-  second' <- read <$> count 2 digitChar
-  sub     <- optional subsecs
+    Text.Megaparsec.Char.space
+    -- option 0 sign
+    sign <-
+        optional
+            (choice
+                [Text.Megaparsec.Char.char '-', Text.Megaparsec.Char.char '+']
+            )
+    year <- read <$> Text.Megaparsec.some digitChar
+    void $ Text.Megaparsec.Char.char '.'
+    day <- read <$> count 3 digitChar
+    void $ Text.Megaparsec.Char.char '.'
+    hour <- read <$> count 2 digitChar
+    void $ Text.Megaparsec.Char.char '.'
+    minute <- read <$> count 2 digitChar
+    void $ Text.Megaparsec.Char.char '.'
+    second' <- read <$> count 2 digitChar
+    sub     <- optional subsecs
 
-  let sec = daySegmToSeconds year day hour minute second'
-      secRel sgn = daysSegmToSecondsRel sgn year day hour minute second'
+    let sec = daySegmToSeconds year day hour minute second'
+        secRel sgn = daysSegmToSecondsRel sgn year day hour minute second'
 
-  case sign of
-    Just si -> do
-      let (sec', neg) = secRel si
-          time        = makeTime sec' (fromMaybe 0 sub) True
-      if neg then return (negTime time) else return time
-    Nothing -> return $ makeTime sec (fromMaybe 0 sub) False
+    case sign of
+        Just si -> do
+            let (sec', neg) = secRel si
+                time        = makeTime sec' (fromMaybe 0 sub) True
+            if neg then return (negTime time) else return time
+        Nothing -> return $ makeTime sec (fromMaybe 0 sub) False
 
 
 -- | subseconds parser
 {-# INLINABLE subsecs #-}
 subsecs :: Parser Int32
 subsecs = Text.Megaparsec.try $ do
-  void $ Text.Megaparsec.Char.char '.'
-  s <- read <$> count 3 digitChar
-  return (s * 1000)
+    void $ Text.Megaparsec.Char.char '.'
+    s <- read <$> count 3 digitChar
+    return (s * 1000)
 
 
 -- | Relative time conversion
 {-# INLINABLE daysSegmToSecondsRel #-}
-daysSegmToSecondsRel :: Char -> Int -> Int -> Int -> Int -> Int -> (Int64, Bool)
+daysSegmToSecondsRel
+    :: Char -> Int -> Int -> Int -> Int -> Int -> (Int64, Bool)
 daysSegmToSecondsRel sign year days hours minutes seconds =
-  let s = sign == '-'
-  in  ( fromIntegral year
-        * (3600 * 24 * 365)
-        + fromIntegral days
-        * 86400
-        + fromIntegral hours
-        * 3600
-        + fromIntegral minutes
-        * 60
-        + fromIntegral seconds
-      , s
-      )
-
--- | Copy of SCOS function to convert day segmented time into seconds
-{-# INLINABLE daySegmToSeconds #-}
-daySegmToSeconds :: Int -> Int -> Int -> Int -> Int -> Int64
-daySegmToSeconds year days hours minutes seconds =
-  let {-year_leap = if ((year /= 0) && ((year `rem` 4) == 0) &&
-                        (((year `rem` 100) /= 0) || (year `rem` 1000) == 0))
-                    then 1
-                    else 0-}
-      go j leap_years'
-        | j >= year
-        = leap_years'
-        | otherwise
-        = if (j `rem` 4) == 0 && (((j `rem` 100) /= 0) || ((j `rem` 1000) == 0))
-          then go (j + 1) (leap_years' + 1)
-          else go (j + 1) leap_years'
-      leap_years = go 1970 0
-      day_sec    = if days /= 0
-        then fromIntegral (days + leap_years - 1) * secsInDay
-        else 0
-      temp_sec = fromIntegral (year - 1970) * secsInYear
-      temp_sec' =
-          temp_sec
-            + day_sec
+    let s = sign == '-'
+    in  ( fromIntegral year
+            * (3600 * 24 * 365)
+            + fromIntegral days
+            * 86400
             + fromIntegral hours
             * 3600
             + fromIntegral minutes
             * 60
             + fromIntegral seconds
-  in  temp_sec'
+        , s
+        )
+
+-- | Copy of SCOS function to convert day segmented time into seconds
+{-# INLINABLE daySegmToSeconds #-}
+daySegmToSeconds :: Int -> Int -> Int -> Int -> Int -> Int64
+daySegmToSeconds year days hours minutes seconds =
+    let {-year_leap = if ((year /= 0) && ((year `rem` 4) == 0) &&
+                        (((year `rem` 100) /= 0) || (year `rem` 1000) == 0))
+                    then 1
+                    else 0-}
+        go j leap_years'
+            | j >= year
+            = leap_years'
+            | otherwise
+            = if (j `rem` 4)
+                  == 0
+                  && (((j `rem` 100) /= 0) || ((j `rem` 1000) == 0))
+              then
+                  go (j + 1) (leap_years' + 1)
+              else
+                  go (j + 1) leap_years'
+        leap_years = go 1970 0
+        day_sec    = if days /= 0
+            then fromIntegral (days + leap_years - 1) * secsInDay
+            else 0
+        temp_sec = fromIntegral (year - 1970) * secsInYear
+        temp_sec' =
+            temp_sec
+                + day_sec
+                + fromIntegral hours
+                * 3600
+                + fromIntegral minutes
+                * 60
+                + fromIntegral seconds
+    in
+        temp_sec'
 
 -- | Add two 'SunTime'
 {-# INLINABLE (<+>) #-}
@@ -689,11 +724,11 @@ negTime (SunTime mic delta) = SunTime (-mic) delta
 {-# INLINABLE addTimes #-}
 addTimes :: SunTime -> SunTime -> SunTime
 addTimes t1 t2 =
-  let mt1       = tdsTime t1
-      mt2       = tdsTime t2
-      bothDelta = isDelta t1 && isDelta t2
-      summ      = mt1 + mt2
-  in  microToTime summ bothDelta
+    let mt1       = tdsTime t1
+        mt2       = tdsTime t2
+        bothDelta = isDelta t1 && isDelta t2
+        summ      = mt1 + mt2
+    in  microToTime summ bothDelta
 
 
 {-# INLINABLE addSpan #-}
@@ -711,16 +746,16 @@ subTimes :: SunTime -> SunTime -> SunTime
 subTimes t1 t2 = addTimes t1 (negTime t2)
 
 instance TimeRepConversion SunTime where
-  {-# INLINABLE timeToWord64 #-}
-  timeToWord64 t = timeToWord64' (tdsSecs t) (tdsMicro t) (tdsDelta t)
-  {-# INLINABLE word64ToTime #-}
-  word64ToTime val delta =
-    let (sec, mic) = word64ToTime' val in makeTime sec mic delta
+    {-# INLINABLE timeToWord64 #-}
+    timeToWord64 t = timeToWord64' (tdsSecs t) (tdsMicro t) (tdsDelta t)
+    {-# INLINABLE word64ToTime #-}
+    word64ToTime val delta =
+        let (sec, mic) = word64ToTime' val in makeTime sec mic delta
 
-  {-# INLINABLE timeToMicro #-}
-  timeToMicro (SunTime usec _) = usec
-  {-# INLINABLE microToTime #-}
-  microToTime = SunTime
+    {-# INLINABLE timeToMicro #-}
+    timeToMicro (SunTime usec _) = usec
+    {-# INLINABLE microToTime #-}
+    microToTime = SunTime
 
 -- | Class to indicate if a time value is a delta time. Can also be set
 -- via the setDelta function
@@ -729,20 +764,21 @@ class DeltaTime a where
     setDelta :: Bool -> a -> a
 
 instance DeltaTime SunTime where
-  {-# INLINABLE isDelta #-}
-  isDelta = tdsDelta
-  {-# INLINABLE setDelta #-}
-  setDelta val t = t { tdsDelta = val }
+    {-# INLINABLE isDelta #-}
+    isDelta = tdsDelta
+    {-# INLINABLE setDelta #-}
+    setDelta val t = t { tdsDelta = val }
 
 
 
 
 
 -- | Data structure which contains the coefficients for correlation
-data CorrelationCoefficients = CorrelationCoefficients {
-    timCoeffGradient :: !Double,
-    timCoeffOffset :: !Double
-    } deriving (Show, Read)
+data CorrelationCoefficients = CorrelationCoefficients
+    { timCoeffGradient :: !Double
+    , timCoeffOffset   :: !Double
+    }
+    deriving (Show, Read)
 
 -- | creates a coefficients data structure out of two real values (gradient and offset)
 {-# INLINABLE createCoeffs #-}
@@ -761,40 +797,40 @@ newtype LeapSeconds = LeapSeconds { fromLeaps :: Int }
 instance Serialise LeapSeconds
 instance FromJSON LeapSeconds
 instance ToJSON LeapSeconds where
-  toEncoding = genericToEncoding defaultOptions
+    toEncoding = genericToEncoding defaultOptions
 
 
 -- | correlation of the given ground time relative to a on-board time
 {-# INLINABLE mcsTimeToOBT #-}
 mcsTimeToOBT :: SunTime -> CorrelationCoefficients -> SunTime
 mcsTimeToOBT curTime coeff
-  | isDelta curTime
-  = curTime
-  | otherwise
-  = let tim  = toDouble curTime
-        obt' = tim * timCoeffGradient coeff + timCoeffOffset coeff
-        obt  = fromDouble obt' False
-    in  obt
+    | isDelta curTime
+    = curTime
+    | otherwise
+    = let tim  = toDouble curTime
+          obt' = tim * timCoeffGradient coeff + timCoeffOffset coeff
+          obt  = fromDouble obt' False
+      in  obt
 
 -- | correlation of a given on-board time into
 -- ground time
 {-# INLINABLE obtToMcsTim #-}
 obtToMcsTim :: SunTime -> CorrelationCoefficients -> SunTime
 obtToMcsTim obt coeff
-  | isDelta obt
-  = obt
-  | otherwise
-  = let obt' = toDouble obt
-        tim  = (obt' - timCoeffOffset coeff) / timCoeffGradient coeff
-        utt  = fromDouble tim False
-    in  utt
+    | isDelta obt
+    = obt
+    | otherwise
+    = let obt' = toDouble obt
+          tim  = (obt' - timCoeffOffset coeff) / timCoeffGradient coeff
+          utt  = fromDouble tim False
+      in  utt
 
 -- | Perform leap second correction to a given time. This is for the
 -- converstion from ground time to OBT
 {-# INLINABLE uttObtLeap #-}
 uttObtLeap :: LeapSeconds -> SunTime -> SunTime
 uttObtLeap leaps (SunTime mic delta) =
-  SunTime (mic + fromIntegral leaps * microSecInt) delta
+    SunTime (mic + fromIntegral leaps * microSecInt) delta
 
 
 
@@ -803,21 +839,21 @@ uttObtLeap leaps (SunTime mic delta) =
 {-# INLINABLE obtUttLeap #-}
 obtUttLeap :: LeapSeconds -> SunTime -> SunTime
 obtUttLeap leaps (SunTime mic delta) =
-  SunTime (mic - fromIntegral leaps * microSecInt) delta
+    SunTime (mic - fromIntegral leaps * microSecInt) delta
 
 
 
 
 
 -- | Epoch, which specifies the used mission epoch, including leap seconds
-data Epoch = Epoch {
-    epEpoch :: !Int64,
-    epLeapSeconds :: !LeapSeconds
+data Epoch = Epoch
+    { epEpoch       :: !Int64
+    , epLeapSeconds :: !LeapSeconds
     }
     deriving (Show, Read, Eq)
 
 instance Ord Epoch where
-  compare (Epoch e1 _) (Epoch e2 _) = compare e1 e2
+    compare (Epoch e1 _) (Epoch e2 _) = compare e1 e2
 
 
 -- | constructor of an epoch. Takes the seconds for the epoch (in relation
@@ -826,15 +862,15 @@ instance Ord Epoch where
 {-# INLINABLE makeEpoch #-}
 makeEpoch :: Int64 -> LeapSeconds -> Epoch
 makeEpoch seconds leaps =
-  Epoch (seconds * microSecInt) (leaps * fromIntegral microSecInt)
+    Epoch (seconds * microSecInt) (leaps * fromIntegral microSecInt)
 
 
 -- | Epoch time is encoded with a given epoch. The epoch is completely free,
 -- some values have been specified as default (GPS, TAI and Year2000)
-data EpochTime = EpochTime {
-    eptTime :: !Int64,
-    eptDelta :: !Bool,
-    eptEpoch :: !Epoch
+data EpochTime = EpochTime
+    { eptTime  :: !Int64
+    , eptDelta :: !Bool
+    , eptEpoch :: !Epoch
     }
     deriving (Eq, Show, Read)
 
@@ -849,7 +885,7 @@ data EpochType =
 instance Serialise EpochType
 instance FromJSON EpochType
 instance ToJSON EpochType where
-  toEncoding = genericToEncoding defaultOptions
+    toEncoding = genericToEncoding defaultOptions
 
 {-# INLINABLE getEpoch #-}
 getEpoch :: EpochType -> LeapSeconds -> Epoch
@@ -904,13 +940,13 @@ oneMicroSecondGPS leaps = EpochTime 1 True (epochGPS leaps)
 {-# INLINABLE epoch1958 #-}
 epoch1958 :: LeapSeconds -> Epoch
 epoch1958 leaps =
-  Epoch ((-378691200) * microSecInt) (leaps * fromIntegral microSecInt)
+    Epoch ((-378691200) * microSecInt) (leaps * fromIntegral microSecInt)
 
 -- | the epoch of GPS time (06.01.1980)
 {-# INLINABLE epochGPS #-}
 epochGPS :: LeapSeconds -> Epoch
 epochGPS leaps =
-  Epoch (315964800 * microSecInt) (leaps * fromIntegral microSecInt)
+    Epoch (315964800 * microSecInt) (leaps * fromIntegral microSecInt)
 
 -- | the epoch of unix time (01.01.1970)
 {-# INLINABLE epochUnix #-}
@@ -921,7 +957,7 @@ epochUnix leaps = Epoch 0 (leaps * fromIntegral microSecInt)
 {-# INLINABLE epoch2000 #-}
 epoch2000 :: LeapSeconds -> Epoch
 epoch2000 leaps =
-  Epoch (946684800 * microSecInt) (leaps * fromIntegral microSecInt)
+    Epoch (946684800 * microSecInt) (leaps * fromIntegral microSecInt)
 
 -- | the default epoch is the unix epoch
 {-# INLINABLE defaultEpoch #-}
@@ -930,15 +966,15 @@ defaultEpoch = epochUnix 0
 
 
 instance DeltaTime EpochTime where
-  {-# INLINABLE isDelta #-}
-  isDelta (EpochTime _ delta _) = delta
-  {-# INLINABLE setDelta #-}
-  setDelta val (EpochTime mic _ ep) = EpochTime mic val ep
+    {-# INLINABLE isDelta #-}
+    isDelta (EpochTime _ delta _) = delta
+    {-# INLINABLE setDelta #-}
+    setDelta val (EpochTime mic _ ep) = EpochTime mic val ep
 
 
 instance ToDouble EpochTime where
-  {-# INLINABLE toDouble #-}
-  toDouble (EpochTime mic _ _) = fromIntegral mic / microSecond
+    {-# INLINABLE toDouble #-}
+    toDouble (EpochTime mic _ _) = fromIntegral mic / microSecond
 
 
 -- {-# INLINABLE epochTimeToMicro #-}
@@ -953,14 +989,14 @@ instance ToDouble EpochTime where
 {-# INLINABLE epochTimeToSunTime #-}
 epochTimeToSunTime :: EpochTime -> SunTime
 epochTimeToSunTime (EpochTime m d (Epoch e l))
-  | d         = SunTime m d
-  | otherwise = SunTime (m + e - fromIntegral l) d
+    | d         = SunTime m d
+    | otherwise = SunTime (m + e - fromIntegral l) d
 
 
 -- | Converts a 'SunTime' with the given 'Epoch' into a 'EpochTime'
 {-# INLINABLE sunTimeToEpochTime #-}
 sunTimeToEpochTime :: Epoch -> SunTime -> EpochTime
 sunTimeToEpochTime ep@(Epoch e l) (SunTime mic delta) =
-  let newmic | delta     = mic
-             | otherwise = (mic - e + fromIntegral l)
-  in  EpochTime newmic delta ep
+    let newmic | delta     = mic
+               | otherwise = (mic - e + fromIntegral l)
+    in  EpochTime newmic delta ep

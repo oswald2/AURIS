@@ -74,6 +74,7 @@ library
     GUI.MessageDialogs
     GUI.FileChooser
     GUI.LiveControls
+    GUI.TimePicker
 
   -- Modules included in this library but not exported.
   -- other-modules:
@@ -120,7 +121,7 @@ library
         InstanceSigs
         KindSignatures
         LambdaCase
-        
+        NumericUnderscores
         MultiParamTypeClasses
         MultiWayIf
         NamedFieldPuns

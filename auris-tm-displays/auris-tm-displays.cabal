@@ -48,7 +48,7 @@ library
     GUI.Chart
     GUI.GraphWidget
     GUI.ParamDisplay
-
+    GUI.FrameRetrieveDialog
 
 
   Hs-Source-Dirs: src/

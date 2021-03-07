@@ -371,25 +371,51 @@ queryHandler
     -> Pipe
     -> DBQuery
     -> m ()
-queryHandler _ _pipe DbGetTMFrames { dbFromTime = Nothing, dbToTime = Nothing }
-    = return ()
-queryHandler resultF pipe q@DbGetTMFrames { dbFromTime = Just start, dbToTime = Just stop }
+queryHandler resultF pipe (FrRange q)
     = do
         logDebug $ "QueryHandler: query=" <> displayShow q
-        frameFromTo resultF pipe start stop
+        let start1 = dbFromTime q
+            stop1 = dbToTime q
+        case (start1, stop1) of 
+            (Nothing, Nothing) -> return () 
+            (Just start, Just stop) -> frameFromTo resultF pipe start stop
+            (Just start, Nothing) -> frameFrom resultF pipe start 
+            (Nothing, Just stop) -> frameTo resultF pipe stop 
 queryHandler _ _ _ = return ()
+
+
+collectQuery :: (MonadIO m, MongoDbConversion b Document) 
+    => (DBResult -> m ())
+    -> Pipe 
+    -> Query 
+    -> ([b] -> DBResult)
+    -> m ()
+collectQuery resultF pipe query constr = do 
+    access pipe master dbName $ do 
+        cursor <- find query 
+        records <- mapMaybe fromDB <$> rest cursor
+        lift $ resultF $ constr records
 
 frameFromTo
     :: (MonadIO m) => (DBResult -> m ()) -> Pipe -> SunTime -> SunTime -> m ()
-frameFromTo resultF pipe start stop = access pipe master dbName $ do
-    cursor <- find
-        (select ["ert" =: ["$gte" =: timeToMicro start, "$lte" =: timeToMicro stop]]
-                tmFrameCollName
-            )
-            { sort = ["ert" =: Int32 (-1)]
-            }
-    records <- catMaybes . map fromDB <$> rest cursor
-    lift $ resultF $ DBResultTMFrames records
+frameFromTo resultF pipe start stop = do
+    let query = (select ["ert" =: ["$gte" =: timeToMicro start, "$lte" =: timeToMicro stop]]
+                    tmFrameCollName) { sort = ["ert" =: Int32 (-1)] }
+    collectQuery resultF pipe query DBResultTMFrames
+
+frameFrom
+    :: (MonadIO m) => (DBResult -> m ()) -> Pipe -> SunTime -> m ()
+frameFrom resultF pipe start = do
+    let query = (select ["ert" =: ["$gte" =: timeToMicro start]] 
+                    tmFrameCollName) { sort = ["ert" =: Int32 (-1)] }
+    collectQuery resultF pipe query DBResultTMFrames
+
+frameTo
+    :: (MonadIO m) => (DBResult -> m ()) -> Pipe -> SunTime -> m ()
+frameTo resultF pipe stop = do
+    let query = (select ["ert" =: ["$lte" =: timeToMicro stop]]
+                    tmFrameCollName) { sort = ["ert" =: Int32 (-1)] }
+    collectQuery resultF pipe query DBResultTMFrames
 
 
 
