@@ -407,3 +407,10 @@ scrolledwindow {
               inset -4px -4px 4px 0 @light_shadow;
 }
 
+
+spinbutton#timespin {
+  font-family: "Noto Sans";
+  font-size: 14px;
+  font-weight: bold;
+  color: black;
+}

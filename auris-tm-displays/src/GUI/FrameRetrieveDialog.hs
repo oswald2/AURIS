@@ -29,23 +29,31 @@ frameRetrieveDiag :: Getting r FrameRetrieveDialog Dialog
 frameRetrieveDiag = to frDialog
 
 
-newFrameRetrieveDialog :: ApplicationWindow -> Gtk.Builder -> IO FrameRetrieveDialog
+newFrameRetrieveDialog
+    :: ApplicationWindow -> Gtk.Builder -> IO FrameRetrieveDialog
 newFrameRetrieveDialog window builder = do
+    diag   <- dialogNew
+    grid   <- gridNew
+    box    <- dialogGetContentArea diag
 
-    diag   <- getObject builder "dialogRetrieveFrames" Dialog
-    grid   <- getObject builder "gridFrameRetrieval" Grid
-    cbFrom <- getObject builder "cbTMFrameFrom" CheckButton
-    cbTo   <- getObject builder "cbTMFrameTo" CheckButton
+    cbFrom <- checkButtonNewWithLabel "From:"
+    cbTo   <- checkButtonNewWithLabel "To:"
 
-    void $ dialogAddButton diag "Cancel" (fromIntegral (fromEnum ResponseTypeCancel))
+    boxPackStart box grid False False 5
+
+    void $ dialogAddButton diag
+                           "Cancel"
+                           (fromIntegral (fromEnum ResponseTypeCancel))
     void $ dialogAddButton diag "OK" (fromIntegral (fromEnum ResponseTypeOk))
 
-    now    <- getCurrentTime
-    tfrom   <- timePickerNew now
-    tto     <- timePickerNew (now <-> oneHour)
+    now   <- getCurrentTime
+    tfrom <- timePickerNew now
+    tto   <- timePickerNew (now <-> oneHour)
 
-    gridAttach grid (timePickerGetBox tfrom) 1 0 1 1 
-    gridAttach grid (timePickerGetBox tto) 1 1 1 1 
+    gridAttach grid cbFrom 0 0 1 1
+    gridAttach grid cbTo 0 1 1 1
+    gridAttach grid (timePickerGetBox tfrom) 1 0 1 1
+    gridAttach grid (timePickerGetBox tto)   1 1 1 1
 
     let g = FrameRetrieveDialog { frParent = window
                                 , frDialog = diag
@@ -55,5 +63,7 @@ newFrameRetrieveDialog window builder = do
                                 , frFrom   = tfrom
                                 , frTo     = tto
                                 }
+
+    widgetShowAll box 
 
     return g
