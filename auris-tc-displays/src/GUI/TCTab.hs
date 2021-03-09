@@ -44,9 +44,7 @@ import           Data.PUS.TCPacket              ( TCPacket(TCPacket) )
 import           Data.PUS.Parameter             ( Parameter(Parameter)
                                                 , ParameterList(Empty, List)
                                                 )
-import           Data.PUS.Value                 ( Value(ValUInt8X)
-                                                , B8(B8)
-                                                )
+import           Data.PUS.Value                 
 import           Data.PUS.TCCnc                 ( TCScoe(TCScoe) )
 
 import           General.PUSTypes               ( mkPUSSubType
@@ -59,13 +57,9 @@ import           General.PUSTypes               ( mkPUSSubType
                                                 )
 import           General.APID                   ( APID(APID) )
 
-import           Protocol.ProtocolInterfaces    ( ProtocolInterface
-                                                    ( IfCnc
-                                                    , IfEden
-                                                    )
-                                                )
+import           Protocol.ProtocolInterfaces 
 
-import           Verification.Verification      ( defaultVerificationSCOE )
+import           Verification.Verification      
 
 import           Refined                        ( refineTH )
 import           System.FilePath
@@ -99,6 +93,7 @@ createTCTab window builder = do
     btSend         <- getObject builder "buttonTCSend" Button
     btStyle        <- getObject builder "buttonStyleChooser" StyleSchemeChooserButton
     btApply        <- getObject builder "buttonApplyStyle" Button
+    btNctrs        <- getObject builder "buttonNCTRSTC" Button
 
     ur             <- newIORef Nothing
     l              <- newIORef Nothing
@@ -139,8 +134,8 @@ createTCTab window builder = do
                       1
                       [ SendRqst $ TCRequest
                             0
-                            "TEST-TC"
-                            "No Description"
+                            "EDEN_TC"
+                            "EDEN TC (binary SCOE)"
                             "TC-TAB"
                             Nothing
                             defaultVerificationSCOE
@@ -171,8 +166,8 @@ createTCTab window builder = do
                       1
                       [ SendRqst $ TCRequest
                             0
-                            "TEST-TC"
-                            "No Description"
+                            "CnC_BIN"
+                            "C&C Binary TC"
                             "TC-TAB"
                             Nothing
                             defaultVerificationSCOE
@@ -203,8 +198,8 @@ createTCTab window builder = do
                       1
                       [ SendRqst $ TCRequest
                             0
-                            "TEST-TC"
-                            "No Description"
+                            "CnC_MSG"
+                            "C&C ASCII Message"
                             "TC-TAB"
                             Nothing
                             defaultVerificationSCOE
@@ -218,6 +213,39 @@ createTCTab window builder = do
                       ]
                 ]
         setText g (T.pack (ppShow rqst))
+
+    _ <- Gtk.on btNctrs #clicked $ do
+        let rqst =
+                [ RepeatN
+                      1
+                      [ SendRqst $ TCRequest
+                            0
+                            "NCTRS-TC"
+                            "TC on the NCTRS connection"
+                            "TC-TAB"
+                            Nothing
+                            defaultVerificationBD
+                            (mkSCID 533)
+                            (mkVCID 1)
+                            (TCCommand
+                                0
+                                BD
+                                (DestNctrs (IfNctrs 1))
+                                (mkSSC 0)
+                                (TCPacket (APID 17)
+                                          (mkPUSType 2)
+                                          (mkPUSSubType 10)
+                                          (mkSourceID 10)
+                                          (List params Empty)
+                                )
+                            )
+                      ]
+                ]
+            param x = Parameter ("X" <> T.pack (show x)) (ValUInt32 BiE x)
+            params = map param [1..10]
+
+        setText g (T.pack (ppShow rqst))
+
 
     return g
 

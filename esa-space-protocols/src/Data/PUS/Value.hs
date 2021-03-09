@@ -19,6 +19,7 @@ module Data.PUS.Value
     , B8(..)
     , B16(..)
     , B32(..)
+    , Endian(..)
     ) where
 
 import           RIO

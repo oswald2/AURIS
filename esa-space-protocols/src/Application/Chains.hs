@@ -44,7 +44,7 @@ import           Data.PUS.TCTransferFrameEncoder
                                                 )
 
 import           Data.PUS.SegmentEncoder        ( tcSegmentEncoderC )
-import           Data.PUS.CLTU                  ( cltuEncodeRandomizedC )
+import           Data.PUS.CLTU                  ( cltuEncodeRandomizedC, cltuEncodeC )
 import           Data.PUS.CLTUEncoder           ( cltuToNcduC )
 import           Data.PUS.Counter               ( initialSSCCounterMap )
 
@@ -472,8 +472,10 @@ runTCChain missionSpecific switcherMap = do
     logDebug "runTCChain entering"
 
     rqstQueue <- view getRqstQueue
+    cfg <- view getConfig 
 
-    let rqstChain =
+    let cltuChain = if cfgRandomizerEnabled cfg then cltuEncodeRandomizedC else cltuEncodeC 
+        rqstChain =
             sourceTBQueue rqstQueue
                 .| concatC
                 .| tcPktEncoderC missionSpecific
@@ -485,7 +487,7 @@ runTCChain missionSpecific switcherMap = do
                 .| tcFrameEncodeC
                 .| switchProtocolFrameC switcherMap
                 .| tcFrameToCltuC
-                .| cltuEncodeRandomizedC
+                .| cltuChain
                 .| switchProtocolCltuC switcherMap
 
     let rqstThread = conc $ runConduitRes rqstChain

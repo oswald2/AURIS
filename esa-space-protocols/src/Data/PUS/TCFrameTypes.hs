@@ -12,7 +12,7 @@
     , TemplateHaskell
 #-}
 module Data.PUS.TCFrameTypes
-   (
+    (
       -- | The TC Transfer Frame itself
       TCTransferFrame(..)
       -- | Header Flags
@@ -33,16 +33,17 @@ module Data.PUS.TCFrameTypes
     , encTcFrameRequest
     , tcfTransFrame
     , tcfTransRqst
-   )
-where
+    ) where
 
-import RIO
-import qualified RIO.ByteString as BS
+import           RIO
+import qualified RIO.ByteString                as BS
 
-import Control.Lens (makeLenses)
+import           Control.Lens                   ( makeLenses )
 
-import General.PUSTypes
-import Data.PUS.TCRequest
+import           General.PUSTypes
+import           General.Types
+
+import           Data.PUS.TCRequest
 
 
 
@@ -57,30 +58,33 @@ data TCFrameFlag =
 
 
 -- | A TC Transfer Frame
-data TCTransferFrame = TCTransferFrame {
-    _tcFrameVersion :: !Word8
-    , _tcFrameFlag :: !TCFrameFlag
-    , _tcFrameSCID :: !SCID
-    , _tcFrameVCID :: !VCID
-    , _tcFrameLength :: !Word16
-    , _tcFrameSeq :: !Word8
-    , _tcFrameData :: !BS.ByteString
-    } deriving (Eq, Show, Read)
+data TCTransferFrame = TCTransferFrame
+    { _tcFrameVersion :: !Word8
+    , _tcFrameFlag    :: !TCFrameFlag
+    , _tcFrameSCID    :: !SCID
+    , _tcFrameVCID    :: !VCID
+    , _tcFrameLength  :: !Word16
+    , _tcFrameSeq     :: !Word8
+    , _tcFrameData    :: HexBytes
+    }
+    deriving (Eq, Show, Read)
 
 makeLenses ''TCTransferFrame
 
-data TCFrameTransport = TCFrameTransport {
-    _tcfTransFrame :: TCTransferFrame
-    , _tcfTransRqst :: TCRequest
-    } deriving (Show, Read)
+data TCFrameTransport = TCFrameTransport
+    { _tcfTransFrame :: TCTransferFrame
+    , _tcfTransRqst  :: TCRequest
+    }
+    deriving (Show, Read)
 makeLenses ''TCFrameTransport
 
 
-data EncodedTCFrame = EncodedTCFrame {
-    _encTcFrameSeq :: !Word8
-    , _encTcFrameData :: BS.ByteString
+data EncodedTCFrame = EncodedTCFrame
+    { _encTcFrameSeq     :: !Word8
+    , _encTcFrameData    :: HexBytes
     , _encTcFrameRequest :: TCRequest
-    } deriving (Show, Read)
+    }
+    deriving (Show, Read)
 
 makeLenses ''EncodedTCFrame
 
