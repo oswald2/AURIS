@@ -1,6 +1,6 @@
 {
     "aurisMIB": null,
-    "aurisMission": "DEFAULT",
+    "aurisMission": "S2K_TEST",
     "aurisTheme": "ThemeLight",
     "aurisDbConfig": {
         "cfgMongoHost": "localhost",
