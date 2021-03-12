@@ -76,10 +76,14 @@ raiseTMParameterC = awaitForever $ \pkt -> do
 
 
 storeTMPacketC :: (MonadIO m, MonadReader env m, HasDatabase env) => ConduitT TMPacket TMPacket m () 
-storeTMPacketC = awaitForever $ \pkt -> do 
+storeTMPacketC = do 
     env <- ask 
-    liftIO $ storeTMPacket env pkt
-    yield pkt 
+    if isJust (getDbBackend env) 
+        then do 
+            awaitForever $ \pkt -> do 
+                liftIO $ storeTMPacket env pkt
+                yield pkt 
+        else awaitForever yield
 
 packetProcessorC
     :: (MonadIO m, MonadReader env m, HasGlobalState env)

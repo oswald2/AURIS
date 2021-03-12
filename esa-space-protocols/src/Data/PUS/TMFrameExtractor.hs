@@ -132,7 +132,7 @@ storeTMFrameC
 storeTMFrameC = do
     env <- ask
     let cfg = env ^. getConfig
-    if cfgStoreTMFrames cfg
+    if isJust (getDbBackend env) && cfgStoreTMFrames cfg
         then awaitForever $ \frame -> do
             logDebug "Storing TM Frame to DB..."
             liftIO $ storeTMFrame env frame
@@ -763,7 +763,7 @@ tmFrameExtraction interf = do
     let missionSpecific = st ^. getMissionSpecific
         cfg = st ^. getConfig
 
-        frameChain = if cfgStoreTMFrames cfg
+        frameChain = if isJust (getDbBackend st) && cfgStoreTMFrames cfg
                         then 
                             checkFrameCountC interf
                                 .| storeTMFrameC
@@ -772,7 +772,9 @@ tmFrameExtraction interf = do
                             checkFrameCountC interf
                                 .| raiseFrameC
 
-    if cfgStorePUSPackets cfg
+    let db = getDbBackend st
+
+    if isJust db && cfgStorePUSPackets cfg
         then 
             frameChain
                 .| extractPktFromTMFramesC missionSpecific interf
