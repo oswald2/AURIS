@@ -103,7 +103,7 @@ data MainWindow = MainWindow
 makeLenses ''MainWindow
 
 
-mwAddTMPacket :: MainWindow -> TMPacket -> IO ()
+mwAddTMPacket :: MainWindow -> ExtractedDU TMPacket -> IO ()
 mwAddTMPacket window pkt = do
     tmpTabAddRow (window ^. mwTMPTab) pkt
 

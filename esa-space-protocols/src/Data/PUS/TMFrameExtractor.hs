@@ -127,7 +127,12 @@ tmFrameDecodeC = do
 
 
 storeTMFrameC
-    :: (MonadIO m, MonadReader env m, HasDatabase env, HasConfig env, HasLogFunc env)
+    :: ( MonadIO m
+       , MonadReader env m
+       , HasDatabase env
+       , HasConfig env
+       , HasLogFunc env
+       )
     => ConduitT (ExtractedDU TMFrame) (ExtractedDU TMFrame) m ()
 storeTMFrameC = do
     env <- ask
@@ -704,8 +709,9 @@ pusPacketGapCheckC
 pusPacketGapCheckC = worker Nothing
   where
     worker sscs = awaitForever $ \pkt -> do
-        let ssc     = pkt ^. extrPacket . epDU . pusHdr . pusHdrSSC
-            APID ap = pkt ^. extrPacket . epDU . pusHdr . pusHdrAPID
+        let hdr     = pkt ^. extrPacket . epDU . pusHdr
+            ssc     = hdr ^. pusHdrSSC
+            APID ap = hdr ^. pusHdrAPID
             apid    = fromIntegral ap
         case sscs of
             Nothing -> do
@@ -761,31 +767,26 @@ tmFrameExtraction
 tmFrameExtraction interf = do
     st <- ask
     let missionSpecific = st ^. getMissionSpecific
-        cfg = st ^. getConfig
+        cfg             = st ^. getConfig
 
-        frameChain = if isJust (getDbBackend st) && cfgStoreTMFrames cfg
-                        then 
-                            checkFrameCountC interf
-                                .| storeTMFrameC
-                                .| raiseFrameC
-                        else 
-                            checkFrameCountC interf
-                                .| raiseFrameC
+        frameChain      = if isJust (getDbBackend st) && cfgStoreTMFrames cfg
+            then checkFrameCountC interf .| storeTMFrameC .| raiseFrameC
+            else checkFrameCountC interf .| raiseFrameC
 
     let db = getDbBackend st
 
     if isJust db && cfgStorePUSPackets cfg
-        then 
+        then
             frameChain
-                .| extractPktFromTMFramesC missionSpecific interf
-                .| pusPacketDecodeC interf
-                .| pusPacketStoreC
-                .| pusPacketGapCheckC
-        else 
+            .| extractPktFromTMFramesC missionSpecific interf
+            .| pusPacketDecodeC interf
+            .| pusPacketStoreC
+            .| pusPacketGapCheckC
+        else
             frameChain
-                .| extractPktFromTMFramesC missionSpecific interf
-                .| pusPacketDecodeC interf
-                .| pusPacketGapCheckC
+            .| extractPktFromTMFramesC missionSpecific interf
+            .| pusPacketDecodeC interf
+            .| pusPacketGapCheckC
 
 
 checkGapsValid :: TMSegmentLen -> IntermediatePacket -> PUSHeader -> Bool

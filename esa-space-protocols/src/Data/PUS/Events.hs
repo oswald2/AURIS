@@ -95,7 +95,7 @@ data EventTelemetry =
     | EVTMRejectedSpillOverPkt PUSPacket
     | EVTMFrameReceived (ExtractedDU TMFrame)
     | EVTMPUSPacketReceived (ExtractedDU PUSPacket)
-    | EVTMPacketDecoded TMPacket
+    | EVTMPacketDecoded (ExtractedDU TMPacket)
     | EVTMParameters (Vector TMParameter)
     deriving (Show, Generic)
 
