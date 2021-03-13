@@ -9,10 +9,10 @@ module GUI.TimePicker
 
 
 import           RIO
-import qualified RIO.Text                      as T
+--import qualified RIO.Text                      as T
 import           Control.Monad                  ( replicateM )
 
-import qualified Data.Text.IO                  as T
+--import qualified Data.Text.IO                  as T
 import           GI.Gtk                        as Gtk
 
 import           General.Time

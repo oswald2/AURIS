@@ -50,7 +50,6 @@ appActivate app = do
 main :: IO ()
 main = do
     app <- new Gtk.Application [#applicationId := "auris.time-picker-test"]
-    Gtk.on app #activate $ appActivate app
+    void $ Gtk.on app #activate $ appActivate app
 
-    #run app Nothing
-    return ()
+    void $ #run app Nothing

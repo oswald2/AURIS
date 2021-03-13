@@ -75,6 +75,13 @@ library
     GUI.FileChooser
     GUI.LiveControls
     GUI.TimePicker
+    GUI.Reactive.Button
+    GUI.Reactive.ToggleButton
+    GUI.Reactive.Entry
+    GUI.Reactive.Property
+    GUI.Reactive.MenuItem
+    GUI.Reactive.Widget
+    GUI.Reactive.SpinButton
 
   -- Modules included in this library but not exported.
   -- other-modules:
@@ -97,6 +104,7 @@ library
     , esa-base
     , esa-space-protocols
     , time
+    , keera-hails-reactivevalues
 
 
   default-extensions:
