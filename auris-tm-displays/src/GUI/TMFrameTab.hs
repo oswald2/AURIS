@@ -308,6 +308,8 @@ setupCallbacks g interface = do
         (ForwardCB (tmfTabForwardCB g interface))
 
 
+
+
 tmfTabPlayCB :: TMFrameTab -> IO ()
 tmfTabPlayCB g = do
     tmFrameTableClearRows (g ^. tmfFrameTable)
