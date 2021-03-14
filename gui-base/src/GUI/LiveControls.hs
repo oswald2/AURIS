@@ -1,20 +1,27 @@
 module GUI.LiveControls
     ( LiveControl
     , createLiveControl
+    , liveControlSetMode
     , liveControlGetWidget
     , setupCallbacks
+    , liveControlConnect
     , PlayCB(..)
     , StopCB(..)
     , RetrieveCB(..)
     , RewindCB(..)
-    , ForwardCB (..)
-
+    , ForwardCB(..)
     ) where
 
 import           RIO
 
 import           GI.Gtk                        as Gtk
 
+import           Data.PUS.LiveState
+
+import           Data.ReactiveValue
+
+import           GUI.Reactive.ToggleButton
+import           GUI.Reactive.Button
 
 
 data LiveControl = LiveControl
@@ -78,8 +85,8 @@ createLiveControl = do
     return g
 
 
-newtype PlayCB = PlayCB (IO ())
-newtype StopCB = StopCB (IO ())
+newtype PlayCB = PlayCB (Bool -> IO ())
+newtype StopCB = StopCB (Bool -> IO ())
 newtype RetrieveCB = RetrieveCB (IO ())
 newtype RewindCB = RewindCB (IO ())
 newtype ForwardCB = ForwardCB (IO ())
@@ -93,12 +100,7 @@ setupCallbacks
     -> RewindCB
     -> ForwardCB
     -> IO ()
-setupCallbacks lc 
-  (PlayCB playAction) 
-  (StopCB stopAction) 
-  (RetrieveCB retrieveAction)
-  (RewindCB rewindAction)
-  (ForwardCB forwardAction)
+setupCallbacks lc (PlayCB playAction) (StopCB stopAction) (RetrieveCB retrieveAction) (RewindCB rewindAction) (ForwardCB forwardAction)
     = do
         void $ Gtk.on (_lcBtRetrieve lc) #clicked retrieveAction
         void $ Gtk.on (_lcBtRewind lc) #clicked rewindAction
@@ -106,24 +108,52 @@ setupCallbacks lc
 
         void $ Gtk.on (_lcBtPlay lc) #toggled $ do
             act <- toggleButtonGetActive (_lcBtPlay lc)
-            when act $ do 
-              liveControlSetLive lc
-              playAction
+            when act $ do
+                liveControlSetLive lc
+                playAction True
 
         void $ Gtk.on (_lcBtStop lc) #toggled $ do
             act <- toggleButtonGetActive (_lcBtStop lc)
-            when act $ do 
-              liveControlSetStop lc
-              stopAction
+            when act $ do
+                liveControlSetStop lc
+                stopAction True
 
+liveControlConnect
+    :: ( ReactiveValueWrite c1 () IO
+       , ReactiveValueWrite c2 Bool IO
+       , ReactiveValueWrite c3 Bool IO
+       , ReactiveValueWrite c4 () IO
+       , ReactiveValueWrite c5 () IO
+       )
+    => LiveControl
+    -> c3
+    -> c2
+    -> c4
+    -> c1
+    -> c5
+    -> ReactiveFieldWrite IO a
+liveControlConnect lc playReactive stopReactive retrieveReactive rewindReactive forwardReactive
+    = wrapDo $ do
+        toggleButtonActiveReactive (_lcBtPlay lc) =:> playReactive
+        toggleButtonActiveReactive (_lcBtStop lc) =:> stopReactive
+        buttonActivateField (_lcBtRetrieve lc) =:> retrieveReactive
+        buttonActivateField (_lcBtRewind lc) =:> rewindReactive
+        buttonActivateField (_lcBtForward lc) =:> forwardReactive
+
+
+liveControlSetMode :: LiveControl -> ReactiveFieldWrite IO LiveStateState
+liveControlSetMode ctrl = ReactiveFieldWrite setter
+  where
+    setter Live    = liveControlSetLive ctrl
+    setter Stopped = liveControlSetStop ctrl
 
 
 liveControlSetLive :: LiveControl -> IO ()
 liveControlSetLive lc = do
     toggleButtonSetActive (_lcBtPlay lc) True
     toggleButtonSetActive (_lcBtStop lc) False
-    widgetSetSensitive (_lcBtStop lc) True
-    widgetSetSensitive (_lcBtPlay lc) False
+    widgetSetSensitive (_lcBtStop lc)     True
+    widgetSetSensitive (_lcBtPlay lc)     False
     widgetSetSensitive (_lcBtRetrieve lc) False
     widgetSetSensitive (_lcBtRewind lc)   False
     widgetSetSensitive (_lcBtForward lc)  False
@@ -133,8 +163,8 @@ liveControlSetStop :: LiveControl -> IO ()
 liveControlSetStop lc = do
     toggleButtonSetActive (_lcBtPlay lc) False
     toggleButtonSetActive (_lcBtStop lc) True
-    widgetSetSensitive (_lcBtStop lc) False
-    widgetSetSensitive (_lcBtPlay lc) True
+    widgetSetSensitive (_lcBtStop lc)     False
+    widgetSetSensitive (_lcBtPlay lc)     True
     widgetSetSensitive (_lcBtRetrieve lc) True
     widgetSetSensitive (_lcBtRewind lc)   True
     widgetSetSensitive (_lcBtForward lc)  True

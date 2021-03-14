@@ -7,9 +7,11 @@ module GUI.TMFrameTable
     , tmFrameTableAddRow
     , tmFrameTableSetRows
     , tmFrameTableClearRows
-    , tmFrameTableSetValues
     , tmFrameTableSetCallback
     , tmFrameTableGetLatestERT
+    , tmFrameTableRowReactive
+    , tmFrameTableAllRowsReactive
+    , tmFrameTableAddRowReactive
     ) where
 
 import           RIO
@@ -25,8 +27,11 @@ import           General.PUSTypes
 import           GUI.Utils
 import           GUI.Colors
 import           GUI.ScrollingTable
+import           GUI.Reactive.TreeView
 
 import           General.Time
+
+import           Data.ReactiveValue
 
 
 data TMFrameTable = TMFrameTable
@@ -34,6 +39,13 @@ data TMFrameTable = TMFrameTable
     , _tmfrModel     :: SeqStore (ExtractedDU TMFrame)
     , _tmfrSortModel :: TreeModelSort
     }
+
+
+tmFrameTableRowReactive :: TMFrameTable -> ReactiveFieldRead IO (Maybe (ExtractedDU TMFrame))
+tmFrameTableRowReactive g =
+    treeViewSelectedRowReactive (_tmfrTable g) (_tmfrModel g)
+
+
 
 -- | Add a single row of a 'TMFrame' wrapped in a 'ExtractedDU'. Ensures, that 
 -- only 'defMaxRowTM' rows are present at maximum, removes old values if the
@@ -43,18 +55,27 @@ data TMFrameTable = TMFrameTable
 tmFrameTableAddRow :: TMFrameTable -> ExtractedDU TMFrame -> IO ()
 tmFrameTableAddRow g = addRowScrollingTable (_tmfrTable g) (_tmfrModel g)
 
-tmFrameTableSetRows :: TMFrameTable -> [ExtractedDU TMFrame] -> IO ()
-tmFrameTableSetRows g = setRowsSeqStore (_tmfrModel g)
-
-tmFrameTableClearRows :: TMFrameTable -> IO ()
-tmFrameTableClearRows g = seqStoreClear (_tmfrModel g)
+tmFrameTableAddRowReactive :: TMFrameTable -> ReactiveFieldWrite IO (ExtractedDU TMFrame) 
+tmFrameTableAddRowReactive g = ReactiveFieldWrite setter 
+  where 
+    setter frame = addRowScrollingTable (_tmfrTable g) (_tmfrModel g) frame
 
 
 -- | Set the internal model to the list of given 'TMFrame' values. In contrast
 -- to 'tmFrameTableAddRow', this function does not limit the length as it is 
 -- intended to be used in retrieval, which depends on the requested data size
-tmFrameTableSetValues :: TMFrameTable -> [ExtractedDU TMFrame] -> IO ()
-tmFrameTableSetValues g = setRowsSeqStore (_tmfrModel g)
+tmFrameTableSetRows :: TMFrameTable -> [ExtractedDU TMFrame] -> IO ()
+tmFrameTableSetRows g = setRowsSeqStore (_tmfrModel g)
+
+tmFrameTableAllRowsReactive :: TMFrameTable -> ReactiveFieldWrite IO [ExtractedDU TMFrame]
+tmFrameTableAllRowsReactive g = ReactiveFieldWrite setter 
+  where 
+    setter frames = setRowsSeqStore (_tmfrModel g) frames
+
+
+tmFrameTableClearRows :: TMFrameTable -> IO ()
+tmFrameTableClearRows g = seqStoreClear (_tmfrModel g)
+
 
 -- | Set the callback function to be called, when a row in the table is activated
 -- (which in GTK terms means double clicked). The callback must take the value as 

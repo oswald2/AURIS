@@ -11,6 +11,7 @@ module GUI.MainWindow
     , createMainWindow
     , mwAddTMPacket
     , mwAddTMFrame
+    , mwAddTMFrameReactive
     , mwSetTMFrames
     , mwAddTMParameters
     , mwAddTMParameterDefinitions
@@ -65,6 +66,8 @@ import           Protocol.ProtocolInterfaces
 
 import           Data.DataModel
 
+import           Data.ReactiveValue
+
 import           Data.TM.Parameter
 import           Data.TM.TMParameterDef
 
@@ -109,6 +112,11 @@ mwAddTMPacket window pkt = do
 
 mwAddTMFrame :: MainWindow -> ExtractedDU TMFrame -> IO ()
 mwAddTMFrame window = tmfTabAddRow (window ^. mwFrameTab)
+
+mwAddTMFrameReactive
+    :: MainWindow -> ReactiveFieldWrite IO (ExtractedDU TMFrame)
+mwAddTMFrameReactive window = tmfTabAddRowReactive (window ^. mwFrameTab)
+
 
 mwSetTMFrames :: MainWindow -> [ExtractedDU TMFrame] -> IO ()
 mwSetTMFrames window = tmfTabSetFrames (window ^. mwFrameTab)
@@ -179,19 +187,21 @@ createMainWindow cfg = do
     menuItemSaveTCAs  <- getObject builder "menuItemSaveTCFileAs" MenuItem
 
     btApply           <- getObject builder "buttonConfigApplyStyle" Button
-    btStyle           <- getObject builder "buttonConfigSelectStyle" StyleSchemeChooserButton
+    btStyle           <- getObject builder
+                                   "buttonConfigSelectStyle"
+                                   StyleSchemeChooserButton
 
     -- create the message display
-    msgDetails        <- createMsgDetailWindow window builder
-    msgDisp           <- createMessageDisplay msgDetails builder
+    msgDetails <- createMsgDetailWindow window builder
+    msgDisp    <- createMessageDisplay msgDetails builder
 
     -- create the tabs in the notebook
-    tmfTab            <- createTMFTab window builder
-    tmpTab            <- createTMPTab window builder
-    paramTab          <- createTMParamTab builder
-    connTab           <- createConnectionTab (aurisPusConfig cfg) builder
-    tcTab             <- createTCTab window builder
-    tcHistory         <- createTCHistory window builder
+    tmfTab     <- createTMFTab window builder
+    tmpTab     <- createTMPTab window builder
+    paramTab   <- createTMParamTab builder
+    connTab    <- createConnectionTab (aurisPusConfig cfg) builder
+    tcTab      <- createTCTab window builder
+    tcHistory  <- createTCHistory window builder
 
 
     setLogo logo 65 65
@@ -248,7 +258,7 @@ createMainWindow cfg = do
     void $ Gtk.on btApply #clicked $ do
         s <- styleSchemeChooserGetStyleScheme btStyle
         bufferSetStyleScheme configTextBuffer (Just s)
- 
+
     return gui
 
 

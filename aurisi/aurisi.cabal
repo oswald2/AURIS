@@ -94,7 +94,8 @@ Executable AURISi
     tar,
     zlib,
     stm,
-    ghc-compact
+    ghc-compact,
+    keera-hails-reactivevalues
 
   default-extensions:
         

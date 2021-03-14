@@ -4,11 +4,12 @@ module GUI.Reactive.Entry where
 import           RIO
 
 import           GI.Gtk                        as Gtk
+import           Data.GI.Gtk.Threading
 
 import           Data.ReactiveValue             ( ReactiveFieldReadWrite
                                                 , ReactiveValueRead(..)
                                                 , ReactiveValueReadWrite
-                                                , ReactiveValueWrite(..)
+                                                , ReactiveValueWrite(..),ReactiveFieldWrite (ReactiveFieldWrite)
                                                 )
 
 import           GUI.Reactive.Property
@@ -17,6 +18,12 @@ import           GUI.Reactive.Property
 
 entryTextReactive :: Entry -> ReactiveFieldReadWrite IO Text
 entryTextReactive e = reactiveProperty e #changed #text
+
+
+entryTextWO :: Entry -> ReactiveFieldWrite IO Text 
+entryTextWO e = ReactiveFieldWrite setter 
+    where 
+        setter v = postGUIASync $ entrySetText e v
 
 
 instance ReactiveValueReadWrite Entry Text IO

@@ -84,6 +84,7 @@ library
     GUI.Reactive.SpinButton
     GUI.Reactive.TreeView
     GUI.Reactive.TextView
+    GUI.Reactive.Utils
 
   -- Modules included in this library but not exported.
   -- other-modules:
