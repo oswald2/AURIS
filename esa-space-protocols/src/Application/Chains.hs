@@ -257,7 +257,7 @@ runTMCnCChain cfg missionSpecific pktQueue = do
 
     let chain =
             receiveCnCC missionSpecific (IfCnc (cfgCncID cfg))
-                .| cncToTMPacket (IfCnc (cfgCncID cfg)) Nothing
+                .| cncToTMPacket (IfCnc (cfgCncID cfg))
                 .| sinkTBQueue pktQueue
 
     runGeneralTCPReconnectClient
@@ -305,7 +305,7 @@ runTCCnCChain cfg missionSpecific duQueue pktQueue = do
     let chain = receivePktChannelC duQueue .| sendTCCncC
         ackChain =
             receiveCnCC missionSpecific ifID
-                .| cncProcessAcks ifID pktQueue Nothing
+                .| cncProcessAcks ifID pktQueue
         ifID = IfCnc (cfgCncID cfg)
 
     logDebug

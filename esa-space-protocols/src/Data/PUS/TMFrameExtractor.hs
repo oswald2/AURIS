@@ -713,27 +713,31 @@ pusPacketGapCheckC = worker Nothing
             ssc     = hdr ^. pusHdrSSC
             APID ap = hdr ^. pusHdrAPID
             apid    = fromIntegral ap
-        case sscs of
-            Nothing -> do
-                yield pkt
-                worker (Just (M.singleton apid ssc))
-            Just old -> do
-                case M.lookup apid old of
+        case hdr ^. pusHdrType of
+            PUSTM -> 
+                case sscs of
                     Nothing -> do
                         yield pkt
-                        worker (Just (M.insert apid ssc old))
-                    Just oldSSC -> do
-                        if oldSSC + 1 == ssc
-                            then yield pkt
-                            else
-                                yield
-                                    (  pkt
-                                    &  extrPacket
-                                    .  epGap
-                                    ?~ (fromIntegral oldSSC, fromIntegral ssc)
-                                    )
-                        worker (Just (M.insert apid ssc old))
-
+                        worker (Just (M.singleton apid ssc))
+                    Just old -> do
+                        case M.lookup apid old of
+                            Nothing -> do
+                                yield pkt
+                                worker (Just (M.insert apid ssc old))
+                            Just oldSSC -> do
+                                if oldSSC + 1 == ssc
+                                    then yield pkt
+                                    else
+                                        yield
+                                            (  pkt
+                                            &  extrPacket
+                                            .  epGap
+                                            ?~ (fromIntegral oldSSC, fromIntegral ssc)
+                                            )
+                                worker (Just (M.insert apid ssc old))
+            PUSTC -> do
+                yield pkt 
+                worker sscs
 
 
 -- | A conduit chain. Reads from a TBQueue which delivers 'TMFrame' s,
