@@ -163,6 +163,7 @@ library
     , hashtables-mo
     , colour
     , ghc-compact
+    , megaparsec
 
   -- Directories containing source files.
   hs-source-dirs:      src
