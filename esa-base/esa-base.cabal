@@ -103,6 +103,8 @@ library
     Data.PUS.LiveState
     Data.PUS.MissionSpecific.Definitions
     Data.PUS.DataModelInfo
+    Data.PUS.Value 
+    Data.PUS.Parameter
     Protocol.ProtocolInterfaces
     Conduit.PayloadParser
     Persistence.Conversion.Types
@@ -191,6 +193,8 @@ library
     , closed
     , bytestring-to-vector
     , ghc-compact
+    , refined
+    , sorted-list
 
 
   -- Directories containing source files.

@@ -32,7 +32,7 @@ data LGFentry = LGFentry {
 
 
 instance FromRecord LGFentry where
-  parseRecord = genericParse (== 7) LGFentry
+  parseRecord = genericParse (>= 7) LGFentry
 
 
 fileName :: FilePath

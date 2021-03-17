@@ -228,9 +228,9 @@ data Value =
     | ValFixedOctet !Word16 !ByteString
     | ValCUCTime CUCTime
     | ValUndefined
-    deriving (Eq, Read, Show, Generic, NFData)
+    deriving (Eq, Read, Show, Generic)
 
-
+instance NFData Value 
 instance Serialise Value
 
 

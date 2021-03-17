@@ -59,12 +59,10 @@ library
         Data.PUS.SegmentEncoder
         Data.PUS.TCDirective
         Data.PUS.TCCnc
-        Data.PUS.Parameter
         Data.PUS.TMFrameExtractor
         Data.PUS.TMParameterExtraction
         Data.PUS.TMPacketProcessing
         Data.PUS.ExtractedPUSPacket
-        Data.PUS.Value
         Data.PUS.NcduToTMFrame
         Data.PUS.Counter
         Data.PUS.MissionSpecific.Default

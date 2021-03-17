@@ -25,6 +25,9 @@ import           Data.MIB.PLF                  as PLF
 import           Data.MIB.TPCF                 as TPCF
 import           Data.MIB.GPF                  as GPF
 import           Data.MIB.GPC                  as GPC
+import           Data.MIB.CCF                  as CCF
+import           Data.MIB.CPC                  as CPC
+import           Data.MIB.CDF                  as CDF
 
 --import           Data.TM.TMParameterDe
 import           Data.Conversion.GRD
@@ -79,6 +82,15 @@ testGpc = testLoadTab GPC.loadFromFile
 
 testGpf :: FilePath -> IO ()
 testGpf = testLoadTab GPF.loadFromFile
+
+testCcf :: FilePath -> IO ()
+testCcf = testLoadTab CCF.loadFromFile
+
+testCpc :: FilePath -> IO ()
+testCpc = testLoadTab CPC.loadFromFile
+
+testCdf :: FilePath -> IO ()
+testCdf = testLoadTab CDF.loadFromFile
 
 
 testLoadTab
@@ -239,21 +251,27 @@ main = do
     testGpc mibPath
     T.putStrLn "\n\n\nGPFs:\n"
     testGpf mibPath
+    T.putStrLn "\n\n\nCCFs:\n"
+    testCcf mibPath
+    T.putStrLn "\n\n\nCPCs:\n"
+    testCpc mibPath
+    T.putStrLn "\n\n\nCDFs:\n"
+    testCdf mibPath
 
 
 
-    T.putStrLn "\n\n\nLoading Data Structures:\n===============\n"
-    T.putStrLn "LoadCalibs:\n"
-    testLoadCalibs mibPath
-    T.putStrLn "\nLoadSyns:\n"
-    testLoadSyn mibPath
-    T.putStrLn "\nLoadParams:\n"
-    testLoadParameters mibPath
-    T.putStrLn "\n\n\nGRDs:\n"
-    testLoadGRDs mibPath
+    -- T.putStrLn "\n\n\nLoading Data Structures:\n===============\n"
+    -- T.putStrLn "LoadCalibs:\n"
+    -- testLoadCalibs mibPath
+    -- T.putStrLn "\nLoadSyns:\n"
+    -- testLoadSyn mibPath
+    -- T.putStrLn "\nLoadParams:\n"
+    -- testLoadParameters mibPath
+    -- T.putStrLn "\n\n\nGRDs:\n"
+    -- testLoadGRDs mibPath
 
-    T.putStrLn "\n\n\nLoading MIB:\n===============\n"
-    T.putStrLn "LoadMIB:\n"
-    testLoadMIB mibPath
+    -- T.putStrLn "\n\n\nLoading MIB:\n===============\n"
+    -- T.putStrLn "LoadMIB:\n"
+    -- testLoadMIB mibPath
 
 

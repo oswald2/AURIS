@@ -81,6 +81,9 @@ library
     Data.MIB.LGF
     Data.MIB.GPF
     Data.MIB.GPC
+    Data.MIB.CCF
+    Data.MIB.CPC
+    Data.MIB.CDF
     Data.MIB.LoadMIB
     Data.Conversion.Types
     Data.Conversion.Calibration
@@ -89,6 +92,7 @@ library
     Data.Conversion.TMPacket
     Data.Conversion.GRD
     Data.Conversion.Info
+    Data.Conversion.TCParameter
 
   -- Modules included in this library but not exported.
   -- other-modules:
