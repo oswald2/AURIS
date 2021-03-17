@@ -136,10 +136,9 @@ eventProcessor _ _ = pure ()
 
 initialiseInterface
     :: MainWindow
-    -> IO (Interface, Async (), TBQueue InterfaceAction, TBQueue DBQuery)
-initialiseInterface mainWindow = do
+    -> Bool -> IO (Interface, Async (), TBQueue InterfaceAction, Maybe (TBQueue DBQuery))
+initialiseInterface mainWindow dbPresent = do
     queue                              <- newTBQueueIO 5000
-    (interface, coreQueue, queryQueue) <- createInterface
-        (aurisEventHandler queue)
+    (interface, coreQueue, queryQueue) <- createInterface (aurisEventHandler queue) dbPresent
     eventThread <- async (eventProcessorThread mainWindow queue)
     pure (interface, eventThread, coreQueue, queryQueue)

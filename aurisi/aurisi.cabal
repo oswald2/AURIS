@@ -144,16 +144,16 @@ Executable AURISi
   if flag(llvm)
         ghc-options: -O2 -Wall -Wcompat -Widentities -Wincomplete-record-updates
                      -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
-                     -funbox-strict-fields -fllvm -optlo-O3 -threaded -rtsopts
+                     -funbox-strict-fields -fllvm -optlo-O3 -threaded -rtsopts -with-rtsopts=--nonmoving-gc
   else
     if flag(optimize)
         ghc-options: -O2 -Wall -Wcompat -Widentities -Wincomplete-record-updates
                      -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
-                     -funbox-strict-fields  -threaded -rtsopts
+                     -funbox-strict-fields  -threaded -rtsopts -with-rtsopts=--nonmoving-gc
     else
         ghc-options: -O0 -g2 -Wall -Wcompat -Widentities -Wincomplete-record-updates
                      -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
-                     -funbox-strict-fields  -threaded -rtsopts
+                     -funbox-strict-fields  -threaded -rtsopts -with-rtsopts=--nonmoving-gc
 
 
 

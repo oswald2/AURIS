@@ -9,10 +9,10 @@ module GUI.TimePicker
 
 
 import           RIO
---import qualified RIO.Text                      as T
+import qualified RIO.Text                      as T
 import           Control.Monad                  ( replicateM )
 
---import qualified Data.Text.IO                  as T
+import qualified Data.Text.IO                  as T
 import           GI.Gtk                        as Gtk
 
 import           General.Time
@@ -68,8 +68,9 @@ timePickerNew time = do
 
     [l1, l2, l3, l4, l5] <- replicateM 5 $ labelNew (Just ".")
 
-    button               <- buttonNewWithLabel "Calendar"
-
+    imCal                <- imageNewFromIconName (Just "x-office-calendar") 0
+    button               <- buttonNew
+    buttonSetImage button (Just imCal)
 
     boxPackStart box years  False False 2
     boxPackStart box l1     False False 2
@@ -142,8 +143,12 @@ timePickerSetDate g y m d = do
     -- T.putStrLn $ "TimePicker: month=" <> T.pack (show m) <> " day=" <> T.pack
     --     (show d)
     spinButtonSetValue (tpYears g) (fromIntegral y)
-    let (_year, doy) = toJulianYearAndDay
-            (fromGregorian (fromIntegral y) (fromIntegral (m + 1)) (fromIntegral d))
+    let s@(_year, doy) = toJulianYearAndDay
+            (fromGregorian (fromIntegral y)
+                           (fromIntegral (m + 1))
+                           (fromIntegral d)
+            )
+    T.putStrLn $ "SetDate: " <> T.pack (show s)
     spinButtonSetValue (tpDays g) (fromIntegral doy)
 
 pickCalendar :: TimePicker -> IO ()
@@ -165,6 +170,7 @@ pickCalendar g = do
     widgetHide diag
 
     when (res == fromIntegral (fromEnum ResponseTypeOk)) $ do
-        (y, m, d) <- calendarGetDate cal
+        s@(y, m, d) <- calendarGetDate cal
+        T.putStrLn $ "Calendar: " <> T.pack (show s)
         timePickerSetDate g y m d
 

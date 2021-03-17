@@ -131,13 +131,13 @@ liveControlConnect
     -> c4
     -> c1
     -> c5
-    -> ReactiveFieldWrite IO a
+    -> IO ()
 liveControlConnect lc playReactive stopReactive retrieveReactive rewindReactive forwardReactive
-    = wrapDo $ do
-        toggleButtonActiveReactive (_lcBtPlay lc) =:> playReactive
-        toggleButtonActiveReactive (_lcBtStop lc) =:> stopReactive
-        buttonActivateField (_lcBtRetrieve lc) =:> retrieveReactive
-        buttonActivateField (_lcBtRewind lc) =:> rewindReactive
+    = do
+        toggleButtonActiveReactive (_lcBtPlay lc) =:> playReactive 
+        toggleButtonActiveReactive (_lcBtStop lc) =:> stopReactive 
+        buttonActivateField (_lcBtRetrieve lc) =:> retrieveReactive 
+        buttonActivateField (_lcBtRewind lc) =:> rewindReactive 
         buttonActivateField (_lcBtForward lc) =:> forwardReactive
 
 

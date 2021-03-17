@@ -14,7 +14,6 @@ module GUI.TMFrameTab
     , tmfTabRetrieveReactive
     , tmfTabRewindReactive
     , tmfTabForwardReactive
-    , tmfTabLiveControl
     , GUI.TMFrameTab.setupCallbacks
     ) where
 
@@ -41,7 +40,7 @@ import           Data.PUS.LiveState
 
 import           General.Hexdump
 import           General.PUSTypes
-import           General.Time
+--import           General.Time
 
 import           Interface.Interface
 
@@ -82,8 +81,6 @@ data TMFrameTab = TMFrameTab
     , _tmfLiveCtrlBox   :: !Box
     , _tmfLiveCtrl      :: !LiveControl
     , _tmfLiveState     :: TVar LiveStateState
-    , _tmfPageNum       :: IOURef Word32
-    , _tmfLastERT       :: IORef SunTime
     , _tmfRetrieveDiag  :: FrameRetrieveDialog
     }
 makeLenses ''TMFrameTab
@@ -97,24 +94,30 @@ tmfTabAddRow tab frame = do
         Live    -> tmFrameTableAddRow (tab ^. tmfFrameTable) frame
         Stopped -> return ()
 
-tmfTabAddRowReactive :: TMFrameTab -> ReactiveFieldWrite IO (ExtractedDU TMFrame)
-tmfTabAddRowReactive g = ReactiveFieldWrite setter 
-    where 
-        setter frame = do 
-            st <- readTVarIO (g ^. tmfLiveState)
-            case st of
-                Live    -> reactiveValueWrite (tmFrameTableAddRowReactive (g ^. tmfFrameTable)) frame
-                Stopped -> return ()
+tmfTabAddRowReactive
+    :: TMFrameTab -> ReactiveFieldWrite IO (ExtractedDU TMFrame)
+tmfTabAddRowReactive g = ReactiveFieldWrite setter
+  where
+    setter frame = do
+        st <- readTVarIO (g ^. tmfLiveState)
+        case st of
+            Live -> reactiveValueWrite
+                (tmFrameTableAddRowReactive (g ^. tmfFrameTable))
+                frame
+            Stopped -> return ()
 
 
-tmfTabSetFramesReactive :: TMFrameTab -> ReactiveFieldWrite IO [ExtractedDU TMFrame]
-tmfTabSetFramesReactive g = ReactiveFieldWrite setter 
-    where 
-        setter frames = do 
-            st <- readTVarIO (g ^. tmfLiveState)
-            case st of
-                Live    -> return ()
-                Stopped -> reactiveValueWrite (tmFrameTableAllRowsReactive (g ^. tmfFrameTable)) frames 
+tmfTabSetFramesReactive
+    :: TMFrameTab -> ReactiveFieldWrite IO [ExtractedDU TMFrame]
+tmfTabSetFramesReactive g = ReactiveFieldWrite setter
+  where
+    setter frames = do
+        st <- readTVarIO (g ^. tmfLiveState)
+        case st of
+            Live    -> return ()
+            Stopped -> reactiveValueWrite
+                (tmFrameTableAllRowsReactive (g ^. tmfFrameTable))
+                frames
 
 
 tmfTabSetFrames :: TMFrameTab -> [ExtractedDU TMFrame] -> IO ()
@@ -220,9 +223,6 @@ createTMFTab window builder = do
     retrieveDiag <- newFrameRetrieveDialog window
 
     liveState    <- newTVarIO Live
-    pageNum      <- newURef 0
-    now          <- getCurrentTime
-    lastERT      <- newIORef now
 
     let g = TMFrameTab { _tmfFrameTable    = frameTable
                        , _tmfOutputSCID    = scid
@@ -243,8 +243,6 @@ createTMFTab window builder = do
                        , _tmfLiveCtrlBox   = liveCtrl
                        , _tmfLiveCtrl      = lc
                        , _tmfLiveState     = liveState
-                       , _tmfPageNum       = pageNum
-                       , _tmfLastERT       = lastERT
                        , _tmfRetrieveDiag  = retrieveDiag
                        }
     tmFrameTableRowReactive (g ^. tmfFrameTable)
@@ -333,6 +331,7 @@ setCLCWValues window clcw = do
         else statusEntrySetState (cl ^. clcwfRetransmit) ESGreen txtNoRetransmit
 
 
+
 setupCallbacks :: TMFrameTab -> Interface -> IO ()
 setupCallbacks g interface = do
     GUI.LiveControls.setupCallbacks
@@ -344,144 +343,102 @@ setupCallbacks g interface = do
         (ForwardCB (tmfTabForwardCB g interface))
 
 
-tmfTabLiveControl :: TMFrameTab -> Interface -> ReactiveFieldWrite IO a
-tmfTabLiveControl g interface =
-    liveControlConnect (g ^. tmfLiveCtrl)
-        (tmfTabPlayReactive g)
-        (tmfTabStopReactive g)
-        (tmfTabRetrieveReactive g interface)
-        (tmfTabForwardReactive g interface)
-        (tmfTabRewindReactive g interface)
+-- setupCallbacks :: TMFrameTab -> Interface -> IO ()
+-- setupCallbacks g interface = do
+--     liveControlConnect (g ^. tmfLiveCtrl)
+--                        (tmfTabPlayReactive g)
+--                        (tmfTabStopReactive g)
+--                        (tmfTabRetrieveReactive g interface)
+--                        (tmfTabForwardReactive g interface)
+--                        (tmfTabRewindReactive g interface)
 
 
 tmfTabPlayCB :: TMFrameTab -> Bool -> IO ()
-tmfTabPlayCB g _ = do
+tmfTabPlayCB g True = do
     tmFrameTableClearRows (g ^. tmfFrameTable)
     atomically $ writeTVar (g ^. tmfLiveState) Live
     return ()
+tmfTabPlayCB _ _ = return ()
+
 
 tmfTabPlayReactive :: TMFrameTab -> ReactiveFieldWrite IO Bool
-tmfTabPlayReactive g = ReactiveFieldWrite setter 
-    where 
-        setter False = return () 
-        setter True = do 
-            tmFrameTableClearRows (g ^. tmfFrameTable)
-            atomically $ writeTVar (g ^. tmfLiveState) Live
-
+tmfTabPlayReactive g = ReactiveFieldWrite setter
+  where
+    setter False = return ()
+    setter True  = do
+        tmFrameTableClearRows (g ^. tmfFrameTable)
+        atomically $ writeTVar (g ^. tmfLiveState) Live
 
 tmfTabStopCB :: TMFrameTab -> Bool -> IO ()
-tmfTabStopCB g _ = do
+tmfTabStopCB g True = do
     atomically $ writeTVar (g ^. tmfLiveState) Stopped
-    lastERT <- getLatestFrameERT g
-    writeIORef (g ^. tmfLastERT) lastERT
+tmfTabStopCB _ _ = return ()
+
 
 tmfTabStopReactive :: TMFrameTab -> ReactiveFieldWrite IO Bool
-tmfTabStopReactive g = ReactiveFieldWrite setter 
-    where 
-        setter False = return () 
-        setter True = do 
-            atomically $ writeTVar (g ^. tmfLiveState) Stopped
-            lastERT <- getLatestFrameERT g
-            writeIORef (g ^. tmfLastERT) lastERT
+tmfTabStopReactive g = ReactiveFieldWrite setter
+  where
+    setter False = return ()
+    setter True  = do
+        atomically $ writeTVar (g ^. tmfLiveState) Stopped
+
 
 
 tmfTabRetrieveCB :: TMFrameTab -> Interface -> IO ()
-tmfTabRetrieveCB g _interface = do
+tmfTabRetrieveCB g interface = do
     res <- dialogRun (g ^. tmfRetrieveDiag . frameRetrieveDiag)
     widgetHide (g ^. tmfRetrieveDiag . frameRetrieveDiag)
-    if res == fromIntegral (fromEnum ResponseTypeOk)
-        then return ()
-        else return ()
-
-    -- now <- getCurrentTime
-    -- callInterface interface
-    --               actionQueryDB
-    --               (FrRange (DbGetFrameRange (Just nullTime) (Just now)))
+    when (res == fromIntegral (fromEnum ResponseTypeOk)) $ do 
+        q <- frameRetrieveDiagGetQuery (g ^. tmfRetrieveDiag)
+        callInterface interface actionQueryDB (FrRange q)
 
 tmfTabRetrieveReactive :: TMFrameTab -> Interface -> ReactiveFieldWrite IO ()
-tmfTabRetrieveReactive g interface = ReactiveFieldWrite setter 
-    where 
-        setter _ = do 
-            query <- reactiveValueRead (frameRetrieveDiagReactive (g ^. tmfRetrieveDiag))
-            case query of 
-                Nothing -> return () 
-                Just q -> callInterface interface actionQueryDB (FrRange q)
+tmfTabRetrieveReactive g interface = ReactiveFieldWrite setter
+  where
+    setter _ = do
+        query <- reactiveValueRead
+            (frameRetrieveDiagReactive (g ^. tmfRetrieveDiag))
+        case query of
+            Nothing -> return ()
+            Just q  -> callInterface interface actionQueryDB (FrRange q)
+
 
 
 tmfTabRewindCB :: TMFrameTab -> Interface -> IO ()
 tmfTabRewindCB g interface = do
-    lastTime <- readIORef (g ^. tmfLastERT)
-    pageNum  <- getPageNumInc g
+    ert <- tmFrameTableGetEarliestERT (g ^. tmfFrameTable)
     callInterface
         interface
         actionQueryDB
-        (FrLast (DbGetLastNFrames lastTime pageNum (fromIntegral defMaxRowTM)))
+        (FrPrev (DbGetLastNFrames ert (fromIntegral defMaxRowTM)))
 
-tmfTabRewindReactive :: TMFrameTab -> Interface -> ReactiveFieldWrite IO () 
+
+tmfTabRewindReactive :: TMFrameTab -> Interface -> ReactiveFieldWrite IO ()
 tmfTabRewindReactive g interface = ReactiveFieldWrite setter
-    where 
-        setter _ = do 
-            lastTime <- readIORef (g ^. tmfLastERT)
-            pageNum  <- getPageNumInc g
-            callInterface
-                interface
-                actionQueryDB
-                (FrLast (DbGetLastNFrames lastTime pageNum (fromIntegral defMaxRowTM)))
-
-
+  where
+    setter _ = do
+        ert <- tmFrameTableGetEarliestERT (g ^. tmfFrameTable)
+        callInterface
+            interface
+            actionQueryDB
+            (FrPrev (DbGetLastNFrames ert (fromIntegral defMaxRowTM)))
 
 tmfTabForwardCB :: TMFrameTab -> Interface -> IO ()
 tmfTabForwardCB g interface = do
-    pageNum <- getPageNumDec g
-    case pageNum of
-        Nothing -> do -- switch to live mode 
-            tmfTabPlayCB g True
-        Just pn -> do
-            lastTime <- readIORef (g ^. tmfLastERT)
-            callInterface
-                interface
-                actionQueryDB
-                (FrLast
-                    (DbGetLastNFrames lastTime pn (fromIntegral defMaxRowTM))
-                )
-
+    ert <- tmFrameTableGetLatestERT (g ^. tmfFrameTable)
+    callInterface
+        interface
+        actionQueryDB
+        (FrNext (DbGetNextNFrames ert (fromIntegral defMaxRowTM)))
+    
 tmfTabForwardReactive :: TMFrameTab -> Interface -> ReactiveFieldWrite IO ()
-tmfTabForwardReactive g interface = ReactiveFieldWrite setter 
-    where 
-        setter _ = do 
-            pageNum <- getPageNumDec g
-            case pageNum of
-                Nothing -> do -- switch to live mode 
-                    reactiveValueWrite (tmfTabPlayReactive g) True 
-                Just pn -> do
-                    lastTime <- readIORef (g ^. tmfLastERT)
-                    callInterface
-                        interface
-                        actionQueryDB
-                        (FrLast
-                            (DbGetLastNFrames lastTime pn (fromIntegral defMaxRowTM))
-                        )
+tmfTabForwardReactive g interface = ReactiveFieldWrite setter
+  where
+    setter _ = do
+        ert <- tmFrameTableGetLatestERT (g ^. tmfFrameTable)
+        callInterface
+            interface
+            actionQueryDB
+            (FrNext (DbGetNextNFrames ert (fromIntegral defMaxRowTM)))
 
 
-
-getLatestFrameERT :: TMFrameTab -> IO SunTime
-getLatestFrameERT g = tmFrameTableGetLatestERT (g ^. tmfFrameTable)
-
-
-getPageNumInc :: TMFrameTab -> IO Word32
-getPageNumInc g = do
-    val <- readURef (g ^. tmfPageNum)
-    let !newVal = val + 1
-    writeURef (g ^. tmfPageNum) newVal
-    return newVal
-
-
-getPageNumDec :: TMFrameTab -> IO (Maybe Word32)
-getPageNumDec g = do
-    val <- readURef (g ^. tmfPageNum)
-    if val == 0
-        then return Nothing
-        else do
-            let !newVal = val - 1
-            writeURef (g ^. tmfPageNum) newVal
-            return (Just newVal)

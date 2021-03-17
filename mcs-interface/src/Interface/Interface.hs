@@ -58,7 +58,6 @@ data ActionTable = ActionTable
     , actionLogMessage       :: LogSource -> LogLevel -> Utf8Builder -> IO ()
     , actionSendTCRequest    :: TCRequest -> IO ()
     , actionSendTCGroup      :: [TCRequest] -> IO ()
-    , actionRequestAllFrames :: IO ()
     , actionQueryDB          :: DBQuery -> IO ()
     }
 
@@ -78,24 +77,34 @@ callAction queue action = atomically $ writeTBQueue queue action
 
 
 
-actionTable :: TBQueue InterfaceAction -> TBQueue DBQuery -> ActionTable
-actionTable queue queryQueue = ActionTable
+actionTable :: TBQueue InterfaceAction -> Maybe (TBQueue DBQuery) -> ActionTable
+actionTable queue (Just queryQueue) = ActionTable
     { actionQuit             = pure ()
     , actionImportMIB        = \p s -> callAction queue (ImportMIB p s)
     , actionLogMessage       = \s l msg -> callAction queue (LogMsg s l msg)
     , actionSendTCRequest    = callAction queue . SendTCRequest
     , actionSendTCGroup      = callAction queue . SendTCGroup
-    , actionRequestAllFrames = callAction queue RequestAllTMFrames
     , actionQueryDB          = atomically . writeTBQueue queryQueue
+    }
+actionTable queue Nothing = ActionTable
+    { actionQuit             = pure ()
+    , actionImportMIB        = \p s -> callAction queue (ImportMIB p s)
+    , actionLogMessage       = \s l msg -> callAction queue (LogMsg s l msg)
+    , actionSendTCRequest    = callAction queue . SendTCRequest
+    , actionSendTCGroup      = callAction queue . SendTCGroup
+    , actionQueryDB          = \_ -> pure ()
     }
 
 
 -- | creates the 'Interface' from the given 'EventHandler'.
-createInterface :: EventHandler -> IO (Interface, TBQueue InterfaceAction, TBQueue DBQuery)
-createInterface handler = do
+createInterface :: EventHandler -> Bool -> IO (Interface, TBQueue InterfaceAction, Maybe (TBQueue DBQuery))
+createInterface handler True = do
     queue <- newTBQueueIO 5000
     queryQueue <- newTBQueueIO 200
-    pure (Interface (actionTable queue queryQueue) (V.singleton handler), queue, queryQueue)
+    pure (Interface (actionTable queue (Just queryQueue)) (V.singleton handler), queue, Just queryQueue)
+createInterface handler False = do
+    queue <- newTBQueueIO 5000
+    pure (Interface (actionTable queue Nothing) (V.singleton handler), queue, Nothing)
 
 -- | Adds a new event handler to the given 'Interface'. Only an event handler
 -- is added, the 'ActionTable' stays the same

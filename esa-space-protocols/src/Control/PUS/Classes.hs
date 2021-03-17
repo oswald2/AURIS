@@ -217,7 +217,10 @@ instance HasDatabase GlobalState where
     storeTMPacket env pkt =
         maybe (return ()) (`DB.storeTMPacket` pkt) (getDbBackend env)
 
-    queryDB env query = atomically $ writeTBQueue (glsQueryQueue env) query
+    queryDB env query = do
+        case glsQueryQueue env of 
+            Just queue -> atomically $ writeTBQueue queue query
+            Nothing -> return ()
 
 instance HasGlobalState GlobalState
 

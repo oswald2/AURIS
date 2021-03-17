@@ -381,7 +381,13 @@ queryHandler resultF pipe (FrRange q)
             (Just start, Just stop) -> frameFromTo resultF pipe start stop
             (Just start, Nothing) -> frameFrom resultF pipe start 
             (Nothing, Just stop) -> frameTo resultF pipe stop 
-queryHandler _ _ _ = return ()
+queryHandler resultF pipe (FrPrev q) = do 
+    logDebug $ "QueryPrev: " <> displayShow q 
+    frameToN resultF pipe (dbStart q) (dbN q)
+queryHandler resultF pipe (FrNext q) = do 
+    logDebug $ "QueryPrev: " <> displayShow q 
+    frameFromN resultF pipe (dbnStart q) (dbnN q)
+
 
 
 collectQuery :: (MonadIO m, MongoDbConversion b Document) 
@@ -410,6 +416,14 @@ frameFrom resultF pipe start = do
                     tmFrameCollName) { sort = ["ert" =: Int32 (-1)] }
     collectQuery resultF pipe query DBResultTMFrames
 
+frameFromN
+    :: (MonadIO m) => (DBResult -> m ()) -> Pipe -> SunTime -> Word32 -> m ()
+frameFromN resultF pipe start n = do
+    let query = (select ["ert" =: ["$gte" =: timeToMicro start]] 
+                    tmFrameCollName) { sort = ["ert" =: Int32 (-1)], limit = n }
+    collectQuery resultF pipe query DBResultTMFrames
+
+
 frameTo
     :: (MonadIO m) => (DBResult -> m ()) -> Pipe -> SunTime -> m ()
 frameTo resultF pipe stop = do
@@ -417,6 +431,12 @@ frameTo resultF pipe stop = do
                     tmFrameCollName) { sort = ["ert" =: Int32 (-1)] }
     collectQuery resultF pipe query DBResultTMFrames
 
+frameToN
+    :: (MonadIO m) => (DBResult -> m ()) -> Pipe -> SunTime -> Word32 -> m ()
+frameToN resultF pipe stop n = do
+    let query = (select ["ert" =: ["$lte" =: timeToMicro stop]]
+                    tmFrameCollName) { sort = ["ert" =: Int32 (-1)], limit = n }
+    collectQuery resultF pipe query DBResultTMFrames
 
 
 cleanFramesTable

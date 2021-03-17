@@ -45,6 +45,9 @@ newFrameRetrieveDialog window = do
     cbFrom <- checkButtonNewWithLabel "From:"
     cbTo   <- checkButtonNewWithLabel "To:"
 
+    Gtk.set cbFrom [#active := True]
+    Gtk.set cbTo [#active := True]
+
     boxPackStart box grid False False 5
 
     void $ dialogAddButton diag
@@ -88,19 +91,19 @@ frameRetrieveDiagGetQuery g = do
     return DbGetFrameRange { dbFromTime = ffrom, dbToTime = fto }
 
 
-frameRetrieveDiagSetQuery :: FrameRetrieveDialog -> DbGetFrameRange -> IO () 
-frameRetrieveDiagSetQuery g query = do 
-    case dbFromTime query of 
-        Nothing -> toggleButtonSetActive (frCbFrom g) False 
-        Just f -> do 
+frameRetrieveDiagSetQuery :: FrameRetrieveDialog -> DbGetFrameRange -> IO ()
+frameRetrieveDiagSetQuery g query = do
+    case dbFromTime query of
+        Nothing -> toggleButtonSetActive (frCbFrom g) False
+        Just f  -> do
             toggleButtonSetActive (frCbFrom g) True
-            timePickerSetTime (frFrom g) f 
+            timePickerSetTime (frFrom g) f
 
-    case dbToTime query of 
-        Nothing -> toggleButtonSetActive (frCbTo g) False 
-        Just f -> do 
+    case dbToTime query of
+        Nothing -> toggleButtonSetActive (frCbTo g) False
+        Just f  -> do
             toggleButtonSetActive (frCbTo g) True
-            timePickerSetTime (frTo g) f 
+            timePickerSetTime (frTo g) f
 
 frameRetrieveDiagReactive
     :: FrameRetrieveDialog -> ReactiveFieldReadWrite IO (Maybe DbGetFrameRange)
@@ -113,7 +116,7 @@ frameRetrieveDiagReactive g = ReactiveFieldReadWrite setter getter notifier
             then Just <$> frameRetrieveDiagGetQuery g
             else return Nothing
 
-    setter Nothing = return () 
+    setter Nothing  = return ()
     setter (Just q) = frameRetrieveDiagSetQuery g q
 
     notifier _ = return ()

@@ -9,6 +9,7 @@ module GUI.TMFrameTable
     , tmFrameTableClearRows
     , tmFrameTableSetCallback
     , tmFrameTableGetLatestERT
+    , tmFrameTableGetEarliestERT
     , tmFrameTableRowReactive
     , tmFrameTableAllRowsReactive
     , tmFrameTableAddRowReactive
@@ -85,8 +86,8 @@ tmFrameTableSetCallback
 tmFrameTableSetCallback g = setTreeViewCallback g _tmfrTable _tmfrModel
 
 
-tmFrameTableGetLatestERT :: TMFrameTable -> IO SunTime
-tmFrameTableGetLatestERT g = do
+tmFrameTableGetEarliestERT :: TMFrameTable -> IO SunTime
+tmFrameTableGetEarliestERT g = do
     now <- getCurrentTime
     lst <- seqStoreToList (_tmfrModel g)
     let !res = foldr minERT now lst
@@ -94,6 +95,16 @@ tmFrameTableGetLatestERT g = do
   where
     minERT :: ExtractedDU TMFrame -> SunTime -> SunTime
     minERT du t = let t1 = (du ^. epERT) in min t1 t
+
+tmFrameTableGetLatestERT :: TMFrameTable -> IO SunTime
+tmFrameTableGetLatestERT g = do
+    lst <- seqStoreToList (_tmfrModel g)
+    let !res = foldr minERT nullTime lst
+    return res
+  where
+    minERT :: ExtractedDU TMFrame -> SunTime -> SunTime
+    minERT du t = let t1 = (du ^. epERT) in max t1 t
+
 
 
 -- | Create a 'TMFrameTable' from a 'Gtk.Builder'.

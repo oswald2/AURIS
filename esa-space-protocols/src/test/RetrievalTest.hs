@@ -85,7 +85,7 @@ main = do
             (\ev -> T.putStrLn ("Event: " <> T.pack (show ev)))
             [EVFlagAll]
             (Just dbBackend)
-            queryQueue
+            (Just queryQueue)
 
         runRIO state $ do
             let resultFunc = \result -> liftIO $ T.putStrLn ("Result: " <> T.pack (show result))

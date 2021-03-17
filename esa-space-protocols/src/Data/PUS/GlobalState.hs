@@ -113,7 +113,7 @@ data GlobalState = GlobalState
     , glsTCRequestQueue    :: TBQueue [TCRequest]
     , glsVerifCommandQueue :: TBQueue VerifCommand
     , glsDatabase          :: Maybe DbBackend
-    , glsQueryQueue        :: TBQueue DBQuery
+    , glsQueryQueue        :: Maybe (TBQueue DBQuery)
     }
 
 -- | Constructor for the global state. Takes a configuration, a
@@ -126,7 +126,7 @@ newGlobalState
     -> (Event -> IO ())
     -> [EventFlag]
     -> Maybe DbBackend
-    -> TBQueue DBQuery
+    -> Maybe (TBQueue DBQuery)
     -> IO GlobalState
 newGlobalState cfg missionSpecific logErr raiseEvent eventFlags dbBackend queryQueue
     = do

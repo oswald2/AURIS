@@ -60,7 +60,7 @@ runProcessing
     -> Interface
     -> MainWindow
     -> TBQueue InterfaceAction
-    -> TBQueue DBQuery
+    -> Maybe (TBQueue DBQuery)
     -> IO ()
 runProcessing cfg missionSpecific mibPath interface mainWindow coreQueue queryQueue
     = do
@@ -99,17 +99,18 @@ runProcessing cfg missionSpecific mibPath interface mainWindow coreQueue queryQu
                                     queryQueue
 
             void $ runRIO state $ do
-                case dbBackend of
-                    Nothing      -> return ()
-                    Just backend -> do
-                        case aurisDbConfig cfg of
-                            Nothing    -> return ()
-                            Just dbCfg -> do
-                                -- First, we create the databas
-                                startDbQueryThreads dbCfg
-                                                    backend
-                                                    dbResultFunc
-                                                    queryQueue
+                let startQueryThread = do 
+                     backend <- dbBackend 
+                     dbCfg <- aurisDbConfig cfg 
+                     queue <- queryQueue
+                     return $ do 
+                        startDbQueryThreads dbCfg
+                                            backend
+                                            dbResultFunc
+                                            queue
+                case startQueryThread of 
+                    Nothing -> return () 
+                    Just action -> action
 
               -- first, try to load a data model or import a MIB
                 logInfo "Loading Data Model..."

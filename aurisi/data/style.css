@@ -414,3 +414,11 @@ spinbutton#timespin {
   font-weight: bold;
   color: black;
 }
+
+spinbutton button.down {
+  color:rgba(0, 0, 0, 0.4)
+}
+
+spinbutton button.up {
+  color:rgba(0, 0, 0, 0.4)
+}

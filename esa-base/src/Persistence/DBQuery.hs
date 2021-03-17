@@ -2,6 +2,7 @@ module Persistence.DBQuery
     ( DBQuery(..)
     , DbGetFrameRange(..)
     , DbGetLastNFrames(..)
+    , DbGetNextNFrames(..)
     , DBResult(..)
     ) where
 
@@ -17,7 +18,8 @@ import           Data.PUS.ExtractedDU
 
 data DBQuery =
     FrRange DbGetFrameRange
-    | FrLast DbGetLastNFrames
+    | FrPrev DbGetLastNFrames
+    | FrNext DbGetNextNFrames
     deriving (Show, Generic)
 
 instance Serialise DBQuery
@@ -40,7 +42,6 @@ instance ToJSON DbGetFrameRange where
 
 data DbGetLastNFrames = DbGetLastNFrames { 
     dbStart :: !SunTime
-    , dbNP :: !Word32
     , dbN :: !Word32 
     }
     deriving (Show, Generic)
@@ -50,6 +51,16 @@ instance FromJSON DbGetLastNFrames
 instance ToJSON DbGetLastNFrames where
     toEncoding = genericToEncoding defaultOptions
 
+data DbGetNextNFrames = DbGetNextNFrames { 
+    dbnStart :: !SunTime
+    , dbnN :: !Word32 
+    }
+    deriving (Show, Generic)
+
+instance Serialise DbGetNextNFrames
+instance FromJSON DbGetNextNFrames
+instance ToJSON DbGetNextNFrames where
+    toEncoding = genericToEncoding defaultOptions
 
 
 data DBResult =
