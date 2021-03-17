@@ -26,6 +26,7 @@ module Data.DataModel
     , dmPacketIdIdx
     , dmVPDStructs
     , dmGRDs
+    , dmInfo
     , empty
     , writeDataModel
     , readDataModel
@@ -50,6 +51,7 @@ import           Data.TM.Calibration
 import           Data.TM.Synthetic
 import           Data.TM.TMParameterDef
 import           Data.TM.TMPacketDef
+import           Data.PUS.DataModelInfo
 
 import           Data.Display.Graphical
 
@@ -60,9 +62,9 @@ import           GHC.Compact
 
 -- | The data model itself.
 data DataModel = DataModel
-    {
+    { _dmInfo            :: DataModelInfo
     -- | A map of the defined calibrations indexed by name
-      _dmCalibrations    :: HashMap ShortText Calibration
+    , _dmCalibrations    :: HashMap ShortText Calibration
     -- | A map of the defined synthetic parameters indexed by name
     , _dmSyntheticParams :: HashMap ShortText Synthetic
     -- | A map of the defined TM parameters indexec by name
@@ -93,7 +95,8 @@ empty =
             prm  <- new
             pkts <- new
             (,) <$> unsafeFreeze prm <*> unsafeFreeze pkts
-    in  DataModel { _dmCalibrations    = HM.empty
+    in  DataModel { _dmInfo            = defaultDataModelInfo
+                  , _dmCalibrations    = HM.empty
                   , _dmSyntheticParams = HM.empty
                   , _dmParameters      = params
                   , _dmPacketIdIdx     = emptyPICSearchIndex
@@ -114,11 +117,12 @@ instance ToJSON DataModel where
 
 
 encodedLen :: Word
-encodedLen = 7
+encodedLen = 8
 
 encodeDataModel :: DataModel -> S.Encoding
 encodeDataModel model =
     encodeListLen encodedLen
+        <> S.encode (_dmInfo model)
         <> S.encode (_dmCalibrations model)
         <> S.encode (_dmSyntheticParams model)
         <> S.encode (_dmGRDs model)
@@ -136,6 +140,7 @@ decodeDataModel = do
         <> show len
         <> ", should be "
         <> show encodedLen
+    info    <- S.decode
     calibs  <- S.decode
     synths  <- S.decode
     grds    <- S.decode
@@ -143,7 +148,8 @@ decodeDataModel = do
     params  <- decodeHashTable
     packets <- decodeHashTable
     vpds    <- decodeHashTable
-    return DataModel { _dmCalibrations    = calibs
+    return DataModel { _dmInfo            = info
+                     , _dmCalibrations    = calibs
                      , _dmSyntheticParams = synths
                      , _dmPacketIdIdx     = idx
                      , _dmGRDs            = grds

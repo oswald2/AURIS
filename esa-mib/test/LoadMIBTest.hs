@@ -29,10 +29,10 @@ import           Data.MIB.GPC                  as GPC
 --import           Data.TM.TMParameterDe
 import           Data.Conversion.GRD
 
-import           Test.Hspec
+--import           Test.Hspec
 import           Text.Show.Pretty
 
-import           GHC.Compact
+--import           GHC.Compact
 
 
 newtype TestState = TestState { logFunction :: LogFunc}

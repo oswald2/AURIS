@@ -49,6 +49,7 @@ import           GUI.TMParamTab
 import           GUI.ConnectionTab
 import           GUI.TCTab
 import           GUI.TCHistory
+import           GUI.DataModelTab
 import           GUI.Utils
 import           GUI.Logo
 import           GUI.MessageDisplay
@@ -99,6 +100,7 @@ data MainWindow = MainWindow
     , _mwConnTab           :: !ConnectionTab
     , _mwTCTab             :: !TCTab
     , _mwTCHistory         :: !TCHistory
+    , _mwDataModelTab      :: !DataModelTab
     , _mwTimeLabel         :: !Label
     , _mwMenuItemImportMIB :: !Gtk.MenuItem
     , _mwLiveState         :: TVar LiveState
@@ -156,6 +158,9 @@ mwInitialiseDataModel window model = do
     -- also add the displas 
     addGrdDefinitions (window ^. mwTMParamTab) (model ^. dmGRDs)
 
+    -- set the data model viewer
+    dataModelTabSetModel (window ^. mwDataModelTab) model
+
 
 -- gladeFile :: Text
 -- gladeFile =
@@ -192,17 +197,17 @@ createMainWindow cfg = do
                                    StyleSchemeChooserButton
 
     -- create the message display
-    msgDetails <- createMsgDetailWindow window builder
-    msgDisp    <- createMessageDisplay msgDetails builder
+    msgDetails   <- createMsgDetailWindow window builder
+    msgDisp      <- createMessageDisplay msgDetails builder
 
     -- create the tabs in the notebook
-    tmfTab     <- createTMFTab window builder
-    tmpTab     <- createTMPTab window builder
-    paramTab   <- createTMParamTab builder
-    connTab    <- createConnectionTab (aurisPusConfig cfg) builder
-    tcTab      <- createTCTab window builder
-    tcHistory  <- createTCHistory window builder
-
+    tmfTab       <- createTMFTab window builder
+    tmpTab       <- createTMPTab window builder
+    paramTab     <- createTMParamTab builder
+    connTab      <- createConnectionTab (aurisPusConfig cfg) builder
+    tcTab        <- createTCTab window builder
+    tcHistory    <- createTCHistory window builder
+    dataModelTab <- createDataModelTab window builder
 
     setLogo logo 65 65
 
@@ -220,6 +225,7 @@ createMainWindow cfg = do
                          , _mwConnTab           = connTab
                          , _mwTCTab             = tcTab
                          , _mwTCHistory         = tcHistory
+                         , _mwDataModelTab      = dataModelTab
                          , _mwMenuItemImportMIB = menuItemImportMIB
                          , _mwLiveState         = liveState
                          }

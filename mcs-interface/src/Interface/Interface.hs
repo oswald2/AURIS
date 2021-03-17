@@ -78,14 +78,8 @@ callAction queue action = atomically $ writeTBQueue queue action
 
 
 actionTable :: TBQueue InterfaceAction -> Maybe (TBQueue DBQuery) -> ActionTable
-actionTable queue (Just queryQueue) = ActionTable
-    { actionQuit             = pure ()
-    , actionImportMIB        = \p s -> callAction queue (ImportMIB p s)
-    , actionLogMessage       = \s l msg -> callAction queue (LogMsg s l msg)
-    , actionSendTCRequest    = callAction queue . SendTCRequest
-    , actionSendTCGroup      = callAction queue . SendTCGroup
-    , actionQueryDB          = atomically . writeTBQueue queryQueue
-    }
+actionTable queue (Just queryQueue) = 
+    (actionTable queue Nothing) { actionQueryDB = atomically . writeTBQueue queryQueue }
 actionTable queue Nothing = ActionTable
     { actionQuit             = pure ()
     , actionImportMIB        = \p s -> callAction queue (ImportMIB p s)

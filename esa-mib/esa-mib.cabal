@@ -88,6 +88,7 @@ library
     Data.Conversion.Criteria
     Data.Conversion.TMPacket
     Data.Conversion.GRD
+    Data.Conversion.Info
 
   -- Modules included in this library but not exported.
   -- other-modules:

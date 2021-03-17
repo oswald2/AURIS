@@ -41,7 +41,7 @@ import           Data.PUS.TMPacket              ( TMPacket )
 import           Data.PUS.TCRequest             ( TCRequest )
 import           Data.TM.Parameter
 
---import           Data.DataModel
+import           Data.DataModel
 
 import           General.Time
 
@@ -116,7 +116,7 @@ data EventAlarm =
     | EVPacketInfo Text
     | EVPacketWarn Text
     | EVPacketAlarm Text
-    | EVMIBLoaded 
+    | EVMIBLoaded DataModel
     | EVMIBLoadError Text
     deriving (Show, Generic)
 

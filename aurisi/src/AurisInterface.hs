@@ -113,8 +113,10 @@ eventProcessor g (EventPUS (EVAlarms (EVIllegalAction txt))) = do
     postGUIASync (mwLogWarn g txt)
 eventProcessor g (EventPUS (EVAlarms (EVMIBLoadError txt))) = do
     postGUIASync (mwLogAlarm g txt)
-eventProcessor g (EventPUS (EVAlarms EVMIBLoaded)) = do
-    postGUIASync (mwLogInfo g "MIB loaded successfully")
+eventProcessor g (EventPUS (EVAlarms (EVMIBLoaded model))) = do
+    postGUIASync $ do 
+        mwLogInfo g "MIB loaded successfully"
+        mwInitialiseDataModel g model
 
 
 eventProcessor g (EventPUS (EVCommanding (EVTCVerificationNew rqst verif))) =

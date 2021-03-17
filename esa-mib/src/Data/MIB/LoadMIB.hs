@@ -23,7 +23,7 @@ import           Data.HashTable.ST.Basic        ( IHashTable )
 import qualified Data.HashTable.ST.Basic       as HT
 import qualified Data.HashTable.Class          as HTC
 
-import           Data.Either
+--import           Data.Either
 import           Data.Text.Short                ( ShortText )
 import qualified Data.MIB.CAF                  as CAF
 import qualified Data.MIB.CAP                  as CAP
@@ -38,25 +38,58 @@ import qualified Data.MIB.TPCF                 as TPCF
 import qualified Data.MIB.PLF                  as PLF
 import qualified Data.MIB.PIC                  as PIC
 import qualified Data.MIB.VPD                  as VPD
+import qualified Data.MIB.VDF                  as VDF
 
 import           Data.DataModel
 
-import           Data.TM.Calibration
-import           Data.TM.NumericalCalibration
-import           Data.TM.PolynomialCalibration
-import           Data.TM.LogarithmicCalibration
-import           Data.TM.TextualCalibration
-import           Data.TM.Synthetic
-import           Data.TM.TMParameterDef
-import           Data.TM.TMPacketDef
+import           Data.TM.Calibration            ( Calibration(..) )
+import           Data.TM.NumericalCalibration   ( NumericalCalibration
+                                                    ( _calibNName
+                                                    )
+                                                )
+import           Data.TM.PolynomialCalibration  ( PolynomialCalibration
+                                                    ( _calibPName
+                                                    )
+                                                )
+import           Data.TM.LogarithmicCalibration ( LogarithmicCalibration
+                                                    ( _calibLName
+                                                    )
+                                                )
+import           Data.TM.TextualCalibration     ( TextualCalibration
+                                                    ( _calibTName
+                                                    )
+                                                )
+import           Data.TM.Synthetic              ( Synthetic
+                                                , parseOL
+                                                )
+import           Data.TM.TMParameterDef         ( TMParameterDef )
+import           Data.TM.TMPacketDef            ( TMPacketKey(..)
+                                                , TMPacketDef
+                                                    ( _tmpdApid
+                                                    , _tmpdType
+                                                    , _tmpdSubType
+                                                    , _tmpdPI1Val
+                                                    , _tmpdPI2Val
+                                                    )
+                                                , VarParams
+                                                , fixedTMPacketDefs
+                                                )
 
-import           Data.Conversion.Calibration
-import           Data.Conversion.Parameter
-import           Data.Conversion.Types
-import           Data.Conversion.TMPacket
-import           Data.Conversion.GRD
+import           Data.Conversion.Calibration    ( convertNumCalib
+                                                , convertTextCalib
+                                                , convertPolyCalib
+                                                , convertLogCalib
+                                                )
+import           Data.Conversion.Parameter      ( convertParameters )
+import           Data.Conversion.Types          ( Warnings )
+import           Data.Conversion.TMPacket       ( convertPackets
+                                                , generateVPDLookup
+                                                , picSeachIndexFromPIC
+                                                )
+import           Data.Conversion.GRD            ( loadGRDs )
+import           Data.Conversion.Info           ( convertInfo )
 
-import           GHC.Compact
+--import           GHC.Compact
 
 -- | load the whole MIB into a data structure
 loadMIB
@@ -70,6 +103,7 @@ loadMIB mibPath = do
             )
         $ runExceptT
         $ do
+              info   <- VDF.loadFromFile mibPath >>= liftEither
               syns   <- loadSyntheticParameters mibPath >>= liftEither
               calibs <- loadCalibs mibPath >>= liftEither
               params <-
@@ -85,7 +119,8 @@ loadMIB mibPath = do
                   >>= liftEither
                   >>= logWarnings
               grds <- loadGRDs mibPath >>= liftEither
-              let model = DataModel { _dmCalibrations    = calibs
+              let model = DataModel { _dmInfo            = convertInfo info
+                                    , _dmCalibrations    = calibs
                                     , _dmSyntheticParams = syns
                                     , _dmParameters      = params
                                     , _dmPacketIdIdx     = pIdx
@@ -183,9 +218,11 @@ loadSyntheticParameters path' = do
     doesDirectoryExist path >>= \x -> if not x
         then do
             logWarn
-                $  display @Text "Could not read synthetic parameters: directory '"
+                $  display @Text
+                       "Could not read synthetic parameters: directory '"
                 <> display (T.pack path)
-                <> display @Text "' does not exist. No synthetic parameters loaded"
+                <> display @Text
+                       "' does not exist. No synthetic parameters loaded"
             return $ Right HM.empty
         else do
             -- traceM ("Path: " <> (T.pack path))
@@ -212,9 +249,11 @@ loadSyntheticParameters path' = do
         let path = path' </> "hcsynthetic"
         doesDirectoryExist path >>= \x -> if not x
             then do
-                logWarn $ display @Text "Could not read  hard-coded synthetic parameters: directory '"
-                        <> display (T.pack path)
-                        <> display @Text "' does not exist"
+                logWarn
+                    $  display @Text
+                           "Could not read  hard-coded synthetic parameters: directory '"
+                    <> display (T.pack path)
+                    <> display @Text "' does not exist"
                 return $ Right HM.empty
             else do
                 -- traceM ("Path: " <> (T.pack path))
