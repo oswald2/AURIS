@@ -8,6 +8,9 @@ module Data.PUS.Value
     , getByteOrder
     , getInt
     , setInt
+    , setDouble
+    , setString
+    , setOctet
     , isSetableAligned
     , setAlignedValue
     , getAlignedValue
@@ -32,9 +35,18 @@ import qualified RIO.Vector.Partial            as V
 import qualified RIO.Vector.Storable           as VS
 
 import qualified Data.ByteString.Char8         as BC
-import           Data.Int.Int24
-import           Data.Word.Word24
-import           Data.Bits
+import           Data.Text.Short                ( ShortText )
+import qualified Data.Text.Short               as ST
+
+import           Data.Int.Int24                 ( Int24 )
+import           Data.Word.Word24               ( Word24 )
+import           Data.Bits                      ( Bits
+                                                    ( (.|.)
+                                                    , (.&.)
+                                                    , shiftR
+                                                    , shiftL
+                                                    )
+                                                )
 import           Data.Attoparsec.ByteString    as A
                                                 ( parseOnly )
 import           Data.Attoparsec.Binary        as A
@@ -111,7 +123,7 @@ import           Refined
 -- | Refinement type for the bit width of the values. Allowed are numbers 1 to 7
 --   (for the bit widths of 1 to 7 bit)
 newtype B8 = B8 (Refined (And (Not (LessThan 1)) (Not (GreaterThan 7))) Word8)
-    deriving(Eq, Show, Read, ToJSON, FromJSON, NFData, Generic)
+    deriving(Eq, Ord, Show, Read, ToJSON, FromJSON, NFData, Generic)
 
 
 -- | Return the number of bits in the width
@@ -128,7 +140,7 @@ instance Serialise B8 where
 -- | Refinement type for the bit width of the values. Allowed are numbers 1 to 15
 --   (for the bit widths of 1 to 15 bit)
 newtype B16 = B16 (Refined (And (Not (LessThan 1)) (Not (GreaterThan 15))) Word8)
-    deriving(Eq, Show, Read, ToJSON, FromJSON, NFData, Generic)
+    deriving(Eq, Ord, Show, Read, ToJSON, FromJSON, NFData, Generic)
 
 unB16 :: B16 -> Word8
 unB16 (B16 x) = unrefine x
@@ -143,7 +155,7 @@ instance Serialise B16 where
 -- | Refinement type for the bit width of the values. Allowed are numbers 1 to 31
 --   (for the bit widths of 1 to 31 bit)
 newtype B32 = B32 (Refined (And (Not (LessThan 1)) (Not (GreaterThan 31))) Word8)
-    deriving(Eq, Show, Read, ToJSON, FromJSON, NFData, Generic)
+    deriving(Eq, Ord, Show, Read, ToJSON, FromJSON, NFData, Generic)
 
 unB32 :: B32 -> Word8
 unB32 (B32 x) = unrefine x
@@ -228,9 +240,9 @@ data Value =
     | ValFixedOctet !Word16 !ByteString
     | ValCUCTime CUCTime
     | ValUndefined
-    deriving (Eq, Read, Show, Generic)
+    deriving (Eq, Ord, Read, Show, Generic)
 
-instance NFData Value 
+instance NFData Value
 instance Serialise Value
 
 
@@ -777,6 +789,95 @@ instance SetInt Word64 where
     setInt (ValCUCTime _) x = ValCUCTime (microToTime (fromIntegral x) False)
     setInt ValUndefined   _ = ValUndefined
 
+instance SetInt Int64 where
+    {-# INLINABLE setInt #-}
+    setInt (ValInt8 _    ) x = ValInt8 (fromIntegral (x .&. 0xFF))
+    setInt (ValInt16  b _) x = ValInt16 b (fromIntegral (x .&. 0xFFFF))
+    setInt (ValInt24  b _) x = ValInt24 b (fromIntegral (x .&. 0xFFFFFF))
+    setInt (ValInt32  b _) x = ValInt32 b (fromIntegral (x .&. 0xFFFFFFFF))
+    setInt (ValInt64  b _) x = ValInt64 b x
+    setInt (ValUInt8X w _) x = ValUInt8X
+        w
+        (fromIntegral (x .&. fromIntegral (table8 V.! fromIntegral (unB8 w))))
+    setInt (ValUInt8 _            ) x = ValUInt8 (fromIntegral x)
+    setInt (ValUInt16X w _        ) x = ValUInt16X w (fromIntegral x)
+    setInt (ValUInt16  b _        ) x = ValUInt16 b (fromIntegral x)
+    setInt (ValUInt32X w _        ) x = ValUInt32X w (fromIntegral x)
+    setInt (ValUInt24  b _        ) x = ValUInt32 b (fromIntegral x)
+    setInt (ValUInt32  b _        ) x = ValUInt32 b (fromIntegral x)
+    setInt (ValUInt64  b _        ) x = ValUInt64 b (fromIntegral x)
+    setInt (ValDouble  b _        ) x = ValDouble b (fromIntegral x)
+    setInt (ValString _) x = ValString (builderBytes (asciiIntegral x))
+    setInt (ValFixedString width _) x = ValFixedString width $ rightPaddedC
+        ' '
+        (fromIntegral width)
+        (builderBytes (asciiIntegral x))
+    setInt (ValOctet _) x = ValOctet (builderBytes (word64BE (fromIntegral x)))
+    setInt (ValFixedOctet width _) x = ValFixedOctet width $ rightPadded
+        0
+        (fromIntegral width)
+        (builderBytes (word64BE (fromIntegral x)))
+    setInt (ValCUCTime _) x = ValCUCTime (microToTime x False)
+    setInt ValUndefined   _ = ValUndefined
+
+
+
+{-# INLINABLE setDouble #-}
+setDouble :: Value -> Double -> Value
+setDouble (ValInt8 _             ) x = ValInt8 (truncate x)
+setDouble (ValInt16  b _         ) x = ValInt16 b (truncate x)
+setDouble (ValInt24  b _         ) x = ValInt24 b (truncate x)
+setDouble (ValInt32  b _         ) x = ValInt32 b (truncate x)
+setDouble (ValInt64  b _         ) x = ValInt64 b (truncate x)
+setDouble (ValUInt8X w _         ) x = ValUInt8X w (truncate x)
+
+setDouble (ValUInt8 _            ) x = ValUInt8 (truncate x)
+setDouble (ValUInt16X w _        ) x = ValUInt16X w (truncate x)
+setDouble (ValUInt16  b _        ) x = ValUInt16 b (truncate x)
+setDouble (ValUInt32X w _        ) x = ValUInt32X w (truncate x)
+setDouble (ValUInt24  b _        ) x = ValUInt32 b (truncate x)
+setDouble (ValUInt32  b _        ) x = ValUInt32 b (truncate x)
+setDouble (ValUInt64  b _        ) x = ValUInt64 b (truncate x)
+setDouble (ValDouble  b _        ) x = ValDouble b x
+setDouble (ValString _           ) x = ValString (encodeUtf8 (textDisplay x))
+setDouble (ValFixedString width _) x = ValFixedString width
+    $ rightPaddedC ' ' (fromIntegral width) (encodeUtf8 (textDisplay x))
+setDouble (ValOctet _) x = ValOctet (builderBytes (word64BE (truncate x)))
+setDouble (ValFixedOctet width _) x = ValFixedOctet width $ rightPadded
+    0
+    (fromIntegral width)
+    (builderBytes (word64BE (truncate x)))
+setDouble (ValCUCTime _) x = ValCUCTime (microToTime (truncate x) False)
+setDouble ValUndefined   _ = ValUndefined
+
+
+
+class SetString a where
+    setString :: Value -> a -> Value
+
+
+instance SetString Text where
+    {-# INLINABLE setString #-}
+    setString (ValString _           ) x = ValString (encodeUtf8 x)
+    setString (ValFixedString width _) x = ValFixedString width
+        $ rightPaddedC ' ' (fromIntegral width) (encodeUtf8 x)
+    setString v _ = v
+
+instance SetString ShortText where
+    {-# INLINABLE setString #-}
+    setString (ValString _           ) x = ValString (ST.toByteString x)
+    setString (ValFixedString width _) x = ValFixedString width
+        $ rightPaddedC ' ' (fromIntegral width) (ST.toByteString x)
+    setString v _ = v
+
+
+{-# INLINABLE setOctet #-}
+setOctet :: Value -> ByteString -> Value
+setOctet (ValOctet _) x = ValOctet x
+setOctet (ValFixedOctet width _) x =
+    ValFixedOctet width $ rightPadded 0 (fromIntegral width) x
+setOctet v _ = v
+
 
 {-# INLINABLE toBytes #-}
 toBytes :: Integer -> ByteString
@@ -962,7 +1063,7 @@ builderReal typ b x =
 
 octetBuilder :: ByteString -> TB.Builder
 octetBuilder x =
-    let chnks    = chunkedByBS 4 x
+    let chnks     = chunkedByBS 4 x
 
         convChunk = mconcat . map byteToHex . B.unpack
         converted = map convChunk chnks
@@ -1019,5 +1120,7 @@ valueBuilder (ValCUCTime x) =
         (textDisplay x)
 
 valueBuilder ValUndefined = TB.text "UNDEFINED"
+
+
 
 

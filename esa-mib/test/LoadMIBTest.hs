@@ -28,6 +28,8 @@ import           Data.MIB.GPC                  as GPC
 import           Data.MIB.CCF                  as CCF
 import           Data.MIB.CPC                  as CPC
 import           Data.MIB.CDF                  as CDF
+import           Data.MIB.PRF                  as PRF
+import           Data.MIB.PRV                  as PRV
 
 --import           Data.TM.TMParameterDe
 import           Data.Conversion.GRD
@@ -91,6 +93,12 @@ testCpc = testLoadTab CPC.loadFromFile
 
 testCdf :: FilePath -> IO ()
 testCdf = testLoadTab CDF.loadFromFile
+
+testPrf :: FilePath -> IO ()
+testPrf = testLoadTab PRF.loadFromFile
+
+testPrv :: FilePath -> IO ()
+testPrv = testLoadTab PRV.loadFromFile
 
 
 testLoadTab
@@ -257,6 +265,10 @@ main = do
     testCpc mibPath
     T.putStrLn "\n\n\nCDFs:\n"
     testCdf mibPath
+    T.putStrLn "\n\n\nPRFs:\n"
+    testPrf mibPath
+    T.putStrLn "\n\n\nPRVs:\n"
+    testPrv mibPath
 
 
 

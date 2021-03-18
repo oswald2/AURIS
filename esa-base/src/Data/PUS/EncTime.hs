@@ -66,6 +66,14 @@ instance FromJSON CUCTime
 instance ToJSON CUCTime where
     toEncoding = genericToEncoding defaultOptions
 
+instance Ord CUCTime where
+    compare (CUCTime s1 m1 d1) (CUCTime s2 m2 d2)
+        | d1 == d2 = case compare s1 s2 of
+            LT -> LT
+            GT -> GT
+            EQ -> compare m1 m2
+        | d1 && not d2 = LT
+        | otherwise = GT
 
 -- | Time is encoded in CDS Time format.
 data CDSTime = CDSTime !Word16 !Word32 (Maybe Word16)

@@ -1,94 +1,173 @@
 module Data.Conversion.TCParameter
-    ( convertParam
+    ( convertCPC
+    , convertPRF
+    , convertRange
     ) where
 
 import           RIO
-import qualified Data.Text.Short               as ST
+import qualified RIO.Vector                    as V
+import qualified RIO.Text                      as T
+import qualified RIO.HashMap                   as HM
 
-import           Data.MIB.CPC
+import qualified Data.Text.Short               as ST
+import           RIO.List                       ( intersperse )
+
+import           Data.Text.Short                ( ShortText )
+import qualified Data.Text.Short               as ST
+import           Control.Monad.Except
+
 
 import           Data.PUS.Parameter
 import           Data.PUS.Value
+import           Data.PUS.EncTime
 
+import           General.Types
+import           General.Time
 import           General.PUSTypes
 
--- import           Text.Megaparsec
--- import           Text.Megaparsec.Char
--- import qualified Text.Megaparsec.Char.Lexer    as L
+import           Data.TC.TCParameterDef
+import           Data.TC.RangeSet
+import           Data.TC.Calibration
 
-import           Numeric
+import           Data.TM.Value
 
-
-convertParam :: CPCentry -> Parameter
-convertParam e@CPCentry {..} = Parameter { _paramName  = ST.toText _cpcName
-                                         , _paramValue = determineValue e
-                                         }
-
-
-
-determineValue :: CPCentry -> Value
-determineValue CPCentry {..} = initialValue BiE (PTC _cpcPTC) (PFC _cpcPFC)
-    -- TODO: set default value, parse from _cpcDefVal
+import           Data.MIB.Types
+import           Data.MIB.CPC
+import           Data.MIB.PRV
+import           Data.MIB.PRF
+import           Data.Conversion.Types
 
 
+convertCPC
+    :: Epoch
+    -> CorrelationCoefficients
+    -> CPCentry
+    -> HashMap ShortText PRFentry
+    -> Vector PRVentry
+    -> Either Text TCParameterDef
+convertCPC epoch coeff CPCentry {..} prfMap prvVec =
+    let rangeSet = if ST.null _cpcPrfRef
+            then Right Nothing
+            else case HM.lookup _cpcPrfRef prfMap of
+                Nothing ->
+                    Left
+                        $  "PRF entry for parameter '"
+                        <> ST.toText _cpcName
+                        <> "' not found, PRF_REF="
+                        <> ST.toText _cpcPrfRef
+                Just prf -> Just <$> convertPRF prf prvVec
+        corr = case getDefaultChar _cpcCorr of
+            'N' -> CorrelationNo
+            _   -> CorrelationYes
+        (ptc, pfc, t) = case getDefaultChar _cpcCateg of
+            'A' -> (PTC 7, PFC 0, TCParamCmdID)
+            'P' -> (PTC 3, PFC _cpcPFC, TCParamParamID)
+            _   -> (PTC _cpcPTC, PFC _cpcPFC, TCParamNormal)
+    in  runExcept $ do
+            s   <- liftEither $ rangeSet
+            def <- liftEither $ determineDefaultValue
+                epoch
+                coeff
+                ptc
+                pfc
+                (getDefaultChar _cpcInter)
+                (getDefaultChar _cpcDispFmt)
+                (charToRadix (getDefaultChar _cpcRadix))
+                _cpcDefVal
+            return $ TCParameterDef
+                { _tcpName         = _cpcName
+                , _tcpDescr        = _cpcDescr
+                , _tcpDefaultValue = def
+                , _tcpRadix        = charToRadix (getDefaultChar _cpcRadix)
+                , _tcpUnit         = _cpcUnit
+                , _tcpProcType     = t
+                , _tcpCalib        = Nothing
+                , _tcpRange        = s
+                , _tcpCorrelate    = corr
+                , _tcoObtID        = getDefaultInt _cpcObtID
+                }
 
--- parseShortTextToValue
---   :: PTC -> PFC -> ShortText -> Either Text TMValueSimple
--- parseShortTextToValue ptc pfc x =
---   case parseMaybe (valueParser ptc pfc) (toText x) of
---     Nothing   -> Left $ "Could not parse '" <> toText x <> "' into PTC " <> textDisplay ptc <> " PFC " <> text Display pfc
---     Just xval -> Right xval
+
+determineDefaultValue
+    :: Epoch
+    -> CorrelationCoefficients
+    -> PTC
+    -> PFC
+    -> Char
+    -> Char
+    -> Radix
+    -> ShortText
+    -> Either Text TCParamDefaultValue
+determineDefaultValue epoch coeff ptc pfc inter dispFormat radix val
+    | ST.null val = Right TCParamNothing
+    | otherwise = case inter of
+        'E' -> TCParamEng <$> getVal dispFormat radix val
+        _   -> TCParamRaw <$> determineRawDefaultValue epoch coeff ptc pfc val
+
+
+determineRawDefaultValue
+    :: Epoch
+    -> CorrelationCoefficients
+    -> PTC
+    -> PFC
+    -> ShortText
+    -> Either Text Value
+determineRawDefaultValue epoch coeff ptc pfc val =
+    case parseShortTextToValue ptc pfc val of
+        Left err -> Left err
+        Right v ->
+            let rawVal = initialValue BiE ptc pfc
+            in
+                Right $ case _tmvalValue v of
+                    TMValInt    x -> Data.PUS.Value.setInt rawVal x
+                    TMValUInt   x -> Data.PUS.Value.setInt rawVal x
+                    TMValDouble x -> setDouble rawVal x
+                    TMValTime   x -> ValCUCTime
+                        $ sunTimeToCUCTime epoch (mcsTimeToOBT x coeff)
+                    TMValString x -> setString rawVal (ST.toText x)
+                    TMValOctet  x -> setOctet rawVal x
+                    TMValNothing  -> ValUndefined
 
 
 
--- double :: Parser Double
--- double = L.signed space L.float
+convertPRF :: PRFentry -> Vector PRVentry -> Either Text RangeSet
+convertPRF prf@PRFentry {..} vec =
+    let (errs, prvs) =
+            partitionEithers
+                . V.toList
+                . V.map (convertRange prf)
+                . V.filter (\x -> _prvNumbr x == _prfNumbr)
+                $ vec
+    in  if not (null errs)
+            then
+                Left
+                $  "Error converting PRVs: "
+                <> (mconcat . intersperse "\n") errs
+            else Right $ RangeSet { _rsIdent  = _prfNumbr
+                                  , _rsDescr  = _prfDescr
+                                  , _rsInter  = sel
+                                  , _rsValues = V.fromList prvs
+                                  }
+  where
+    sel = case getDefaultChar _prfInter of
+        'R' -> InterRaw
+        'E' -> InterEng
+        _   -> InterRaw
 
--- integer :: Parser Int64
--- integer = L.lexeme space L.decimal
-
--- uInteger :: Parser Word64
--- uInteger = L.lexeme space L.decimal
-
--- signedInteger :: Parser Int64
--- signedInteger = L.signed space integer
-
--- hexInteger :: Parser Word64
--- hexInteger = L.lexeme space L.hexadecimal
-
--- octInteger :: Parser Word64
--- octInteger = L.lexeme space L.octal
 
 
--- {-# INLINABLE tmValueParser #-}
--- valueParser :: PTC -> PFC -> Parser Value
--- valueParser (PTC ptc) (PFC pfc)
---   | ptc == 1 || ptc == 2 || ptc == 3
---   = TMValUInt <$> uInteger
---   | ptc == 4
---   = TMValInt <$> signedInteger
---   | ptc == 5
---   = TMValDouble <$> double
---   | ptc == 6 && pfc > 0
---   = TMValUInt <$> uInteger
---   | ptc == 7 && pfc == 0
---   = TMValOctet . strToByteString <$> many hexDigitChar
---   | ptc == 7
---   = TMValOctet . strToByteString <$> count (2 * pfc) hexDigitChar
---   | ptc == 8 && pfc == 0
---   = TMValString . Data.Text.Short.fromText <$> takeRest
---   | ptc == 8
---   = TMValString . Data.Text.Short.fromText <$> takeP Nothing pfc
---   | ptc == 9 || ptc == 10
---   = TMValTime <$> sunTimeParser
---   | ptc == 11 || ptc == 13
---   = pure nullValueSimple
---   | otherwise
---   = fancyFailure
---     .  S.singleton
---     .  ErrorFail
---     $  "Illegal type for TMValue (PTC="
---     <> show ptc
---     <> ", PFC="
---     <> show pfc
---     <> ")"
+convertRange :: PRFentry -> PRVentry -> Either Text RangeValue
+convertRange PRFentry {..} PRVentry {..} = if ST.null _prvMaxVal
+    then case getVal (getDefaultChar _prfDispFormat) radix _prvMinVal of
+        Left  err -> Left err
+        Right v   -> Right (RangeDiscrete v)
+    else runExcept $ do
+        v1 <- liftEither
+            $ getVal (getDefaultChar _prfDispFormat) radix _prvMinVal
+        v2 <- liftEither
+            $ getVal (getDefaultChar _prfDispFormat) radix _prvMaxVal
+        return $ RangeMinMax v1 v2
+    where radix = charToRadix . getDefaultChar $ _prfRadix
+
+
+

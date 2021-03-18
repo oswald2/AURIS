@@ -88,6 +88,9 @@ library
     Data.TM.TMPacketDef
     Data.TM.PIVals
     Data.TM.Synthetic
+    Data.TC.TCParameterDef
+    Data.TC.RangeSet
+    Data.TC.Calibration
     Data.Display.Graphical
     Data.PUS.TMFrame
     Data.PUS.TMPacket

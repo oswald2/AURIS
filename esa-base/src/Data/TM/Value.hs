@@ -34,6 +34,7 @@ module Data.TM.Value
   , parseShortTextToValue
   , parseShortTextToDouble
   , parseShortTextToInt64
+  , parseShortTextToWord64
   , charToType
   , charToRadix
   , nullValue
@@ -73,13 +74,6 @@ import qualified Text.Megaparsec.Char.Lexer    as L
 import           Numeric
 
 
--- | The radix of a value
-data Radix =
-    Decimal
-    | Octal
-    | Hex
-    deriving (Eq, Ord, Enum, Show, Read)
-
 -- | The numerical type if it is a numerical value
 data NumType =
     NumInteger
@@ -95,13 +89,6 @@ instance ToJSON NumType where
 
 type Parser = Parsec Void Text
 
--- | Converst from a Char to a 'Radix' according to the SCOS-2000 MIB ICD 6.9
-{-# INLINABLE charToRadix #-}
-charToRadix :: Char -> Radix
-charToRadix 'D' = Decimal
-charToRadix 'H' = Hex
-charToRadix 'O' = Octal
-charToRadix _   = Decimal
 
 -- | Converst from a Char to a 'NumType' according to the SCOS-2000 MIB ICD 6.9
 {-# INLINABLE charToType #-}
@@ -164,6 +151,16 @@ parseShortTextToInt64 typ radix x =
     Just xval -> Right xval
 
 
+-- | parses a 'ShortText' to a integer value. It takes the 'NumType' and 'Radix' to determine
+-- the format the value is and returns a 'Int64' value
+parseShortTextToWord64 :: NumType -> Radix -> ShortText -> Either Text Word64
+parseShortTextToWord64 typ radix x =
+  -- trace ("parseShortTextToInt64: " <> T.pack (show typ ++ " " ++ show radix ++ show x)) $
+  case parseMaybe (uintParser typ radix) (toText x) of
+    Nothing   -> Left $ "Could not parse '" <> toText x <> "' into UInt64"
+    Just xval -> Right xval
+
+
 intParser :: NumType -> Radix -> Parser Int64
 intParser NumInteger  Decimal = signedInteger
 intParser NumInteger  Hex     = L.signed space L.hexadecimal
@@ -174,6 +171,15 @@ intParser NumUInteger Octal   = fromIntegral <$> octInteger
 intParser NumDouble _ =
   truncate <$> Text.Megaparsec.try double <|> signedInteger
 
+uintParser :: NumType -> Radix -> Parser Word64
+uintParser NumInteger  Decimal = fromIntegral <$> signedInteger
+uintParser NumInteger  Hex     = L.signed space L.hexadecimal
+uintParser NumInteger  Octal   = L.signed space L.octal
+uintParser NumUInteger Decimal = L.decimal
+uintParser NumUInteger Hex     = hexInteger
+uintParser NumUInteger Octal   = octInteger
+uintParser NumDouble _ =
+  truncate <$> Text.Megaparsec.try double <|> L.decimal
 
 -- | A simple value, without a validity. Contains the specified value
 data TMValueSimple =
@@ -276,9 +282,9 @@ parseShortTextToValueSimple ptc pfc x =
 parseShortTextToValue :: PTC -> PFC -> ShortText -> Either Text TMValue
 parseShortTextToValue ptc pfc x =
   -- trace ("parseShortTextToValue: " <> T.pack (show ptc ++ " " ++ show pfc ++ show x)) $
-                                  case parseShortTextToValueSimple ptc pfc x of
-  Left  err -> Left err
-  Right val -> Right (TMValue val clearValidity)
+    case parseShortTextToValueSimple ptc pfc x of
+        Left  err -> Left err
+        Right val -> Right (TMValue val clearValidity)
 
 
 
