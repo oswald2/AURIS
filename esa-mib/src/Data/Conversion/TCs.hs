@@ -1,4 +1,4 @@
-module Data.Conversion.TCParameter
+module Data.Conversion.TCs
     ( convertTCDef
     , convertTCParams
     , convertTCParamLocDef

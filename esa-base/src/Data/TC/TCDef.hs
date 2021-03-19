@@ -20,6 +20,7 @@ data TCType =
   | TCSleThrowEvent
   | TCNisThrowEvent
   | TCNormal
+  deriving (Eq, Ord, Enum, Show, Generic)
 
 
 data InterlockScope =
@@ -28,6 +29,7 @@ data InterlockScope =
   | ILSubSystem
   | ILGlobalSubsystem
   | ILNone
+  deriving (Eq, Ord, Enum, Show, Generic)
 
 data InterlockStage =
   ILRelease
@@ -35,9 +37,11 @@ data InterlockStage =
   | ILOnboardReception
   | ILAcceptance
   | ILCompletion
+  deriving (Eq, Ord, Enum, Show, Generic)
 
 
 data ParamSet = ParamSet
+  deriving (Show, Generic)
 
 data TCDef = TCDef
     { _tcDefName     :: !ShortText
@@ -58,3 +62,4 @@ data TCDef = TCDef
     , _tcDefSubSched :: Maybe Int
     , _tcDefParams   :: Vector TCParameterLocDef
     }
+    deriving (Show, Generic)

@@ -25,12 +25,13 @@ data TCParamDefaultValue =
     | TCParamEng TMValueSimple
     | TCCmdID ShortText
     | TCParamID ShortText
-
+    deriving(Show, Generic)
 
 data TCParamType =
     TCParamNormal
     | TCParamCmdID
     | TCParamParamID
+    deriving(Show, Generic)
 
 data TCParameterDef = TCParameterDef
     { _tcpName         :: !ShortText
@@ -44,28 +45,30 @@ data TCParameterDef = TCParameterDef
     , _tcpCorrelate    :: !Correlate
     , _tcoObtID        :: !Int
     }
-
+    deriving (Show, Generic)
 
 data ElemType =
     ElemFixedArea
     | ElemFixed
     | ElemEditable
+    deriving(Show, Generic)
 
-data ElemFlag = 
-    ElemRaw 
+data ElemFlag =
+    ElemRaw
     | ElemEng
-    | ElemCPC 
+    | ElemCPC
     | ElemTM
-
+    deriving(Show, Generic)
 
 data TCParameterLocDef = TCParameterLocDef
-    { _tcplElemType :: !ElemType
-    , _tcplDescr :: !ShortText 
-    , _tcplLen :: !BitSize 
-    , _tcplBit :: !BitOffset 
-    , _tcplGroupSize :: !Word16
-    , _tcplElemFlag :: !ElemFlag
+    { _tcplElemType     :: !ElemType
+    , _tcplDescr        :: !ShortText
+    , _tcplLen          :: !BitSize
+    , _tcplBit          :: !BitOffset
+    , _tcplGroupSize    :: !Word16
+    , _tcplElemFlag     :: !ElemFlag
     , _tcplDefaultValue :: !TCParamDefaultValue
-    , _tcplTMParam :: !ShortText
-    , _tcplParam :: !TCParameterDef
+    , _tcplTMParam      :: !ShortText
+    , _tcplParam        :: !TCParameterDef
     }
+    deriving (Show, Generic)

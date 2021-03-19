@@ -6,7 +6,7 @@ module Data.TC.Calibration
     , TCTextCalibration(..)
     ) where
 
-import           RIO                            ( )
+import           RIO                            
 import           Data.Text.Short                ( ShortText )
 import           Data.TM.Value
 
@@ -17,12 +17,13 @@ import           Data.Bimap
 data TCCalibration =
   TCNumCalib TCNumericCalibration
   | TCTextCalib TCTextCalibration
-
+    deriving(Show, Generic)
 
 data NumCalibVal = NumCalibVal
     { _ncvRaw :: TMValueSimple
     , _ncvEng :: TMValueSimple
     }
+    deriving(Show, Generic)
 
 data TCNumericCalibration = TCNumericCalibration
     { _tcncName   :: !ShortText
@@ -30,6 +31,8 @@ data TCNumericCalibration = TCNumericCalibration
     , _tcncUnit   :: !ShortText
     , _tcncValues :: Bimap TMValueSimple TMValueSimple
     }
+    deriving(Show, Generic)
+
 
 instance TcCalibration TCNumericCalibration TMValueSimple TMValueSimple where
     tcCalibrate TCNumericCalibration {..} from =
@@ -43,14 +46,14 @@ data TextCalibVal = TextCalibVal
     { _tcvRaw :: TMValueSimple
     , _tcvEng :: !ShortText
     }
-
+    deriving(Show, Generic)
 
 data TCTextCalibration = TCTextCalibration
     { _tcvName   :: !ShortText
     , _tcvDescr  :: !ShortText
     , _tcvValues :: Bimap TMValueSimple ShortText
     }
-
+    deriving(Show, Generic)
 
 instance TcCalibration TCTextCalibration TMValueSimple ShortText where
     tcCalibrate TCTextCalibration {..} from = Data.Bimap.lookup from _tcvValues

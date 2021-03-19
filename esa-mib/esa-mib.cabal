@@ -91,6 +91,7 @@ library
     Data.MIB.PAS 
     Data.MIB.PAF
     Data.MIB.LoadMIB
+    Data.MIB.LoadTCs
     Data.Conversion.Types
     Data.Conversion.Calibration
     Data.Conversion.Parameter
@@ -98,7 +99,7 @@ library
     Data.Conversion.TMPacket
     Data.Conversion.GRD
     Data.Conversion.Info
-    Data.Conversion.TCParameter
+    Data.Conversion.TCs
     Data.Conversion.TCCalibration
 
   -- Modules included in this library but not exported.

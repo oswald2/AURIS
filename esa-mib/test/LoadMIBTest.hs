@@ -34,10 +34,12 @@ import           Data.MIB.CCA                  as CCA
 import           Data.MIB.CCS                  as CCS
 import           Data.MIB.PAF                  as PAF
 import           Data.MIB.PAS                  as PAS
-
+import           Data.MIB.LoadTCs
 --import           Data.TM.TMParameterDe
 import           Data.Conversion.GRD
+import           Data.Conversion.TCs
 
+import           General.Time
 --import           Test.Hspec
 import           Text.Show.Pretty
 
@@ -219,6 +221,20 @@ testLoadParameters mibPath = do
                 Just x  -> pPrint x
                 Nothing -> T.putStrLn "S2KTP201 not found."
 
+testLoadTCs :: FilePath -> IO ()
+testLoadTCs mibPath = do
+    let epoch = epochUnix 0
+        coeff = defaultCoeffs
+    res <- runRIOTestAction (loadTCs epoch coeff mibPath)
+    case res of
+        Left err -> do
+            T.putStrLn err
+            exitFailure
+        Right (msgs, r) -> do
+            pPrint r
+            T.putStrLn $ "Messages:\n" <> T.intercalate "\n" msgs <> 
+                "Count: " <> T.pack (show (length (HT.toList r)))
+
 
 
 testLoadMIB :: FilePath -> IO ()
@@ -304,7 +320,10 @@ main = do
     -- testLoadParameters mibPath
     -- T.putStrLn "\n\n\nGRDs:\n"
     -- testLoadGRDs mibPath
-
+    T.putStrLn "\n\n\nTCs:\n"
+    testLoadTCs mibPath
+    
+    
     -- T.putStrLn "\n\n\nLoading MIB:\n===============\n"
     -- T.putStrLn "LoadMIB:\n"
     -- testLoadMIB mibPath

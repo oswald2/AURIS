@@ -15,6 +15,8 @@ import           General.Types
 data RangeValue =
   RangeDiscrete !TMValueSimple
   | RangeMinMax !TMValueSimple !TMValueSimple
+    deriving(Show, Generic)
+
 
 {-# INLINABLE checkRange #-}
 checkRange :: TMValueSimple -> RangeValue -> Bool
@@ -34,7 +36,10 @@ data RangeSet = RangeSet
     , _rsInter  :: !ValInter
     , _rsValues :: Vector RangeValue
     }
+    deriving(Show, Generic)
 
+
+    
 {-# INLINABLE rangeSetCheck #-}
 rangeSetCheck :: RangeSet -> TMValueSimple -> Bool
 rangeSetCheck RangeSet {..} val = V.foldl' f False _rsValues
