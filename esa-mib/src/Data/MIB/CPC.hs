@@ -2,6 +2,7 @@
 module Data.MIB.CPC
     ( CPCentry(..)
     , loadFromFile
+    , getCPCMap
     , cpcName
     , cpcDescr
     , cpcPTC
@@ -21,6 +22,7 @@ module Data.MIB.CPC
 
 import           RIO
 import qualified RIO.Vector                    as V
+import qualified RIO.HashMap                   as HM
 import           Control.Lens                   ( makeLenses )
 
 import           Data.Text.Short                ( ShortText )
@@ -60,7 +62,9 @@ instance Eq CPCentry where
 instance FromRecord CPCentry where
     parseRecord v
         | V.length v == 15 = genericParse (const True) CPCentry v
-        | V.length v == 13 = genericParse (const True) CPCentry $ v V.++ V.fromList ["Y", "0"]
+        | V.length v == 13 =    genericParse (const True) CPCentry
+        $    v
+        V.++ V.fromList ["Y", "0"]
         | otherwise = mzero
 
 fileName :: FilePath
@@ -73,3 +77,5 @@ loadFromFile
 loadFromFile mibPath = loadFromFileGen mibPath fileName
 
 
+getCPCMap :: Vector CPCentry -> HashMap ShortText CPCentry
+getCPCMap = V.foldl' (\m e -> HM.insert (_cpcName e) e m) HM.empty

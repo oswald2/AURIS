@@ -9,7 +9,6 @@ import           Data.Text.Short                ( ShortText )
 import qualified Data.Text.Short               as ST
 import           Data.TM.Value
 import           General.Time
-import           General.Types
 
 type Warnings = Maybe Text
 

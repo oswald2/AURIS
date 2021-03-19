@@ -41,7 +41,7 @@ instance FromRecord PAFentry where
 
 
 fileName :: FilePath
-fileName = "cca.dat"
+fileName = "paf.dat"
 
 
 loadFromFile

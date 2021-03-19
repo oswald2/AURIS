@@ -4,23 +4,25 @@
 module Data.MIB.PAS
     ( PASentry(..)
     , loadFromFile
+    , getPASMap
     , pasNumbr
-    , pasEng  
-    , pasRaw  
-    )
-where 
+    , pasEng
+    , pasRaw
+    ) where
 
 import           RIO
+import qualified RIO.Vector                    as V
 import           Control.Lens                   ( makeLenses )
 
 import           Data.Text.Short                ( ShortText )
 import           Data.Csv
 
 import           Data.MIB.Load
+import           Data.Multimap                 as M
 
 
-data PASentry = PASentry {
-     _pasNumbr :: !ShortText
+data PASentry = PASentry
+    { _pasNumbr :: !ShortText
     , _pasEng   :: !ShortText
     , _pasRaw   :: !ShortText
     }
@@ -47,3 +49,6 @@ loadFromFile
 loadFromFile mibPath = loadFromFileGen mibPath fileName
 
 
+{-# INLINABLE getPASMap #-}
+getPASMap :: Vector PASentry -> Multimap ShortText PASentry
+getPASMap vec = V.foldl' (\m e -> M.insert (_pasNumbr e) e m) M.empty vec

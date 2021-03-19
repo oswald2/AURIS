@@ -231,6 +231,10 @@ instance Eq TMValueSimple where
     Just EQ -> True
     _       -> False
 
+instance Ord TMValueSimple where 
+  compare v1 v2 = 
+    fromMaybe LT $ compareVal v1 v2 
+
 instance FromJSON TMValueSimple where
   parseJSON = withObject "TMValueSimple" $ \o -> asum
     [ TMValInt <$> o .: "tmValInt"

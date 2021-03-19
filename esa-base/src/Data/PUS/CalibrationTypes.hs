@@ -1,5 +1,5 @@
 {-|
-Module      : Data.TM.CalibrationTypes
+Module      : Data.PUS.CalibrationTypes
 Description : General data types for calibrations
 Copyright   : (c) Michael Oswald, 2019
 License     : BSD-3
@@ -21,8 +21,9 @@ This module provides some types used in calibrations
     , GADTs
     , ExistentialQuantification
 #-}
-module Data.TM.CalibrationTypes
+module Data.PUS.CalibrationTypes
   ( Calibrate(..)
+  , TcCalibration(..)
   , CalibInterpolation(..)
   , toCalibInterpolation
   )
@@ -62,4 +63,16 @@ toCalibInterpolation _   = CalibFail
 -- The first value is the calibration used.
 class Calibrate a where
     calibrate :: a -> TMValue -> TMValue
+
+
+-- | This class provides the functionality for calibration and 
+-- de-calibration of TC values. This is not simply based on 
+-- TMValues, but can span more types
+--
+-- Type 'a' is the calibration, 'b' is the from type and 'c' is the 
+-- to type. Calibrations muste be possible in both directions
+class TcCalibration a b c where 
+    tcCalibrate :: a -> b -> Maybe c 
+    tcDeCalibrate :: a -> c -> Maybe b
+
 

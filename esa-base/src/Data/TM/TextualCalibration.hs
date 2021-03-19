@@ -42,7 +42,7 @@ import           Data.Aeson
 
 import           Data.Text.Short                ( ShortText )
 
-import           Data.TM.CalibrationTypes
+import           Data.PUS.CalibrationTypes
 import           Data.TM.Value
 
 

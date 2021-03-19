@@ -78,7 +78,6 @@ library
     Data.TM.Value
     Data.TM.Parameter
     Data.TM.Calibration
-    Data.TM.CalibrationTypes
     Data.TM.NumericalCalibration
     Data.TM.TextualCalibration
     Data.TM.PolynomialCalibration
@@ -91,7 +90,9 @@ library
     Data.TC.TCParameterDef
     Data.TC.RangeSet
     Data.TC.Calibration
+    Data.TC.TCDef
     Data.Display.Graphical
+    Data.PUS.CalibrationTypes
     Data.PUS.TMFrame
     Data.PUS.TMPacket
     Data.PUS.TMFrameDfh
@@ -198,6 +199,7 @@ library
     , ghc-compact
     , refined
     , sorted-list
+    , bimap
 
 
   -- Directories containing source files.

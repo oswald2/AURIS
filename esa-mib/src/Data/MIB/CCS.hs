@@ -4,20 +4,21 @@
 module Data.MIB.CCS
     ( CCSentry(..)
     , loadFromFile
+    , getCCSMap
     , ccsNumbr
-    , ccsEng  
-    , ccsRaw  
-    )
-where 
+    , ccsEng
+    , ccsRaw
+    ) where
 
 import           RIO
+import qualified RIO.Vector                    as V
 import           Control.Lens                   ( makeLenses )
 
 import           Data.Text.Short                ( ShortText )
 import           Data.Csv
 
 import           Data.MIB.Load
-
+import           Data.Multimap                 as M
 
 data CCSentry = CCSentry
     { _ccsNumbr :: !ShortText
@@ -47,3 +48,6 @@ loadFromFile
 loadFromFile mibPath = loadFromFileGen mibPath fileName
 
 
+{-# INLINABLE getCCSMap #-}
+getCCSMap :: Vector CCSentry -> Multimap ShortText CCSentry
+getCCSMap vec = V.foldl' (\m e -> M.insert (_ccsNumbr e) e m) M.empty vec

@@ -2,6 +2,7 @@
 module Data.MIB.CDF
     ( CDFentry(..)
     , loadFromFile
+    , getCDFMap
     , cdfName
     , cdfElemType
     , cdfDescr
@@ -15,6 +16,7 @@ module Data.MIB.CDF
     ) where
 
 import           RIO
+import qualified RIO.Vector                    as V
 import           Control.Lens                   ( makeLenses )
 
 import           Data.Text.Short                ( ShortText )
@@ -23,6 +25,7 @@ import           Data.Csv
 import           Data.MIB.Load
 import           Data.MIB.Types
 
+import           Data.Multimap                 as M
 
 
 
@@ -50,6 +53,9 @@ instance FromRecord CDFentry where
     parseRecord = genericParse (>= 10) CDFentry
 
 
+        
+
+
 fileName :: FilePath
 fileName = "cdf.dat"
 
@@ -59,4 +65,8 @@ loadFromFile
     -> m (Either Text (Vector CDFentry))
 loadFromFile mibPath = loadFromFileGen mibPath fileName
 
+
+{-# INLINABLE getCDFMap #-}
+getCDFMap :: Vector CDFentry -> Multimap ShortText CDFentry
+getCDFMap vec = V.foldl' (\m e -> M.insert (_cdfName e) e m) M.empty vec
 

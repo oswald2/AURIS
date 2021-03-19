@@ -171,6 +171,8 @@ library
     , colour
     , ghc-compact
     , megaparsec
+    , bimap
+    , multi-containers
 
   -- Directories containing source files.
   hs-source-dirs:      src

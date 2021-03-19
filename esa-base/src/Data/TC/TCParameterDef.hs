@@ -2,6 +2,9 @@ module Data.TC.TCParameterDef
     ( TCParameterDef(..)
     , TCParamDefaultValue(..)
     , TCParamType(..)
+    , TCParameterLocDef(..)
+    , ElemType(..)
+    , ElemFlag(..)
     ) where
 
 import           RIO
@@ -24,8 +27,8 @@ data TCParamDefaultValue =
     | TCParamID ShortText
 
 
-data TCParamType = 
-    TCParamNormal 
+data TCParamType =
+    TCParamNormal
     | TCParamCmdID
     | TCParamParamID
 
@@ -39,8 +42,30 @@ data TCParameterDef = TCParameterDef
     , _tcpCalib        :: Maybe TCCalibration
     , _tcpRange        :: Maybe RangeSet
     , _tcpCorrelate    :: !Correlate
-    , _tcoObtID        :: !Int 
+    , _tcoObtID        :: !Int
     }
 
 
+data ElemType =
+    ElemFixedArea
+    | ElemFixed
+    | ElemEditable
 
+data ElemFlag = 
+    ElemRaw 
+    | ElemEng
+    | ElemCPC 
+    | ElemTM
+
+
+data TCParameterLocDef = TCParameterLocDef
+    { _tcplElemType :: !ElemType
+    , _tcplDescr :: !ShortText 
+    , _tcplLen :: !BitSize 
+    , _tcplBit :: !BitOffset 
+    , _tcplGroupSize :: !Word16
+    , _tcplElemFlag :: !ElemFlag
+    , _tcplDefaultValue :: !TCParamDefaultValue
+    , _tcplTMParam :: !ShortText
+    , _tcplParam :: !TCParameterDef
+    }

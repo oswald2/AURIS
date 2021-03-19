@@ -30,6 +30,10 @@ import           Data.MIB.CPC                  as CPC
 import           Data.MIB.CDF                  as CDF
 import           Data.MIB.PRF                  as PRF
 import           Data.MIB.PRV                  as PRV
+import           Data.MIB.CCA                  as CCA
+import           Data.MIB.CCS                  as CCS
+import           Data.MIB.PAF                  as PAF
+import           Data.MIB.PAS                  as PAS
 
 --import           Data.TM.TMParameterDe
 import           Data.Conversion.GRD
@@ -100,6 +104,17 @@ testPrf = testLoadTab PRF.loadFromFile
 testPrv :: FilePath -> IO ()
 testPrv = testLoadTab PRV.loadFromFile
 
+testCca :: FilePath -> IO ()
+testCca = testLoadTab CCA.loadFromFile
+
+testCcs :: FilePath -> IO ()
+testCcs = testLoadTab CCS.loadFromFile
+
+testPaf :: FilePath -> IO ()
+testPaf = testLoadTab PAF.loadFromFile
+
+testPas :: FilePath -> IO ()
+testPas = testLoadTab PAS.loadFromFile
 
 testLoadTab
     :: Show b
@@ -269,6 +284,14 @@ main = do
     testPrf mibPath
     T.putStrLn "\n\n\nPRVs:\n"
     testPrv mibPath
+    T.putStrLn "\n\n\nCCAs:\n"
+    testCca mibPath
+    T.putStrLn "\n\n\nCCSs:\n"
+    testCcs mibPath
+    T.putStrLn "\n\n\nPAFs:\n"
+    testPaf mibPath
+    T.putStrLn "\n\n\nPASs:\n"
+    testPas mibPath
 
 
 

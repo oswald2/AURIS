@@ -20,7 +20,7 @@ import           Data.MIB.LGF
 import           Data.MIB.TXF
 import           Data.MIB.TXP
 
-import           Data.TM.CalibrationTypes
+import           Data.PUS.CalibrationTypes
 import           Data.TM.NumericalCalibration
 import           Data.TM.PolynomialCalibration
 import           Data.TM.LogarithmicCalibration

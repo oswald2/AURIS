@@ -21,7 +21,7 @@ import           Data.MIB.CUR
 
 import           Data.TM.TMParameterDef
 import           Data.TM.Calibration
-import           Data.TM.CalibrationTypes
+import           Data.PUS.CalibrationTypes
 import           Data.TM.Synthetic
 import           Data.TM.Value
 import           Data.TM.Validity

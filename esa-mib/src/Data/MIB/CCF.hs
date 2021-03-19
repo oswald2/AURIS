@@ -52,7 +52,7 @@ data CCFentry = CCFentry
     , _ccfExec       :: CharDefaultTo "Y"
     , _ccfIlScope    :: CharDefaultTo "N"
     , _ccfIlStage    :: CharDefaultTo "C"
-    , _ccfSubSys     :: !ShortText
+    , _ccfSubSys     :: Maybe Int 
     , _ccfHiPri      :: CharDefaultTo "N"
     , _ccfMapID      :: Maybe Int
     , _ccfDefSet     :: !ShortText

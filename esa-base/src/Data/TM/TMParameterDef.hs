@@ -69,7 +69,7 @@ import           Data.Aeson
 
 import           Data.TM.Value
 import           Data.TM.Calibration
-import           Data.TM.CalibrationTypes
+import           Data.PUS.CalibrationTypes
 import           Data.TM.Synthetic
 
 import           General.Types
