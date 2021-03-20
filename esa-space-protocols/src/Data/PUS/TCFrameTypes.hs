@@ -36,7 +36,7 @@ module Data.PUS.TCFrameTypes
     ) where
 
 import           RIO
-import qualified RIO.ByteString                as BS
+--import qualified RIO.ByteString                as BS
 
 import           Control.Lens                   ( makeLenses )
 

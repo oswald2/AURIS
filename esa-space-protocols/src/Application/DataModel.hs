@@ -10,7 +10,8 @@ import qualified RIO.Text                      as T
 
 import           Data.DataModel
 import           Data.MIB.LoadMIB
-
+import           Control.PUS.Classes
+import           Data.PUS.PUSState              ( PUSState(_pusStEpoch) )
 import           System.Directory
 import           System.FilePath
 
@@ -32,11 +33,19 @@ data LoadFrom =
 -- | Load a data model either from MIB or directly from the serialized 
 -- representation. If the model could not be loaded, returns an empty model.
 loadDataModelDef
-    :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env)
+    :: ( MonadUnliftIO m
+       , MonadReader env m
+       , HasLogFunc env
+       , HasPUSState env
+       , HasCorrelationState env
+       )
     => LoadFrom
     -> m DataModel
 loadDataModelDef (LoadFromMIB str serializedPath) = do
-    res <- loadMIB str
+    env   <- ask
+    epoch <- _pusStEpoch <$> readTVarIO (env ^. appStateG)
+    coeff <- readTVarIO (env ^. corrStateG)
+    res   <- loadMIB epoch coeff str
     case res of
         Left err -> do
             logError
@@ -82,11 +91,19 @@ loadDataModelDef (LoadFromSerialized path) = do
 -- | Load a data model either from MIB or directly from the serialized 
 -- representation.
 loadDataModel
-    :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env)
+    :: ( MonadUnliftIO m
+       , MonadReader env m
+       , HasLogFunc env
+       , HasPUSState env
+       , HasCorrelationState env
+       )
     => LoadFrom
-    -> m (Either Text  DataModel)
+    -> m (Either Text DataModel)
 loadDataModel (LoadFromMIB str serializedPath) = do
-    res <- loadMIB str
+    env   <- ask
+    epoch <- _pusStEpoch <$> readTVarIO (env ^. appStateG)
+    coeff <- readTVarIO (env ^. corrStateG)
+    res   <- loadMIB epoch coeff str
     case res of
         Left  err   -> return (Left err)
         Right model -> do

@@ -1,13 +1,15 @@
 module Data.TC.Calibration
     ( TCCalibration(..)
     , TCNumericCalibration(..)
-    , NumCalibVal(..)
-    , TextCalibVal(..)
     , TCTextCalibration(..)
     ) where
 
-import           RIO                            
+import           RIO
 import           Data.Text.Short                ( ShortText )
+
+import           Codec.Serialise
+import           Data.Aeson
+
 import           Data.TM.Value
 
 import           Data.PUS.CalibrationTypes
@@ -19,11 +21,11 @@ data TCCalibration =
   | TCTextCalib TCTextCalibration
     deriving(Show, Generic)
 
-data NumCalibVal = NumCalibVal
-    { _ncvRaw :: TMValueSimple
-    , _ncvEng :: TMValueSimple
-    }
-    deriving(Show, Generic)
+instance Serialise TCCalibration
+instance FromJSON TCCalibration
+instance ToJSON TCCalibration where
+    toEncoding = genericToEncoding defaultOptions
+
 
 data TCNumericCalibration = TCNumericCalibration
     { _tcncName   :: !ShortText
@@ -31,7 +33,12 @@ data TCNumericCalibration = TCNumericCalibration
     , _tcncUnit   :: !ShortText
     , _tcncValues :: Bimap TMValueSimple TMValueSimple
     }
-    deriving(Show, Generic)
+    deriving (Show, Generic)
+
+instance Serialise TCNumericCalibration
+instance FromJSON TCNumericCalibration
+instance ToJSON TCNumericCalibration where
+    toEncoding = genericToEncoding defaultOptions
 
 
 instance TcCalibration TCNumericCalibration TMValueSimple TMValueSimple where
@@ -42,18 +49,19 @@ instance TcCalibration TCNumericCalibration TMValueSimple TMValueSimple where
 
 
 
-data TextCalibVal = TextCalibVal
-    { _tcvRaw :: TMValueSimple
-    , _tcvEng :: !ShortText
-    }
-    deriving(Show, Generic)
-
 data TCTextCalibration = TCTextCalibration
     { _tcvName   :: !ShortText
     , _tcvDescr  :: !ShortText
     , _tcvValues :: Bimap TMValueSimple ShortText
     }
-    deriving(Show, Generic)
+    deriving (Show, Generic)
+
+instance Serialise TCTextCalibration
+instance FromJSON TCTextCalibration
+instance ToJSON TCTextCalibration where
+    toEncoding = genericToEncoding defaultOptions
+
+
 
 instance TcCalibration TCTextCalibration TMValueSimple ShortText where
     tcCalibrate TCTextCalibration {..} from = Data.Bimap.lookup from _tcvValues

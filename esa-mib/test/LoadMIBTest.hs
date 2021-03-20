@@ -260,7 +260,7 @@ testLoadTCs mibPath = do
 
 testLoadMIB :: FilePath -> IO ()
 testLoadMIB mibPath = do
-    res <- runRIOTestAction (loadMIB mibPath)
+    res <- runRIOTestAction (loadMIB (epochUnix 0) defaultCoeffs mibPath)
     case res of
         Left err -> do
             T.putStrLn err

@@ -29,11 +29,7 @@ data InterfaceAction =
 runCoreThread
     :: ( MonadUnliftIO m
        , MonadReader env m
-       , HasRaiseEvent env
-       , HasDataModel env
-       , HasLogFunc env
-       , HasTCRqstQueue env
-       , HasDatabase env
+       , HasGlobalState env
        )
     => TBQueue InterfaceAction
     -> m ()
@@ -55,11 +51,7 @@ runCoreThread queue = do
 processMsg
     :: ( MonadUnliftIO m
        , MonadReader env m
-       , HasRaiseEvent env
-       , HasDataModel env
-       , HasLogFunc env
-       , HasTCRqstQueue env
-       , HasDatabase env
+       , HasGlobalState env
        )
     => InterfaceAction
     -> m ()
@@ -85,9 +77,7 @@ processMsg (QueryDB query) = do
 importMIB
     :: ( MonadUnliftIO m
        , MonadReader env m
-       , HasRaiseEvent env
-       , HasDataModel env
-       , HasLogFunc env
+       , HasGlobalState env 
        )
     => FilePath
     -> FilePath

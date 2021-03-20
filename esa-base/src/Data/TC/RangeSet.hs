@@ -8,6 +8,9 @@ import           RIO
 import qualified RIO.Vector                    as V
 import           Data.Text.Short                ( ShortText )
 
+import           Codec.Serialise
+import           Data.Aeson
+
 import           Data.TM.Value
 import           General.Types
 
@@ -16,6 +19,12 @@ data RangeValue =
   RangeDiscrete !TMValueSimple
   | RangeMinMax !TMValueSimple !TMValueSimple
     deriving(Show, Generic)
+
+instance Serialise RangeValue
+instance FromJSON RangeValue
+instance ToJSON RangeValue where
+    toEncoding = genericToEncoding defaultOptions
+
 
 
 {-# INLINABLE checkRange #-}
@@ -36,10 +45,14 @@ data RangeSet = RangeSet
     , _rsInter  :: !ValInter
     , _rsValues :: Vector RangeValue
     }
-    deriving(Show, Generic)
+    deriving (Show, Generic)
+
+instance Serialise RangeSet
+instance FromJSON RangeSet
+instance ToJSON RangeSet where
+    toEncoding = genericToEncoding defaultOptions
 
 
-    
 {-# INLINABLE rangeSetCheck #-}
 rangeSetCheck :: RangeSet -> TMValueSimple -> Bool
 rangeSetCheck RangeSet {..} val = V.foldl' f False _rsValues

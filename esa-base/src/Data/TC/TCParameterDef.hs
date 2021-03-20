@@ -10,6 +10,9 @@ module Data.TC.TCParameterDef
 import           RIO
 import           Data.Text.Short                ( ShortText )
 
+import           Codec.Serialise
+import           Data.Aeson              hiding ( Value )
+
 import           Data.PUS.Value
 
 import           General.Types
@@ -27,11 +30,25 @@ data TCParamDefaultValue =
     | TCParamID ShortText
     deriving(Show, Generic)
 
+instance Serialise TCParamDefaultValue
+instance FromJSON TCParamDefaultValue
+instance ToJSON TCParamDefaultValue where
+    toEncoding = genericToEncoding defaultOptions
+
+
+
 data TCParamType =
     TCParamNormal
     | TCParamCmdID
     | TCParamParamID
     deriving(Show, Generic)
+
+instance Serialise TCParamType
+instance FromJSON TCParamType
+instance ToJSON TCParamType where
+    toEncoding = genericToEncoding defaultOptions
+
+
 
 data TCParameterDef = TCParameterDef
     { _tcpName         :: !ShortText
@@ -47,11 +64,24 @@ data TCParameterDef = TCParameterDef
     }
     deriving (Show, Generic)
 
+instance Serialise TCParameterDef
+instance FromJSON TCParameterDef
+instance ToJSON TCParameterDef where
+    toEncoding = genericToEncoding defaultOptions
+
+
+
 data ElemType =
     ElemFixedArea
     | ElemFixed
     | ElemEditable
     deriving(Show, Generic)
+
+instance Serialise ElemType
+instance FromJSON ElemType
+instance ToJSON ElemType where
+    toEncoding = genericToEncoding defaultOptions
+
 
 data ElemFlag =
     ElemRaw
@@ -59,6 +89,12 @@ data ElemFlag =
     | ElemCPC
     | ElemTM
     deriving(Show, Generic)
+
+instance Serialise ElemFlag
+instance FromJSON ElemFlag
+instance ToJSON ElemFlag where
+    toEncoding = genericToEncoding defaultOptions
+
 
 data TCParameterLocDef = TCParameterLocDef
     { _tcplElemType     :: !ElemType
@@ -72,3 +108,9 @@ data TCParameterLocDef = TCParameterLocDef
     , _tcplParam        :: !TCParameterDef
     }
     deriving (Show, Generic)
+
+
+instance Serialise TCParameterLocDef
+instance FromJSON TCParameterLocDef
+instance ToJSON TCParameterLocDef where
+    toEncoding = genericToEncoding defaultOptions

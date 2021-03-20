@@ -81,6 +81,7 @@ import           Data.Bits                      ( Bits
                                                     , shiftL
                                                     )
                                                 )
+import           Data.Bimap                    as BM
 import           Data.Text.Short                ( ShortText )
 import qualified Data.Text.Short               as ST
 import           Data.HashTable.ST.Basic        ( IHashTable )
@@ -143,14 +144,14 @@ instance NFData Correlate
 instance Serialise Correlate
 instance FromJSON Correlate
 instance ToJSON Correlate where
-  toEncoding = genericToEncoding defaultOptions
+    toEncoding = genericToEncoding defaultOptions
 
 {-# INLINABLE determineCorr #-}
 determineCorr :: Maybe Bool -> Correlate
 determineCorr = maybe CorrelationYes go
- where
-  go True  = CorrelationYes
-  go False = CorrelationNo
+  where
+    go True  = CorrelationYes
+    go False = CorrelationNo
 
 -- | Specifies the endianess (BiE = Big Endian, LiE = Little Endian)
 data Endian = BiE | LiE
@@ -429,9 +430,12 @@ instance Serialise ShortText where
     encode x = S.encode . ST.toByteString $ x
     decode = do
         v <- S.decode
-        case ST.fromByteString v of 
-            Just x -> return x 
-            Nothing -> fail $ "Could not convert data from ByteString to ShortText: " <> show v
+        case ST.fromByteString v of
+            Just x -> return x
+            Nothing ->
+                fail
+                    $  "Could not convert data from ByteString to ShortText: "
+                    <> show v
 
 instance FromJSON ShortText where
     parseJSON = withText "ShortText" $ pure . ST.fromText
@@ -451,7 +455,7 @@ instance ToJSON ShortText where
     {-# INLINE toEncoding #-}
 
 instance Display ShortText where
-    display x = displayBytesUtf8 . ST.toByteString $ x 
+    display x = displayBytesUtf8 . ST.toByteString $ x
 
 
 -- | Serialise a 'IHashTable' 
@@ -530,3 +534,19 @@ instance Read HexBytes where
         A.Fail{}      -> []
         A.Partial _   -> []
         A.Done rest x -> [(x, T.unpack rest)]
+
+
+
+
+instance (ToJSON a, ToJSON b) => ToJSON (Bimap a b) where
+    toJSON = toJSON . BM.toList
+
+
+instance (FromJSON a, FromJSON b, Ord a, Ord b) => FromJSON (Bimap a b) where
+    parseJSON x = BM.fromList <$> parseJSON x
+
+
+instance (Serialise a, Serialise b, Ord a, Ord b) => Serialise (Bimap a b) where
+    encode = S.encode . BM.toList
+    decode = BM.fromList <$> S.decode
+

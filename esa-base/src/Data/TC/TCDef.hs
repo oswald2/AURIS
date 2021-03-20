@@ -10,8 +10,12 @@ module Data.TC.TCDef
 
 import           RIO
 import           Data.Text.Short                ( ShortText )
+
+import           Codec.Serialise
+import           Data.Aeson
 import           General.PUSTypes
 import           General.APID
+
 import           Data.TC.TCParameterDef
 
 data TCType =
@@ -23,6 +27,11 @@ data TCType =
   | TCNormal
   deriving (Eq, Ord, Enum, Show, Generic)
 
+instance Serialise TCType
+instance FromJSON TCType
+instance ToJSON TCType where
+    toEncoding = genericToEncoding defaultOptions
+
 
 data InterlockScope =
   ILGlobal
@@ -32,6 +41,12 @@ data InterlockScope =
   | ILNone
   deriving (Eq, Ord, Enum, Show, Generic)
 
+instance Serialise InterlockScope
+instance FromJSON InterlockScope
+instance ToJSON InterlockScope where
+    toEncoding = genericToEncoding defaultOptions
+
+
 data InterlockStage =
   ILRelease
   | ILUplink
@@ -40,9 +55,22 @@ data InterlockStage =
   | ILCompletion
   deriving (Eq, Ord, Enum, Show, Generic)
 
+instance Serialise InterlockStage
+instance FromJSON InterlockStage
+instance ToJSON InterlockStage where
+    toEncoding = genericToEncoding defaultOptions
+
+
 
 data ParamSet = ParamSet
     deriving (Show, Generic)
+
+instance Serialise ParamSet
+instance FromJSON ParamSet
+instance ToJSON ParamSet where
+    toEncoding = genericToEncoding defaultOptions
+
+
 
 
 data VerificationDef =
@@ -52,6 +80,11 @@ data VerificationDef =
   | VerStageP Int
   | VerStageC
   deriving (Eq, Ord, Show, Generic)
+
+instance Serialise VerificationDef
+instance FromJSON VerificationDef
+instance ToJSON VerificationDef where
+    toEncoding = genericToEncoding defaultOptions
 
 
 
@@ -76,3 +109,9 @@ data TCDef = TCDef
     , _tcDefParams      :: Vector TCParameterLocDef
     }
     deriving (Show, Generic)
+
+
+instance Serialise TCDef
+instance FromJSON TCDef
+instance ToJSON TCDef where
+    toEncoding = genericToEncoding defaultOptions

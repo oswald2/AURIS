@@ -27,6 +27,7 @@ module Data.DataModel
     , dmVPDStructs
     , dmGRDs
     , dmInfo
+    , dmTCs
     , empty
     , writeDataModel
     , readDataModel
@@ -52,6 +53,8 @@ import           Data.TM.Synthetic
 import           Data.TM.TMParameterDef
 import           Data.TM.TMPacketDef
 import           Data.PUS.DataModelInfo
+
+import           Data.TC.TCDef
 
 import           Data.Display.Graphical
 
@@ -80,6 +83,8 @@ data DataModel = DataModel
     -- up in this table. The rest of the packet is then replaced with these 
     -- 'VarParams' structure. 
     , _dmVPDStructs      :: IHashTable Int VarParams
+    -- | A hash table for the TC Commands available in the MIB
+    , _dmTCs             :: IHashTable ShortText TCDef
     }
     deriving (Show, Generic)
 makeLenses ''DataModel
@@ -103,6 +108,7 @@ empty =
                   , _dmTMPackets       = packets
                   , _dmVPDStructs      = HT.iempty
                   , _dmGRDs            = M.empty
+                  , _dmTCs             = HT.iempty
                   }
 
 
@@ -117,7 +123,7 @@ instance ToJSON DataModel where
 
 
 encodedLen :: Word
-encodedLen = 8
+encodedLen = 9
 
 encodeDataModel :: DataModel -> S.Encoding
 encodeDataModel model =
@@ -130,6 +136,7 @@ encodeDataModel model =
         <> encodeHashTable (_dmParameters model)
         <> encodeHashTable (_dmTMPackets model)
         <> encodeHashTable (_dmVPDStructs model)
+        <> encodeHashTable (_dmTCs model)
 
 decodeDataModel :: Decoder s DataModel
 decodeDataModel = do
@@ -148,6 +155,7 @@ decodeDataModel = do
     params  <- decodeHashTable
     packets <- decodeHashTable
     vpds    <- decodeHashTable
+    tcs     <- decodeHashTable
     return DataModel { _dmInfo            = info
                      , _dmCalibrations    = calibs
                      , _dmSyntheticParams = synths
@@ -156,6 +164,7 @@ decodeDataModel = do
                      , _dmParameters      = params
                      , _dmTMPackets       = packets
                      , _dmVPDStructs      = vpds
+                     , _dmTCs             = tcs
                      }
 
 -- | Serializes the 'DataModel' and writes it to a file. Uses 

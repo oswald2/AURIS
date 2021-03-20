@@ -89,14 +89,20 @@ import           Data.Conversion.TMPacket       ( convertPackets
 import           Data.Conversion.GRD            ( loadGRDs )
 import           Data.Conversion.Info           ( convertInfo )
 
+import           Data.MIB.LoadTCs
+
+import           General.Time
+
 --import           GHC.Compact
 
 -- | load the whole MIB into a data structure
 loadMIB
     :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env)
-    => FilePath
+    => Epoch
+    -> CorrelationCoefficients
+    -> FilePath
     -> m (Either Text DataModel)
-loadMIB mibPath = do
+loadMIB epoch coeff mibPath = do
     handleIO
             (\e -> return $ Left $ "Error on loading MIB: " <> T.pack
                 (displayException e)
@@ -119,6 +125,10 @@ loadMIB mibPath = do
                   >>= liftEither
                   >>= logWarnings
               grds <- loadGRDs mibPath >>= liftEither
+
+              cmds <-
+                  loadTCs epoch coeff mibPath >>= liftEither >>= logTCMessages
+
               let model = DataModel { _dmInfo            = convertInfo info
                                     , _dmCalibrations    = calibs
                                     , _dmSyntheticParams = syns
@@ -127,6 +137,7 @@ loadMIB mibPath = do
                                     , _dmTMPackets       = packets
                                     , _dmVPDStructs      = vpdLookup
                                     , _dmGRDs            = grds
+                                    , _dmTCs             = cmds
                                     }
               return model
 
@@ -139,6 +150,9 @@ loadMIB mibPath = do
             logWarn $ "On parameter import: " <> display w
             return res
 
+    logTCMessages (msgs, result) = do
+        forM_ msgs (\m -> logWarn $ "On TC import: " <> display m)
+        return result
 
 loadParameters
     :: (MonadIO m, MonadReader env m, HasLogFunc env)
