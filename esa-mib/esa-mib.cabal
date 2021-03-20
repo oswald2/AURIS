@@ -90,6 +90,9 @@ library
     Data.MIB.CCA
     Data.MIB.PAS 
     Data.MIB.PAF
+    Data.MIB.CVS 
+    Data.MIB.CVE
+    Data.MIB.CVP
     Data.MIB.LoadMIB
     Data.MIB.LoadTCs
     Data.Conversion.Types
@@ -174,6 +177,7 @@ library
     , megaparsec
     , bimap
     , multi-containers
+    , refined
 
   -- Directories containing source files.
   hs-source-dirs:      src

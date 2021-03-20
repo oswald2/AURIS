@@ -276,8 +276,8 @@ oneSecond = SunTime 1_000_000 True
 
 
 {-# INLINABLE oneHour #-}
-oneHour :: SunTime 
-oneHour = SunTime (3600 * 1_000_000) True 
+oneHour :: SunTime
+oneHour = SunTime (3600 * 1_000_000) True
 
 
 -- | check if a time is a null time
@@ -476,11 +476,11 @@ timeToComponents (SunTime t _) =
         (secs, micro) = fromEnum (todSec time) `quotRem` 1_000_000
     in  (ymdYear date, dayOfYear, todHour time, todMin time, secs, micro)
 
-timeFromComponents :: Year -> DayOfYear -> Hour -> Minute -> Int -> Int -> SunTime 
-timeFromComponents y d h m s micro =  
+timeFromComponents
+    :: Year -> DayOfYear -> Hour -> Minute -> Int -> Int -> SunTime
+timeFromComponents y d h m s micro =
     let sec = daySegmToSeconds y d h m s
-    in
-    makeTime sec (fromIntegral micro) False
+    in  makeTime sec (fromIntegral micro) False
 
 
 
@@ -619,26 +619,69 @@ sunTimeParser = do
             (choice
                 [Text.Megaparsec.Char.char '-', Text.Megaparsec.Char.char '+']
             )
-    year <- read <$> Text.Megaparsec.some digitChar
-    void $ Text.Megaparsec.Char.char '.'
-    day <- read <$> count 3 digitChar
-    void $ Text.Megaparsec.Char.char '.'
-    hour <- read <$> count 2 digitChar
-    void $ Text.Megaparsec.Char.char '.'
-    minute <- read <$> count 2 digitChar
-    void $ Text.Megaparsec.Char.char '.'
-    second' <- read <$> count 2 digitChar
-    sub     <- optional subsecs
-
-    let sec = daySegmToSeconds year day hour minute second'
-        secRel sgn = daysSegmToSecondsRel sgn year day hour minute second'
 
     case sign of
         Just si -> do
-            let (sec', neg) = secRel si
-                time        = makeTime sec' (fromMaybe 0 sub) True
-            if neg then return (negTime time) else return time
-        Nothing -> return $ makeTime sec (fromMaybe 0 sub) False
+            det <- eitherP (count 3 digitChar) (count 2 digitChar)
+            case det of
+                Left days' -> do
+                    let year = 0
+                        day  = read days'
+                    void $ Text.Megaparsec.Char.char '.'
+                    hour <- read <$> count 2 digitChar
+                    void $ Text.Megaparsec.Char.char '.'
+                    minute <- read <$> count 2 digitChar
+                    void $ Text.Megaparsec.Char.char '.'
+                    second' <- read <$> count 2 digitChar
+                    sub     <- optional subsecs
+
+                    let secRel sgn = daysSegmToSecondsRel sgn
+                                                          year
+                                                          day
+                                                          hour
+                                                          minute
+                                                          second'
+                        (sec', neg) = secRel si
+                        time        = makeTime sec' (fromMaybe 0 sub) True
+
+                    if neg then return (negTime time) else return time
+
+                Right hour' -> do
+                    void $ Text.Megaparsec.Char.char '.'
+                    minute <- read <$> count 2 digitChar
+                    void $ Text.Megaparsec.Char.char '.'
+                    second' <- read <$> count 2 digitChar
+                    sub     <- optional subsecs
+
+                    let year = 0
+                        day  = 0
+                        hour = read hour'
+                        secRel sgn = daysSegmToSecondsRel sgn
+                                                          year
+                                                          day
+                                                          hour
+                                                          minute
+                                                          second'
+                        (sec', neg) = secRel si
+                        time        = makeTime sec' (fromMaybe 0 sub) True
+
+                    if neg then return (negTime time) else return time
+
+        Nothing -> do
+            year <- read <$> Text.Megaparsec.some digitChar
+            void $ Text.Megaparsec.Char.char '.'
+            day <- read <$> count 3 digitChar
+            void $ Text.Megaparsec.Char.char '.'
+            hour <- read <$> count 2 digitChar
+            void $ Text.Megaparsec.Char.char '.'
+            minute <- read <$> count 2 digitChar
+            void $ Text.Megaparsec.Char.char '.'
+            second' <- read <$> count 2 digitChar
+            sub     <- optional subsecs
+
+            let sec = daySegmToSeconds year day hour minute second'
+
+            return $ makeTime sec (fromMaybe 0 sub) False
 
 
 -- | subseconds parser

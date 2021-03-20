@@ -43,7 +43,7 @@ data TCParameterDef = TCParameterDef
     , _tcpCalib        :: Maybe TCCalibration
     , _tcpRange        :: Maybe RangeSet
     , _tcpCorrelate    :: !Correlate
-    , _tcoObtID        :: !Int
+    , _tcpObtID        :: !Int
     }
     deriving (Show, Generic)
 

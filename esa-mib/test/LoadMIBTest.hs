@@ -34,10 +34,16 @@ import           Data.MIB.CCA                  as CCA
 import           Data.MIB.CCS                  as CCS
 import           Data.MIB.PAF                  as PAF
 import           Data.MIB.PAS                  as PAS
+import           Data.MIB.CVS                  as CVS
+import           Data.MIB.CVE                  as CVE 
+import           Data.MIB.CVP                  as CVP
+
 import           Data.MIB.LoadTCs
 --import           Data.TM.TMParameterDe
 import           Data.Conversion.GRD
-import           Data.Conversion.TCs
+--import           Data.Conversion.TCs
+
+--import           Data.TM.Value
 
 import           General.Time
 --import           Test.Hspec
@@ -117,6 +123,18 @@ testPaf = testLoadTab PAF.loadFromFile
 
 testPas :: FilePath -> IO ()
 testPas = testLoadTab PAS.loadFromFile
+
+testCvs :: FilePath -> IO ()
+testCvs = testLoadTab CVS.loadFromFile
+
+testCve :: FilePath -> IO ()
+testCve = testLoadTab CVE.loadFromFile
+
+testCvp :: FilePath -> IO ()
+testCvp = testLoadTab CVP.loadFromFile
+
+
+
 
 testLoadTab
     :: Show b
@@ -232,8 +250,11 @@ testLoadTCs mibPath = do
             exitFailure
         Right (msgs, r) -> do
             pPrint r
-            T.putStrLn $ "Messages:\n" <> T.intercalate "\n" msgs <> 
-                "Count: " <> T.pack (show (length (HT.toList r)))
+            T.putStrLn
+                $  "Messages:\n"
+                <> T.intercalate "\n" msgs
+                <> "Count: "
+                <> T.pack (show (length (HT.toList r)))
 
 
 
@@ -308,6 +329,12 @@ main = do
     testPaf mibPath
     T.putStrLn "\n\n\nPASs:\n"
     testPas mibPath
+    T.putStrLn "\n\n\nCVSs:\n"
+    testCvs mibPath
+    T.putStrLn "\n\n\nCVEs:\n"
+    testCve mibPath
+    T.putStrLn "\n\n\nCVPs:\n"
+    testCvp mibPath
 
 
 
@@ -322,8 +349,7 @@ main = do
     -- testLoadGRDs mibPath
     T.putStrLn "\n\n\nTCs:\n"
     testLoadTCs mibPath
-    
-    
+
     -- T.putStrLn "\n\n\nLoading MIB:\n===============\n"
     -- T.putStrLn "LoadMIB:\n"
     -- testLoadMIB mibPath

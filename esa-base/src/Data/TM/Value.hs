@@ -123,7 +123,8 @@ doubleParser NumDouble _ =
 
 
 double :: Parser Double
-double = L.signed space L.float
+double = Text.Megaparsec.try (L.signed space L.float) 
+  <|> (fromIntegral <$> L.signed space integer)
 
 integer :: Parser Int64
 integer = L.lexeme space L.decimal
@@ -147,7 +148,8 @@ parseShortTextToInt64 :: NumType -> Radix -> ShortText -> Either Text Int64
 parseShortTextToInt64 typ radix x =
   -- trace ("parseShortTextToInt64: " <> T.pack (show typ ++ " " ++ show radix ++ show x)) $
   case parseMaybe (intParser typ radix) (toText x) of
-    Nothing   -> Left $ "Could not parse '" <> toText x <> "' into Int64"
+    Nothing   -> Left $ "Could not parse '" <> toText x <> "' into Int64 (type=" 
+      <> T.pack (show typ) <> ", radix= " <> T.pack (show radix) <> ")"
     Just xval -> Right xval
 
 
@@ -157,7 +159,8 @@ parseShortTextToWord64 :: NumType -> Radix -> ShortText -> Either Text Word64
 parseShortTextToWord64 typ radix x =
   -- trace ("parseShortTextToInt64: " <> T.pack (show typ ++ " " ++ show radix ++ show x)) $
   case parseMaybe (uintParser typ radix) (toText x) of
-    Nothing   -> Left $ "Could not parse '" <> toText x <> "' into UInt64"
+    Nothing   -> Left $ "Could not parse '" <> toText x <> "' into UInt64 (type=" 
+      <> T.pack (show typ) <> ", radix= " <> T.pack (show radix) <> ")"
     Just xval -> Right xval
 
 
@@ -278,14 +281,14 @@ parseShortTextToValueSimple
   :: PTC -> PFC -> ShortText -> Either Text TMValueSimple
 parseShortTextToValueSimple ptc pfc x =
   case parseMaybe (tmValueParser ptc pfc) (toText x) of
-    Nothing   -> Left $ "Could not parse '" <> toText x <> "' into Int64"
+    Nothing   -> Left $ "Could not parse '" <> toText x <> "' into TMValueSimple (PTC=" 
+      <> T.pack (show ptc) <> ", PFC=" <> T.pack (show pfc) <> ")"
     Just xval -> Right xval
 
 -- | parses a 'ShortText' to a integer value. It takes the 'PTC' and 'PFC' type descriptors
 -- and returns a 'TMValue' with the specified type and a clearValidity
 parseShortTextToValue :: PTC -> PFC -> ShortText -> Either Text TMValue
 parseShortTextToValue ptc pfc x =
-  -- trace ("parseShortTextToValue: " <> T.pack (show ptc ++ " " ++ show pfc ++ show x)) $
     case parseShortTextToValueSimple ptc pfc x of
         Left  err -> Left err
         Right val -> Right (TMValue val clearValidity)

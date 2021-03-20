@@ -21,6 +21,8 @@ import           Data.MIB.PAS                  as PAS
 import           Data.MIB.CPC                  as CPC
 import           Data.MIB.CDF                  as CDF
 import           Data.MIB.CCF                  as CCF
+import           Data.MIB.CVS                  as CVS
+import           Data.MIB.CVP                  as CVP
 
 import           Data.Conversion.TCs
 import           Data.Conversion.TCCalibration
@@ -50,6 +52,9 @@ loadTCs epoch coeff mibPath = do
         cpcs <- CPC.loadFromFile mibPath >>= liftEither
         ccfs <- CCF.loadFromFile mibPath >>= liftEither
 
+        cvss <- CVS.loadFromFile mibPath >>= liftEither 
+        cvps <- CVP.loadFromFile mibPath >>= liftEither
+
         let (tcErrs, hm) = convertTCDef epoch
                                         coeff
                                         (getPRFMap prfMap)
@@ -58,5 +63,7 @@ loadTCs epoch coeff mibPath = do
                                         textCalibs
                                         (getCDFMap cdfs)
                                         cpcs
+                                        (getCVSMap cvss)
+                                        (getCVPMap cvps)
                                         ccfs
         return (nErrs ++ tErrs ++ tcErrs, hm)
