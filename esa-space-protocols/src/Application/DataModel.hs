@@ -9,9 +9,14 @@ import           RIO
 import qualified RIO.Text                      as T
 
 import           Data.DataModel
+
 import           Data.MIB.LoadMIB
+
 import           Control.PUS.Classes
+
 import           Data.PUS.PUSState              ( PUSState(_pusStEpoch) )
+import           Data.PUS.Config
+
 import           System.Directory
 import           System.FilePath
 
@@ -38,6 +43,7 @@ loadDataModelDef
        , HasLogFunc env
        , HasPUSState env
        , HasCorrelationState env
+       , HasConfig env
        )
     => LoadFrom
     -> m DataModel
@@ -45,7 +51,8 @@ loadDataModelDef (LoadFromMIB str serializedPath) = do
     env   <- ask
     epoch <- _pusStEpoch <$> readTVarIO (env ^. appStateG)
     coeff <- readTVarIO (env ^. corrStateG)
-    res   <- loadMIB epoch coeff str
+    let cfg = env ^. getConfig
+    res <- loadMIB epoch coeff (getDefaultInterfaceName cfg) str
     case res of
         Left err -> do
             logError
@@ -96,6 +103,7 @@ loadDataModel
        , HasLogFunc env
        , HasPUSState env
        , HasCorrelationState env
+       , HasConfig env
        )
     => LoadFrom
     -> m (Either Text DataModel)
@@ -103,7 +111,8 @@ loadDataModel (LoadFromMIB str serializedPath) = do
     env   <- ask
     epoch <- _pusStEpoch <$> readTVarIO (env ^. appStateG)
     coeff <- readTVarIO (env ^. corrStateG)
-    res   <- loadMIB epoch coeff str
+    let cfg = env ^. getConfig
+    res <- loadMIB epoch coeff (getDefaultInterfaceName cfg) str
     case res of
         Left  err   -> return (Left err)
         Right model -> do

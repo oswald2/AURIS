@@ -27,15 +27,18 @@ module Data.PUS.Config
     -- , loadConfigString
     , loadConfigJSON
     , getInterfaces
+    , getDefaultInterface
+    , getDefaultInterfaceName
     ) where
 
 
 import           RIO
-
+import           RIO.List                       ( headMaybe )
 import           Data.Aeson
 import           Data.ByteString.Lazy          as B
 import qualified Data.Text                     as T
-
+import           Data.Text.Short                ( ShortText )
+import qualified Data.Text.Short               as ST
 
 import           General.PUSTypes
 
@@ -257,6 +260,17 @@ getInterfaces conf = getNctrs ++ getCnc ++ getEden
     getCnc   = RIO.map (IfCnc . cfgCncID) (cfgCnC conf)
     getEden  = RIO.map (IfEden . cfgEdenID) (cfgEDEN conf)
 
+getDefaultInterface :: Config -> Maybe ProtocolInterface
+getDefaultInterface cfg = headMaybe (getInterfaces cfg)
+
+getDefaultInterfaceName :: Config -> ShortText
+getDefaultInterfaceName cfg = case headMaybe (cfgNCTRS cfg) of
+    Just x  -> ST.fromText $ cfgNctrsName x
+    Nothing -> case headMaybe (cfgEDEN cfg) of
+        Just x  -> ST.fromText $ cfgEdenName x
+        Nothing -> case headMaybe (cfgCnC cfg) of
+            Just x  -> ST.fromText $ (cfgCncName x)
+            Nothing -> "NCTRS A"
 
 -- | write the config as a serialized string to a file. Uses the Show class for serizalization
 -- writeConfigString :: MonadIO m => Config -> FilePath -> m ()
