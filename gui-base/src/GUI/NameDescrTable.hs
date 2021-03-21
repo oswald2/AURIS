@@ -2,44 +2,42 @@
   TemplateHaskell
 #-}
 module GUI.NameDescrTable
-  ( TableValue(..)
-  , Selection(..)
-  , NameDescrTable
-  , createNameDescrTable
-  , getSelectedItems
-  , getSelectedItemsVector
-  , setTableFromModel
-  , setPopupMenu
-  )
-where
+    ( TableValue(..)
+    , Selection(..)
+    , NameDescrTable
+    , createNameDescrTable
+    , getSelectedItems
+    , getSelectedItemsVector
+    , setTableFromModel
+    , setPopupMenu
+    ) where
 
 import           RIO
-import qualified RIO.Text as T
-import qualified RIO.Vector as V
-import           Control.Lens                   ( makeLenses
-                                                )
+import qualified RIO.Text                      as T
+import qualified RIO.Vector                    as V
+import           Control.Lens                   ( makeLenses )
 import           GI.Gtk                        as Gtk
 import           Data.GI.Gtk.ModelView.SeqStore
 import           Data.GI.Gtk.ModelView.CellLayout
 import           GI.Gdk.Structs.EventButton
 
+import           GUI.Definitions
 
 
-data Selection = SingleSelection | MultiSelection 
-  deriving (Eq, Ord, Enum, Show, Read)
 
-data TableValue = TableValue {
-  _tableValName :: !Text
-  , _tableValDescr :: !Text
-  } deriving (Show)
+data TableValue = TableValue
+    { _tableValName  :: !Text
+    , _tableValDescr :: !Text
+    }
+    deriving Show
 makeLenses ''TableValue
 
-data NameDescrTable = NameDescrTable {
-  _nmdtView :: !TreeView 
-  , _nmdtModel :: !(SeqStore TableValue)
-  , _nmdtFilterModel :: !TreeModelFilter
-  , _nmdtMenu :: TVar (Maybe Menu)
-  }
+data NameDescrTable = NameDescrTable
+    { _nmdtView        :: !TreeView
+    , _nmdtModel       :: !(SeqStore TableValue)
+    , _nmdtFilterModel :: !TreeModelFilter
+    , _nmdtMenu        :: TVar (Maybe Menu)
+    }
 makeLenses ''NameDescrTable
 
 
@@ -48,134 +46,150 @@ makeLenses ''NameDescrTable
 -- filter model. At the bottom, a 'Entry' is added to enter the 
 -- filter values. 
 createNameDescrTable :: Box -> Selection -> [TableValue] -> IO NameDescrTable
-createNameDescrTable mainBox sel values = do 
-  model <- seqStoreNew values 
+createNameDescrTable mainBox sel values = do
+    model       <- seqStoreNew values
 
-  --treeViewSetModel tv (Just model)
+    --treeViewSetModel tv (Just model)
 
-  -- add a filter entry and a label 
-  filterEntry <- new SearchEntry []
-  filterLabel <- new Label [ #label := "Filter:"]
-  box <- boxNew OrientationHorizontal 0 
-  boxPackStart box filterLabel False False 5 
-  boxPackStart box filterEntry True True 5 
+    -- add a filter entry and a label 
+    filterEntry <- new SearchEntry []
+    filterLabel <- new Label [#label := "Filter:"]
+    box         <- boxNew OrientationHorizontal 0
+    boxPackStart box filterLabel False False 5
+    boxPackStart box filterEntry True  True  5
 
-  -- the main box is the treeview in a scrolled window and the 
-  -- filter entry box (label + entry) below
-  scrolledWin <- new ScrolledWindow []
-  tv <- new TreeView [ #enableGridLines := TreeViewGridLinesBoth, 
-    #headersVisible := True, 
-    #rulesHint := True, 
-    #searchColumn := 0 ]
-  containerAdd scrolledWin tv 
+    -- the main box is the treeview in a scrolled window and the 
+    -- filter entry box (label + entry) below
+    scrolledWin <- new ScrolledWindow []
+    tv          <- new
+        TreeView
+        [ #enableGridLines := TreeViewGridLinesBoth
+        , #headersVisible := True
+        , #rulesHint := True
+        , #searchColumn := 0
+        ]
+    containerAdd scrolledWin tv
 
-  boxPackStart mainBox scrolledWin True True 5 
-  boxPackStart mainBox box False False 5 
+    boxPackStart mainBox scrolledWin True  True  5
+    boxPackStart mainBox box         False False 5
 
-  -- create a filter model and set the child model
-  filterModel <- new TreeModelFilter [ #childModel := model ] 
-  -- set the filter function (see below)
-  treeModelFilterSetVisibleFunc filterModel (filterFunction model filterEntry)
-  -- now set the filter model for the TreeView
-  treeViewSetModel tv (Just filterModel)
+    -- create a filter model and set the child model
+    filterModel <- new TreeModelFilter [#childModel := model]
+    -- set the filter function (see below)
+    treeModelFilterSetVisibleFunc filterModel (filterFunction model filterEntry)
+    -- now set the filter model for the TreeView
+    treeViewSetModel tv (Just filterModel)
 
-  -- set callback to retrigger the filtering 
-  void $ Gtk.on filterEntry #searchChanged (treeModelFilterRefilter filterModel)
+    -- set callback to retrigger the filtering 
+    void $ Gtk.on filterEntry
+                  #searchChanged
+                  (treeModelFilterRefilter filterModel)
 
-  selection <- treeViewGetSelection tv 
+    selection <- treeViewGetSelection tv
 
-  case sel of 
-    MultiSelection -> do 
-      treeSelectionSetMode selection SelectionModeMultiple
-      treeViewSetRubberBanding tv True
-    SingleSelection -> do 
-      treeSelectionSetMode selection SelectionModeSingle
-      treeViewSetRubberBanding tv False
+    case sel of
+        MultiSelection -> do
+            treeSelectionSetMode selection SelectionModeMultiple
+            treeViewSetRubberBanding tv True
+        SingleSelection -> do
+            treeSelectionSetMode selection SelectionModeSingle
+            treeViewSetRubberBanding tv False
 
-  col1 <- treeViewColumnNew
-  col2 <- treeViewColumnNew
+    col1 <- treeViewColumnNew
+    col2 <- treeViewColumnNew
 
-  treeViewColumnSetTitle col1 "Name"
-  treeViewColumnSetTitle col2 "Description"
+    treeViewColumnSetTitle col1 "Name"
+    treeViewColumnSetTitle col2 "Description"
 
-  renderer1 <- cellRendererTextNew 
-  renderer2 <- cellRendererTextNew 
+    renderer1 <- cellRendererTextNew
+    renderer2 <- cellRendererTextNew
 
-  cellLayoutPackStart col1 renderer1 True 
-  cellLayoutPackStart col2 renderer2 True 
+    cellLayoutPackStart col1 renderer1 True
+    cellLayoutPackStart col2 renderer2 True
 
-  cellLayoutSetAttributes col1 renderer1 model $ \val -> [ #text := val ^. tableValName]
-  cellLayoutSetAttributes col2 renderer2 model $ \val -> [ #text := val ^. tableValDescr]
+    cellLayoutSetAttributes col1 renderer1 model
+        $ \val -> [#text := val ^. tableValName]
+    cellLayoutSetAttributes col2 renderer2 model
+        $ \val -> [#text := val ^. tableValDescr]
 
-  void $ treeViewAppendColumn tv col1
-  void $ treeViewAppendColumn tv col2
+    void $ treeViewAppendColumn tv col1
+    void $ treeViewAppendColumn tv col2
 
-  treeViewSetSearchColumn tv 0
-  treeViewSetEnableSearch tv True 
-  treeViewSetSearchEqualFunc tv (searchFunc model)
+    treeViewSetSearchColumn tv 0
+    treeViewSetEnableSearch tv True
+    treeViewSetSearchEqualFunc tv (searchFunc model)
 
-  menu <- newTVarIO Nothing 
+    menu <- newTVarIO Nothing
 
-  let g = NameDescrTable tv model filterModel menu 
+    let g = NameDescrTable tv model filterModel menu
 
-  void $ Gtk.on tv #buttonPressEvent (buttonCB g)
+    void $ Gtk.on tv #buttonPressEvent (buttonCB g)
 
-  return g
+    return g
 
-  where 
-    searchFunc model _ _ text iter = do 
-      idx <- seqStoreIterToIndex iter 
-      val <- seqStoreGetValue model idx 
-      
-      let searchText = T.toLower text
-          !res = (searchText `T.isPrefixOf` T.toLower (val ^. tableValName)) 
-            || (searchText `T.isPrefixOf` T.toLower (val ^. tableValDescr)) 
-      return res 
+  where
+    searchFunc model _ _ text iter = do
+        idx <- seqStoreIterToIndex iter
+        val <- seqStoreGetValue model idx
 
-    filterFunction model entry _ iter = do 
-      idx <- seqStoreIterToIndex iter 
-      val <- seqStoreGetValue model idx 
-      text <- get entry #text 
-      let searchText = T.toLower text
-          !res = (searchText `T.isInfixOf` T.toLower (val ^. tableValName)) 
-            || (searchText `T.isInfixOf` T.toLower (val ^. tableValDescr)) 
-      return res 
+        let searchText = T.toLower text
+            !res =
+                (searchText `T.isPrefixOf` T.toLower (val ^. tableValName))
+                    || (              searchText
+                       `T.isPrefixOf` T.toLower (val ^. tableValDescr)
+                       )
+        return res
+
+    filterFunction model entry _ iter = do
+        idx  <- seqStoreIterToIndex iter
+        val  <- seqStoreGetValue model idx
+        text <- get entry #text
+        let searchText = T.toLower text
+            !res =
+                (searchText `T.isInfixOf` T.toLower (val ^. tableValName))
+                    || (             searchText
+                       `T.isInfixOf` T.toLower (val ^. tableValDescr)
+                       )
+        return res
 
 
 
 
-setPopupMenu :: NameDescrTable -> Menu -> IO () 
+setPopupMenu :: NameDescrTable -> Menu -> IO ()
 setPopupMenu tbl menu = atomically $ writeTVar (tbl ^. nmdtMenu) (Just menu)
 
 
-buttonCB :: NameDescrTable -> EventButton -> IO Bool 
-buttonCB tbl evtBtn = do 
-  bt <- getEventButtonButton evtBtn 
-  case bt of 
-    3 -> do --right mouse button 
-      mn <- readTVarIO (tbl ^. nmdtMenu)
-      case mn of 
-        Nothing -> return False 
-        Just menu -> do 
-          menuPopupAtPointer menu Nothing
-          return True 
-    _ -> return False 
+buttonCB :: NameDescrTable -> EventButton -> IO Bool
+buttonCB tbl evtBtn = do
+    bt <- getEventButtonButton evtBtn
+    case bt of
+        3 -> do --right mouse button 
+            mn <- readTVarIO (tbl ^. nmdtMenu)
+            case mn of
+                Nothing   -> return False
+                Just menu -> do
+                    menuPopupAtPointer menu Nothing
+                    return True
+        _ -> return False
 
 
 -- | gets the currently selected items in the table and returns a list of 
 -- the selected values
 getSelectedItems :: NameDescrTable -> IO [TableValue]
 getSelectedItems tbl = do
-  let tv = tbl ^. nmdtView
-      model = tbl ^. nmdtModel
-      filterModel = tbl ^. nmdtFilterModel
+    let tv          = tbl ^. nmdtView
+        model       = tbl ^. nmdtModel
+        filterModel = tbl ^. nmdtFilterModel
 
-  sel <- treeViewGetSelection tv 
-  (paths, _) <- treeSelectionGetSelectedRows sel 
+    sel        <- treeViewGetSelection tv
+    (paths, _) <- treeSelectionGetSelectedRows sel
 
-  childPaths <- catMaybes <$> traverse (treeModelFilterConvertPathToChildPath filterModel) paths
-  idxs <- traverse treePathGetIndices childPaths
-  traverse (seqStoreGetValue model) ((concat . catMaybes) idxs)
+    childPaths <-
+        catMaybes
+            <$> traverse (treeModelFilterConvertPathToChildPath filterModel)
+                         paths
+    idxs <- traverse treePathGetIndices childPaths
+    traverse (seqStoreGetValue model) ((concat . catMaybes) idxs)
 
 -- | gets the currently selected items in the table and returns a 'Vector' of 
 -- the selected values
@@ -188,10 +202,10 @@ getSelectedItemsVector tbl = V.fromList <$> getSelectedItems tbl
 -- the model is displayed as-is
 setTableFromModel :: NameDescrTable -> Vector TableValue -> IO ()
 setTableFromModel table vals = do
-  let model = table ^. nmdtModel
+    let model = table ^. nmdtModel
 
-  seqStoreClear model 
-  mapM_ (seqStoreAppend model) vals
+    seqStoreClear model
+    mapM_ (seqStoreAppend model) vals
 
 
 

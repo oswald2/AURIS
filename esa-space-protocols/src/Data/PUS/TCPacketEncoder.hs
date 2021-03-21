@@ -55,6 +55,7 @@ import           Data.PUS.MissionSpecific.Definitions
                                                 ( pmsTCDataFieldHeader
                                                 , PUSMissionSpecific
                                                 )
+import           Data.PUS.Verification
 
 import           General.PUSTypes               ( loadRqstID
                                                 , nextRqstID
@@ -62,7 +63,6 @@ import           General.PUSTypes               ( loadRqstID
                                                 )
 import           General.Types                  ( HexBytes(HexBytes) )
 
-import           Verification.Verification
 
 
 data EncodedTCPacket = EncodedTCPacket

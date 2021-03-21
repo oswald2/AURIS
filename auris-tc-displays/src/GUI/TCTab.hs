@@ -9,13 +9,14 @@ module GUI.TCTab
     , tcTabSaveFileAs
     , tcTabLoadTCFile
     , tcTabSaveTCFile
+    , tcTabSetTCs
     ) where
 
 
 import           RIO
 import           RIO.Partial                    ( toEnum )
 import qualified RIO.Text                      as T
-
+import qualified Data.Text.Short               as ST
 --import qualified Data.Text.IO                  as T
 
 
@@ -24,6 +25,7 @@ import           GI.GtkSource
 import qualified GI.GtkSource.Objects.Buffer   as BUF
 import           GI.GtkSource.Interfaces.StyleSchemeChooser
                                                 ( )
+import           Data.GI.Base.Attributes        ( AttrOpTag(AttrSet) )
 
 import           Text.Show.Pretty               ( ppShow )
 import           Interface.Interface            ( Interface
@@ -38,14 +40,16 @@ import           Interface.Interface            ( Interface
 import           GUI.Utils                      ( getObject )
 import           GUI.MessageDialogs             ( warningDialog )
 import           GUI.FileChooser
+import           GUI.Definitions
 
 import           Data.PUS.TCRequest
 import           Data.PUS.TCPacket              ( TCPacket(TCPacket) )
 import           Data.PUS.Parameter             ( Parameter(Parameter)
                                                 , ParameterList(Empty, List)
                                                 )
-import           Data.PUS.Value                 
+import           Data.PUS.Value
 import           Data.PUS.TCCnc                 ( TCScoe(TCScoe) )
+import           Data.PUS.Verification
 
 import           General.PUSTypes               ( mkPUSSubType
                                                 , mkPUSType
@@ -57,15 +61,15 @@ import           General.PUSTypes               ( mkPUSSubType
                                                 )
 import           General.APID                   ( APID(APID) )
 
-import           Protocol.ProtocolInterfaces 
+import           Protocol.ProtocolInterfaces
 
-import           Verification.Verification      
 
 import           Refined                        ( refineTH )
 import           System.FilePath
 
-
-
+import           Data.TC.TCDef
+import           Data.GI.Gtk.ModelView.SeqStore
+import           GUI.ScrollingTable
 
 
 data TCTab = TCTab
@@ -80,6 +84,10 @@ data TCTab = TCTab
     , _tcTabFileName           :: IORef (Maybe FilePath)
     , _tcTabLogFunc
           :: IORef (Maybe (LogSource -> LogLevel -> Utf8Builder -> IO ()))
+    , _tcTabTCBrowser     :: !TreeView
+    , _tcTabTCModel       :: SeqStore TCDef
+    , _tcTabTCFilterModel :: !TreeModelFilter
+    , _tcTabTCSearchEntry :: !SearchEntry
     }
 
 
@@ -94,6 +102,9 @@ createTCTab window builder = do
     btStyle        <- getObject builder "buttonStyleChooser" StyleSchemeChooserButton
     btApply        <- getObject builder "buttonApplyStyle" Button
     btNctrs        <- getObject builder "buttonNCTRSTC" Button
+
+    tcv            <- getObject builder "treeviewTCs" TreeView
+    btSearch       <- getObject builder "searchEntryTCs" SearchEntry
 
     ur             <- newIORef Nothing
     l              <- newIORef Nothing
@@ -114,6 +125,7 @@ createTCTab window builder = do
         s <- styleSchemeChooserGetStyleScheme btStyle
         bufferSetStyleScheme textBuffer (Just s)
 
+    (tcModel, filterModel) <- initTCBrowser tcv btSearch
 
     let g = TCTab { _tcTabWindow             = window
                   , _tcTabTextView           = textView
@@ -125,6 +137,10 @@ createTCTab window builder = do
                   , _tcTabButtonInsertScoeCc = btCcScoeInsert
                   , _tcTabFileName           = ur
                   , _tcTabLogFunc            = l
+                  , _tcTabTCBrowser          = tcv
+                  , _tcTabTCModel            = tcModel
+                  , _tcTabTCFilterModel      = filterModel
+                  , _tcTabTCSearchEntry      = btSearch
                   }
 
     _ <- Gtk.on btClear #clicked $ setText g ""
@@ -242,7 +258,7 @@ createTCTab window builder = do
                       ]
                 ]
             param x = Parameter ("X" <> T.pack (show x)) (ValUInt32 BiE x)
-            params = map param [1..10]
+            params = map param [1 .. 10]
 
         setText g (T.pack (ppShow rqst))
 
@@ -377,3 +393,45 @@ tcTabSaveTCFile :: TCTab -> FilePath -> IO ()
 tcTabSaveTCFile gui file = do
     content <- getText gui
     writeFileUtf8 file content
+
+
+
+initTCBrowser
+    :: TreeView -> SearchEntry -> IO (SeqStore TCDef, TreeModelFilter)
+initTCBrowser tv searchEntry = do
+    model <- createScrollingTableFilter
+        tv
+        searchEntry
+        SingleSelection 
+        filterFunc
+        [ ("TC"         , 90 , \row -> [#text := ST.toText (row ^. tcDefName)])
+        , ("Description", 100, \row -> [#text := ST.toText (row ^. tcDefDescr)])
+        , ("T"          , 30 , displayMaybeText tcDefType)
+        , ("ST"         , 30 , displayMaybeText tcDefSubType)
+        , ("APID"       , 60 , displayMaybeText tcDefApid)
+        ]
+
+    return model
+  where
+    filterFunc searchText row =
+        (searchText `T.isInfixOf` T.toLower (ST.toText (row ^. tcDefName)))
+            || (             searchText
+               `T.isInfixOf` T.toLower (ST.toText (row ^. tcDefDescr))
+               )
+
+displayMaybeText
+    :: (Display a)
+    => Getting (Maybe a) TCDef (Maybe a)
+    -> TCDef
+    -> [AttrOp CellRendererText 'AttrSet]
+displayMaybeText l def =
+    let txt = maybe "" textDisplay (def ^. l) in [#text := txt]
+
+
+
+tcTabSetTCs :: TCTab -> [TCDef] -> IO () 
+tcTabSetTCs g tcs = do 
+    let model = _tcTabTCModel g
+    seqStoreClear model 
+    mapM_ (seqStoreAppend model) tcs 
+

@@ -34,7 +34,7 @@ import           General.PUSTypes               ( RequestID )
 import           Data.PUS.TCRequest
 import           Data.PUS.TCPacket
 import           Data.PUS.TCCnc
-import           Verification.Verification
+import           Data.PUS.Verification
 
 --import           Text.Show.Pretty
 

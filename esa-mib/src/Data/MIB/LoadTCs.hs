@@ -23,6 +23,8 @@ import           Data.MIB.CDF                  as CDF
 import           Data.MIB.CCF                  as CCF
 import           Data.MIB.CVS                  as CVS
 import           Data.MIB.CVP                  as CVP
+import           Data.MIB.TCD                  as TCD
+import           Data.MIB.SCO                  as SCO
 
 import           Data.Conversion.TCs
 import           Data.Conversion.TCCalibration
@@ -34,9 +36,10 @@ loadTCs
     :: (MonadIO m, MonadReader env m, HasLogFunc env)
     => Epoch
     -> CorrelationCoefficients
+    -> ShortText 
     -> FilePath
     -> m (Either Text ([Text], IHashTable ShortText TCDef))
-loadTCs epoch coeff mibPath = do
+loadTCs epoch coeff defaultConnName mibPath = do
     runExceptT $ do
         prfMap <- PRF.loadFromFile mibPath >>= liftEither
         prvMap <- PRV.loadFromFile mibPath >>= liftEither
@@ -55,8 +58,12 @@ loadTCs epoch coeff mibPath = do
         cvss <- CVS.loadFromFile mibPath >>= liftEither 
         cvps <- CVP.loadFromFile mibPath >>= liftEither
 
+        tcds <- TCD.loadFromFile mibPath >>= liftEither 
+        scos <- SCO.loadFromFile mibPath >>= liftEither 
+
         let (tcErrs, hm) = convertTCDef epoch
                                         coeff
+                                        defaultConnName
                                         (getPRFMap prfMap)
                                         (getPRVMap prvMap)
                                         numCalibs
@@ -65,5 +72,7 @@ loadTCs epoch coeff mibPath = do
                                         cpcs
                                         (getCVSMap cvss)
                                         (getCVPMap cvps)
+                                        (getTCDMap tcds)
+                                        (getSCOMap scos)
                                         ccfs
         return (nErrs ++ tErrs ++ tcErrs, hm)

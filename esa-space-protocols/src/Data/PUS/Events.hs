@@ -39,6 +39,7 @@ import           Data.PUS.ExtractedDU           ( ExtractedDU )
 import           Data.PUS.TMFrame               ( TMFrame )
 import           Data.PUS.TMPacket              ( TMPacket )
 import           Data.PUS.TCRequest             ( TCRequest )
+import           Data.PUS.Verification
 import           Data.TM.Parameter
 
 import           Data.DataModel
@@ -46,13 +47,12 @@ import           Data.DataModel
 import           General.Time
 
 import           Protocol.ProtocolInterfaces
-import           Verification.Verification
 
 
-data EventFlag = 
+data EventFlag =
     EVFlagCommanding
-    | EVFlagTelemetry 
-    | EVFlagAlarm 
+    | EVFlagTelemetry
+    | EVFlagAlarm
     | EVFlagCOP1
     | EVFlagDB
     | EVFlagAll
@@ -159,7 +159,7 @@ instance ToJSON EventCOP1 where
 
 
 
-data EventDB = 
+data EventDB =
     EVDBTMFrames [ExtractedDU TMFrame]
     | EVDBEvents
     deriving(Show, Generic)

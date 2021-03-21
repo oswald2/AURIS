@@ -1,3 +1,4 @@
+{-# LANGUAGE TemplateHaskell #-}
 module Data.TC.TCParameterDef
     ( TCParameterDef(..)
     , TCParamDefaultValue(..)
@@ -5,10 +6,31 @@ module Data.TC.TCParameterDef
     , TCParameterLocDef(..)
     , ElemType(..)
     , ElemFlag(..)
+    , tcpName        
+    , tcpDescr       
+    , tcpDefaultValue
+    , tcpRadix       
+    , tcpUnit        
+    , tcpProcType    
+    , tcpCalib       
+    , tcpRange       
+    , tcpCorrelate   
+    , tcpObtID       
+    , tcplElemType    
+    , tcplDescr       
+    , tcplLen         
+    , tcplBit         
+    , tcplGroupSize   
+    , tcplElemFlag    
+    , tcplDefaultValue
+    , tcplTMParam     
+    , tcplParam       
     ) where
 
 import           RIO
 import           Data.Text.Short                ( ShortText )
+
+import           Control.Lens                   ( makeLenses )
 
 import           Codec.Serialise
 import           Data.Aeson              hiding ( Value )
@@ -63,6 +85,7 @@ data TCParameterDef = TCParameterDef
     , _tcpObtID        :: !Int
     }
     deriving (Show, Generic)
+makeLenses ''TCParameterDef
 
 instance Serialise TCParameterDef
 instance FromJSON TCParameterDef
@@ -108,6 +131,7 @@ data TCParameterLocDef = TCParameterLocDef
     , _tcplParam        :: !TCParameterDef
     }
     deriving (Show, Generic)
+makeLenses ''TCParameterLocDef
 
 
 instance Serialise TCParameterLocDef

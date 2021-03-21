@@ -57,25 +57,39 @@ import           GUI.MessageDetails
 import           GUI.About
 
 
-import           Data.PUS.TMPacket
-import           Data.PUS.ExtractedDU
-import           Data.PUS.TMFrame
+import           Data.PUS.TMPacket              ( TMPacket )
+import           Data.PUS.ExtractedDU           ( ExtractedDU )
+import           Data.PUS.TMFrame               ( TMFrame )
 import           Data.PUS.TCRequest             ( TCRequest )
-import           Data.PUS.LiveState
+import           Data.PUS.LiveState             ( defaultLiveState
+                                                , LiveState
+                                                )
 
-import           Protocol.ProtocolInterfaces
+import           Protocol.ProtocolInterfaces    ( ProtocolInterface
+                                                , ConnType
+                                                , ConnectionState
+                                                )
 
-import           Data.DataModel
+import           Data.DataModel                 ( DataModel
+                                                , dmGRDs
+                                                , dmParameters
+                                                , dmTCs
+                                                )
 
 import           Data.ReactiveValue
 
-import           Data.TM.Parameter
-import           Data.TM.TMParameterDef
-
-import           General.Time
+import           Data.TM.Parameter              ( TMParameter )
+import           Data.TM.TMParameterDef         ( TMParameterDef
+                                                , fpName
+                                                )
+import           Data.TC.TCDef                  ( tcDefName )
+import           General.Time                   ( SunTime
+                                                , displayTimeMilli
+                                                , getCurrentTime
+                                                )
 import           General.PUSTypes               ( RequestID )
 
-import           Verification.Verification      ( Verification )
+import           Data.PUS.Verification      ( Verification )
 
 import           GI.Gtk                        as Gtk
 import           GI.GtkSource
@@ -161,6 +175,10 @@ mwInitialiseDataModel window model = do
     -- set the data model viewer
     dataModelTabSetModel (window ^. mwDataModelTab) model
 
+    -- set the TCs in the TC browser 
+    let tcs = sortBy st . map snd . HT.toList $ model ^. dmTCs
+        st tc1 tc2 = compare (tc1 ^. tcDefName) (tc2 ^. tcDefName)
+    tcTabSetTCs (window ^. mwTCTab) tcs
 
 -- gladeFile :: Text
 -- gladeFile =

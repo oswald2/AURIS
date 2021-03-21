@@ -109,6 +109,11 @@ library
     Data.PUS.DataModelInfo
     Data.PUS.Value 
     Data.PUS.Parameter
+    Data.PUS.TCRequest
+    Data.PUS.TCDirective
+    Data.PUS.TCPacket
+    Data.PUS.TCCnc
+    Data.PUS.Verification
     Protocol.ProtocolInterfaces
     Conduit.PayloadParser
     Persistence.Conversion.Types

@@ -93,6 +93,9 @@ library
     Data.MIB.CVS 
     Data.MIB.CVE
     Data.MIB.CVP
+    Data.MIB.DST
+    Data.MIB.SCO
+    Data.MIB.TCD
     Data.MIB.LoadMIB
     Data.MIB.LoadTCs
     Data.Conversion.Types

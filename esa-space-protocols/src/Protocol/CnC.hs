@@ -40,6 +40,8 @@ import           Data.PUS.ExtractedPUSPacket
 import           Data.PUS.MissionSpecific.Definitions
 import           Data.PUS.Events
 import           Data.PUS.TCRequest
+import           Data.PUS.Verification
+
 import           Protocol.ProtocolInterfaces    ( protContent
                                                 , ProtocolInterface(IfCnc)
                                                 , ProtocolPacket(ProtocolPacket)
@@ -51,7 +53,6 @@ import           General.Types
 import           General.Hexdump                ( hexdumpBS )
 import           Control.PUS.Classes
 
-import           Verification.Verification
 
 -- if we have a SCOE packet, and it has a secondary header, it is a binary
 -- TC, else an ASCII one.

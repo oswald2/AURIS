@@ -36,6 +36,7 @@ import           Data.PUS.MissionSpecific.Definitions
 import           Data.PUS.FOP1
 import           Data.PUS.Parameter
 import           Data.PUS.TCPacket
+import           Data.PUS.Verification
 
 import           Protocol.NCTRS
 import           Protocol.ProtocolInterfaces
@@ -44,7 +45,6 @@ import           GHC.Conc.Sync
 
 import           General.Types
 
-import           Verification.Verification
 
 
 pkt1 :: Word16 -> PUSPacket

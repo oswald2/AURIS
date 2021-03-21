@@ -57,10 +57,10 @@ import           General.Time
 import           Data.PUS.TCDirective
 import           Data.PUS.TCPacket
 import           Data.PUS.TCCnc
+import           Data.PUS.Verification
 
 import           Protocol.ProtocolInterfaces
 
-import           Verification.Verification
 
 -- | The level on which the TC request should be encoded and sent. For various 
 -- purposes, different levels are used. For assembly integration & testing mostly

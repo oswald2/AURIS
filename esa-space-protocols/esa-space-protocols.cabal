@@ -48,8 +48,6 @@ library
         Data.PUS.TCFrameTypes
         Data.PUS.TCTransferFrame
         Data.PUS.TCTransferFrameEncoder
-        Data.PUS.TCRequest
-        Data.PUS.TCPacket
         Data.PUS.TCPacketEncoder
         Data.PUS.PUSPacketEncoder
         Data.PUS.COP1Types
@@ -57,8 +55,6 @@ library
         Data.PUS.FARM1
         Data.PUS.Segment
         Data.PUS.SegmentEncoder
-        Data.PUS.TCDirective
-        Data.PUS.TCCnc
         Data.PUS.TMFrameExtractor
         Data.PUS.TMParameterExtraction
         Data.PUS.TMPacketProcessing
@@ -67,6 +63,7 @@ library
         Data.PUS.Counter
         Data.PUS.MissionSpecific.Default
         Data.PUS.EventHandler
+        Data.PUS.TCGeneration
         Protocol.NCTRS
         Protocol.NCTRSProcessor
         Protocol.EDEN
@@ -76,7 +73,6 @@ library
         Protocol.ProtocolSwitcher
         Application.Chains
         Application.DataModel
-        Verification.Verification
         Verification.Commands
         Verification.Processor
         Persistence.DbResultProcessor

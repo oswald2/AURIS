@@ -30,10 +30,11 @@ import           Control.PUS.Classes
 
 import           Data.PUS.CLTU
 import           Data.PUS.TCRequest
+import           Data.PUS.Verification
+
 import           General.PUSTypes
 import           General.Time
 
-import           Verification.Verification
 
 
 -- | This is just very basic now, it directly converts the CLTU

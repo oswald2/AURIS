@@ -13,7 +13,9 @@ import           RIO
 import qualified RIO.Vector                    as V
 import qualified RIO.Text                      as T
 import qualified RIO.HashMap                   as HM
-import           RIO.List                       ( sortOn, sort)
+import           RIO.List                       ( sortOn
+                                                , sort
+                                                )
 import           Data.HashTable.ST.Basic        ( IHashTable )
 import qualified Data.HashTable.ST.Basic       as HT
 
@@ -53,6 +55,8 @@ import           Data.MIB.CDF
 import           Data.MIB.CCF
 import           Data.MIB.CVS
 import           Data.MIB.CVP
+import           Data.MIB.SCO
+import           Data.MIB.TCD
 
 import           Data.Conversion.Types
 
@@ -64,6 +68,7 @@ import qualified Data.Multimap                 as M
 convertTCDef
     :: Epoch
     -> CorrelationCoefficients
+    -> ShortText
     -> HashMap ShortText PRFentry
     -> Multimap ShortText PRVentry
     -> HashMap ShortText TCNumericCalibration
@@ -72,36 +77,42 @@ convertTCDef
     -> Vector CPCentry
     -> HashMap Int CVSentry
     -> Multimap ShortText CVPentry
+    -> HashMap Word32 TCDentry
+    -> HashMap ShortText SCOentry
     -> Vector CCFentry
-    -> ([Text], IHashTable ShortText TCDef)
-convertTCDef epoch coeff prfMap prvs numCalibs textCalibs cdfs cpcs cvsMap cvpMap vec =
-    let
-        (errs, tcs) =
-            partitionEithers
-                . V.toList
-                . V.map
-                      (convertCCF epoch
-                                  coeff
-                                  prfMap
-                                  prvs
-                                  numCalibs
-                                  textCalibs
-                                  cdfs
-                                  cpcs
-                                  cvsMap 
-                                  cvpMap
-                      )
-                $ vec
-        conv x = (_tcDefName x, x)
-        hm = HT.fromList $ map conv tcs
-    in
-        (errs, hm)
+    -> ( [Text]
+       , IHashTable ShortText TCDef
+       )
+convertTCDef epoch coeff defaultConnName prfMap prvs numCalibs textCalibs cdfs cpcs cvsMap cvpMap tcdMap scoMap vec
+    = let (errs, tcs) =
+              partitionEithers
+                  . V.toList
+                  . V.map
+                        (convertCCF epoch
+                                    coeff
+                                    defaultConnName
+                                    prfMap
+                                    prvs
+                                    numCalibs
+                                    textCalibs
+                                    cdfs
+                                    cpcs
+                                    cvsMap
+                                    cvpMap
+                                    tcdMap
+                                    scoMap
+                        )
+                  $ vec
+          conv x = (_tcDefName x, x)
+          hm = HT.fromList $ map conv tcs
+      in  (errs, hm)
 
 
 
 convertCCF
     :: Epoch
     -> CorrelationCoefficients
+    -> ShortText
     -> HashMap ShortText PRFentry
     -> Multimap ShortText PRVentry
     -> HashMap ShortText TCNumericCalibration
@@ -110,10 +121,13 @@ convertCCF
     -> Vector CPCentry
     -> HashMap Int CVSentry
     -> Multimap ShortText CVPentry
+    -> HashMap Word32 TCDentry
+    -> HashMap ShortText SCOentry
     -> CCFentry
     -> Either Text TCDef
-convertCCF epoch coeff prfMap prvs numCalibs textCalibs cdfs cpcs cvsMap cvpMap CCFentry {..}
-    = let locs   = sortOn (_cdfBit) $ M.lookup _ccfName cdfs
+convertCCF epoch coeff defaultConnName prfMap prvs numCalibs textCalibs cdfs cpcs cvsMap cvpMap tcdMap scoMap CCFentry {..}
+    = let
+          locs   = sortOn (_cdfBit) $ M.lookup _ccfName cdfs
           cpcMap = getCPCMap cpcs
           conv cdf = if _cdfElemType cdf == 'A'
               then createFixedArea cdf
@@ -134,7 +148,8 @@ convertCCF epoch coeff prfMap prvs numCalibs textCalibs cdfs cpcs cvsMap cvpMap 
           (errs'    , plocs ) = partitionEithers . map conv $ locs
           (stageErrs, stages) = convertVerif _ccfName cvsMap cvpMap
           errs                = errs' ++ stageErrs
-      in  if not (null errs)
+      in
+          if not (null errs)
               then
                   Left
                   $  "Error converting TC from MIB: "
@@ -157,6 +172,10 @@ convertCCF epoch coeff prfMap prvs numCalibs textCalibs cdfs cpcs cvsMap cvpMap 
                   , _tcDefAckFlags    = maybe 0 fromIntegral _ccfAck
                   , _tcDefSubSched    = _ccfSubschedID
                   , _tcDefVerifStages = stages
+                  , _tcDefConnection  = getConnectionName defaultConnName
+                                                          tcdMap
+                                                          scoMap
+                                                          _ccfApid
                   , _tcDefParams      = V.fromList plocs
                   }
 
@@ -529,3 +548,19 @@ convertVerif cmdName cvsMap cvpMap =
 
         stages = map (convType . _cvsType) cvss
     in  (errs, V.fromList (sort stages))
+
+
+
+getConnectionName
+    :: ShortText
+    -> HashMap Word32 TCDentry
+    -> HashMap ShortText SCOentry
+    -> Maybe Int
+    -> ShortText
+getConnectionName defaultLinkName _tcdMap _scoMap Nothing = defaultLinkName
+getConnectionName defaultLinkName tcdMap scoMap (Just apid) =
+    let look = do
+            tcd <- HM.lookup (fromIntegral apid) tcdMap
+            sco <- HM.lookup (_tcdLink tcd) scoMap
+            return (_scoSCOE sco)
+    in  fromMaybe defaultLinkName look

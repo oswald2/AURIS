@@ -50,12 +50,12 @@ import           Data.PUS.TCRequest
 import           Data.PUS.ExtractedDU           ( ExtractedDU )
 import           Data.PUS.PUSPacket             ( PUSPacket )
 import           Data.PUS.TMPacket              ( TMPacket )
+import           Data.PUS.Verification
 
 import           General.PUSTypes
 import           General.Time
 
 import           Verification.Commands
-import           Verification.Verification
 
 import           Persistence.DbBackend         as DB
 import           Persistence.DBQuery            ( DBQuery )

@@ -100,9 +100,10 @@ loadMIB
     :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env)
     => Epoch
     -> CorrelationCoefficients
+    -> ShortText 
     -> FilePath
     -> m (Either Text DataModel)
-loadMIB epoch coeff mibPath = do
+loadMIB epoch coeff defaultConnName mibPath = do
     handleIO
             (\e -> return $ Left $ "Error on loading MIB: " <> T.pack
                 (displayException e)
@@ -127,7 +128,7 @@ loadMIB epoch coeff mibPath = do
               grds <- loadGRDs mibPath >>= liftEither
 
               cmds <-
-                  loadTCs epoch coeff mibPath >>= liftEither >>= logTCMessages
+                  loadTCs epoch coeff defaultConnName mibPath >>= liftEither >>= logTCMessages
 
               let model = DataModel { _dmInfo            = convertInfo info
                                     , _dmCalibrations    = calibs

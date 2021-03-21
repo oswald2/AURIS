@@ -40,13 +40,13 @@ import           Data.PUS.Value
 import           Data.PUS.MissionSpecific.Default
 import           Data.PUS.Counter
 import           Data.PUS.Events                ( EventFlag(..) )
+import           Data.PUS.Verification
 
 import           Protocol.NCTRSProcessor
 import           Protocol.ProtocolInterfaces
 
 import           GHC.Conc.Sync
 
-import           Verification.Verification
 
 import           Refined
 

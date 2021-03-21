@@ -35,21 +35,20 @@ import           Data.MIB.CCS                  as CCS
 import           Data.MIB.PAF                  as PAF
 import           Data.MIB.PAS                  as PAS
 import           Data.MIB.CVS                  as CVS
-import           Data.MIB.CVE                  as CVE 
+import           Data.MIB.CVE                  as CVE
 import           Data.MIB.CVP                  as CVP
 
 import           Data.MIB.LoadTCs
---import           Data.TM.TMParameterDe
-import           Data.Conversion.GRD
---import           Data.Conversion.TCs
 
---import           Data.TM.Value
+import           Data.Conversion.GRD
+
+
 
 import           General.Time
---import           Test.Hspec
+
 import           Text.Show.Pretty
 
---import           GHC.Compact
+
 
 
 newtype TestState = TestState { logFunction :: LogFunc}
@@ -243,7 +242,7 @@ testLoadTCs :: FilePath -> IO ()
 testLoadTCs mibPath = do
     let epoch = epochUnix 0
         coeff = defaultCoeffs
-    res <- runRIOTestAction (loadTCs epoch coeff mibPath)
+    res <- runRIOTestAction (loadTCs epoch coeff "NCTRS A" mibPath)
     case res of
         Left err -> do
             T.putStrLn err
@@ -260,7 +259,12 @@ testLoadTCs mibPath = do
 
 testLoadMIB :: FilePath -> IO ()
 testLoadMIB mibPath = do
-    res <- runRIOTestAction (loadMIB (epochUnix 0) defaultCoeffs mibPath)
+    res <- runRIOTestAction
+        (loadMIB (epochUnix 0)
+                 defaultCoeffs
+                 "NCTRS A"
+                 mibPath
+        )
     case res of
         Left err -> do
             T.putStrLn err

@@ -1,6 +1,7 @@
 module GUI.Definitions
   ( defMaxRowTM
   , setEntryStyle
+  , Selection(..)
   ) where
 
 
@@ -13,6 +14,11 @@ import           GI.Gtk                        as Gtk
 import           GI.Gtk.Objects.StyleContext    ( styleContextAddProviderForScreen
                                                 )
 import           GI.Gdk.Objects.Screen          ( screenGetDefault )
+
+
+
+data Selection = SingleSelection | MultiSelection 
+  deriving (Eq, Ord, Enum, Show, Read)
 
 
 -- | The maximum number of rows in a TM display in live mode

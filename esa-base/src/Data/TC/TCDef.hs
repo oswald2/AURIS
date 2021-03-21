@@ -1,3 +1,4 @@
+{-# LANGUAGE TemplateHaskell #-}
 module Data.TC.TCDef
     ( TCDef(..)
     , TCType(..)
@@ -5,11 +6,31 @@ module Data.TC.TCDef
     , InterlockStage(..)
     , ParamSet(..)
     , VerificationDef(..)
-    ) where
-
+    , tcDefName       
+    , tcDefDescr      
+    , tcDefDescr2     
+    , tcDefCType      
+    , tcDefCritical   
+    , tcDefApid       
+    , tcDefType       
+    , tcDefSubType    
+    , tcDefExec       
+    , tcDefILScope    
+    , tcDefILStage    
+    , tcDefSubSys     
+    , tcDefMapID      
+    , tcDefParamSet   
+    , tcDefAckFlags   
+    , tcDefSubSched   
+    , tcDefConnection
+    , tcDefVerifStages
+    , tcDefParams     
+    )
+where 
 
 import           RIO
 import           Data.Text.Short                ( ShortText )
+import           Control.Lens                   ( makeLenses )
 
 import           Codec.Serialise
 import           Data.Aeson
@@ -106,10 +127,11 @@ data TCDef = TCDef
     , _tcDefAckFlags    :: !Word8
     , _tcDefSubSched    :: Maybe Int
     , _tcDefVerifStages :: Vector VerificationDef
+    , _tcDefConnection  :: !ShortText 
     , _tcDefParams      :: Vector TCParameterLocDef
     }
     deriving (Show, Generic)
-
+makeLenses ''TCDef
 
 instance Serialise TCDef
 instance FromJSON TCDef

@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
-module Verification.Verification
+module Data.PUS.Verification
     ( Verification(..)
     , ReleaseStage(..)
     , GroundStage(..)
@@ -258,10 +258,11 @@ setGroundReceptionStage StGFail verif =
         &  verGroundOBR
         .~ StGDisabled
         &  setAllTMStages StTmDisabled
-setGroundReceptionStage StGTimeout verif = 
-    if (verif ^. verGroundReception == StGPending) || (verif ^. verGroundReception == StGExpected)
+setGroundReceptionStage StGTimeout verif =
+    if (verif ^. verGroundReception == StGPending)
+            || (verif ^. verGroundReception == StGExpected)
         then verif & verGroundReception .~ StGTimeout
-        else verif 
+        else verif
 setGroundReceptionStage status verif = verif & verGroundReception .~ status
 
 
@@ -278,8 +279,9 @@ setGroundTransmissionStage StGSuccess verif =
             then verif & verGroundReception .~ StGAssumed
             else verif
     in  newVerif & verGroundTransmission .~ StGSuccess
-setGroundTransmissionStage StGTimeout verif = 
-    if (verif ^. verGroundTransmission == StGPending) || (verif ^. verGroundTransmission == StGExpected)
+setGroundTransmissionStage StGTimeout verif =
+    if (verif ^. verGroundTransmission == StGPending)
+            || (verif ^. verGroundTransmission == StGExpected)
         then verif & verGroundTransmission .~ StGTimeout
         else verif
 setGroundTransmissionStage status verif =
@@ -296,8 +298,9 @@ setGroundOBRStage StGSuccess verif =
             then verif1 & verGroundTransmission .~ StGAssumed
             else verif1
     in  verif2 & verGroundOBR .~ StGSuccess
-setGroundOBRStage StGTimeout verif = 
-    if (verif ^. verGroundOBR == StGPending) || (verif ^. verGroundOBR == StGExpected)
+setGroundOBRStage StGTimeout verif =
+    if (verif ^. verGroundOBR == StGPending)
+            || (verif ^. verGroundOBR == StGExpected)
         then verif & verGroundOBR .~ StGTimeout
         else verif
 setGroundOBRStage status verif = verif & verGroundOBR .~ status
@@ -312,14 +315,16 @@ setGroundGTStages StGFail verif =
         &  verGroundOBR
         .~ StGDisabled
         &  setAllTMStages StTmDisabled
-setGroundGTStages StGTimeout verif = 
-    let newVerif = if (verif ^. verGroundReception == StGPending) || (verif ^. verGroundReception == StGExpected)
-                        then verif & verGroundReception .~ StGTimeout
-                        else verif 
-    in 
-    if (newVerif ^. verGroundTransmission == StGPending) || (newVerif ^. verGroundTransmission == StGExpected)
-        then newVerif & verGroundTransmission .~ StGTimeout
-        else newVerif
+setGroundGTStages StGTimeout verif =
+    let newVerif =
+            if (verif ^. verGroundReception == StGPending)
+                    || (verif ^. verGroundReception == StGExpected)
+                then verif & verGroundReception .~ StGTimeout
+                else verif
+    in  if (newVerif ^. verGroundTransmission == StGPending)
+                || (newVerif ^. verGroundTransmission == StGExpected)
+            then newVerif & verGroundTransmission .~ StGTimeout
+            else newVerif
 setGroundGTStages status verif =
     verif & verGroundReception .~ status & verGroundTransmission .~ status
 
@@ -348,8 +353,9 @@ setTMAcceptStage StTmAssumed verif =
     in  if (obr == StGExpected) || (obr == StGPending)
             then newVerif & verGroundOBR .~ StGAssumed
             else newVerif
-setTMAcceptStage StTmTimeout verif = 
-    if (verif ^. verTMAcceptance == StTmPending) || (verif ^. verTMAcceptance == StTmExpected)
+setTMAcceptStage StTmTimeout verif =
+    if (verif ^. verTMAcceptance == StTmPending)
+            || (verif ^. verTMAcceptance == StTmExpected)
         then verif & verTMAcceptance .~ StTmTimeout
         else verif
 setTMAcceptStage status verif = verif & verTMAcceptance .~ status
@@ -369,10 +375,13 @@ setTMStartStage StTmSuccess verif =
     setAcceptPending (verif & verTMStart .~ StTmSuccess)
 setTMStartStage StTmAssumed verif =
     setAcceptPending (verif & verTMStart .~ StTmAssumed)
-setTMStartStage StTmTimeout verif = 
-    if (verif ^. verTMStart == StTmPending) || (verif ^. verTMStart == StTmExpected)
-        then verif & verTMStart .~ StTmTimeout
-        else verif
+setTMStartStage StTmTimeout verif =
+    if (verif ^. verTMStart == StTmPending)
+        || (verif ^. verTMStart == StTmExpected)
+    then
+        verif & verTMStart .~ StTmTimeout
+    else
+        verif
 setTMStartStage status verif = verif & verTMStart .~ status
 
 setAcceptPending :: Verification -> Verification
@@ -422,8 +431,9 @@ setTMCompleteStage StTmFail verif =
     verif & verTMComplete .~ StTmFail & setStartPending & setProgressAssumed
 setTMCompleteStage StTmSuccess verif =
     verif & verTMComplete .~ StTmSuccess & setStartPending & setProgressAssumed
-setTMCompleteStage StTmTimeout verif = 
-    if (verif ^. verTMComplete == StTmPending) || (verif ^. verTMComplete == StTmExpected)
+setTMCompleteStage StTmTimeout verif =
+    if (verif ^. verTMComplete == StTmPending)
+            || (verif ^. verTMComplete == StTmExpected)
         then verif & verTMComplete .~ StTmTimeout
         else verif
 setTMCompleteStage status verif = verif & verTMComplete .~ status
@@ -493,28 +503,24 @@ isFailed Verification {..} =
 
 isTMExpected :: Verification -> Bool
 isTMExpected verif =
-    isTMAExpected verif 
-        || isTMSExpected verif
-        || isTMCExpected verif
+    isTMAExpected verif || isTMSExpected verif || isTMCExpected verif
   -- we don't check for the progess, because for progess we need at 
   -- least a completion anyway
 
 
-isTMAExpected :: Verification -> Bool 
+isTMAExpected :: Verification -> Bool
 isTMAExpected Verification {..} =
     (_verTMAcceptance == StTmExpected) || (_verTMAcceptance == StTmPending)
 
-isTMSExpected :: Verification -> Bool 
+isTMSExpected :: Verification -> Bool
 isTMSExpected Verification {..} =
     (_verTMStart == StTmExpected) || (_verTMStart == StTmPending)
 
 isTMPExpected :: Verification -> Bool
-isTMPExpected verif = 
-    V.any expected (_verTMProgress verif)
-    where 
-        expected x = (x == StTmExpected) || (x == StTmPending)
+isTMPExpected verif = V.any expected (_verTMProgress verif)
+    where expected x = (x == StTmExpected) || (x == StTmPending)
 
-isTMCExpected :: Verification -> Bool 
+isTMCExpected :: Verification -> Bool
 isTMCExpected Verification {..} =
     (_verTMComplete == StTmExpected) || (_verTMComplete == StTmPending)
 
@@ -522,65 +528,68 @@ isTMCExpected Verification {..} =
 isGroundSuccess :: Verification -> Bool
 isGroundSuccess Verification {..} =
     (_verGroundOBR == StGSuccess)
-    || (_verGroundOBR == StGDisabled) && (_verGroundTransmission == StGSuccess)
+        || (_verGroundOBR == StGDisabled)
+        && (_verGroundTransmission == StGSuccess)
 
-isGroundTimeout :: Verification -> Bool 
-isGroundTimeout Verification {..} = 
+isGroundTimeout :: Verification -> Bool
+isGroundTimeout Verification {..} =
     (_verGroundOBR == StGTimeout)
-    || (_verGroundOBR == StGDisabled) && (_verGroundTransmission == StGTimeout)
+        || (_verGroundOBR == StGDisabled)
+        && (_verGroundTransmission == StGTimeout)
 
-isGroundDisabled :: Verification -> Bool 
-isGroundDisabled Verification {..} = 
-    (_verGroundReception == StGDisabled) 
-    && (_verGroundTransmission == StGDisabled)
-    && (_verGroundOBR == StGDisabled)
+isGroundDisabled :: Verification -> Bool
+isGroundDisabled Verification {..} =
+    (_verGroundReception == StGDisabled)
+        && (_verGroundTransmission == StGDisabled)
+        && (_verGroundOBR == StGDisabled)
 
-isGroundExpected :: Verification -> Bool 
+isGroundExpected :: Verification -> Bool
 isGroundExpected verif =
     isGroundGExpected verif
-    || isGroundTExpected verif
-    || isGroundOExpected verif 
+        || isGroundTExpected verif
+        || isGroundOExpected verif
 
 
-isGroundGExpected :: Verification -> Bool 
-isGroundGExpected Verification {..} = 
+isGroundGExpected :: Verification -> Bool
+isGroundGExpected Verification {..} =
     (_verGroundReception == StGExpected) || (_verGroundReception == StGPending)
 
-isGroundTExpected :: Verification -> Bool 
-isGroundTExpected Verification {..} = 
-    (_verGroundTransmission == StGExpected) || (_verGroundTransmission == StGPending)
+isGroundTExpected :: Verification -> Bool
+isGroundTExpected Verification {..} =
+    (_verGroundTransmission == StGExpected)
+        || (_verGroundTransmission == StGPending)
 
-isGroundOExpected :: Verification -> Bool 
-isGroundOExpected Verification {..} = 
+isGroundOExpected :: Verification -> Bool
+isGroundOExpected Verification {..} =
     (_verGroundOBR == StGExpected) || (_verGroundOBR == StGPending)
 
 
-isGroundFail :: Verification -> Bool 
+isGroundFail :: Verification -> Bool
 isGroundFail Verification {..} =
     (_verGroundReception == StGFail)
-    || (_verGroundTransmission == StGFail)
-    || (_verGroundOBR == StGFail)
+        || (_verGroundTransmission == StGFail)
+        || (_verGroundOBR == StGFail)
 
-isOBAExpected :: Verification -> Bool 
-isOBAExpected Verification {..} = 
+isOBAExpected :: Verification -> Bool
+isOBAExpected Verification {..} =
     (_verGroundOBR == StGExpected) || (_verGroundOBR == StGPending)
 
 isSuccess :: Verification -> Bool
-isSuccess verif@Verification {..} 
-    | _verTMComplete == StTmSuccess = True 
-    | isFailed verif = False 
-    | isTimeout verif = False 
-    | not (isTMExpected verif) && isGroundSuccess verif = True 
-    | isGroundDisabled verif && (_verRelease == StRSuccess) = True 
-    | otherwise = False 
+isSuccess verif@Verification {..}
+    | _verTMComplete == StTmSuccess = True
+    | isFailed verif                = False
+    | isTimeout verif               = False
+    | not (isTMExpected verif) && isGroundSuccess verif = True
+    | isGroundDisabled verif && (_verRelease == StRSuccess) = True
+    | otherwise                     = False
 
 
-isTimeout :: Verification -> Bool 
-isTimeout verif@Verification {..} = 
+isTimeout :: Verification -> Bool
+isTimeout verif@Verification {..} =
     (_verTMComplete == StTmTimeout)
-    || not (isTMExpected verif) && isGroundTimeout verif 
+        || not (isTMExpected verif)
+        && isGroundTimeout verif
 
 
-isFinished :: Verification -> Bool 
-isFinished verif = 
-    isFailed verif || isSuccess verif || isTimeout verif 
+isFinished :: Verification -> Bool
+isFinished verif = isFailed verif || isSuccess verif || isTimeout verif

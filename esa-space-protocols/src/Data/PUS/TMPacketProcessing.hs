@@ -45,6 +45,7 @@ import           Data.PUS.EncTime
 import           Data.PUS.PUSState
 import           Data.PUS.CRC
 import           Data.PUS.Events
+import           Data.PUS.Verification
 
 import           General.GetBitField
 import           General.Types
@@ -52,7 +53,6 @@ import           General.Time
 import           General.Hexdump
 import           General.PUSTypes
 
-import           Verification.Verification
 
 
 isUnknownPacket :: Config -> TMPacket -> Bool
