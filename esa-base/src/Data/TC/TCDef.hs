@@ -6,27 +6,27 @@ module Data.TC.TCDef
     , InterlockStage(..)
     , ParamSet(..)
     , VerificationDef(..)
-    , tcDefName       
-    , tcDefDescr      
-    , tcDefDescr2     
-    , tcDefCType      
-    , tcDefCritical   
-    , tcDefApid       
-    , tcDefType       
-    , tcDefSubType    
-    , tcDefExec       
-    , tcDefILScope    
-    , tcDefILStage    
-    , tcDefSubSys     
-    , tcDefMapID      
-    , tcDefParamSet   
-    , tcDefAckFlags   
-    , tcDefSubSched   
+    , tcDefName
+    , tcDefDescr
+    , tcDefDescr2
+    , tcDefCType
+    , tcDefCritical
+    , tcDefApid
+    , tcDefType
+    , tcDefSubType
+    , tcDefExec
+    , tcDefILScope
+    , tcDefILStage
+    , tcDefSubSys
+    , tcDefMapID
+    , tcDefParamSet
+    , tcDefAckFlags
+    , tcDefSubSched
     , tcDefConnection
+    , tcDefConnectionFlag
     , tcDefVerifStages
-    , tcDefParams     
-    )
-where 
+    , tcDefParams
+    ) where
 
 import           RIO
 import           Data.Text.Short                ( ShortText )
@@ -110,25 +110,26 @@ instance ToJSON VerificationDef where
 
 
 data TCDef = TCDef
-    { _tcDefName        :: !ShortText
-    , _tcDefDescr       :: !ShortText
-    , _tcDefDescr2      :: !ShortText
-    , _tcDefCType       :: !TCType
-    , _tcDefCritical    :: !Bool
-    , _tcDefApid        :: Maybe APID
-    , _tcDefType        :: Maybe PUSType
-    , _tcDefSubType     :: Maybe PUSSubType
-    , _tcDefExec        :: !Bool
-    , _tcDefILScope     :: !InterlockScope
-    , _tcDefILStage     :: !InterlockStage
-    , _tcDefSubSys      :: Maybe Int
-    , _tcDefMapID       :: Maybe MAPID
-    , _tcDefParamSet    :: !ParamSet
-    , _tcDefAckFlags    :: !Word8
-    , _tcDefSubSched    :: Maybe Int
-    , _tcDefVerifStages :: Vector VerificationDef
-    , _tcDefConnection  :: !ShortText 
-    , _tcDefParams      :: Vector TCParameterLocDef
+    { _tcDefName           :: !ShortText
+    , _tcDefDescr          :: !ShortText
+    , _tcDefDescr2         :: !ShortText
+    , _tcDefCType          :: !TCType
+    , _tcDefCritical       :: !Bool
+    , _tcDefApid           :: Maybe APID
+    , _tcDefType           :: Maybe PUSType
+    , _tcDefSubType        :: Maybe PUSSubType
+    , _tcDefExec           :: !Bool
+    , _tcDefILScope        :: !InterlockScope
+    , _tcDefILStage        :: !InterlockStage
+    , _tcDefSubSys         :: Maybe Int
+    , _tcDefMapID          :: Maybe MAPID
+    , _tcDefParamSet       :: !ParamSet
+    , _tcDefAckFlags       :: !Word8
+    , _tcDefSubSched       :: Maybe Int
+    , _tcDefVerifStages    :: Vector VerificationDef
+    , _tcDefConnection     :: !ShortText
+    , _tcDefConnectionFlag :: !CommandType
+    , _tcDefParams         :: Vector TCParameterLocDef
     }
     deriving (Show, Generic)
 makeLenses ''TCDef

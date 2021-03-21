@@ -91,6 +91,7 @@ library
     Data.TC.RangeSet
     Data.TC.Calibration
     Data.TC.TCDef
+    Data.TC.ValueConversion
     Data.Display.Graphical
     Data.PUS.CalibrationTypes
     Data.PUS.TMFrame

@@ -519,6 +519,7 @@ initialValue _ (PTC 10) (PFC _) = ValCUCTime nullCUCTimeRel
 initialValue _ _        _       = ValUndefined
 
 
+
 instance BitSizes Value where
     {-# INLINABLE bitSize #-}
     bitSize ValInt8{}        = mkBitSize 8

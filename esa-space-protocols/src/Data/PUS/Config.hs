@@ -29,11 +29,13 @@ module Data.PUS.Config
     , getInterfaces
     , getDefaultInterface
     , getDefaultInterfaceName
+    , getInterfaceMap
     ) where
 
 
 import           RIO
 import           RIO.List                       ( headMaybe )
+import qualified RIO.HashMap                   as HM
 import           Data.Aeson
 import           Data.ByteString.Lazy          as B
 import qualified Data.Text                     as T
@@ -254,7 +256,7 @@ defaultConfig = Config { cfgCltuBlockSize        = CltuBS_8
 
 
 getInterfaces :: Config -> [ProtocolInterface]
-getInterfaces conf = getNctrs ++ getCnc ++ getEden
+getInterfaces conf = getNctrs ++ getEden ++ getCnc
   where
     getNctrs = RIO.map (IfNctrs . cfgNctrsID) (cfgNCTRS conf)
     getCnc   = RIO.map (IfCnc . cfgCncID) (cfgCnC conf)
@@ -271,6 +273,22 @@ getDefaultInterfaceName cfg = case headMaybe (cfgNCTRS cfg) of
         Nothing -> case headMaybe (cfgCnC cfg) of
             Just x  -> ST.fromText $ (cfgCncName x)
             Nothing -> "NCTRS A"
+
+
+getInterfaceMap :: Config -> HashMap ShortText ProtocolInterface
+getInterfaceMap cfg = HM.fromList (getNctrs ++ getEden ++ getCnc)
+  where
+    getNctrs = RIO.map
+        (\x -> (ST.fromText (cfgNctrsName x), IfNctrs (cfgNctrsID x)))
+        (cfgNCTRS cfg)
+    getCnc = RIO.map
+        (\x -> (ST.fromText (cfgCncName x), IfCnc (cfgCncID x)))
+        (cfgCnC cfg)
+    getEden = RIO.map
+        (\x -> (ST.fromText (cfgEdenName x), IfEden (cfgEdenID x)))
+        (cfgEDEN cfg)
+
+
 
 -- | write the config as a serialized string to a file. Uses the Show class for serizalization
 -- writeConfigString :: MonadIO m => Config -> FilePath -> m ()

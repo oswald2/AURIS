@@ -223,7 +223,7 @@ createMainWindow cfg = do
     tmpTab       <- createTMPTab window builder
     paramTab     <- createTMParamTab builder
     connTab      <- createConnectionTab (aurisPusConfig cfg) builder
-    tcTab        <- createTCTab window builder
+    tcTab        <- createTCTab (aurisPusConfig cfg) window builder
     tcHistory    <- createTCHistory window builder
     dataModelTab <- createDataModelTab window builder
 

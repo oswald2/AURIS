@@ -41,24 +41,27 @@ module Interface.Interface
 
 import           RIO
 import qualified RIO.Vector                    as V
-
+import           Data.Text.Short                ( ShortText )
 import           Data.PUS.TCRequest
+import           Data.TC.TCDef
 
 import           Interface.Events
 import           Interface.CoreProcessor
 
 import           Persistence.DBQuery            ( DBQuery )
 
+import           General.PUSTypes
 
 -- | Table of actions which can be called. Direction is from the 
 -- client (GUI, script, command line) to the MCS
 data ActionTable = ActionTable
-    { actionQuit             :: IO ()
-    , actionImportMIB        :: FilePath -> FilePath -> IO ()
-    , actionLogMessage       :: LogSource -> LogLevel -> Utf8Builder -> IO ()
-    , actionSendTCRequest    :: TCRequest -> IO ()
-    , actionSendTCGroup      :: [TCRequest] -> IO ()
-    , actionQueryDB          :: DBQuery -> IO ()
+    { actionQuit          :: IO ()
+    , actionImportMIB     :: FilePath -> FilePath -> IO ()
+    , actionLogMessage    :: LogSource -> LogLevel -> Utf8Builder -> IO ()
+    , actionSendTCRequest :: TCRequest -> IO ()
+    , actionSendTCGroup   :: [TCRequest] -> IO ()
+    , actionQueryDB       :: DBQuery -> IO ()
+    , actionGetTCSync :: TCDef -> ShortText -> TransmissionMode -> IO TCRequest
     }
 
 -- | Data type for the event handler.
@@ -77,28 +80,47 @@ callAction queue action = atomically $ writeTBQueue queue action
 
 
 
-actionTable :: TBQueue InterfaceAction -> Maybe (TBQueue DBQuery) -> ActionTable
-actionTable queue (Just queryQueue) = 
-    (actionTable queue Nothing) { actionQueryDB = atomically . writeTBQueue queryQueue }
+actionTable
+    :: TBQueue InterfaceAction -> Maybe (TBQueue DBQuery) -> ActionTable
+actionTable queue (Just queryQueue) = (actionTable queue Nothing)
+    { actionQueryDB = atomically . writeTBQueue queryQueue
+    }
 actionTable queue Nothing = ActionTable
-    { actionQuit             = pure ()
-    , actionImportMIB        = \p s -> callAction queue (ImportMIB p s)
-    , actionLogMessage       = \s l msg -> callAction queue (LogMsg s l msg)
-    , actionSendTCRequest    = callAction queue . SendTCRequest
-    , actionSendTCGroup      = callAction queue . SendTCGroup
-    , actionQueryDB          = \_ -> pure ()
+    { actionQuit          = pure ()
+    , actionImportMIB     = \p s -> callAction queue (ImportMIB p s)
+    , actionLogMessage    = \s l msg -> callAction queue (LogMsg s l msg)
+    , actionSendTCRequest = callAction queue . SendTCRequest
+    , actionSendTCGroup   = callAction queue . SendTCGroup
+    , actionQueryDB       = \_ -> pure ()
+    , actionGetTCSync     = \tcDef source transMode -> do
+                                var <- newEmptyTMVarIO
+                                callAction
+                                    queue
+                                    (GetTCSync tcDef source transMode var)
+                                atomically $ takeTMVar var
     }
 
 
 -- | creates the 'Interface' from the given 'EventHandler'.
-createInterface :: EventHandler -> Bool -> IO (Interface, TBQueue InterfaceAction, Maybe (TBQueue DBQuery))
+createInterface
+    :: EventHandler
+    -> Bool
+    -> IO (Interface, TBQueue InterfaceAction, Maybe (TBQueue DBQuery))
 createInterface handler True = do
-    queue <- newTBQueueIO 5000
+    queue      <- newTBQueueIO 5000
     queryQueue <- newTBQueueIO 200
-    pure (Interface (actionTable queue (Just queryQueue)) (V.singleton handler), queue, Just queryQueue)
+    pure
+        ( Interface (actionTable queue (Just queryQueue)) (V.singleton handler)
+        , queue
+        , Just queryQueue
+        )
 createInterface handler False = do
     queue <- newTBQueueIO 5000
-    pure (Interface (actionTable queue Nothing) (V.singleton handler), queue, Nothing)
+    pure
+        ( Interface (actionTable queue Nothing) (V.singleton handler)
+        , queue
+        , Nothing
+        )
 
 -- | Adds a new event handler to the given 'Interface'. Only an event handler
 -- is added, the 'ActionTable' stays the same

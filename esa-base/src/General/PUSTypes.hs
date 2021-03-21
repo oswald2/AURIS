@@ -81,6 +81,12 @@ module General.PUSTypes
     , pktIdDfh
     , pktIdAPID
     , SeqControl(..)
+    , ProtocolLevel(..)
+    , CommandType(..)
+    , DirectiveProtocolLevel(..)
+    , Destination(..)
+    , DirectiveDestination(..)
+    , ScoeDestination(..)
     ) where
 
 
@@ -110,8 +116,10 @@ import           System.Directory               ( createDirectoryIfMissing
 import           System.FilePath                ( (</>) )
 import           General.APID                   ( APID(APID) )
 
+import           Protocol.ProtocolInterfaces
+
 -- | Virtual Channel ID
-newtype VCID = VCID Word8 
+newtype VCID = VCID Word8
     deriving (Eq, Ord, Num, Show, Read, Generic)
 
 
@@ -146,7 +154,7 @@ newtype SCID = SCID Word16
     deriving (Eq, Ord, Show, Read, Generic)
 
 getSCID :: SCID -> Word16
-getSCID (SCID x) = x 
+getSCID (SCID x) = x
 
 -- | Smart constructor for the S/C ID
 mkSCID :: Word16 -> SCID
@@ -189,7 +197,7 @@ instance FromJSON MAPID
 instance ToJSON MAPID where
     toEncoding = genericToEncoding defaultOptions
 
-instance Display MAPID where 
+instance Display MAPID where
     display (MAPID x) = display x
 
 -- | Builder for the MAPDI
@@ -227,11 +235,11 @@ data Initialized = Initialized
 data Good = Good
     deriving Generic
 
-instance NFData Good 
-instance NFData Ready 
-instance NFData Enable 
-instance NFData OnOff 
-instance NFData Initialized 
+instance NFData Good
+instance NFData Ready
+instance NFData Enable
+instance NFData OnOff
+instance NFData Initialized
 
 
 instance FlagDisplay Ready where
@@ -286,7 +294,7 @@ newtype RequestID = RequestID Word32
     deriving (Eq, Ord, Num, Show, Read, Hashable, Generic)
 
 getRqstID :: RequestID -> Word32
-getRqstID (RequestID x) = x 
+getRqstID (RequestID x) = x
 
 -- | Smart constructor for the 'RequestID'
 mkRqstID :: Word32 -> RequestID
@@ -339,7 +347,7 @@ instance FromJSON TransmissionMode
 instance ToJSON TransmissionMode where
     toEncoding = genericToEncoding defaultOptions
 
-instance Display TransmissionMode where 
+instance Display TransmissionMode where
     display AD = "AD"
     display BD = "BD"
 
@@ -362,8 +370,8 @@ newtype PUSType = PUSType Word8
     deriving (Eq, Ord, Num, Show, Read, Generic)
 
 
-getPUSTypeVal :: PUSType -> Word8 
-getPUSTypeVal (PUSType x) = x 
+getPUSTypeVal :: PUSType -> Word8
+getPUSTypeVal (PUSType x) = x
 
 -- | Smart constructor for the 'PUSType'
 mkPUSType :: Word8 -> PUSType
@@ -430,7 +438,7 @@ instance FromJSON PUSPacketType
 instance ToJSON PUSPacketType where
     toEncoding = genericToEncoding defaultOptions
 
-instance Display PUSPacketType where 
+instance Display PUSPacketType where
     display PUSTM = "TM"
     display PUSTC = "TC"
 
@@ -450,11 +458,15 @@ instance Display PktID where
     display (PktID x) = display x
 
 pktIdDisplayPretty :: PktID -> Utf8Builder
-pktIdDisplayPretty x = 
-    "Version: " <> display (pktIdVersion x) 
-    <> " Type: " <> display (pktIdType x)
-    <> " DFH: " <> if pktIdDfh x then "True" else "False"
-    <> " APID: " <> display (pktIdAPID x)
+pktIdDisplayPretty x =
+    "Version: "
+        <> display (pktIdVersion x)
+        <> " Type: "
+        <> display (pktIdType x)
+        <> " DFH: "
+        <> if pktIdDfh x
+               then "True"
+               else "False" <> " APID: " <> display (pktIdAPID x)
 
 pktIdVersion :: PktID -> Word8
 pktIdVersion (PktID x) =
@@ -494,7 +506,7 @@ newtype SSC = SSC Word16
 
 
 getSSC :: SSC -> Word16
-getSSC (SSC x) = x 
+getSSC (SSC x) = x
 
 -- | Smart constructor for a 'SSC'
 mkSSC :: Word16 -> SSC
@@ -518,7 +530,7 @@ newtype SourceID = SourceID Word8
     deriving (Eq, Ord, Num, Show, Read, Generic)
 
 getSourceID :: SourceID -> Word8
-getSourceID (SourceID x) = x 
+getSourceID (SourceID x) = x
 
 mkSourceID :: Word8 -> SourceID
 mkSourceID = SourceID
@@ -529,7 +541,7 @@ instance ToJSON SourceID where
     toEncoding = genericToEncoding defaultOptions
 instance NFData SourceID
 
-instance Display SourceID where 
+instance Display SourceID where
     display (SourceID x) = display x
 
 -- | A buidler for the VCID
@@ -615,3 +627,146 @@ instance ToJSON EduVCID where
 instance Display EduVCID where
     display (IsVCID vcid) = display vcid
     display IsSCOE        = display @Text "SCOE"
+
+
+-- | Determines if the 'TCRequest' is a spacecraft command or a command destined 
+-- for a SCOE. Space commands are encoded slightly different in most protocols.
+-- Also, the 'ProtocolLevel' is given here to specify the encoding of the command
+-- to be sent out.
+data CommandType =
+  Space ProtocolLevel
+  | SCOE
+    deriving (Eq, Ord, Show, Read, Generic)
+
+instance NFData CommandType
+instance Serialise CommandType
+instance FromJSON CommandType
+instance ToJSON CommandType where
+    toEncoding = genericToEncoding defaultOptions
+
+instance Display CommandType where
+    display (Space level) = "SPACE (" <> display level <> ")"
+    display SCOE          = "SCOE"
+
+
+-- | The level on which the TC request should be encoded and sent. For various 
+-- purposes, different levels are used. For assembly integration & testing mostly
+-- packet based level is used, but also for some automated commanding when the AD 
+-- mode handling is done outside of the system (e.g. Proba-3)
+--
+-- TC Frame level is when the AD mode is handled, but the encoding for transmission 
+-- is done externally (normally CLTU). This is done e.g. in Galileo where TC Frames
+-- are sent out to the encryption unit which encrypts and CLTU encodes the frames
+-- before sending them out
+--
+-- For TCs going to spacecrafts this is normally done via CLTUs, hence this is the 
+-- last level (lowest encoding level).
+data ProtocolLevel =
+  ProtLevelPacket
+  | ProtLevelFrame
+  | ProtLevelCltu
+    deriving (Eq, Ord, Enum, Show, Read, Generic)
+
+instance NFData ProtocolLevel
+instance Serialise ProtocolLevel
+instance FromJSON ProtocolLevel
+instance ToJSON ProtocolLevel where
+    toEncoding = genericToEncoding defaultOptions
+
+instance Display ProtocolLevel where
+    display ProtLevelPacket = "PACKET"
+    display ProtLevelFrame  = "FRAME"
+    display ProtLevelCltu   = "CLTU"
+
+
+data DirectiveProtocolLevel =
+  DirProtLevelFrame
+  | DirProtLevelCltu
+    deriving (Eq, Ord, Enum, Show, Read, Generic)
+
+instance NFData DirectiveProtocolLevel
+instance Serialise DirectiveProtocolLevel
+instance FromJSON DirectiveProtocolLevel
+instance ToJSON DirectiveProtocolLevel where
+    toEncoding = genericToEncoding defaultOptions
+
+instance Display DirectiveProtocolLevel where
+    display DirProtLevelFrame = "FRAME"
+    display DirProtLevelCltu  = "CLTU"
+
+
+
+
+-- | Specifies the destination, where the command should be sent to. This can be 
+-- the given interfaces (currently NCTRS, C&C and EDEN). For EDEN also the type 
+-- (and protocol level) can be specified as EDEN is quite flexible and can handle 
+-- full spacecraft as well as SCOE management.
+data Destination =
+  DestNctrs ProtocolInterface
+  | DestCnc ProtocolInterface
+  | DestEden ProtocolInterface CommandType
+  deriving (Eq, Show, Read, Generic)
+
+instance NFData Destination
+instance Serialise Destination
+instance FromJSON Destination
+instance ToJSON Destination where
+    toEncoding = genericToEncoding defaultOptions
+
+instance Display Destination where
+    display (DestNctrs i ) = display i
+    display (DestCnc   i ) = display i
+    display (DestEden i t) = display i <> " (" <> display t <> ")"
+
+
+-- | The destination a 'TCDirective' can have. Since directives only make sense 
+-- in spacecraft links and not SCOE links, the destination is different from the 
+-- 'TCRequest' destination ('Destination'). 
+data DirectiveDestination =
+  DirDestNctrs ProtocolInterface
+  | DirDestEden ProtocolInterface DirectiveProtocolLevel
+  deriving (Eq, Show, Read, Generic)
+
+instance NFData DirectiveDestination
+instance Serialise DirectiveDestination
+instance FromJSON DirectiveDestination
+instance ToJSON DirectiveDestination where
+    toEncoding = genericToEncoding defaultOptions
+
+instance Display DirectiveDestination where
+    display (DirDestNctrs i ) = display i
+    display (DirDestEden i l) = display i <> " (" <> display l <> ")"
+
+
+-- | Destination for SCOE commands. SCOE commands are special CCSDS packets which 
+-- don't have a binary content, but are more text oriented. These commands can only 
+-- be sent on the C&C protocol links as well as on the EDEN link, when the packet 
+-- is contained in an 'EdenMessage'
+data ScoeDestination =
+  ScoeDestCnc ProtocolInterface
+  | ScoeDestEden ProtocolInterface
+  deriving (Eq, Show, Read, Generic)
+
+instance NFData ScoeDestination
+instance Serialise ScoeDestination
+instance FromJSON ScoeDestination
+instance ToJSON ScoeDestination where
+    toEncoding = genericToEncoding defaultOptions
+
+instance Display ScoeDestination where
+    display (ScoeDestCnc  i) = display i
+    display (ScoeDestEden i) = display i
+
+
+instance ProtocolDestination Destination where
+    destination (DestNctrs x ) = x
+    destination (DestCnc   x ) = x
+    destination (DestEden x _) = x
+
+instance ProtocolDestination DirectiveDestination where
+    destination (DirDestNctrs x ) = x
+    destination (DirDestEden x _) = x
+
+instance ProtocolDestination ScoeDestination where
+    destination (ScoeDestCnc  x) = x
+    destination (ScoeDestEden x) = x

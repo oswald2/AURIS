@@ -126,8 +126,7 @@ convertCCF
     -> CCFentry
     -> Either Text TCDef
 convertCCF epoch coeff defaultConnName prfMap prvs numCalibs textCalibs cdfs cpcs cvsMap cvpMap tcdMap scoMap CCFentry {..}
-    = let
-          locs   = sortOn (_cdfBit) $ M.lookup _ccfName cdfs
+    = let locs   = sortOn (_cdfBit) $ M.lookup _ccfName cdfs
           cpcMap = getCPCMap cpcs
           conv cdf = if _cdfElemType cdf == 'A'
               then createFixedArea cdf
@@ -148,36 +147,43 @@ convertCCF epoch coeff defaultConnName prfMap prvs numCalibs textCalibs cdfs cpc
           (errs'    , plocs ) = partitionEithers . map conv $ locs
           (stageErrs, stages) = convertVerif _ccfName cvsMap cvpMap
           errs                = errs' ++ stageErrs
-      in
-          if not (null errs)
+      in  if not (null errs)
               then
                   Left
                   $  "Error converting TC from MIB: "
                   <> T.intercalate "\n" errs
-              else Right $ TCDef
-                  { _tcDefName        = _ccfName
-                  , _tcDefDescr       = _ccfDescr
-                  , _tcDefDescr2      = _ccfDescr2
-                  , _tcDefCType       = determineCType _ccfCType
-                  , _tcDefCritical    = _ccfCritical == CharDefaultTo 'Y'
-                  , _tcDefApid        = APID . fromIntegral <$> _ccfApid
-                  , _tcDefType        = PUSType . fromIntegral <$> _ccfType
-                  , _tcDefSubType     = PUSSubType . fromIntegral <$> _ccfSType
-                  , _tcDefExec        = _ccfExec == CharDefaultTo 'Y'
-                  , _tcDefILScope     = determineILScope _ccfIlScope
-                  , _tcDefILStage     = determineILStage _ccfIlStage
-                  , _tcDefSubSys      = _ccfSubSys
-                  , _tcDefMapID       = mkMAPID . fromIntegral <$> _ccfMapID
-                  , _tcDefParamSet    = ParamSet -- TODO
-                  , _tcDefAckFlags    = maybe 0 fromIntegral _ccfAck
-                  , _tcDefSubSched    = _ccfSubschedID
-                  , _tcDefVerifStages = stages
-                  , _tcDefConnection  = getConnectionName defaultConnName
-                                                          tcdMap
-                                                          scoMap
-                                                          _ccfApid
-                  , _tcDefParams      = V.fromList plocs
-                  }
+              else
+                  let
+                      (connName, connFlag) = getConnectionName
+                          defaultConnName
+                          tcdMap
+                          scoMap
+                          _ccfApid
+                  in
+                      Right $ TCDef
+                          { _tcDefName           = _ccfName
+                          , _tcDefDescr          = _ccfDescr
+                          , _tcDefDescr2         = _ccfDescr2
+                          , _tcDefCType          = determineCType _ccfCType
+                          , _tcDefCritical = _ccfCritical == CharDefaultTo 'Y'
+                          , _tcDefApid = APID . fromIntegral <$> _ccfApid
+                          , _tcDefType = PUSType . fromIntegral <$> _ccfType
+                          , _tcDefSubType        = PUSSubType
+                                                   .   fromIntegral
+                                                   <$> _ccfSType
+                          , _tcDefExec           = _ccfExec == CharDefaultTo 'Y'
+                          , _tcDefILScope        = determineILScope _ccfIlScope
+                          , _tcDefILStage        = determineILStage _ccfIlStage
+                          , _tcDefSubSys         = _ccfSubSys
+                          , _tcDefMapID = mkMAPID . fromIntegral <$> _ccfMapID
+                          , _tcDefParamSet       = ParamSet -- TODO
+                          , _tcDefAckFlags       = maybe 0 fromIntegral _ccfAck
+                          , _tcDefSubSched       = _ccfSubschedID
+                          , _tcDefVerifStages    = stages
+                          , _tcDefConnection     = connName
+                          , _tcDefConnectionFlag = connFlag
+                          , _tcDefParams         = V.fromList plocs
+                          }
 
   where
     determineCType "R" = TCControlSegment
@@ -205,6 +211,8 @@ createFixedArea :: CDFentry -> Either Text TCParameterLocDef
 createFixedArea CDFentry {..} =
     let param val = TCParameterDef { _tcpName         = "FIXED"
                                    , _tcpDescr        = "Fixed area"
+                                   , _tcpPTC          = PTC 3
+                                   , _tcpPFC          = PFC (_cdfElemLen - 4)
                                    , _tcpDefaultValue = TCParamRaw val
                                    , _tcpRadix        = Hex
                                    , _tcpUnit         = ""
@@ -383,6 +391,8 @@ convertCPC epoch coeff prfMap prvVec numCalibs textCalibs cpc@CPCentry {..} =
             return $ TCParameterDef
                 { _tcpName         = _cpcName
                 , _tcpDescr        = _cpcDescr
+                , _tcpPTC          = PTC _cpcPTC
+                , _tcpPFC          = PFC _cpcPFC
                 , _tcpDefaultValue = def
                 , _tcpRadix        = charToRadix (getDefaultChar _cpcRadix)
                 , _tcpUnit         = _cpcUnit
@@ -556,11 +566,16 @@ getConnectionName
     -> HashMap Word32 TCDentry
     -> HashMap ShortText SCOentry
     -> Maybe Int
-    -> ShortText
-getConnectionName defaultLinkName _tcdMap _scoMap Nothing = defaultLinkName
+    -> (ShortText, CommandType)
+getConnectionName defaultLinkName _tcdMap _scoMap Nothing =
+    (defaultLinkName, SCOE)
 getConnectionName defaultLinkName tcdMap scoMap (Just apid) =
     let look = do
             tcd <- HM.lookup (fromIntegral apid) tcdMap
             sco <- HM.lookup (_tcdLink tcd) scoMap
-            return (_scoSCOE sco)
-    in  fromMaybe defaultLinkName look
+            let flag = case _tcdFlag tcd of
+                    'D' -> Space ProtLevelPacket
+                    'S' -> SCOE
+                    _   -> SCOE
+            return (_scoSCOE sco, flag)
+    in  fromMaybe (defaultLinkName, SCOE) look

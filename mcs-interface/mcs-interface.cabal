@@ -93,6 +93,7 @@ library
     , word8
     , serialise
     , unliftio
+    , text-short
 
 
   default-extensions:

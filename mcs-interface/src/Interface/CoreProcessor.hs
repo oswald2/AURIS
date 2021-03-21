@@ -5,15 +5,19 @@ module Interface.CoreProcessor
 
 
 import           RIO
-
+import           Data.Text.Short                ( ShortText )
 import           Application.DataModel
 
 import           Control.PUS.Classes
 
 import           Data.PUS.Events
+import           Data.PUS.TCGeneration
 import           Data.PUS.TCRequest
-
+import           Data.TC.TCDef
 import           Persistence.DBQuery
+
+import           General.PUSTypes
+
 
 data InterfaceAction =
   Quit
@@ -21,16 +25,13 @@ data InterfaceAction =
   | LogMsg LogSource LogLevel Utf8Builder
   | SendTCRequest TCRequest
   | SendTCGroup [TCRequest]
-  | RequestAllTMFrames
   | QueryDB DBQuery
+  | GetTCSync TCDef ShortText TransmissionMode (TMVar TCRequest)
   deriving (Generic)
 
 
 runCoreThread
-    :: ( MonadUnliftIO m
-       , MonadReader env m
-       , HasGlobalState env
-       )
+    :: (MonadUnliftIO m, MonadReader env m, HasGlobalState env)
     => TBQueue InterfaceAction
     -> m ()
 runCoreThread queue = do
@@ -49,10 +50,7 @@ runCoreThread queue = do
 
 
 processMsg
-    :: ( MonadUnliftIO m
-       , MonadReader env m
-       , HasGlobalState env
-       )
+    :: (MonadUnliftIO m, MonadReader env m, HasGlobalState env)
     => InterfaceAction
     -> m ()
 processMsg Quit                           = return ()
@@ -67,6 +65,11 @@ processMsg (SendTCGroup group) = do
 processMsg (QueryDB query) = do
     env <- ask
     liftIO $ queryDB env query
+processMsg (GetTCSync tcDef source transMode var) = do
+    tc <- getTC source transMode tcDef
+    atomically $ putTMVar var tc
+
+
 
 -- processMsg RequestAllTMFrames = do 
 --   env <- ask
@@ -75,10 +78,7 @@ processMsg (QueryDB query) = do
 
 
 importMIB
-    :: ( MonadUnliftIO m
-       , MonadReader env m
-       , HasGlobalState env 
-       )
+    :: (MonadUnliftIO m, MonadReader env m, HasGlobalState env)
     => FilePath
     -> FilePath
     -> m ()

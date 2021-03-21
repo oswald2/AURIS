@@ -8,11 +8,13 @@ import           RIO
 import           Data.Text.Short                ( ShortText )
 
 import           Codec.Serialise
-import           Data.Aeson
+import           Data.Aeson              hiding ( Value )
 
 import           Data.TM.Value
 
 import           Data.PUS.CalibrationTypes
+--import           Data.PUS.Value
+
 import           Data.Bimap
 
 

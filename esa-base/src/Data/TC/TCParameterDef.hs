@@ -6,25 +6,27 @@ module Data.TC.TCParameterDef
     , TCParameterLocDef(..)
     , ElemType(..)
     , ElemFlag(..)
-    , tcpName        
-    , tcpDescr       
+    , tcpName
+    , tcpDescr
     , tcpDefaultValue
-    , tcpRadix       
-    , tcpUnit        
-    , tcpProcType    
-    , tcpCalib       
-    , tcpRange       
-    , tcpCorrelate   
-    , tcpObtID       
-    , tcplElemType    
-    , tcplDescr       
-    , tcplLen         
-    , tcplBit         
-    , tcplGroupSize   
-    , tcplElemFlag    
+    , tcpPTC
+    , tcpPFC
+    , tcpRadix
+    , tcpUnit
+    , tcpProcType
+    , tcpCalib
+    , tcpRange
+    , tcpCorrelate
+    , tcpObtID
+    , tcplElemType
+    , tcplDescr
+    , tcplLen
+    , tcplBit
+    , tcplGroupSize
+    , tcplElemFlag
     , tcplDefaultValue
-    , tcplTMParam     
-    , tcplParam       
+    , tcplTMParam
+    , tcplParam
     ) where
 
 import           RIO
@@ -42,6 +44,8 @@ import           Data.TC.RangeSet
 import           Data.TC.Calibration
 
 import           Data.TM.Value
+
+import           General.PUSTypes
 
 
 data TCParamDefaultValue =
@@ -75,6 +79,8 @@ instance ToJSON TCParamType where
 data TCParameterDef = TCParameterDef
     { _tcpName         :: !ShortText
     , _tcpDescr        :: !ShortText
+    , _tcpPTC          :: !PTC
+    , _tcpPFC          :: !PFC
     , _tcpDefaultValue :: !TCParamDefaultValue
     , _tcpRadix        :: !Radix
     , _tcpUnit         :: !ShortText

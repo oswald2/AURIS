@@ -16,6 +16,7 @@ module GUI.TCTab
 import           RIO
 import           RIO.Partial                    ( toEnum )
 import qualified RIO.Text                      as T
+import           Data.Text.Short                ( ShortText )
 import qualified Data.Text.Short               as ST
 --import qualified Data.Text.IO                  as T
 
@@ -50,6 +51,7 @@ import           Data.PUS.Parameter             ( Parameter(Parameter)
 import           Data.PUS.Value
 import           Data.PUS.TCCnc                 ( TCScoe(TCScoe) )
 import           Data.PUS.Verification
+import           Data.PUS.Config
 
 import           General.PUSTypes               ( mkPUSSubType
                                                 , mkPUSType
@@ -88,18 +90,20 @@ data TCTab = TCTab
     , _tcTabTCModel       :: SeqStore TCDef
     , _tcTabTCFilterModel :: !TreeModelFilter
     , _tcTabTCSearchEntry :: !SearchEntry
+    , _tcTabConfig        :: Config
+    , _tcTabConnMap       :: HashMap ShortText ProtocolInterface
     }
 
 
-createTCTab :: ApplicationWindow -> Gtk.Builder -> IO TCTab
-createTCTab window builder = do
+createTCTab :: Config -> ApplicationWindow -> Gtk.Builder -> IO TCTab
+createTCTab cfg window builder = do
     textView       <- getObject builder "textViewTC" View
     btInsert       <- getObject builder "buttonTCInsertTemplate" Button
     btCcInsert     <- getObject builder "buttonTCInsertCncTemplate" Button
     btCcScoeInsert <- getObject builder "buttonScoeTC" Button
     btClear        <- getObject builder "buttonTCClear" Button
     btSend         <- getObject builder "buttonTCSend" Button
-    btStyle        <- getObject builder "buttonStyleChooser" StyleSchemeChooserButton
+    btStyle <- getObject builder "buttonStyleChooser" StyleSchemeChooserButton
     btApply        <- getObject builder "buttonApplyStyle" Button
     btNctrs        <- getObject builder "buttonNCTRSTC" Button
 
@@ -141,6 +145,8 @@ createTCTab window builder = do
                   , _tcTabTCModel            = tcModel
                   , _tcTabTCFilterModel      = filterModel
                   , _tcTabTCSearchEntry      = btSearch
+                  , _tcTabConfig             = cfg
+                  , _tcTabConnMap            = getInterfaceMap cfg
                   }
 
     _ <- Gtk.on btClear #clicked $ setText g ""
@@ -402,7 +408,7 @@ initTCBrowser tv searchEntry = do
     model <- createScrollingTableFilter
         tv
         searchEntry
-        SingleSelection 
+        SingleSelection
         filterFunc
         [ ("TC"         , 90 , \row -> [#text := ST.toText (row ^. tcDefName)])
         , ("Description", 100, \row -> [#text := ST.toText (row ^. tcDefDescr)])
@@ -429,9 +435,9 @@ displayMaybeText l def =
 
 
 
-tcTabSetTCs :: TCTab -> [TCDef] -> IO () 
-tcTabSetTCs g tcs = do 
+tcTabSetTCs :: TCTab -> [TCDef] -> IO ()
+tcTabSetTCs g tcs = do
     let model = _tcTabTCModel g
-    seqStoreClear model 
-    mapM_ (seqStoreAppend model) tcs 
+    seqStoreClear model
+    mapM_ (seqStoreAppend model) tcs
 
