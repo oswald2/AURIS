@@ -37,17 +37,18 @@ import           Data.PUS.TCPacketEncoder
 import           Data.PUS.TCPacket
 import           Data.PUS.Parameter
 import           Data.PUS.Value
-import           Data.PUS.MissionSpecific.Definitions
+import           Data.PUS.MissionSpecific.Default
 import           Data.PUS.Counter
+import           Data.PUS.Events                ( EventFlag(..) )
+import           Data.PUS.Verification
 
 import           Protocol.NCTRSProcessor
 import           Protocol.ProtocolInterfaces
 
 import           GHC.Conc.Sync
 
-import           Verification.Verification
 
-import           Refined 
+import           Refined
 
 
 -- transferFrames :: [TCTransferFrame]
@@ -109,6 +110,7 @@ rqst n = TCRequest
         0
         BD
         (DestNctrs (IfNctrs 1))
+        (mkSSC 0)
         (TCPacket (APID 256)
                   (mkPUSType 2)
                   (mkPUSSubType 10)
@@ -116,7 +118,9 @@ rqst n = TCRequest
                   (List params Empty)
         )
     )
-    where params = RIO.replicate n (Parameter "X" (ValUInt8X (B8 $$(refineTH 3)) 0b101))
+  where
+    params =
+        RIO.replicate n (Parameter "X" (ValUInt8X (B8 $$(refineTH 3)) 0b101))
 
 
 -- | Generate a TC Packet where the parameter n is the number of 'Parameter'
@@ -146,6 +150,9 @@ main = do
             (defaultMissionSpecific defaultConfig)
             logFunc
             (\ev -> T.putStrLn ("Event: " <> T.pack (show ev)))
+            [EVFlagAll]
+            Nothing
+            Nothing
 
         runRIO state $ do
             let chain =

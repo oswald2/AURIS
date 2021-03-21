@@ -73,6 +73,18 @@ library
     GUI.ConnectionStatus
     GUI.MessageDialogs
     GUI.FileChooser
+    GUI.LiveControls
+    GUI.TimePicker
+    GUI.Reactive.Button
+    GUI.Reactive.ToggleButton
+    GUI.Reactive.Entry
+    GUI.Reactive.Property
+    GUI.Reactive.MenuItem
+    GUI.Reactive.Widget
+    GUI.Reactive.SpinButton
+    GUI.Reactive.TreeView
+    GUI.Reactive.TextView
+    GUI.Reactive.Utils
 
   -- Modules included in this library but not exported.
   -- other-modules:
@@ -92,7 +104,10 @@ library
     , gi-gobject
     , gi-gdk
     , haskell-gi-base
+    , esa-base
     , esa-space-protocols
+    , time
+    , keera-hails-reactivevalues
 
 
   default-extensions:
@@ -118,7 +133,7 @@ library
         InstanceSigs
         KindSignatures
         LambdaCase
-        
+        NumericUnderscores
         MultiParamTypeClasses
         MultiWayIf
         NamedFieldPuns
@@ -157,3 +172,24 @@ library
                      -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
                      -funbox-strict-fields -freverse-errors
 
+
+executable time-picker-test
+  -- Base language which the package is written in.
+  default-language:    Haskell2010
+
+  -- The interface type and version of the test suite.
+  --type:                exitcode-stdio-1.0
+
+  -- The directory where the test specifications are found.
+  hs-source-dirs:      test
+
+  -- The entrypoint to the test suite.
+  main-is:             TimePickerTest.hs
+
+  -- Test dependencies.
+  build-depends:       
+    base 
+    , rio 
+    , gi-gtk 
+    , gui-base
+    , esa-base

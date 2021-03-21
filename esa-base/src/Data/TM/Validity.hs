@@ -15,7 +15,7 @@ This module is for handling the validity of a value
     , NoImplicitPrelude
 #-}
 module Data.TM.Validity
-  ( Validity
+  ( Validity(..)
   , isValid
   , clearValidity
   , isWrongType

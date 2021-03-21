@@ -37,6 +37,8 @@ module Data.PUS.GlobalState
     , glsDataModel
     , glsTCRequestQueue
     , glsVerifCommandQueue
+    , glsDatabase
+    , glsQueryQueue
     , newGlobalState
     , nextADCount
     ) where
@@ -58,17 +60,27 @@ import           Data.PUS.PUSState              ( defaultPUSState
                                                 , nextADCnt
                                                 , PUSState
                                                 )
-import           Data.PUS.Events                ( Event )
+import           Data.PUS.Events                ( Event
+                                                , EventFlag
+                                                )
 import           Data.PUS.COP1Types
 import           Data.PUS.MissionSpecific.Definitions
                                                 ( PUSMissionSpecific )
 import           Data.PUS.TCRequest             ( TCRequest )
+import           Data.PUS.EventHandler          ( filteredRaiseEvent
+                                                , createEventConfig
+                                                , cfgEvAll
+                                                )
 
 import           General.PUSTypes
 import           General.Time
 
 import           Verification.Commands
 
+import           Persistence.DbBackend
+import           Persistence.DBQuery
+
+--import           GHC.Compact
 
 
 -- | The AppState is just a type alias
@@ -100,6 +112,8 @@ data GlobalState = GlobalState
     , glsLogFunc           :: !LogFunc
     , glsTCRequestQueue    :: TBQueue [TCRequest]
     , glsVerifCommandQueue :: TBQueue VerifCommand
+    , glsDatabase          :: Maybe DbBackend
+    , glsQueryQueue        :: Maybe (TBQueue DBQuery)
     }
 
 -- | Constructor for the global state. Takes a configuration, a
@@ -110,30 +124,41 @@ newGlobalState
     -> PUSMissionSpecific
     -> LogFunc
     -> (Event -> IO ())
+    -> [EventFlag]
+    -> Maybe DbBackend
+    -> Maybe (TBQueue DBQuery)
     -> IO GlobalState
-newGlobalState cfg missionSpecific logErr raiseEvent = do
-    st     <- defaultPUSState cfg
-    tv     <- newTVarIO st
-    cv     <- newTVarIO defaultCoeffs
-    dmodel <- newTVarIO Data.DataModel.empty
-    let vcids = cfgVCIDs cfg
-    fopTVars <- mapM (newTVarIO . initialFOPState) vcids
-    let fop1 = HM.fromList $ zip vcids fopTVars
-    rqstQueue  <- newTBQueueIO rqstQueueSize
-    verifQueue <- newTBQueueIO 5000
+newGlobalState cfg missionSpecific logErr raiseEvent eventFlags dbBackend queryQueue
+    = do
+        st     <- defaultPUSState cfg
+        tv     <- newTVarIO st
+        cv     <- newTVarIO defaultCoeffs
+        dmodel <- newTVarIO Data.DataModel.empty
+        let vcids = cfgVCIDs cfg
+        fopTVars <- mapM (newTVarIO . initialFOPState) vcids
+        let fop1 = HM.fromList $ zip vcids fopTVars
+        rqstQueue  <- newTBQueueIO rqstQueueSize
+        verifQueue <- newTBQueueIO 5000
 
-    let state = GlobalState { glsConfig            = cfg
-                            , glsState             = tv
-                            , glsCorrState         = cv
-                            , glsFOP1              = fop1
-                            , glsRaiseEvent        = raiseEvent
-                            , glsLogFunc           = logErr
-                            , glsDataModel         = dmodel
-                            , glsMissionSpecific   = missionSpecific
-                            , glsTCRequestQueue    = rqstQueue
-                            , glsVerifCommandQueue = verifQueue
-                            }
-    pure state
+        let eventCfg = createEventConfig eventFlags
+            eventFn  = if eventCfg ^. cfgEvAll
+                then raiseEvent
+                else filteredRaiseEvent eventCfg raiseEvent
+
+        let state = GlobalState { glsConfig            = cfg
+                                , glsState             = tv
+                                , glsCorrState         = cv
+                                , glsFOP1              = fop1
+                                , glsRaiseEvent        = eventFn
+                                , glsLogFunc           = logErr
+                                , glsDataModel         = dmodel
+                                , glsMissionSpecific   = missionSpecific
+                                , glsTCRequestQueue    = rqstQueue
+                                , glsVerifCommandQueue = verifQueue
+                                , glsDatabase          = dbBackend
+                                , glsQueryQueue        = queryQueue
+                                }
+        pure state
 
 -- | returns the next counter value for TC transfer frames
 -- in AD transmission mode

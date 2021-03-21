@@ -13,7 +13,6 @@ import           Control.PUS.Classes            ( HasRaiseEvent(..)
                                                 , HasConfig(..)
                                                 )
 
-import           Verification.Verification
 
 import           Verification.Commands          ( VerifCommand(..) )
 
@@ -33,6 +32,7 @@ import           Data.PUS.Events                ( EventCommanding
                                                 , Event(EVCommanding)
                                                 )
 import           Data.PUS.Config                
+import           Data.PUS.Verification
 
 import           Data.Fixed                     ( E6
                                                 , Fixed

@@ -21,15 +21,13 @@ import           Data.Conduit.TQueue            ( sinkTBQueue
 import           Conduit.SocketConnector        ( runGeneralTCPReconnectClient )
 
 import           Data.PUS.Config
-import           Data.PUS.GlobalState           ( GlobalState )
+import           Data.PUS.GlobalState           
 import           Data.PUS.MissionSpecific.Definitions
                                                 ( PUSMissionSpecific )
-import           Data.PUS.TMFrameExtractor      ( setupFrameSwitcher
-                                                , storeFrameC
-                                                , tmFrameSwitchVC
-                                                )
+import           Data.PUS.TMFrameExtractor      
 import           Data.PUS.TMPacketProcessing    ( packetProcessorC
                                                 , raiseTMPacketC
+                                                , storeTMPacketC
                                                 , raiseTMParameterC
                                                 )
 import           Data.PUS.NcduToTMFrame         ( ncduToTMFrameC )
@@ -46,7 +44,7 @@ import           Data.PUS.TCTransferFrameEncoder
                                                 )
 
 import           Data.PUS.SegmentEncoder        ( tcSegmentEncoderC )
-import           Data.PUS.CLTU                  ( cltuEncodeRandomizedC )
+import           Data.PUS.CLTU                  ( cltuEncodeRandomizedC, cltuEncodeC )
 import           Data.PUS.CLTUEncoder           ( cltuToNcduC )
 import           Data.PUS.Counter               ( initialSSCCounterMap )
 
@@ -114,7 +112,6 @@ runTMNctrsChain cfg pktQueue = do
     let chain =
             receiveTmNcduC
                 .| ncduToTMFrameC
-                .| storeFrameC
                 .| tmFrameSwitchVC vcMap
 
     runGeneralTCPReconnectClient
@@ -250,8 +247,6 @@ runAdminNctrsChain cfg = do
             Right _ -> return ()
 
 
-
-
 runTMCnCChain
     :: CncConfig
     -> PUSMissionSpecific
@@ -262,7 +257,7 @@ runTMCnCChain cfg missionSpecific pktQueue = do
 
     let chain =
             receiveCnCC missionSpecific (IfCnc (cfgCncID cfg))
-                .| cncToTMPacket (IfCnc (cfgCncID cfg)) Nothing
+                .| cncToTMPacket (IfCnc (cfgCncID cfg))
                 .| sinkTBQueue pktQueue
 
     runGeneralTCPReconnectClient
@@ -310,7 +305,7 @@ runTCCnCChain cfg missionSpecific duQueue pktQueue = do
     let chain = receivePktChannelC duQueue .| sendTCCncC
         ackChain =
             receiveCnCC missionSpecific ifID
-                .| cncProcessAcks ifID pktQueue Nothing
+                .| cncProcessAcks ifID pktQueue
         ifID = IfCnc (cfgCncID cfg)
 
     logDebug
@@ -450,6 +445,7 @@ runTMChain missionSpecific pktQueue = do
     let chain =
             sourceTBQueue pktQueue
                 .| packetProcessorC
+                .| storeTMPacketC
                 .| raiseTMPacketC
                 .| raiseTMParameterC
                 .| sinkNull
@@ -476,8 +472,10 @@ runTCChain missionSpecific switcherMap = do
     logDebug "runTCChain entering"
 
     rqstQueue <- view getRqstQueue
+    cfg <- view getConfig 
 
-    let rqstChain =
+    let cltuChain = if cfgRandomizerEnabled cfg then cltuEncodeRandomizedC else cltuEncodeC 
+        rqstChain =
             sourceTBQueue rqstQueue
                 .| concatC
                 .| tcPktEncoderC missionSpecific
@@ -489,7 +487,7 @@ runTCChain missionSpecific switcherMap = do
                 .| tcFrameEncodeC
                 .| switchProtocolFrameC switcherMap
                 .| tcFrameToCltuC
-                .| cltuEncodeRandomizedC
+                .| cltuChain
                 .| switchProtocolCltuC switcherMap
 
     let rqstThread = conc $ runConduitRes rqstChain

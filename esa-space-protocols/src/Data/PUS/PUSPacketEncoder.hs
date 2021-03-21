@@ -64,17 +64,18 @@ tcPktToEncPUSC hm = do
                     (newHM, ssc) <- lift
                         $ getNextSSC hm (pkt ^. pusHdr . pusHdrAPID)
                     let enc@(_, pktID, seqFlags) = encodePUSPacket newPkt
-                        newPkt = pkt & pusHdr . pusHdrSSC .~ ssc
+                        !newPkt = pkt & pusHdr . pusHdrSSC .~ ssc
+                        !newRqst = tcReqSetSSC request ssc
 
                     -- register this TC for Verification
                     env <- ask
                     liftIO $ registerRequest env
-                                             request
+                                             newRqst
                                              pktID
                                              seqFlags
 
                     -- now pass the packet on to the next stage in encoding
-                    yield (EncodedPUSPacket (Just enc) request)
+                    yield (EncodedPUSPacket (Just enc) newRqst)
                     tcPktToEncPUSC newHM
                 Nothing -> do
                     yield (EncodedPUSPacket Nothing request)

@@ -44,10 +44,11 @@ library
     GUI.TMPacketTab
     GUI.TMFrameTab
     GUI.TMParamTab
+    GUI.TMParamDetails
     GUI.Chart
     GUI.GraphWidget
     GUI.ParamDisplay
-
+    GUI.FrameRetrieveDialog
 
 
   Hs-Source-Dirs: src/
@@ -59,6 +60,7 @@ library
     containers,
     esa-base,
     esa-space-protocols,
+    mcs-interface,
     gui-base,
     text-short,
     Chart,
@@ -77,7 +79,9 @@ library
     gi-cairo-connector,
     gi-cairo-render,
     gi-gdk,
-    haskell-gi-base
+    haskell-gi-base,
+    keera-callbacks,
+    keera-hails-reactivevalues
 
 
   default-extensions:

@@ -15,10 +15,11 @@ import           Data.GI.Gtk.ModelView.SeqStore
 
 import           GUI.Utils
 import           GUI.ScrollingTable
-
+import           GUI.TMParamDetails
 
 data TMPParamTable = TMPParamTable {
-  _tmppTable :: TreeView
+  _tmppDetails :: !TMParamDetailsWindow
+  , _tmppTable :: !TreeView
   , _tmppModel :: SeqStore TMParameter
   }
 
@@ -30,15 +31,28 @@ tmpParamTableSetValues g values = do
   V.mapM_ (seqStoreAppend model) values
 
 
-createTMPParamTable :: Gtk.Builder -> IO TMPParamTable
-createTMPParamTable builder = do
+createTMPParamTable :: ApplicationWindow -> Gtk.Builder -> IO TMPParamTable
+createTMPParamTable window builder = do
+  
+  details <- createTMParamDetailWindow window builder 
+  
   tv <- getObject builder "treeviewTMPUSParameters" TreeView
 
-  createScrollingTable
+  gui <- createScrollingTable
     tv
-    TMPParamTable
+    (TMPParamTable details)
     [ ("Parameter", 80, \par -> [#text := ST.toText (par ^. pName)])
     , ("Timestamp", 190, \par -> [#text := textDisplay (par ^. pTime)])
     , ("Raw Value", 100, \par -> [#text := textDisplay (par ^. pValue)])
     ]
+
+  setTreeViewCallback gui _tmppTable _tmppModel (displayDetails gui)
+  return gui
+
+
+displayDetails :: TMPParamTable -> TMParameter -> IO () 
+displayDetails gui param = do 
+  paramDetailSetValues (_tmppDetails gui) param
+  paramDetailShowWindow (_tmppDetails gui)
+
 

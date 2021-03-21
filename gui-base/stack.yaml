@@ -17,7 +17,7 @@
 #
 # resolver: ./custom-snapshot.yaml
 # resolver: https://example.com/snapshots/2018-01-01.yaml
-resolver: lts-16.31
+resolver: lts-17.6
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -30,6 +30,12 @@ resolver: lts-16.31
 #   - wai
 packages:
 - .
+- ../esa-base
+- ../esa-space-protocols 
+- ../hashtables-mo
+- ../esa-mib
+- ../esa-db-mongodb
+
 # Dependency packages to be pulled from upstream that are not in the resolver.
 # These entries can reference officially published versions as well as
 # forks / in-progress versions pinned to a git hash. For example:
@@ -39,7 +45,11 @@ packages:
 # - git: https://github.com/commercialhaskell/stack.git
 #   commit: e7b331f14bcffb8367cd58fbfc8b40ec7642100a
 #
-# extra-deps: []
+extra-deps: 
+- attoparsec-data-1.0.5.1@sha256:aa910edffaff049faacbb8a2a24af06c8b416f920a3bdaa9bc0991c217830dfd,1535
+- hw-prim-bits-0.1.0.4@sha256:623722c529839676825deec78c13164a91b73bacd3e7b99a5afe2af81811f185,2147
+- timers-updatable-0.2.0.2@sha256:8dc262bb1324c02eae4251f2b0f78109d1a6133754d5ae845778908abda43858,946
+- attoparsec-time-1.0.1.1@sha256:7254ee92d32a5e9c95ac1f570b0a2cea34003428b01b2f50f9b96dd71339355d,1650
 
 # Override default flag values for local packages and extra-deps
 # flags: {}

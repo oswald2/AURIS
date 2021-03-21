@@ -29,6 +29,7 @@ module Control.PUS.Classes
     , setDataModel
     , HasRaiseEvent(..)
     , HasVerif(..)
+    , HasDatabase(..)
     ) where
 
 import           RIO                     hiding ( to
@@ -41,19 +42,25 @@ import           Control.Lens.Getter
 import           Data.DataModel
 import           Data.PUS.Config
 import           Data.PUS.Events
+import           Data.PUS.TMFrame               ( TMFrame )
 import           Data.PUS.GlobalState
 import           Data.PUS.MissionSpecific.Definitions
                                                 ( PUSMissionSpecific )
 import           Data.PUS.TCRequest
+import           Data.PUS.ExtractedDU           ( ExtractedDU )
+import           Data.PUS.PUSPacket             ( PUSPacket )
+import           Data.PUS.TMPacket              ( TMPacket )
+import           Data.PUS.Verification
 
 import           General.PUSTypes
 import           General.Time
 
 import           Verification.Commands
-import           Verification.Verification
 
+import           Persistence.DbBackend         as DB
+import           Persistence.DBQuery            ( DBQuery )
 
-
+--import           GHC.Compact
 
 -- | This class specifies how to get a configuration
 class HasConfig env where
@@ -104,18 +111,30 @@ class HasRaiseEvent env where
 class HasVerif env where
   registerRequest :: env -> TCRequest -> PktID -> SeqControl -> IO ()
   requestReleased :: env -> RequestID -> SunTime -> ReleaseStage -> IO ()
-  requestVerifyG :: env -> RequestID -> GroundStage -> IO () 
-  requestVerifyT :: env -> RequestID -> GroundStage -> IO () 
-  requestVerifyO :: env -> RequestID -> GroundStage -> IO () 
-  requestVerifyGT :: env -> RequestID -> GroundStage -> IO () 
+  requestVerifyG :: env -> RequestID -> GroundStage -> IO ()
+  requestVerifyT :: env -> RequestID -> GroundStage -> IO ()
+  requestVerifyO :: env -> RequestID -> GroundStage -> IO ()
+  requestVerifyGT :: env -> RequestID -> GroundStage -> IO ()
   requestVerifyGTCnC :: env -> (PktID, SeqControl) -> GroundStage -> IO ()
   requestVerifyTMA :: env -> (PktID, SeqControl) -> TMStage -> IO ()
   requestVerifyTMS :: env -> (PktID, SeqControl) -> TMStage -> IO ()
   requestVerifyTMC :: env -> (PktID, SeqControl) -> TMStage -> IO ()
   requestVerifyProgressTM :: env -> (PktID, SeqControl, Word8) -> TMStage -> IO ()
 
+
+-- | This class specifies how to get database path
+class HasDatabase env where
+    getDbBackend :: env -> Maybe DbBackend
+    storeTMFrame :: env -> ExtractedDU TMFrame -> IO ()
+    storeTMFrames :: env -> [ExtractedDU TMFrame] -> IO ()
+    storePUSPacket :: env -> ExtractedDU PUSPacket -> IO ()
+    storeTMPacket :: env -> TMPacket -> IO ()
+
+    queryDB :: env -> DBQuery -> IO ()
+
 -- | Class for accessing the global state
 class (HasConfig env,
+    HasDatabase env,
     HasPUSState env,
     HasFOPState env,
     HasMissionSpecific env,
@@ -124,7 +143,8 @@ class (HasConfig env,
     HasDataModel env,
     HasRaiseEvent env,
     HasTCRqstQueue env,
-    HasVerif env) => HasGlobalState env
+    HasVerif env,
+    HasDatabase env) => HasGlobalState env
 
 
 
@@ -160,24 +180,47 @@ instance HasVerif GlobalState where
     requestReleased env rqstID releaseTime status = atomically $ writeTBQueue
         (glsVerifCommandQueue env)
         (SetVerifR rqstID releaseTime status)
-    requestVerifyG env rqstID status =
-        atomically $ writeTBQueue (glsVerifCommandQueue env) (SetVerifG rqstID status)
-    requestVerifyT env rqstID status =
-        atomically $ writeTBQueue (glsVerifCommandQueue env) (SetVerifT rqstID status)
-    requestVerifyO env rqstID status =
-        atomically $ writeTBQueue (glsVerifCommandQueue env) (SetVerifO rqstID status)
-    requestVerifyGT env rqstID status =
-        atomically $ writeTBQueue (glsVerifCommandQueue env) (SetVerifGT rqstID status)
-    requestVerifyGTCnC env (pktID, seqC) status = 
-        atomically $ writeTBQueue (glsVerifCommandQueue env) (SerVerifGTCnC pktID seqC status)
-    requestVerifyTMA env (pktID, seqC) status = 
-        atomically $ writeTBQueue (glsVerifCommandQueue env) (SetVerifA pktID seqC status)
-    requestVerifyTMS env (pktID, seqC) status = 
-        atomically $ writeTBQueue (glsVerifCommandQueue env) (SetVerifS pktID seqC status)
-    requestVerifyTMC env (pktID, seqC) status = 
-        atomically $ writeTBQueue (glsVerifCommandQueue env) (SetVerifC pktID seqC status)
-    requestVerifyProgressTM env (pktID, seqC, idx) status = 
-        atomically $ writeTBQueue (glsVerifCommandQueue env) (SetVerifP (fromIntegral idx) pktID seqC status)
+    requestVerifyG env rqstID status = atomically
+        $ writeTBQueue (glsVerifCommandQueue env) (SetVerifG rqstID status)
+    requestVerifyT env rqstID status = atomically
+        $ writeTBQueue (glsVerifCommandQueue env) (SetVerifT rqstID status)
+    requestVerifyO env rqstID status = atomically
+        $ writeTBQueue (glsVerifCommandQueue env) (SetVerifO rqstID status)
+    requestVerifyGT env rqstID status = atomically
+        $ writeTBQueue (glsVerifCommandQueue env) (SetVerifGT rqstID status)
+    requestVerifyGTCnC env (pktID, seqC) status = atomically $ writeTBQueue
+        (glsVerifCommandQueue env)
+        (SerVerifGTCnC pktID seqC status)
+    requestVerifyTMA env (pktID, seqC) status = atomically $ writeTBQueue
+        (glsVerifCommandQueue env)
+        (SetVerifA pktID seqC status)
+    requestVerifyTMS env (pktID, seqC) status = atomically $ writeTBQueue
+        (glsVerifCommandQueue env)
+        (SetVerifS pktID seqC status)
+    requestVerifyTMC env (pktID, seqC) status = atomically $ writeTBQueue
+        (glsVerifCommandQueue env)
+        (SetVerifC pktID seqC status)
+    requestVerifyProgressTM env (pktID, seqC, idx) status =
+        atomically $ writeTBQueue
+            (glsVerifCommandQueue env)
+            (SetVerifP (fromIntegral idx) pktID seqC status)
+
+
+instance HasDatabase GlobalState where
+    getDbBackend env = glsDatabase env
+    storeTMFrame env frame =
+        maybe (return ()) (`DB.storeTMFrame` frame) (getDbBackend env)
+    storeTMFrames env frames =
+        maybe (return ()) (`DB.storeTMFrames` frames) (getDbBackend env)
+    storePUSPacket env pkt =
+        maybe (return ()) (`DB.storePUSPacket` pkt) (getDbBackend env)
+    storeTMPacket env pkt =
+        maybe (return ()) (`DB.storeTMPacket` pkt) (getDbBackend env)
+
+    queryDB env query = do
+        case glsQueryQueue env of 
+            Just queue -> atomically $ writeTBQueue queue query
+            Nothing -> return ()
 
 instance HasGlobalState GlobalState
 

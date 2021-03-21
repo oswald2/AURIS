@@ -18,7 +18,7 @@ import           GUI.StatusEntry
 
 
 data MessageDetailWindow = MessageDetailWindow
-    { _msgDetParent      :: !Window
+    { _msgDetParent      :: !ApplicationWindow
     , _msgDetWindow      :: !Window
     , _msgDetEntryTime   :: !Entry
     , _mstDetEntryLevel  :: !StatusEntry
@@ -27,7 +27,7 @@ data MessageDetailWindow = MessageDetailWindow
     }
 
 
-createMsgDetailWindow :: Window -> Gtk.Builder -> IO MessageDetailWindow
+createMsgDetailWindow :: ApplicationWindow -> Gtk.Builder -> IO MessageDetailWindow
 createMsgDetailWindow window builder = do
     win      <- getObject builder "windowMessageDetail" Window
     textView <- getObject builder "textViewMessageDetail" TextView
@@ -48,9 +48,6 @@ createMsgDetailWindow window builder = do
     void $ Gtk.on win #deleteEvent $ \_ -> do
         widgetHide win
         return True
-
-    -- void $ Gtk.on win #destroy $ do 
-    --   widgetHide win 
 
     return gui
 

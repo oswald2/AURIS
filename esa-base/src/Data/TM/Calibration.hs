@@ -43,7 +43,7 @@ import           Codec.Serialise
 import           Data.Aeson
 import           Data.Text.Short
 
-import           Data.TM.CalibrationTypes
+import           Data.PUS.CalibrationTypes
 import           Data.TM.NumericalCalibration
 import           Data.TM.TextualCalibration
 import           Data.TM.PolynomialCalibration

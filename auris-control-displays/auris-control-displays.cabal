@@ -64,6 +64,7 @@ library
   -- Modules exported by the library.
   exposed-modules:     
     GUI.ConnectionTab
+    GUI.DataModelTab
 
   -- Modules included in this library but not exported.
   -- other-modules:
@@ -83,8 +84,10 @@ library
     , gi-gobject
     , gi-gdk
     , haskell-gi-base
+    , esa-base
     , esa-space-protocols
     , gui-base
+    , text-short
 
   default-extensions:
         

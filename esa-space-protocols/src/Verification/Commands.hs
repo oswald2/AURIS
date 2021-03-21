@@ -3,12 +3,12 @@ module Verification.Commands
     ) where
 
 import           RIO
-import           Verification.Verification
 
 import           General.PUSTypes
 import           General.Time
 
 import           Data.PUS.TCRequest
+import           Data.PUS.Verification
 
 
 data VerifCommand =

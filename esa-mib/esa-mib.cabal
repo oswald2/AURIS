@@ -81,13 +81,32 @@ library
     Data.MIB.LGF
     Data.MIB.GPF
     Data.MIB.GPC
+    Data.MIB.CCF
+    Data.MIB.CPC
+    Data.MIB.CDF
+    Data.MIB.PRF 
+    Data.MIB.PRV
+    Data.MIB.CCS
+    Data.MIB.CCA
+    Data.MIB.PAS 
+    Data.MIB.PAF
+    Data.MIB.CVS 
+    Data.MIB.CVE
+    Data.MIB.CVP
+    Data.MIB.DST
+    Data.MIB.SCO
+    Data.MIB.TCD
     Data.MIB.LoadMIB
+    Data.MIB.LoadTCs
     Data.Conversion.Types
     Data.Conversion.Calibration
     Data.Conversion.Parameter
     Data.Conversion.Criteria
     Data.Conversion.TMPacket
     Data.Conversion.GRD
+    Data.Conversion.Info
+    Data.Conversion.TCs
+    Data.Conversion.TCCalibration
 
   -- Modules included in this library but not exported.
   -- other-modules:
@@ -157,6 +176,11 @@ library
     , mtl
     , hashtables-mo
     , colour
+    , ghc-compact
+    , megaparsec
+    , bimap
+    , multi-containers
+    , refined
 
   -- Directories containing source files.
   hs-source-dirs:      src
@@ -235,7 +259,8 @@ executable LoadMIBTest
         hspec,
         pretty-show,
         vector,
-        hashtables-mo
+        hashtables-mo,
+        ghc-compact
 
 
 test-suite esa-mib-test

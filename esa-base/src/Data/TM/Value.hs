@@ -34,6 +34,7 @@ module Data.TM.Value
   , parseShortTextToValue
   , parseShortTextToDouble
   , parseShortTextToInt64
+  , parseShortTextToWord64
   , charToType
   , charToRadix
   , nullValue
@@ -73,13 +74,6 @@ import qualified Text.Megaparsec.Char.Lexer    as L
 import           Numeric
 
 
--- | The radix of a value
-data Radix =
-    Decimal
-    | Octal
-    | Hex
-    deriving (Eq, Ord, Enum, Show, Read)
-
 -- | The numerical type if it is a numerical value
 data NumType =
     NumInteger
@@ -95,13 +89,6 @@ instance ToJSON NumType where
 
 type Parser = Parsec Void Text
 
--- | Converst from a Char to a 'Radix' according to the SCOS-2000 MIB ICD 6.9
-{-# INLINABLE charToRadix #-}
-charToRadix :: Char -> Radix
-charToRadix 'D' = Decimal
-charToRadix 'H' = Hex
-charToRadix 'O' = Octal
-charToRadix _   = Decimal
 
 -- | Converst from a Char to a 'NumType' according to the SCOS-2000 MIB ICD 6.9
 {-# INLINABLE charToType #-}
@@ -136,7 +123,8 @@ doubleParser NumDouble _ =
 
 
 double :: Parser Double
-double = L.signed space L.float
+double = Text.Megaparsec.try (L.signed space L.float) 
+  <|> (fromIntegral <$> L.signed space integer)
 
 integer :: Parser Int64
 integer = L.lexeme space L.decimal
@@ -160,7 +148,19 @@ parseShortTextToInt64 :: NumType -> Radix -> ShortText -> Either Text Int64
 parseShortTextToInt64 typ radix x =
   -- trace ("parseShortTextToInt64: " <> T.pack (show typ ++ " " ++ show radix ++ show x)) $
   case parseMaybe (intParser typ radix) (toText x) of
-    Nothing   -> Left $ "Could not parse '" <> toText x <> "' into Int64"
+    Nothing   -> Left $ "Could not parse '" <> toText x <> "' into Int64 (type=" 
+      <> T.pack (show typ) <> ", radix= " <> T.pack (show radix) <> ")"
+    Just xval -> Right xval
+
+
+-- | parses a 'ShortText' to a integer value. It takes the 'NumType' and 'Radix' to determine
+-- the format the value is and returns a 'Int64' value
+parseShortTextToWord64 :: NumType -> Radix -> ShortText -> Either Text Word64
+parseShortTextToWord64 typ radix x =
+  -- trace ("parseShortTextToInt64: " <> T.pack (show typ ++ " " ++ show radix ++ show x)) $
+  case parseMaybe (uintParser typ radix) (toText x) of
+    Nothing   -> Left $ "Could not parse '" <> toText x <> "' into UInt64 (type=" 
+      <> T.pack (show typ) <> ", radix= " <> T.pack (show radix) <> ")"
     Just xval -> Right xval
 
 
@@ -174,6 +174,15 @@ intParser NumUInteger Octal   = fromIntegral <$> octInteger
 intParser NumDouble _ =
   truncate <$> Text.Megaparsec.try double <|> signedInteger
 
+uintParser :: NumType -> Radix -> Parser Word64
+uintParser NumInteger  Decimal = fromIntegral <$> signedInteger
+uintParser NumInteger  Hex     = L.signed space L.hexadecimal
+uintParser NumInteger  Octal   = L.signed space L.octal
+uintParser NumUInteger Decimal = L.decimal
+uintParser NumUInteger Hex     = hexInteger
+uintParser NumUInteger Octal   = octInteger
+uintParser NumDouble _ =
+  truncate <$> Text.Megaparsec.try double <|> L.decimal
 
 -- | A simple value, without a validity. Contains the specified value
 data TMValueSimple =
@@ -200,6 +209,34 @@ nullValueSimple = TMValUInt 0
 
 instance NFData TMValueSimple
 instance Serialise TMValueSimple
+
+-- | Compare two values. Since we also cover non-numeric values,
+-- the function returns a 'Maybe' 'Ordering'. If the values cannot
+-- be compared, Nothing is returned.
+{-# INLINABLE compareVal #-}
+compareVal :: TMValueSimple -> TMValueSimple -> Maybe Ordering
+compareVal (TMValInt    x) (TMValInt    y) = Just $ compare x y
+compareVal (TMValUInt   x) (TMValUInt   y) = Just $ compare x y
+compareVal (TMValDouble x) (TMValDouble y) = Just $ compare x y
+compareVal (TMValTime   x) (TMValTime   y) = Just $ compare x y
+compareVal (TMValString x) (TMValString y) = Just $ compare x y
+compareVal (TMValOctet  x) (TMValOctet  y) = Just $ compare x y
+
+compareVal (TMValInt    x) (TMValDouble y) = Just $ compare (fromIntegral x) y
+compareVal (TMValUInt   x) (TMValDouble y) = Just $ compare (fromIntegral x) y
+compareVal (TMValDouble x) (TMValInt    y) = Just $ compare x (fromIntegral y)
+compareVal (TMValDouble x) (TMValUInt   y) = Just $ compare x (fromIntegral y)
+
+compareVal _               _               = Nothing
+
+instance Eq TMValueSimple where
+  val1 == val2 = case compareVal val1 val2 of
+    Just EQ -> True
+    _       -> False
+
+instance Ord TMValueSimple where 
+  compare v1 v2 = 
+    fromMaybe LT $ compareVal v1 v2 
 
 instance FromJSON TMValueSimple where
   parseJSON = withObject "TMValueSimple" $ \o -> asum
@@ -244,17 +281,17 @@ parseShortTextToValueSimple
   :: PTC -> PFC -> ShortText -> Either Text TMValueSimple
 parseShortTextToValueSimple ptc pfc x =
   case parseMaybe (tmValueParser ptc pfc) (toText x) of
-    Nothing   -> Left $ "Could not parse '" <> toText x <> "' into Int64"
+    Nothing   -> Left $ "Could not parse '" <> toText x <> "' into TMValueSimple (PTC=" 
+      <> T.pack (show ptc) <> ", PFC=" <> T.pack (show pfc) <> ")"
     Just xval -> Right xval
 
 -- | parses a 'ShortText' to a integer value. It takes the 'PTC' and 'PFC' type descriptors
 -- and returns a 'TMValue' with the specified type and a clearValidity
 parseShortTextToValue :: PTC -> PFC -> ShortText -> Either Text TMValue
 parseShortTextToValue ptc pfc x =
-  -- trace ("parseShortTextToValue: " <> T.pack (show ptc ++ " " ++ show pfc ++ show x)) $
-                                  case parseShortTextToValueSimple ptc pfc x of
-  Left  err -> Left err
-  Right val -> Right (TMValue val clearValidity)
+    case parseShortTextToValueSimple ptc pfc x of
+        Left  err -> Left err
+        Right val -> Right (TMValue val clearValidity)
 
 
 
@@ -311,7 +348,7 @@ strToByteString ls' =
 data TMValue = TMValue {
     _tmvalValue :: !TMValueSimple
     , _tmvalValidity :: !Validity
-    } deriving (Show, Generic)
+    } deriving (Eq, Show, Generic)
 makeLenses ''TMValue
 
 instance NFData TMValue
@@ -394,30 +431,8 @@ setValidity (TMValue val validity) f = TMValue val (f validity)
 --     if y < 0 then GT else compare x (fromIntegral y)
 
 
--- | Compare two values. Since we also cover non-numeric values,
--- the function returns a 'Maybe' 'Ordering'. If the values cannot
--- be compared, Nothing is returned.
-{-# INLINABLE compareVal #-}
-compareVal :: TMValueSimple -> TMValueSimple -> Maybe Ordering
-compareVal (TMValInt    x) (TMValInt    y) = Just $ compare x y
-compareVal (TMValUInt   x) (TMValUInt   y) = Just $ compare x y
-compareVal (TMValDouble x) (TMValDouble y) = Just $ compare x y
-compareVal (TMValTime   x) (TMValTime   y) = Just $ compare x y
-compareVal (TMValString x) (TMValString y) = Just $ compare x y
-compareVal (TMValOctet  x) (TMValOctet  y) = Just $ compare x y
-
-compareVal (TMValInt    x) (TMValDouble y) = Just $ compare (fromIntegral x) y
-compareVal (TMValUInt   x) (TMValDouble y) = Just $ compare (fromIntegral x) y
-compareVal (TMValDouble x) (TMValInt    y) = Just $ compare x (fromIntegral y)
-compareVal (TMValDouble x) (TMValUInt   y) = Just $ compare x (fromIntegral y)
-
-compareVal _               _               = Nothing
 
 
-instance Eq TMValueSimple where
-  val1 == val2 = case compareVal val1 val2 of
-    Just EQ -> True
-    _       -> False
 
 
 

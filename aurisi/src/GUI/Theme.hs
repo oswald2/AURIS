@@ -2,6 +2,7 @@
 #-}
 module GUI.Theme
   ( setTheme
+  , setDarkTheme
   )
 where
 
@@ -51,8 +52,8 @@ checkDirectory homeDir = do
       return False
 
 
-setTheme :: IO ()
-setTheme = do
+setDarkTheme :: IO ()
+setDarkTheme = do
   homeDir <- getHomeDirectory
   exists  <- checkDirectory homeDir
   unless exists $ do
@@ -62,4 +63,13 @@ setTheme = do
   screenGetDefault >>= \case
     Nothing     -> T.putStrLn "Could not get screen"
     Just screen -> styleContextAddProviderForScreen screen provider 600
+
+
+setTheme :: IO() 
+setTheme = do 
+    provider <- Gtk.cssProviderNew
+    Gtk.cssProviderLoadFromPath provider "style.css"
+    --Gtk.cssProviderLoadFromResource provider "/auris/data/style.css"
+    Just screen <- screenGetDefault
+    Gtk.styleContextAddProviderForScreen screen provider (fromIntegral Gtk.STYLE_PROVIDER_PRIORITY_USER)
 

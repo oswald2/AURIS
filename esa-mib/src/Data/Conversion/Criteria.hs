@@ -8,7 +8,7 @@ where
 import           RIO
 import qualified RIO.HashMap                   as HM
 import qualified RIO.Vector                    as V
-import           Data.Either
+--import           Data.Either
 import           Data.Text.Short                ( ShortText
                                                 , toText
                                                 )

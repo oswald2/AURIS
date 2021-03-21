@@ -11,6 +11,8 @@ module GUI.MainWindow
     , createMainWindow
     , mwAddTMPacket
     , mwAddTMFrame
+    , mwAddTMFrameReactive
+    , mwSetTMFrames
     , mwAddTMParameters
     , mwAddTMParameterDefinitions
     , mwAddVerifRqst
@@ -23,16 +25,18 @@ module GUI.MainWindow
     , mwInitialiseDataModel
     , mwTimerLabelCB
     , mwWindow
+    , mwMenuBar
     , mwProgress
     , mwConnTab
     , mwTCTab
     , mwTCHistory
     , mwMenuItemImportMIB
+    , mwLiveState
     ) where
 
 import           RIO
 import qualified RIO.Text                      as T
-import qualified Data.Text.Encoding            as T
+--import qualified Data.Text.Encoding            as T
 import qualified RIO.Vector                    as V
 import           RIO.List                       ( sortBy )
 import           Control.Lens                   ( makeLenses )
@@ -45,39 +49,62 @@ import           GUI.TMParamTab
 import           GUI.ConnectionTab
 import           GUI.TCTab
 import           GUI.TCHistory
+import           GUI.DataModelTab
 import           GUI.Utils
 import           GUI.Logo
 import           GUI.MessageDisplay
 import           GUI.MessageDetails
 import           GUI.About
-import           GUI.TextView
 
 
-import           Data.PUS.TMPacket
-import           Data.PUS.ExtractedDU
-import           Data.PUS.TMFrame
+import           Data.PUS.TMPacket              ( TMPacket )
+import           Data.PUS.ExtractedDU           ( ExtractedDU )
+import           Data.PUS.TMFrame               ( TMFrame )
 import           Data.PUS.TCRequest             ( TCRequest )
-import           Protocol.ProtocolInterfaces
+import           Data.PUS.LiveState             ( defaultLiveState
+                                                , LiveState
+                                                )
 
-import           Data.DataModel
+import           Protocol.ProtocolInterfaces    ( ProtocolInterface
+                                                , ConnType
+                                                , ConnectionState
+                                                )
 
-import           Data.TM.Parameter
-import           Data.TM.TMParameterDef
+import           Data.DataModel                 ( DataModel
+                                                , dmGRDs
+                                                , dmParameters
+                                                , dmTCs
+                                                )
 
-import           General.Time
+import           Data.ReactiveValue
+
+import           Data.TM.Parameter              ( TMParameter )
+import           Data.TM.TMParameterDef         ( TMParameterDef
+                                                , fpName
+                                                )
+import           Data.TC.TCDef                  ( tcDefName )
+import           General.Time                   ( SunTime
+                                                , displayTimeMilli
+                                                , getCurrentTime
+                                                )
 import           General.PUSTypes               ( RequestID )
 
-import           Verification.Verification      ( Verification )
+import           Data.PUS.Verification      ( Verification )
 
 import           GI.Gtk                        as Gtk
-import           Data.FileEmbed
+import           GI.GtkSource
+import qualified GI.GtkSource.Objects.Buffer   as BUF
+                                                ( bufferNew )
+
+--import           Data.FileEmbed
 
 import           AurisConfig
 
 
 
 data MainWindow = MainWindow
-    { _mwWindow            :: !Gtk.Window
+    { _mwWindow            :: !Gtk.ApplicationWindow
+    , _mwMenuBar           :: !Gtk.MenuBar
     , _mwProgress          :: !Gtk.ProgressBar
     , _mwMessageDisplay    :: !MessageDisplay
     , _mwTMPTab            :: !TMPacketTab
@@ -87,18 +114,28 @@ data MainWindow = MainWindow
     , _mwConnTab           :: !ConnectionTab
     , _mwTCTab             :: !TCTab
     , _mwTCHistory         :: !TCHistory
+    , _mwDataModelTab      :: !DataModelTab
     , _mwTimeLabel         :: !Label
     , _mwMenuItemImportMIB :: !Gtk.MenuItem
+    , _mwLiveState         :: TVar LiveState
     }
 makeLenses ''MainWindow
 
 
-mwAddTMPacket :: MainWindow -> TMPacket -> IO ()
+mwAddTMPacket :: MainWindow -> ExtractedDU TMPacket -> IO ()
 mwAddTMPacket window pkt = do
     tmpTabAddRow (window ^. mwTMPTab) pkt
 
 mwAddTMFrame :: MainWindow -> ExtractedDU TMFrame -> IO ()
 mwAddTMFrame window = tmfTabAddRow (window ^. mwFrameTab)
+
+mwAddTMFrameReactive
+    :: MainWindow -> ReactiveFieldWrite IO (ExtractedDU TMFrame)
+mwAddTMFrameReactive window = tmfTabAddRowReactive (window ^. mwFrameTab)
+
+
+mwSetTMFrames :: MainWindow -> [ExtractedDU TMFrame] -> IO ()
+mwSetTMFrames window = tmfTabSetFrames (window ^. mwFrameTab)
 
 mwAddTMParameters :: MainWindow -> Vector TMParameter -> IO ()
 mwAddTMParameters window params = do
@@ -135,26 +172,35 @@ mwInitialiseDataModel window model = do
     -- also add the displas 
     addGrdDefinitions (window ^. mwTMParamTab) (model ^. dmGRDs)
 
+    -- set the data model viewer
+    dataModelTabSetModel (window ^. mwDataModelTab) model
 
-gladeFile :: Text
-gladeFile =
-    T.decodeUtf8 $(makeRelativeToProject "src/MainWindow.glade" >>= embedFile)
+    -- set the TCs in the TC browser 
+    let tcs = sortBy st . map snd . HT.toList $ model ^. dmTCs
+        st tc1 tc2 = compare (tc1 ^. tcDefName) (tc2 ^. tcDefName)
+    tcTabSetTCs (window ^. mwTCTab) tcs
+
+-- gladeFile :: Text
+-- gladeFile =
+--     T.decodeUtf8 $(makeRelativeToProject "src/MainWindow.glade" >>= embedFile)
 
 
 
 
 createMainWindow :: AurisConfig -> IO MainWindow
 createMainWindow cfg = do
-    builder <- builderNewFromString gladeFile
-                                    (fromIntegral (T.length gladeFile))
+    -- builder <- builderNewFromString gladeFile
+    --                                 (fromIntegral (T.length gladeFile))
+    builder           <- builderNewFromResource "/auris/data/MainWindow.glade"
 
-    window            <- getObject builder "mainWindow" Window
+    window            <- getObject builder "mainWindow" ApplicationWindow
+    mainMenuBar       <- getObject builder "mainMenuBar" MenuBar
     missionLabel      <- getObject builder "labelMission" Label
     progressBar       <- getObject builder "progressBar" ProgressBar
     aboutItem         <- getObject builder "menuitemAbout" MenuItem
     logo              <- getObject builder "logo" Image
     timeLabel         <- getObject builder "labelTime" Label
-    configTextView    <- getObject builder "textViewConfig" TextView
+    configTextView    <- getObject builder "sourceViewConfig" View
 
     menuItemQuit      <- getObject builder "menuItemQuit" MenuItem
     menuItemImportMIB <- getObject builder "menuItemImportMIB" MenuItem
@@ -163,22 +209,30 @@ createMainWindow cfg = do
     menuItemSaveTC    <- getObject builder "menuItemSaveTCFile" MenuItem
     menuItemSaveTCAs  <- getObject builder "menuItemSaveTCFileAs" MenuItem
 
+    btApply           <- getObject builder "buttonConfigApplyStyle" Button
+    btStyle           <- getObject builder
+                                   "buttonConfigSelectStyle"
+                                   StyleSchemeChooserButton
+
     -- create the message display
-    msgDetails        <- createMsgDetailWindow window builder
-    msgDisp           <- createMessageDisplay msgDetails builder
+    msgDetails   <- createMsgDetailWindow window builder
+    msgDisp      <- createMessageDisplay msgDetails builder
 
     -- create the tabs in the notebook
-    tmfTab            <- createTMFTab builder
-    tmpTab            <- createTMPTab builder
-    paramTab          <- createTMParamTab builder
-    connTab           <- createConnectionTab (aurisPusConfig cfg) builder
-    tcTab             <- createTCTab window builder
-    tcHistory         <- createTCHistory window builder
-
+    tmfTab       <- createTMFTab window builder
+    tmpTab       <- createTMPTab window builder
+    paramTab     <- createTMParamTab builder
+    connTab      <- createConnectionTab (aurisPusConfig cfg) builder
+    tcTab        <- createTCTab (aurisPusConfig cfg) window builder
+    tcHistory    <- createTCHistory window builder
+    dataModelTab <- createDataModelTab window builder
 
     setLogo logo 65 65
 
+    liveState <- newTVarIO defaultLiveState
+
     let gui = MainWindow { _mwWindow            = window
+                         , _mwMenuBar           = mainMenuBar
                          , _mwMission           = missionLabel
                          , _mwProgress          = progressBar
                          , _mwMessageDisplay    = msgDisp
@@ -189,7 +243,9 @@ createMainWindow cfg = do
                          , _mwConnTab           = connTab
                          , _mwTCTab             = tcTab
                          , _mwTCHistory         = tcHistory
+                         , _mwDataModelTab      = dataModelTab
                          , _mwMenuItemImportMIB = menuItemImportMIB
+                         , _mwLiveState         = liveState
                          }
 
     void $ Gtk.on aboutItem #activate $ do
@@ -205,9 +261,30 @@ createMainWindow cfg = do
     void $ Gtk.on menuItemSaveTC #activate $ tcTabSaveFile tcTab
     void $ Gtk.on menuItemSaveTCAs #activate $ tcTabSaveFileAs tcTab
 
-    textViewSetText configTextView (configPretty cfg)
+    lm               <- languageManagerNew
+    styleViewMgr     <- styleSchemeManagerGetDefault
+
+    -- schemeIds <- styleSchemeManagerGetSchemeIds styleViewMgr
+    -- T.putStrLn $ "Schemes: " <> T.pack (show schemeIds)
+
+    scheme           <- styleSchemeManagerGetScheme styleViewMgr "kate"
+    configTextBuffer <- BUF.bufferNew (Nothing :: Maybe TextTagTable)
+    bufferSetStyleScheme configTextBuffer (Just scheme)
+
+    let t = configPretty cfg
+
+    lang <- languageManagerGetLanguage lm "json"
+    bufferSetLanguage configTextBuffer lang
+
+    textBufferSetText configTextBuffer t (fromIntegral (T.length t))
+    textViewSetBuffer configTextView (Just configTextBuffer)
+
+    void $ Gtk.on btApply #clicked $ do
+        s <- styleSchemeChooserGetStyleScheme btStyle
+        bufferSetStyleScheme configTextBuffer (Just s)
 
     return gui
+
 
 
 

@@ -19,13 +19,13 @@ import           Control.PUS.Classes
 import           Data.PUS.Events                ( Event(EVAlarms)
                                                 , EventAlarm(EVNCDUParseError)
                                                 )
+import           Data.PUS.Verification
 
 import           Protocol.NCTRS
 
 import           General.PUSTypes
 import           General.Hexdump
 
-import           Verification.Verification
 
 -- | Conduit for receiving TC NCDUs. Receives a 'ByteString' which is
 -- parsed and converted into a 'NcduTcDu'

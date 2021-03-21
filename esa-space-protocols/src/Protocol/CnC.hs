@@ -40,6 +40,8 @@ import           Data.PUS.ExtractedPUSPacket
 import           Data.PUS.MissionSpecific.Definitions
 import           Data.PUS.Events
 import           Data.PUS.TCRequest
+import           Data.PUS.Verification
+
 import           Protocol.ProtocolInterfaces    ( protContent
                                                 , ProtocolInterface(IfCnc)
                                                 , ProtocolPacket(ProtocolPacket)
@@ -48,10 +50,9 @@ import           Protocol.ProtocolInterfaces    ( protContent
 import           General.Time
 import           General.PUSTypes
 import           General.Types
-import General.Hexdump ( hexdumpBS )
+import           General.Hexdump                ( hexdumpBS )
 import           Control.PUS.Classes
 
-import           Verification.Verification
 
 -- if we have a SCOE packet, and it has a secondary header, it is a binary
 -- TC, else an ASCII one.
@@ -94,29 +95,28 @@ cncProcessAcks
     :: (MonadIO m, MonadReader env m, HasLogFunc env, HasVerif env)
     => ProtocolInterface
     -> TBQueue ExtractedPacket
-    -> Maybe SSC
     -> ConduitT (ByteString, ProtocolPacket PUSPacket) Void m ()
-cncProcessAcks interf queue oldSSC = do
+cncProcessAcks interf queue = do
     x <- await
     case x of
         Just (byts, protPkt) -> do
             let pkt = protPkt ^. protContent
             if pkt ^. pusHdr . pusHdrTcVersion == 3 && not
                 (pkt ^. pusHdr . pusHdrDfhFlag)
-            then do
+            then
+                do
                 -- we have most probably an ACK packet
-                processAsciiAck protPkt
-                cncProcessAcks interf queue oldSSC
+                    processAsciiAck protPkt
+                    cncProcessAcks interf queue
             else
                 do
                     -- we have a binary ACK packet
                     processBinaryAck protPkt
                     -- forward the ack packet also to the TM packet processing
-                    (newPkt, newSSC) <- convertCncToTMPacket (byts, protPkt)
-                                                             interf
-                                                             oldSSC
+                    newPkt <- convertCncToTMPacket (byts, protPkt) interf
+
                     atomically $ writeTBQueue queue newPkt
-                    cncProcessAcks interf queue (Just newSSC)
+                    cncProcessAcks interf queue 
         Nothing -> return ()
 
 processBinaryAck
@@ -167,8 +167,8 @@ processAsciiAck
     -> m ()
 processAsciiAck protPkt = do
     let hdr   = protPkt ^. protContent . pusHdr
-        -- the ack is a TM packet, but the PktID to be used for verification is a 
-        -- TC, therefore, we need to set the type flag in the PktID
+    -- the ack is a TM packet, but the PktID to be used for verification is a 
+    -- TC, therefore, we need to set the type flag in the PktID
         pktID = pktIdSetType (hdr ^. pusHdrPktID) PUSTC
         seqC  = hdr ^. pusHdrSeqCtrl
         ack   = BS8.pack "ACK"
@@ -195,48 +195,40 @@ processAsciiAck protPkt = do
 cncToTMPacket
     :: (MonadIO m, MonadReader env m, HasLogFunc env)
     => ProtocolInterface
-    -> Maybe SSC
     -> ConduitT
            (ByteString, ProtocolPacket PUSPacket)
            ExtractedPacket
            m
            ()
-cncToTMPacket interf lastSSC = do
+cncToTMPacket interf = do
     x <- await
     case x of
         Nothing  -> return ()
         Just res -> do
-            (newPkt, newSSC) <- convertCncToTMPacket res interf lastSSC
+            newPkt <- convertCncToTMPacket res interf
             logDebug $ "CnC TM: received packet: " <> displayShow newPkt
             yield newPkt
-            cncToTMPacket interf (Just newSSC)
+            cncToTMPacket interf
 
 
 convertCncToTMPacket
     :: MonadIO m
     => (ByteString, ProtocolPacket PUSPacket)
     -> ProtocolInterface
-    -> Maybe SSC
-    -> m (ExtractedPacket, SSC)
-convertCncToTMPacket (byts, protPkt) interf lastSSC = do
+    -> m ExtractedPacket
+convertCncToTMPacket (byts, protPkt) interf = do
     ert <- liftIO getCurrentTime
     let epd = ExtractedDU { _epQuality = toFlag Good True
                           , _epERT     = ert
-                          , _epGap     = determineGap lastSSC newSSC
+                          , _epGap     = Nothing
                           , _epSource  = interf
                           , _epVCID    = IsSCOE
                           , _epDU      = pkt
                           }
-        newSSC = pkt ^. pusHdr . pusHdrSSC
         pkt    = protPkt ^. protContent
         newPkt = ExtractedPacket byts epd
 
-    return (newPkt, newSSC)
-  where
-    determineGap Nothing       _   = Nothing
-    determineGap (Just oldSSC) ssc = if oldSSC + 1 == ssc
-        then Nothing
-        else Just (fromIntegral oldSSC, fromIntegral ssc)
+    return newPkt
 
 
 

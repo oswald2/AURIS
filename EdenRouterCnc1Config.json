@@ -1,21 +1,23 @@
 {
     "aurisMIB": null,
     "aurisMission": "DEFAULT",
+    "aurisDbConfig": null,
+    "aurisTheme": "ThemeLight",
     "aurisPusConfig": {
         "cfgCnC": [
             {
                 "cfgCncHasCRC": true,
-                "cfgCncPortTM": 10000,
+                "cfgCncPortTM": 11971,
                 "cfgCncHost": "localhost",
-                "cfgCncPortTC": 11000,
+                "cfgCncPortTC": 11970,
                 "cfgCncID": 1,
                 "cfgCncName": "CCS C&amp;C"
             },
             {
                 "cfgCncHasCRC": true,
-                "cfgCncPortTM": 10001,
+                "cfgCncPortTM": 11973,
                 "cfgCncHost": "localhost",
-                "cfgCncPortTC": 11001,
+                "cfgCncPortTC": 11972,
                 "cfgCncID": 2,
                 "cfgCncName": "TSC C&amp;C"
             }
@@ -42,6 +44,13 @@
         "cfgSCID": 0,
         "cfgNCTRS": [
         ],
+        "cfgDataBase": {
+            "cfgStoreTMFrames": true,
+            "cfgDbDebugLog": true,
+            "cfgBackend": {
+                "tag": "NoDB"
+            }
+        },
         "cfgMaxTMFrameLen": 1115,
         "cfgCltuBlockSize": "CltuBS_8",
         "cfgEDEN": [
@@ -50,11 +59,16 @@
                 "cfgEdenName": "Simulator",
                 "cfgEdenHost": "localhost",
                 "cfgEdenType": "SCOE",
-                "cfgEdenPort": 40302
+                "cfgEdenPort": 11980
             }
         ],
-        "cfgTMSegLength": "TMSegment65536",
-        "cfgTMFrameHasCRC": true
+        "cfgStoreTMFrames": true,
+        "cfgStorePUSPackets": true,
+        "cfgTMFrame": {
+            "cfgMaxTMFrameLen": 1115,
+            "cfgTMSegLength": "TMSegment65536",
+            "cfgTMFrameHasCRC": true
+        }
     },
     "aurisLogLevel": {
         "tag": "LogLevelDebug"

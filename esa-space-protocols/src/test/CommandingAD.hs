@@ -36,6 +36,7 @@ import           Data.PUS.MissionSpecific.Definitions
 import           Data.PUS.FOP1
 import           Data.PUS.Parameter
 import           Data.PUS.TCPacket
+import           Data.PUS.Verification
 
 import           Protocol.NCTRS
 import           Protocol.ProtocolInterfaces
@@ -44,7 +45,6 @@ import           GHC.Conc.Sync
 
 import           General.Types
 
-import           Verification.Verification
 
 
 pkt1 :: Word16 -> PUSPacket
@@ -68,6 +68,7 @@ rqst1 = TCRequest
         0
         BD
         (DestNctrs (IfNctrs 1))
+        (mkSSC 0)
         (TCPacket (APID 1024) (PUSType 128) (PUSSubType 1) (SourceID 0) Empty)
     )
 

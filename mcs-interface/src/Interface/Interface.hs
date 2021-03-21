@@ -28,34 +28,40 @@ interface can communicate with a client via either Strings, Binary or JSON.
 
 #-}
 module Interface.Interface
-  ( Interface
-  , ActionTable(..)
-  , EventHandler
-  , createInterface
-  , addInterface
-  , callInterface
-  , syncCallInterface
-  , ifRaiseEvent
-  )
-where
+    ( Interface
+    , ActionTable(..)
+    , EventHandler
+    , createInterface
+    , addInterface
+    , callInterface
+    , syncCallInterface
+    , ifRaiseEvent
+    ) where
 
 
 import           RIO
 import qualified RIO.Vector                    as V
-
+import           Data.Text.Short                ( ShortText )
 import           Data.PUS.TCRequest
+import           Data.TC.TCDef
 
 import           Interface.Events
 import           Interface.CoreProcessor
 
+import           Persistence.DBQuery            ( DBQuery )
+
+import           General.PUSTypes
+
 -- | Table of actions which can be called. Direction is from the 
 -- client (GUI, script, command line) to the MCS
-data ActionTable = ActionTable {
-    actionQuit :: IO ()
-    , actionImportMIB :: FilePath -> FilePath -> IO ()
-    , actionLogMessage :: LogSource -> LogLevel -> Utf8Builder -> IO ()
+data ActionTable = ActionTable
+    { actionQuit          :: IO ()
+    , actionImportMIB     :: FilePath -> FilePath -> IO ()
+    , actionLogMessage    :: LogSource -> LogLevel -> Utf8Builder -> IO ()
     , actionSendTCRequest :: TCRequest -> IO ()
-    , actionSendTCGroup :: [TCRequest] -> IO ()
+    , actionSendTCGroup   :: [TCRequest] -> IO ()
+    , actionQueryDB       :: DBQuery -> IO ()
+    , actionGetTCSync :: TCDef -> ShortText -> TransmissionMode -> IO TCRequest
     }
 
 -- | Data type for the event handler.
@@ -64,9 +70,9 @@ type EventHandler = IfEvent -> IO ()
 -- | The interface data type itself. Contains basically just the 
 -- action table and the event handler. There can be multiple 
 -- event handlers installed if more interfaces are used.
-data Interface = Interface {
-    ifActionTable :: ActionTable
-    , ifEventFuncs :: Vector EventHandler
+data Interface = Interface
+    { ifActionTable :: ActionTable
+    , ifEventFuncs  :: Vector EventHandler
     }
 
 callAction :: TBQueue InterfaceAction -> InterfaceAction -> IO ()
@@ -74,27 +80,53 @@ callAction queue action = atomically $ writeTBQueue queue action
 
 
 
-actionTable :: TBQueue InterfaceAction -> ActionTable
-actionTable queue = ActionTable
-  { actionQuit          = pure ()
-  , actionImportMIB     = \p s -> callAction queue (ImportMIB p s)
-  , actionLogMessage    = \s l msg -> callAction queue (LogMsg s l msg)
-  , actionSendTCRequest = callAction queue . SendTCRequest
-  , actionSendTCGroup   = callAction queue . SendTCGroup
-  }
+actionTable
+    :: TBQueue InterfaceAction -> Maybe (TBQueue DBQuery) -> ActionTable
+actionTable queue (Just queryQueue) = (actionTable queue Nothing)
+    { actionQueryDB = atomically . writeTBQueue queryQueue
+    }
+actionTable queue Nothing = ActionTable
+    { actionQuit          = pure ()
+    , actionImportMIB     = \p s -> callAction queue (ImportMIB p s)
+    , actionLogMessage    = \s l msg -> callAction queue (LogMsg s l msg)
+    , actionSendTCRequest = callAction queue . SendTCRequest
+    , actionSendTCGroup   = callAction queue . SendTCGroup
+    , actionQueryDB       = \_ -> pure ()
+    , actionGetTCSync     = \tcDef source transMode -> do
+                                var <- newEmptyTMVarIO
+                                callAction
+                                    queue
+                                    (GetTCSync tcDef source transMode var)
+                                atomically $ takeTMVar var
+    }
 
 
 -- | creates the 'Interface' from the given 'EventHandler'.
-createInterface ::  EventHandler -> IO (Interface, TBQueue InterfaceAction)
-createInterface handler = do 
+createInterface
+    :: EventHandler
+    -> Bool
+    -> IO (Interface, TBQueue InterfaceAction, Maybe (TBQueue DBQuery))
+createInterface handler True = do
+    queue      <- newTBQueueIO 5000
+    queryQueue <- newTBQueueIO 200
+    pure
+        ( Interface (actionTable queue (Just queryQueue)) (V.singleton handler)
+        , queue
+        , Just queryQueue
+        )
+createInterface handler False = do
     queue <- newTBQueueIO 5000
-    pure (Interface (actionTable queue) (V.singleton handler), queue)
+    pure
+        ( Interface (actionTable queue Nothing) (V.singleton handler)
+        , queue
+        , Nothing
+        )
 
 -- | Adds a new event handler to the given 'Interface'. Only an event handler
 -- is added, the 'ActionTable' stays the same
 addInterface :: Interface -> EventHandler -> Interface
 addInterface interface f =
-  interface { ifEventFuncs = ifEventFuncs interface `V.snoc` f }
+    interface { ifEventFuncs = ifEventFuncs interface `V.snoc` f }
 
 -- | Call a specific action on the 'Interface'. This is the primary function that a local
 -- client must use to invoke action in the MCS. The client should not call functions in the 
@@ -113,9 +145,9 @@ callInterface interface f = f (ifActionTable interface)
 -- Therefore, not many synchronous actions are provided
 syncCallInterface :: Interface -> (ActionTable -> TMVar a -> IO ()) -> IO a
 syncCallInterface interface f = do
-  mvar <- newEmptyTMVarIO
-  f (ifActionTable interface) mvar
-  atomically $ takeTMVar mvar
+    mvar <- newEmptyTMVarIO
+    f (ifActionTable interface) mvar
+    atomically $ takeTMVar mvar
 
 -- | Main function which is used inside the MCS libraries to raise an event.
 -- Distributes the event to all registered event handlers (local interfaces,
@@ -124,4 +156,4 @@ ifRaiseEvent :: Interface -> IfEvent -> IO ()
 ifRaiseEvent interface event = V.mapM_ (\f -> f event) (ifEventFuncs interface)
 
 
-  
+

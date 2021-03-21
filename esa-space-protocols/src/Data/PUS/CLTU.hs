@@ -160,13 +160,7 @@ cltuParser cfg = do
         Left  err   -> fail (T.unpack err)
         Right parts -> do
             let
-                bs =
-                    (
-                      builderBytes
-                    . mconcat
-                    . map bytes
-                    $ parts
-                    )
+                bs = builderBytes . mconcat . map bytes $ parts
             pure (CLTU bs)
 
 
@@ -206,13 +200,7 @@ cltuRandomizedParser cfg = do
         Left  err   -> fail (T.unpack err)
         Right parts -> do
             let
-                bs =
-                    (
-                    builderBytes
-                    . mconcat
-                    . map bytes
-                    $ parts
-                    )
+                bs = builderBytes . mconcat . map bytes $ parts 
             pure (CLTU bs)
 
 

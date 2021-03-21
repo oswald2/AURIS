@@ -47,7 +47,7 @@ data TMParameter = TMParameter {
     , _pValue :: TMValue
     -- | the engineering (calibrated) value if applicable
     , _pEngValue :: Maybe TMValue
-} deriving (Show, Generic)
+} deriving (Eq, Show, Generic)
 makeLenses ''TMParameter
 
 instance NFData TMParameter

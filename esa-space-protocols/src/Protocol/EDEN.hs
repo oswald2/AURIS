@@ -89,6 +89,7 @@ import           Data.Conduit.Attoparsec
 
 import           Data.PUS.CLCW
 import           Data.PUS.Events
+import           Data.PUS.Verification
 
 import           General.SizeOf
 
@@ -100,7 +101,6 @@ import           General.PUSTypes               ( RequestID
                                                 , mkRqstID
                                                 )
 
-import           Verification.Verification
 
 
 data EdenType =

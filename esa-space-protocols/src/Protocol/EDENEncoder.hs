@@ -41,7 +41,7 @@ import           General.PUSTypes               ( getMAPID
                                                 , getVCID
                                                 , mkMAPID
                                                 )
-import           General.Types                  ( HexBytes(HexBytes) )
+import           General.Types                  ( HexBytes(HexBytes), toBS )
 
 
 
@@ -103,7 +103,7 @@ frameToEDEN var encFrame = liftIO $ do
                                      st
                                      (encFrame ^. encTcFrameRequest)
                                      EdenTcFrame
-                                     (encFrame ^. encTcFrameData)
+                                     (toBS (encFrame ^. encTcFrameData))
     return (Just edenMessage)
 
 

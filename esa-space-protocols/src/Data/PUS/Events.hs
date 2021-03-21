@@ -21,6 +21,8 @@ module Data.PUS.Events
     , EventTelemetry(..)
     , EventAlarm(..)
     , EventCOP1(..)
+    , EventDB(..)
+    , EventFlag(..)
     ) where
 
 
@@ -37,6 +39,7 @@ import           Data.PUS.ExtractedDU           ( ExtractedDU )
 import           Data.PUS.TMFrame               ( TMFrame )
 import           Data.PUS.TMPacket              ( TMPacket )
 import           Data.PUS.TCRequest             ( TCRequest )
+import           Data.PUS.Verification
 import           Data.TM.Parameter
 
 import           Data.DataModel
@@ -44,13 +47,24 @@ import           Data.DataModel
 import           General.Time
 
 import           Protocol.ProtocolInterfaces
-import           Verification.Verification
+
+
+data EventFlag =
+    EVFlagCommanding
+    | EVFlagTelemetry
+    | EVFlagAlarm
+    | EVFlagCOP1
+    | EVFlagDB
+    | EVFlagAll
+    deriving (Eq, Ord, Enum, Show, Generic)
+
 
 -- | The events themselves
 data Event = EVCommanding EventCommanding
     | EVAlarms EventAlarm
     | EVTelemetry EventTelemetry
     | EVCOP1 EventCOP1
+    | EVDB EventDB
     deriving (Show, Generic)
 
 instance Serialise Event
@@ -81,7 +95,7 @@ data EventTelemetry =
     | EVTMRejectedSpillOverPkt PUSPacket
     | EVTMFrameReceived (ExtractedDU TMFrame)
     | EVTMPUSPacketReceived (ExtractedDU PUSPacket)
-    | EVTMPacketDecoded TMPacket
+    | EVTMPacketDecoded (ExtractedDU TMPacket)
     | EVTMParameters (Vector TMParameter)
     deriving (Show, Generic)
 
@@ -141,4 +155,16 @@ data EventCOP1 =
 instance Serialise EventCOP1
 instance FromJSON EventCOP1
 instance ToJSON EventCOP1 where
+    toEncoding = genericToEncoding defaultOptions
+
+
+
+data EventDB =
+    EVDBTMFrames [ExtractedDU TMFrame]
+    | EVDBEvents
+    deriving(Show, Generic)
+
+instance Serialise EventDB
+instance FromJSON EventDB
+instance ToJSON EventDB where
     toEncoding = genericToEncoding defaultOptions

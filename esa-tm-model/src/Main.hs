@@ -11,7 +11,7 @@ import           Data.TM.Parameter
 import           Data.TM.Value
 import           Data.TM.Validity
 import           General.Types
-import           Data.TM.CalibrationTypes
+import           Data.PUS.CalibrationTypes
 import           Data.TM.Calibration
 import           General.Time
 

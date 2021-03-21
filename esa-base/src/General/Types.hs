@@ -11,7 +11,12 @@ This module provides some general data types and functions operating on them
 -}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module General.Types
-    ( Endian(..)
+    ( Radix(..)
+    , charToRadix
+    , ValInter(..)
+    , Correlate(..)
+    , determineCorr
+    , Endian(..)
     , endianBuilder
     , ByteOffset(..)
     , BitOffset(..)
@@ -76,6 +81,7 @@ import           Data.Bits                      ( Bits
                                                     , shiftL
                                                     )
                                                 )
+import           Data.Bimap                    as BM
 import           Data.Text.Short                ( ShortText )
 import qualified Data.Text.Short               as ST
 import           Data.HashTable.ST.Basic        ( IHashTable )
@@ -97,6 +103,55 @@ import           General.Hexdump
 
 
 
+-- | The radix of a value
+data Radix =
+    Decimal
+    | Octal
+    | Hex
+    deriving (Eq, Ord, Enum, Show, Read, Generic)
+
+instance Serialise Radix
+instance FromJSON Radix
+instance ToJSON Radix where
+    toEncoding = genericToEncoding defaultOptions
+instance NFData Radix
+
+-- | Converst from a Char to a 'Radix' according to the SCOS-2000 MIB ICD 6.9
+{-# INLINABLE charToRadix #-}
+charToRadix :: Char -> Radix
+charToRadix 'D' = Decimal
+charToRadix 'H' = Hex
+charToRadix 'O' = Octal
+charToRadix _   = Decimal
+
+
+data ValInter = InterRaw | InterEng
+  deriving (Eq, Ord, Enum, Read, Show, Generic)
+
+instance Serialise ValInter
+instance FromJSON ValInter
+instance ToJSON ValInter where
+    toEncoding = genericToEncoding defaultOptions
+instance NFData ValInter
+
+
+-- | Specifies, if the parameter is a time value, if
+-- this value should go through the time correlation
+data Correlate = CorrelationYes | CorrelationNo
+    deriving (Eq, Ord, Enum, Bounded, Show, Generic)
+
+instance NFData Correlate
+instance Serialise Correlate
+instance FromJSON Correlate
+instance ToJSON Correlate where
+    toEncoding = genericToEncoding defaultOptions
+
+{-# INLINABLE determineCorr #-}
+determineCorr :: Maybe Bool -> Correlate
+determineCorr = maybe CorrelationYes go
+  where
+    go True  = CorrelationYes
+    go False = CorrelationNo
 
 -- | Specifies the endianess (BiE = Big Endian, LiE = Little Endian)
 data Endian = BiE | LiE
@@ -372,8 +427,15 @@ class FromDouble a where
 
 
 instance Serialise ShortText where
-    encode = S.encode . ST.toText
-    decode = ST.fromText <$> S.decode
+    encode x = S.encode . ST.toByteString $ x
+    decode = do
+        v <- S.decode
+        case ST.fromByteString v of
+            Just x -> return x
+            Nothing ->
+                fail
+                    $  "Could not convert data from ByteString to ShortText: "
+                    <> show v
 
 instance FromJSON ShortText where
     parseJSON = withText "ShortText" $ pure . ST.fromText
@@ -386,14 +448,14 @@ instance FromJSONKey ShortText where
 
 
 instance ToJSON ShortText where
-    toJSON = String . ST.toText
+    toJSON x = String . ST.toText $ x
     {-# INLINE toJSON #-}
 
-    toEncoding = E.text . ST.toText
+    toEncoding x = E.text . ST.toText $ x
     {-# INLINE toEncoding #-}
 
 instance Display ShortText where
-    display = display . ST.toText
+    display x = displayBytesUtf8 . ST.toByteString $ x
 
 
 -- | Serialise a 'IHashTable' 
@@ -425,7 +487,7 @@ instance (Eq k, Hashable k, FromJSON k, FromJSON v) => FromJSON (IHashTable k v)
 -- | A newtype wrapper around 'ByteString' for text-serialising a 'ByteString'
 -- into a hex-coded string value
 newtype HexBytes = HexBytes { toBS :: ByteString }
-  deriving(Eq)
+  deriving(Eq, Generic)
 
 
 hexLength :: HexBytes -> Int
@@ -441,7 +503,7 @@ parseByte = do
     b <- A.satisfy isHexDigit
     return $ fromIntegral (ord a `shiftL` 4 .|. ord b)
 
-
+instance NFData HexBytes
 
 instance Serialise HexBytes where
     encode (HexBytes b) = S.encode b
@@ -472,3 +534,19 @@ instance Read HexBytes where
         A.Fail{}      -> []
         A.Partial _   -> []
         A.Done rest x -> [(x, T.unpack rest)]
+
+
+
+
+instance (ToJSON a, ToJSON b) => ToJSON (Bimap a b) where
+    toJSON = toJSON . BM.toList
+
+
+instance (FromJSON a, FromJSON b, Ord a, Ord b) => FromJSON (Bimap a b) where
+    parseJSON x = BM.fromList <$> parseJSON x
+
+
+instance (Serialise a, Serialise b, Ord a, Ord b) => Serialise (Bimap a b) where
+    encode = S.encode . BM.toList
+    decode = BM.fromList <$> S.decode
+

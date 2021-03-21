@@ -17,6 +17,7 @@ import           Data.PUS.ExtractedDU
 import           Data.PUS.Events                ( Event(EVAlarms)
                                                 , EventAlarm(EVPacketAlarm)
                                                 )
+import           Data.PUS.Verification
 
 import           Protocol.EDEN
 import           Protocol.ProtocolInterfaces    ( protContent
@@ -33,7 +34,6 @@ import           General.Types                  ( HexBytes(toBS) )
 import           General.Time                   ( edenTimeParser
                                                 , nullTime
                                                 )
-import           Verification.Verification
 
 
 

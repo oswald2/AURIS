@@ -22,6 +22,7 @@ import           Data.PUS.TMFrameExtractor
 import           Data.PUS.TMStoreFrame
 import           Data.PUS.Config
 import           Data.PUS.MissionSpecific.Definitions
+import           Data.PUS.MissionSpecific.Default
 import           Data.PUS.ExtractedDU
 import           Data.PUS.ExtractedPUSPacket
 import           Data.PUS.GlobalState
@@ -33,6 +34,7 @@ import           General.APID
 import           Data.PUS.EncTime
 import           Data.PUS.CLCW
 import           Data.PUS.CRC
+import           Data.PUS.Events
 --import           Data.PUS.TMFrameExtractor
 
 import           General.Types
@@ -56,7 +58,7 @@ makeTMFrames
     :: Config -> PUSMissionSpecific -> TMFrameHeader -> ByteString -> [TMFrame]
 makeTMFrames cfg missionSpecific hdr pl =
     let
-        len       = tmFrameMaxDataLen cfg missionSpecific hdr
+        len       = tmFrameMaxDataLen (cfgTMFrame cfg) missionSpecific hdr
         frameData = chunkedByBS len pl
         hdrs      = map upd [0 ..]
         upd x = hdr & tmFrameVCFC .~ x & tmFrameMCFC .~ x
@@ -74,7 +76,7 @@ makeStoreFrames
     -> [TMStoreFrame]
 makeStoreFrames cfg missionSpecific timestamp hdr pl =
     let frames      = makeTMFrames cfg missionSpecific hdr pl
-        bytes       = map (encodeFrame cfg) frames
+        bytes       = map (HexBytes . encodeFrame (cfgTMFrame cfg)) frames
         times       = iterate (<+> oneMicroSecond) timestamp
         storeFrames = zipWith3 TMStoreFrame times frames bytes
     in  storeFrames
@@ -82,19 +84,23 @@ makeStoreFrames cfg missionSpecific timestamp hdr pl =
 
 frameToStoreFrame :: Config -> SunTime -> TMFrame -> TMStoreFrame
 frameToStoreFrame cfg timestamp frame =
-    TMStoreFrame timestamp frame (encodeFrame cfg frame)
+    TMStoreFrame timestamp frame (HexBytes (encodeFrame (cfgTMFrame cfg) frame))
 
 
 runRIOTestAction :: RIO GlobalState b -> IO b
 runRIOTestAction action = do
     defLogOptions <- logOptionsHandle stdout True
     let logOptions = setLogMinLevel LevelError defLogOptions
+    queue <- newTBQueueIO 200
     withLogFunc logOptions $ \logFunc -> do
         state <- newGlobalState
             defaultConfig
             (defaultMissionSpecific defaultConfig)
             logFunc
             (\ev -> T.putStrLn ("Event: " <> T.pack (show ev)))
+            [EVFlagAll]
+            Nothing
+            queue
 
         runRIO state action
 
@@ -156,38 +162,37 @@ pusPacketExtraction cfg = do
 testFrameExtraction2 :: Config -> IO ()
 testFrameExtraction2 cfg = do
     now <- getCurrentTime
-    let storeFrame = TMStoreFrame now frame (encodeFrame cfg frame)
-        frame      = TMFrame
-            { _tmFrameHdr  = TMFrameHeader
-                                 { _tmFrameVersion        = 0
-                                 , _tmFrameScID = SCID { getSCID = 533 }
-                                 , _tmFrameVcID           = VCID { getVCID = 0 }
-                                 , _tmFrameOpControl      = True
-                                 , _tmFrameMCFC           = 112
-                                 , _tmFrameVCFC           = 108
-                                 , _tmFrameDfh            = False
-                                 , _tmFrameSync           = False
-                                 , _tmFrameOrder          = False
-                                 , _tmFrameSegID          = TMSegment65536
-                                 , _tmFrameFirstHeaderPtr = 0
-                                 }
+    let storeFrame =
+            TMStoreFrame now frame (HexBytes (encodeFrame (cfgTMFrame cfg) frame))
+        frame = TMFrame
+            { _tmFrameHdr  = TMFrameHeader { _tmFrameVersion        = 0
+                                           , _tmFrameScID           = SCID 533
+                                           , _tmFrameVcID           = VCID 0
+                                           , _tmFrameOpControl      = True
+                                           , _tmFrameMCFC           = 112
+                                           , _tmFrameVCFC           = 108
+                                           , _tmFrameDfh            = False
+                                           , _tmFrameSync           = False
+                                           , _tmFrameOrder          = False
+                                           , _tmFrameSegID = TMSegment65536
+                                           , _tmFrameFirstHeaderPtr = 0
+                                           }
             , _tmFrameData =
                 "\b\DC1\192\ETX\NUL\SI\DLE\SOH\SOH\NULJ\158\US\SUB\252\ESC\NUL\NUL\NUL\NUL|\143\a\255\208\213\EOT2UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU=\GS"
-            , _tmFrameOCF  = Just $ packValues CLCW
-                                 { _clcwType        = False
-                                 , _clcwVersion     = 0
-                                 , _clcwStatus      = 0
-                                 , _clcwCopInEffect = 1
-                                 , _clcwVcID        = VCID { getVCID = 0 }
-                                 , _clcwNoRF        = False
-                                 , _clcwNoBitLock   = False
-                                 , _clcwLockout     = False
-                                 , _clcwWait        = False
-                                 , _clcwRetrans     = False
-                                 , _clcwBCounter    = 0
-                                 , _clcwReportType  = False
-                                 , _clcwReportVal   = 0
-                                 }
+            , _tmFrameOCF  = Just $ packValues CLCW { _clcwType        = False
+                                                    , _clcwVersion     = 0
+                                                    , _clcwStatus      = 0
+                                                    , _clcwCopInEffect = 1
+                                                    , _clcwVcID        = VCID 0
+                                                    , _clcwNoRF        = False
+                                                    , _clcwNoBitLock   = False
+                                                    , _clcwLockout     = False
+                                                    , _clcwWait        = False
+                                                    , _clcwRetrans     = False
+                                                    , _clcwBCounter    = 0
+                                                    , _clcwReportType  = False
+                                                    , _clcwReportVal   = 0
+                                                    }
             , _tmFrameFECW = Just (mkCRC 61462)
             }
         extractedPacket = ExtractedDU
@@ -202,7 +207,7 @@ testFrameExtraction2 cfg = do
                                                      , _pusHdrTcVersion = 0
                                                      , _pusHdrType = PUSTM
                                                      , _pusHdrDfhFlag = True
-                                                     , _pusHdrAPID = APID { getAPID = 17 }
+                                                     , _pusHdrAPID = APID 17
                                                      , _pusHdrSeqFlags = SegmentStandalone
                                                      , _pusHdrSSC = mkSSC 3
                                                      , _pusHdrSeqCtrl = 49155
@@ -244,7 +249,7 @@ missingFrame cfg = do
         payload           = B.pack (take 4096 (cycle [0 .. 255]))
         (encPusPkt, _, _) = encodePUSPacket pusPkt
 
-        len               = tmFrameMaxDataLen cfg
+        len               = tmFrameMaxDataLen (cfgTMFrame cfg)
                                               (defaultMissionSpecific cfg)
                                               tmFrameDefaultHeader
         frameData = chunkedByBS len encPusPkt

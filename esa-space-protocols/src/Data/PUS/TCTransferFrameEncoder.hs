@@ -7,8 +7,7 @@
 module Data.PUS.TCTransferFrameEncoder
     ( tcFrameToCltuC
     , tcSegmentToTransferFrame
-    )
-where
+    ) where
 
 
 import           RIO
@@ -20,13 +19,14 @@ import           Data.PUS.CLTU
 import           Data.PUS.Segment
 import           Data.PUS.TCRequest
 
+import           General.Types
 
 
 tcFrameToCltuC
     :: (MonadIO m, MonadReader env m, HasLogFunc env)
     => ConduitT EncodedTCFrame CLTUInput m ()
 tcFrameToCltuC = awaitForever $ \frame -> do
-    let new = cltuNew (frame ^. encTcFrameData)
+    let new     = cltuNew (toBS (frame ^. encTcFrameData))
         encCltu = CLTUInput new (frame ^. encTcFrameRequest)
     logDebug $ "New CLTU: " <> displayShow new
     yield encCltu
@@ -41,6 +41,6 @@ tcSegmentToTransferFrame = awaitForever $ \segm -> do
                                 (rqst ^. tcReqVCID)
                                 0
                                 0
-                                (segm ^. encSegSegment)
+                                (HexBytes (segm ^. encSegSegment))
         rqst = segm ^. encSegRequest
     yield (TCFrameTransport frame rqst)

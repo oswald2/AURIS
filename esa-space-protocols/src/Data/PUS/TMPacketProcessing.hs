@@ -2,8 +2,10 @@
 module Data.PUS.TMPacketProcessing
     ( packetProcessorC
     , raiseTMPacketC
+    , storeTMPacketC
     , raiseTMParameterC
     , getPackeDefinition
+    , isUnknownPacket
     ) where
 
 
@@ -43,6 +45,7 @@ import           Data.PUS.EncTime
 import           Data.PUS.PUSState
 import           Data.PUS.CRC
 import           Data.PUS.Events
+import           Data.PUS.Verification
 
 import           General.GetBitField
 import           General.Types
@@ -50,13 +53,14 @@ import           General.Time
 import           General.Hexdump
 import           General.PUSTypes
 
-import           Verification.Verification
 
 
+isUnknownPacket :: Config -> TMPacket -> Bool
+isUnknownPacket cfg pkt = _tmpSPID pkt == cfgUnknownSPID cfg
 
 raiseTMPacketC
     :: (MonadIO m, MonadReader env m, HasGlobalState env)
-    => ConduitT TMPacket TMPacket m ()
+    => ConduitT (ExtractedDU TMPacket) (ExtractedDU TMPacket) m ()
 raiseTMPacketC = awaitForever $ \pkt -> do
     env <- ask
     liftIO $ raiseEvent env (EVTelemetry (EVTMPacketDecoded pkt))
@@ -65,15 +69,28 @@ raiseTMPacketC = awaitForever $ \pkt -> do
 
 raiseTMParameterC
     :: (MonadIO m, MonadReader env m, HasGlobalState env)
-    => ConduitT TMPacket TMPacket m ()
+    => ConduitT (ExtractedDU TMPacket) (ExtractedDU TMPacket) m ()
 raiseTMParameterC = awaitForever $ \pkt -> do
     env <- ask
-    liftIO $ raiseEvent env (EVTelemetry (EVTMParameters (pkt ^. tmpParams)))
+    liftIO $ raiseEvent env (EVTelemetry (EVTMParameters (pkt ^. epDU . tmpParams)))
+    yield pkt
 
+
+storeTMPacketC
+    :: (MonadIO m, MonadReader env m, HasDatabase env)
+    => ConduitT (ExtractedDU TMPacket) (ExtractedDU TMPacket) m ()
+storeTMPacketC = do
+    env <- ask
+    if isJust (getDbBackend env)
+        then do
+            awaitForever $ \pkt -> do
+                liftIO $ storeTMPacket env (pkt ^. epDU)
+                yield pkt
+        else awaitForever yield
 
 packetProcessorC
     :: (MonadIO m, MonadReader env m, HasGlobalState env)
-    => ConduitT ExtractedPacket TMPacket m ()
+    => ConduitT ExtractedPacket (ExtractedDU TMPacket) m ()
 packetProcessorC = awaitForever $ \pkt@(ExtractedPacket oct pusPkt) -> do
 
     logDebug
@@ -89,16 +106,18 @@ packetProcessorC = awaitForever $ \pkt@(ExtractedPacket oct pusPkt) -> do
         processVerification pusPkt
 
     -- if we received a TC Echo just log it 
-    when (pusPkt ^. epDU . pusHdr . pusHdrType == PUSTC) $ do 
-        logDebug $ "Received TC Echo from SCOE: " <> displayShow (pusPkt ^. epDU)
+    when (pusPkt ^. epDU . pusHdr . pusHdrType == PUSTC) $ do
+        logDebug $ "Received TC Echo from SCOE: " <> displayShow
+            (pusPkt ^. epDU)
 
     let def' = getPackeDefinition model pkt
     case def' of
         Just (key, def) -> do
             if def ^. tmpdCheck
                 then do
-                    logDebug $ "TM Packet Processor: received: " <> display (hexdumpBS oct)
-                    checkCRC pusPkt def key oct 
+                    logDebug $ "TM Packet Processor: received: " <> display
+                        (hexdumpBS oct)
+                    checkCRC pusPkt def key oct
                 else yieldM $ processPacket def key pkt
         Nothing -> do
             -- if we have a packet, that is not found in the data model,
@@ -117,7 +136,9 @@ packetProcessorC = awaitForever $ \pkt@(ExtractedPacket oct pusPkt) -> do
                     { _pName     = "Content"
                     , _pTime     = timeStamp
                     , _pValue    = TMValue
-                                       (TMValOctet (toBS (pusPkt ^. epDU . pusData)))
+                                       (TMValOctet
+                                           (toBS (pusPkt ^. epDU . pusData))
+                                       )
                                        clearValidity
                     , _pEngValue = Nothing
                     }
@@ -140,30 +161,33 @@ packetProcessorC = awaitForever $ \pkt@(ExtractedPacket oct pusPkt) -> do
                     , _tmpParams    = V.singleton param
                     }
 
-            yield tmpkt
-    where 
-        checkCRC pusPkt def key oct = do 
-            case crcCheck oct of
-                Left err ->
-                    logError
-                        $  "CRC Check on TM packet failed: "
-                        <> display err
+                du = pusPkt { _epDU = tmpkt }
+
+            yield du
+  where
+    checkCRC pusPkt def key oct = do
+        case crcCheck oct of
+            Left err ->
+                logError
+                    $  "CRC Check on TM packet failed: "
+                    <> display err
+                    <> ". Packet ignored."
+            Right (chk, payload, crcReceived, crcCalcd) -> do
+                if chk
+                    then performProcessing pusPkt def key payload
+                    else
+                        logError
+                        $  "CRC Check on TM packet failed: received: "
+                        <> display crcReceived
+                        <> ", calculated: "
+                        <> display crcCalcd
                         <> ". Packet ignored."
-                Right (chk, payload, crcReceived, crcCalcd) -> do
-                    if chk
-                        then performProcessing pusPkt def key payload
-                        else
-                            logError
-                            $ "CRC Check on TM packet failed: received: "
-                            <> display crcReceived
-                            <> ", calculated: "
-                            <> display crcCalcd
-                            <> ". Packet ignored."
 
 
-        performProcessing pusPkt def key payload = do
-            -- process the packet and pass it on 
-            yieldM $ processPacket def key (ExtractedPacket payload pusPkt)
+    performProcessing pusPkt def key payload = do
+        -- process the packet and pass it on 
+        yieldM $ processPacket def key (ExtractedPacket payload pusPkt)
+
 
 
 
@@ -174,7 +198,7 @@ getPackeDefinition
     :: DataModel -> ExtractedPacket -> Maybe (TMPacketKey, TMPacketDef)
 getPackeDefinition model (ExtractedPacket bytes pkt) =
     let pusPkt     = pkt ^. epDU
-        pktType    = hdr ^. pusHdrType 
+        pktType    = hdr ^. pusHdrType
         hdr        = pusPkt ^. pusHdr
         apid       = hdr ^. pusHdrAPID
         dfh        = pusPkt ^. pusDfh
@@ -184,19 +208,16 @@ getPackeDefinition model (ExtractedPacket bytes pkt) =
             Just def -> extractPIVals def bytes
             Nothing  -> (0, 0)
         pktKey = TMPacketKey apid t st pi1 pi2
-    in  
-        case pktType of 
-            PUSTM -> 
-                case HT.ilookup (model ^. dmTMPackets) pktKey of
-                    Nothing -> Nothing
-                    Just p  -> Just (pktKey, p)
-            PUSTC -> 
+    in  case pktType of
+            PUSTM -> case HT.ilookup (model ^. dmTMPackets) pktKey of
+                Nothing -> Nothing
+                Just p  -> Just (pktKey, p)
+            PUSTC ->
                 -- we have a TC Echo Packet from a SCOE
-                let def = if hdr ^. pusHdrTcVersion == 3 
-                            then tcEchoDefCC apid 
-                            else tcEchoDef apid t st 
-                in 
-                Just (pktKey, def)
+                let def = if hdr ^. pusHdrTcVersion == 3
+                        then tcEchoDefCC apid
+                        else tcEchoDef apid t st
+                in  Just (pktKey, def)
 
 
 
@@ -234,7 +255,7 @@ processPacket
     => TMPacketDef
     -> TMPacketKey
     -> ExtractedPacket
-    -> m TMPacket
+    -> m (ExtractedDU TMPacket)
 processPacket pktDef (TMPacketKey _apid _t _st pi1 pi2) pkt@(ExtractedPacket _ pusDU)
     = do
         (timestamp, epoch) <- getTimeStamp (pkt ^. extrPacket)
@@ -266,6 +287,8 @@ processPacket pktDef (TMPacketKey _apid _t _st pi1 pi2) pkt@(ExtractedPacket _ p
                                 , _tmpSource    = pusDU ^. epSource
                                 , _tmpParams    = params
                                 }
+
+            du = pusDU { _epDU = tmPacket }
 
         -- check for an event
         case _tmpdEvent pktDef of
@@ -321,7 +344,7 @@ processPacket pktDef (TMPacketKey _apid _t _st pi1 pi2) pkt@(ExtractedPacket _ p
                             <> " Msg: "
                             <> display (ST.toText txt)
                 liftIO $ raiseEvent env (EVAlarms (EVPacketAlarm msg))
-        return tmPacket
+        return du
 
 
 getTimeStamp

@@ -3,34 +3,31 @@
   , ForeignFunctionInterface
 #-}
 module GUI.Logo
-  ( setLogo
-  , getLogoPixbuf
-  )
-where
+    ( setLogo
+    , getLogoPixbuf
+    ) where
 
 
 import           RIO
---import qualified Data.Text.IO                  as T
 import           GI.Gtk                        as Gtk
-import           GI.GdkPixbuf.Objects.Pixbuf
-import           GI.GdkPixbuf.Enums
-
-import           GUI.LogoXPM
+                                                ( imageSetFromPixbuf
+                                                , Image
+                                                )
+import           GI.GdkPixbuf.Objects.Pixbuf    ( pixbufNewFromResourceAtScale
+                                                , Pixbuf
+                                                )
 
 
 setLogo :: Image -> Int32 -> Int32 -> IO ()
 setLogo img width height = do
-  pixbuf <- pixbufNewFromXpmData aurisLogoXPM
-  res    <- pixbufScaleSimple pixbuf width height InterpTypeHyper
-  case res of
-    Just p  -> imageSetFromPixbuf img (Just p)
-    Nothing -> error "Could not scale logo!"
+    pixbuf <- pixbufNewFromResourceAtScale "/auris/data/AurisLogo.svg"
+                                           width
+                                           height
+                                           True
+    imageSetFromPixbuf img (Just pixbuf)
+
 
 
 getLogoPixbuf :: Int32 -> Int32 -> IO Pixbuf
 getLogoPixbuf width height = do
-  pixbuf <- pixbufNewFromXpmData aurisLogoXPM
-  res    <- pixbufScaleSimple pixbuf width height InterpTypeHyper
-  case res of
-    Just p  -> return p
-    Nothing -> error "Could not scale logo!"
+    pixbufNewFromResourceAtScale "/auris/data/AurisLogo.svg" width height True

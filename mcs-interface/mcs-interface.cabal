@@ -81,6 +81,7 @@ library
   build-depends:
     base ==4.*
     , esa-space-protocols
+    , esa-base
     , rio
     , aeson
     , binary
@@ -92,6 +93,7 @@ library
     , word8
     , serialise
     , unliftio
+    , text-short
 
 
   default-extensions:

@@ -39,7 +39,7 @@ import           Data.Text.Short                ( ShortText )
 
 --import           General.Types                  ( ToDouble(..) )
 
-import           Data.TM.CalibrationTypes
+import           Data.PUS.CalibrationTypes
 import           Data.TM.Value
 import           Data.TM.Validity        hiding ( isValid )
 

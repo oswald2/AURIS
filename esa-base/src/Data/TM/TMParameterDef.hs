@@ -69,7 +69,7 @@ import           Data.Aeson
 
 import           Data.TM.Value
 import           Data.TM.Calibration
-import           Data.TM.CalibrationTypes
+import           Data.PUS.CalibrationTypes
 import           Data.TM.Synthetic
 
 import           General.Types
@@ -127,17 +127,6 @@ instance FromJSON TimeType
 instance ToJSON TimeType where
   toEncoding = genericToEncoding defaultOptions
 
-
--- | Specifies, if the parameter is a time value, if
--- this value should go through the time correlation
-data Correlate = CorrelationYes | CorrelationNo
-    deriving (Eq, Ord, Enum, Bounded, Show, Generic)
-
-instance NFData Correlate
-instance Serialise Correlate
-instance FromJSON Correlate
-instance ToJSON Correlate where
-  toEncoding = genericToEncoding defaultOptions
 
 
 -- | Specifies the data type of the parameter
@@ -331,14 +320,6 @@ ptcPfcToParamType (PTC 11) (PFC x) _ = Right $ ParamDeduced (Just x)
 ptcPfcToParamType (PTC 13) (PFC 0) _ = Right ParamSavedSynthetic
 ptcPfcToParamType ptc pfc _ =
   Left $ "Unsupported: " <> textDisplay ptc <> " " <> textDisplay pfc
-
-
-{-# INLINABLE determineCorr #-}
-determineCorr :: Maybe Bool -> Correlate
-determineCorr = maybe CorrelationYes go
- where
-  go True  = CorrelationYes
-  go False = CorrelationNo
 
 
 instance NFData ParamType

@@ -9,7 +9,7 @@
 # Warnings currently triggered by your code
 - ignore: {name: "Unused LANGUAGE pragma"}
 - ignore: {name: "Redundant do"}
-
+- ignoer: {name: "Eta reduce"}
 
 # Specify additional command line arguments
 #

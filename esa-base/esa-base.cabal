@@ -78,7 +78,6 @@ library
     Data.TM.Value
     Data.TM.Parameter
     Data.TM.Calibration
-    Data.TM.CalibrationTypes
     Data.TM.NumericalCalibration
     Data.TM.TextualCalibration
     Data.TM.PolynomialCalibration
@@ -88,8 +87,42 @@ library
     Data.TM.TMPacketDef
     Data.TM.PIVals
     Data.TM.Synthetic
+    Data.TC.TCParameterDef
+    Data.TC.RangeSet
+    Data.TC.Calibration
+    Data.TC.TCDef
+    Data.TC.ValueConversion
     Data.Display.Graphical
-
+    Data.PUS.CalibrationTypes
+    Data.PUS.TMFrame
+    Data.PUS.TMPacket
+    Data.PUS.TMFrameDfh
+    Data.PUS.TMStoreFrame
+    Data.PUS.EncTime
+    Data.PUS.PUSPacket
+    Data.PUS.PUSDfh
+    Data.PUS.CRC
+    Data.PUS.CLCW
+    Data.PUS.SegmentationFlags
+    Data.PUS.ExtractedDU
+    Data.PUS.LiveState
+    Data.PUS.MissionSpecific.Definitions
+    Data.PUS.DataModelInfo
+    Data.PUS.Value 
+    Data.PUS.Parameter
+    Data.PUS.TCRequest
+    Data.PUS.TCDirective
+    Data.PUS.TCPacket
+    Data.PUS.TCCnc
+    Data.PUS.Verification
+    Protocol.ProtocolInterfaces
+    Conduit.PayloadParser
+    Persistence.Conversion.Types
+    Persistence.LogEvent
+    Persistence.Logging
+    Persistence.DbBackend
+    Persistence.DBQuery 
+    
   -- Modules included in this library but not exported.
   -- other-modules:
 
@@ -118,7 +151,6 @@ library
         InstanceSigs
         KindSignatures
         LambdaCase
-        
         MultiParamTypeClasses
         MultiWayIf
         NamedFieldPuns
@@ -168,6 +200,12 @@ library
     , directory
     , filepath
     , word24
+    , closed
+    , bytestring-to-vector
+    , ghc-compact
+    , refined
+    , sorted-list
+    , bimap
 
 
   -- Directories containing source files.

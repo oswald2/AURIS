@@ -322,16 +322,16 @@ getBitFieldMilExtended bytes off endian = decMILExtended endian <$> getBitField 
 getBitField :: ByteString -> Offset -> BitSize -> Maybe Word64
 getBitField bytes off bs@(BitSize nBits) =
     let
-        (ByteOffset idx, BitOffset bitNr) = offsetParts off
+        (ByteOffset !idx, BitOffset !bitNr) = offsetParts off
         value1 :: Word64
         !value1 = fromIntegral $ bytes `B.index` idx .&. (255 `shiftR` bitNr)
 
-        sum1    = bitNr + nBits
+        !sum1    = bitNr + nBits
 
         loop1 :: Int -> Word64 -> Int -> (Int, Word64, Int)
         loop1 !nb !val !ix
             | nb >= 8
-            = let val2 = (val `shiftL` 8) .|. fromIntegral (bytes `B.index` ix)
+            = let !val2 = (val `shiftL` 8) .|. fromIntegral (bytes `B.index` ix)
               in  loop1 (nb - 8) val2 (ix + 1)
             | otherwise
             = (nb, val, ix)

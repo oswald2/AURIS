@@ -21,7 +21,16 @@ GECCOS]]
 
 Please note that these screenshots are preliminary. The displays are
 still subject to major changes, also most implementations are not
-complete.
+complete. 
+
+There are currently 2 themes available, one dark and one (newer) based 
+on neumorphic principles
+
+** More Information 
+
+See also the [[https://github.com/oswald2/AURIS/wiki][wiki]] for more information.
+
+*** Dark Theme 
 
 Telemetry Frame Display:
 
@@ -56,9 +65,36 @@ Connections Tab:
 #+CAPTION: Connections display
 [[file:screenshots/Connections.png]]
 
-** More Information 
+*** Neumorph Theme 
 
-See also the [[https://github.com/oswald2/AURIS/wiki][wiki]] for more information.
+Telemetry Frame Display:
+
+#+CAPTION: TM Frame Display
+[[file:screenshots/TMFrames_Neumorph.png]]
+
+Telemetry Packet Display:
+
+#+CAPTION: TM Packet Display
+[[file:screenshots/TMPackets_Neumorph.png]]
+
+#+CAPTION: Commanding
+[[file:screenshots/TCTab_Neumorph.png]]
+
+#+CAPTION: TC History
+[[file:screenshots/TCHistory_Neumorph.png]]
+
+Connections Tab:
+
+#+CAPTION: Connections Display
+[[file:screenshots/Connections_Neumorph.png]]
+
+Configuration Tab:
+
+#+CAPTION: Configuration Display
+[[file:screenshots/Config_Neumorph.png]]
+
+
+
 
 ** Building
    :PROPERTIES:

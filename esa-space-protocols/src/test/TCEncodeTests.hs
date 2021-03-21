@@ -2,6 +2,7 @@
     BangPatterns
     , OverloadedStrings
     , NoImplicitPrelude
+    , TemplateHaskell
 #-}
 module Main where
 
@@ -27,6 +28,8 @@ import           General.SetBitField
 import           System.IO
 
 import           Test.Hspec
+import           Refined
+
 
 
 parameters :: ParameterList
@@ -35,7 +38,9 @@ parameters = List
     (Group
         (Parameter "N" (ValInt8 3))
         (List
-            [Parameter "G1" (ValUInt3 1), Parameter "G2" (ValDouble BiE 3.14)]
+            [ Parameter "G1" (ValUInt8X (B8 $$(refineTH 3)) 1)
+            , Parameter "G2" (ValDouble BiE 3.14)
+            ]
             Empty
         )
     )
@@ -44,11 +49,11 @@ expectedParameters :: [Parameter]
 expectedParameters =
     [ Parameter { _paramName = "P1", _paramValue = ValInt16 BiE 43707 }
     , Parameter { _paramName = "N", _paramValue = ValInt8 3 }
-    , Parameter { _paramName = "G1", _paramValue = ValUInt3 1 }
+    , Parameter { _paramName = "G1", _paramValue = ValUInt8X (B8 $$(refineTH 3)) 1 }
     , Parameter { _paramName = "G2", _paramValue = ValDouble BiE 3.14 }
-    , Parameter { _paramName = "G1", _paramValue = ValUInt3 1 }
+    , Parameter { _paramName = "G1", _paramValue = ValUInt8X (B8 $$(refineTH 3)) 1 }
     , Parameter { _paramName = "G2", _paramValue = ValDouble BiE 3.14 }
-    , Parameter { _paramName = "G1", _paramValue = ValUInt3 1 }
+    , Parameter { _paramName = "G1", _paramValue = ValUInt8X (B8 $$(refineTH 3)) 1 }
     , Parameter { _paramName = "G2", _paramValue = ValDouble BiE 3.14 }
     ]
 
@@ -59,7 +64,9 @@ parameters2 = List
     (Group
         (Parameter "N1" (ValInt8 3))
         (List
-            [Parameter "G1" (ValUInt3 1), Parameter "G2" (ValDouble BiE 3.14)]
+            [ Parameter "G1" (ValUInt8X (B8 $$(refineTH 3)) 1)
+            , Parameter "G2" (ValDouble BiE 3.14)
+            ]
             (Group
                 (Parameter "N2" (ValInt8 2))
                 (List
@@ -79,7 +86,8 @@ parameters3 = List
     , Parameter "P2" (ValUInt16 BiE 0xaabb)
     , Parameter "P3" (ValUInt32 BiE 0x11223344)
     , Parameter "P4" (ValUInt64 BiE 0x0102030405060708)
-    ] Empty
+    ]
+    Empty
 
 
 expectedParameters3 :: ByteString
@@ -108,19 +116,19 @@ expectedParameters2 :: [Parameter]
 expectedParameters2 =
     [ Parameter { _paramName = "P1", _paramValue = ValInt16 BiE 43707 }
     , Parameter { _paramName = "N1", _paramValue = ValInt8 3 }
-    , Parameter { _paramName = "G1", _paramValue = ValUInt3 1 }
+    , Parameter { _paramName = "G1", _paramValue = ValUInt8X (B8 $$(refineTH 3)) 1 }
     , Parameter { _paramName = "G2", _paramValue = ValDouble BiE 3.14 }
     , Parameter { _paramName = "N2", _paramValue = ValInt8 2 }
     , Parameter { _paramName = "NG1", _paramValue = ValInt8 10 }
     , Parameter { _paramName = "NG2", _paramValue = ValInt16 BiE 45054 }
     , Parameter { _paramName = "NG1", _paramValue = ValInt8 10 }
     , Parameter { _paramName = "NG2", _paramValue = ValInt16 BiE 45054 }
-    , Parameter { _paramName = "G1", _paramValue = ValUInt3 1 }
+    , Parameter { _paramName = "G1", _paramValue = ValUInt8X (B8 $$(refineTH 3)) 1 }
     , Parameter { _paramName = "G2", _paramValue = ValDouble BiE 3.14 }
     , Parameter { _paramName = "N2", _paramValue = ValInt8 2 }
     , Parameter { _paramName = "NG1", _paramValue = ValInt8 10 }
     , Parameter { _paramName = "NG2", _paramValue = ValInt16 BiE 45054 }
-    , Parameter { _paramName = "G1", _paramValue = ValUInt3 1 }
+    , Parameter { _paramName = "G1", _paramValue = ValUInt8X (B8 $$(refineTH 3)) 1 }
     , Parameter { _paramName = "G2", _paramValue = ValDouble BiE 3.14 }
     , Parameter { _paramName = "N2", _paramValue = ValInt8 2 }
     , Parameter { _paramName = "NG1", _paramValue = ValInt8 10 }
@@ -129,7 +137,7 @@ expectedParameters2 =
     , Parameter { _paramName = "NG2", _paramValue = ValInt16 BiE 45054 }
     , Parameter { _paramName = "NG1", _paramValue = ValInt8 10 }
     , Parameter { _paramName = "NG2", _paramValue = ValInt16 BiE 45054 }
-    , Parameter { _paramName = "G1", _paramValue = ValUInt3 1 }
+    , Parameter { _paramName = "G1", _paramValue = ValUInt8X (B8 $$(refineTH 3)) 1 }
     , Parameter { _paramName = "G2", _paramValue = ValDouble BiE 3.14 }
     , Parameter { _paramName = "N2", _paramValue = ValInt8 2 }
     , Parameter { _paramName = "NG1", _paramValue = ValInt8 10 }
@@ -147,7 +155,9 @@ extParameters = ExtList
         (ExtParameter "N" (ValInt8 3) (BitOffset 16))
         (ExtList
             (SL.toSortedList
-                [ ExtParameter "G1" (ValUInt3 1)         (BitOffset (3 * 8))
+                [ ExtParameter "G1"
+                               (ValUInt8X (B8 $$(refineTH 3)) 1)
+                               (BitOffset (3 * 8))
                 , ExtParameter "G2" (ValDouble BiE 3.14) (BitOffset (3 * 8 + 3))
                 ]
             )
@@ -166,7 +176,7 @@ extParametersExpected =
                    , _extParOff   = BitOffset 16
                    }
     , ExtParameter { _extParName  = "G1"
-                   , _extParValue = ValUInt3 1
+                   , _extParValue = ValUInt8X (B8 $$(refineTH 3)) 1
                    , _extParOff   = BitOffset (3 * 8)
                    }
     , ExtParameter { _extParName  = "G2"
@@ -174,7 +184,7 @@ extParametersExpected =
                    , _extParOff   = BitOffset (3 * 8 + 3)
                    }
     , ExtParameter { _extParName  = "G1"
-                   , _extParValue = ValUInt3 1
+                   , _extParValue = ValUInt8X (B8 $$(refineTH 3)) 1
                    , _extParOff   = BitOffset (8 * 8 + 3)
                    }
     , ExtParameter { _extParName  = "G2"
@@ -182,7 +192,7 @@ extParametersExpected =
                    , _extParOff   = BitOffset (8 * 8 + 6)
                    }
     , ExtParameter { _extParName  = "G1"
-                   , _extParValue = ValUInt3 1
+                   , _extParValue = ValUInt8X (B8 $$(refineTH 3)) 1
                    , _extParOff   = BitOffset (17 * 8 + 1)
                    }
     , ExtParameter { _extParName  = "G2"
@@ -199,9 +209,9 @@ t1 = ExtList
 t2 :: ExtParameterList
 t2 = ExtList
     (SL.toSortedList
-        [ ExtParameter "G1" (ValUInt3 1)          (BitOffset 8)
-        , ExtParameter "G2" (ValUInt3 2)          (BitOffset (8 + 3))
-        , ExtParameter "G3" (ValInt16 BiE 0xdead) (BitOffset (8 + 6))
+        [ ExtParameter "G1" (ValUInt8X (B8 $$(refineTH 3)) 1) (BitOffset 8)
+        , ExtParameter "G2" (ValUInt8X (B8 $$(refineTH 3)) 2) (BitOffset (8 + 3))
+        , ExtParameter "G3" (ValInt16 BiE 0xdead)       (BitOffset (8 + 6))
         ]
     )
     ExtEmpty
@@ -218,11 +228,11 @@ expectedAppendN = ExtList
     (ExtList
         (SL.toSortedList
             [ ExtParameter { _extParName  = "G1"
-                           , _extParValue = ValUInt3 1
+                           , _extParValue = ValUInt8X (B8 $$(refineTH 3)) 1
                            , _extParOff   = BitOffset 8
                            }
             , ExtParameter { _extParName  = "G2"
-                           , _extParValue = ValUInt3 2
+                           , _extParValue = ValUInt8X (B8 $$(refineTH 3)) 2
                            , _extParOff   = BitOffset (8 + 3)
                            }
             , ExtParameter { _extParName  = "G3"
@@ -234,11 +244,11 @@ expectedAppendN = ExtList
         (ExtList
             (SL.toSortedList
                 [ ExtParameter { _extParName  = "G1"
-                               , _extParValue = ValUInt3 1
+                               , _extParValue = ValUInt8X (B8 $$(refineTH 3)) 1
                                , _extParOff   = BitOffset (3 * 8 + 6)
                                }
                 , ExtParameter { _extParName  = "G2"
-                               , _extParValue = ValUInt3 2
+                               , _extParValue = ValUInt8X (B8 $$(refineTH 3)) 2
                                , _extParOff   = BitOffset (4 * 8 + 1)
                                }
                 , ExtParameter { _extParName  = "G3"
@@ -250,11 +260,11 @@ expectedAppendN = ExtList
             (ExtList
                 (SL.toSortedList
                     [ ExtParameter { _extParName  = "G1"
-                                   , _extParValue = ValUInt3 1
+                                   , _extParValue = ValUInt8X (B8 $$(refineTH 3)) 1
                                    , _extParOff   = BitOffset (6 * 8 + 4)
                                    }
                     , ExtParameter { _extParName  = "G2"
-                                   , _extParValue = ValUInt3 2
+                                   , _extParValue = ValUInt8X (B8 $$(refineTH 3)) 2
                                    , _extParOff   = BitOffset (6 * 8 + 7)
                                    }
                     , ExtParameter { _extParName  = "G3"
@@ -273,11 +283,11 @@ expectedPrependN :: ExtParameterList
 expectedPrependN = ExtList
     (SL.toSortedList
         [ ExtParameter { _extParName  = "G1"
-                       , _extParValue = ValUInt3 1
+                       , _extParValue = ValUInt8X (B8 $$(refineTH 3)) 1
                        , _extParOff   = BitOffset 8
                        }
         , ExtParameter { _extParName  = "G2"
-                       , _extParValue = ValUInt3 2
+                       , _extParValue = ValUInt8X (B8 $$(refineTH 3)) 2
                        , _extParOff   = BitOffset (8 + 3)
                        }
         , ExtParameter { _extParName  = "G3"
@@ -289,11 +299,11 @@ expectedPrependN = ExtList
     (ExtList
         (SL.toSortedList
             [ ExtParameter { _extParName  = "G1"
-                           , _extParValue = ValUInt3 1
+                           , _extParValue = ValUInt8X (B8 $$(refineTH 3)) 1
                            , _extParOff   = BitOffset (3 * 8 + 6)
                            }
             , ExtParameter { _extParName  = "G2"
-                           , _extParValue = ValUInt3 2
+                           , _extParValue = ValUInt8X (B8 $$(refineTH 3)) 2
                            , _extParOff   = BitOffset (4 * 8 + 1)
                            }
             , ExtParameter { _extParName  = "G3"
@@ -305,11 +315,11 @@ expectedPrependN = ExtList
         (ExtList
             (SL.toSortedList
                 [ ExtParameter { _extParName  = "G1"
-                               , _extParValue = ValUInt3 1
+                               , _extParValue = ValUInt8X (B8 $$(refineTH 3)) 1
                                , _extParOff   = BitOffset (6 * 8 + 4)
                                }
                 , ExtParameter { _extParName  = "G2"
-                               , _extParValue = ValUInt3 2
+                               , _extParValue = ValUInt8X (B8 $$(refineTH 3)) 2
                                , _extParOff   = BitOffset (6 * 8 + 7)
                                }
                 , ExtParameter { _extParName  = "G3"
@@ -363,24 +373,28 @@ main = hspec $ do
 
 
     describe "Simple Parameter Test" $ do
-        it "Simple Parameters" $ do 
-          let bs = runST $ do 
-                v <- VS.new 4
-                let val :: Word32
-                    val = 0xaabbccdd
-                
-                setValue v (ByteOffset 0) BiE val 
-                vec <- VS.unsafeFreeze v 
-                pure (vectorToByteString vec)
+        it "Simple Parameters" $ do
+            let bs = runST $ do
+                    v <- VS.new 4
+                    let val :: Word32
+                        val = 0xaabbccdd
 
-          T.putStrLn $ "Encoded:\n" <> hexdumpBS bs 
-          bs `shouldBe` B.pack [0xaa, 0xbb, 0xcc, 0xdd]
+                    setValue v (ByteOffset 0) BiE val
+                    vec <- VS.unsafeFreeze v
+                    pure (vectorToByteString vec)
 
-        
+            T.putStrLn $ "Encoded:\n" <> hexdumpBS bs
+            bs `shouldBe` B.pack [0xaa, 0xbb, 0xcc, 0xdd]
+
+
         it "Parameter List" $ do
             let output = encodeParameters (toSizedParamList parameters3)
 
-            T.putStrLn $ "Encoded:\n" <> hexdumpBS output <> "\nExpected:\n" <> hexdumpBS expectedParameters3
+            T.putStrLn
+                $  "Encoded:\n"
+                <> hexdumpBS output
+                <> "\nExpected:\n"
+                <> hexdumpBS expectedParameters3
             output `shouldBe` expectedParameters3
 
     return ()

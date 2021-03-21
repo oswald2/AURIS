@@ -8,7 +8,7 @@ where
 
 import           RIO 
 
-import           Data.PUS.MissionSpecific.Definitions
+import           Data.PUS.MissionSpecific.Default
 
 import           AurisConfig
 

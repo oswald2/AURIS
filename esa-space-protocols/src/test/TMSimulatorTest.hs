@@ -167,6 +167,7 @@ main = do
   withLogFunc logOptions $ \logFunc -> do
     state <- newGlobalState
       defaultConfig
+      Nothing
       (defaultMissionSpecific defaultConfig)
       logFunc
       (\ev -> T.putStrLn ("Event: " <> T.pack (show ev)))
@@ -175,7 +176,6 @@ main = do
       let chain =
             receiveTmNcduC
               .| ncduToTMFrameC
-              .| storeFrameC
               .| tmFrameExtraction (IfNctrs 1)
               .| C.print
 
