@@ -13,10 +13,7 @@ import qualified RIO.Set                       as S
 import           Data.Text.Short                ( ShortText )
 import           Data.Csv                       ( FromRecord(..) )
 
-import           Data.MIB.Load                  ( loadFromFileGen
-                                                , GenericParse(genericParse)
-                                                )
-
+import           Data.MIB.Load
 
 data SCOentry = SCOentry
     { _scoLink :: !ShortText
@@ -48,7 +45,7 @@ loadFromFile
     :: (MonadIO m, MonadReader env m, HasLogFunc env)
     => FilePath
     -> m (Either Text (Vector SCOentry))
-loadFromFile mibPath = loadFromFileGen mibPath fileName
+loadFromFile mibPath = loadFromFileGenOptional mibPath fileName
 
 
 {-# INLINABLE getSCOSet #-}

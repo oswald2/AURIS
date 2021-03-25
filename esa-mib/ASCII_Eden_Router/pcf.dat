@@ -1,0 +1,9 @@
+RTNTCS	Number TCs			3	16				N	R			N				1		
+RTNTMS	Number TMs			3	16				N	R			N				1		
+RTTCPS	TCs per second		TC/sec	5	2				N	R			N				1		
+RTTMPS	TMs per second		TM/sec	5	2				N	R			N				1		
+RTTCBPS	TC Bytes per second		Bytes/sec	5	2				N	R			N				1		
+RTTMBPS	TM Bytes per second		Bytes/sec	5	2				N	R			N				1		
+RTNFEE	Number of FEEs			3	4				N	R			N				1		
+RTFEEID	FEE HK ID			3	4				N	R			N				1		
+RTFEEST	FEE Status			3	4				N	R			N				1		

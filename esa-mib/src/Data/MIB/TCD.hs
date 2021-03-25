@@ -32,7 +32,7 @@ loadFromFile
     :: (MonadIO m, MonadReader env m, HasLogFunc env)
     => FilePath
     -> m (Either Text (Vector TCDentry))
-loadFromFile mibPath = loadFromFileGen mibPath fileName
+loadFromFile mibPath = loadFromFileGenOptional mibPath fileName
 
 
 {-# INLINABLE getTCDMap #-}
