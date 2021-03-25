@@ -68,8 +68,8 @@ setDarkTheme = do
 setTheme :: IO() 
 setTheme = do 
     provider <- Gtk.cssProviderNew
-    Gtk.cssProviderLoadFromPath provider "style.css"
-    --Gtk.cssProviderLoadFromResource provider "/auris/data/style.css"
+    --Gtk.cssProviderLoadFromPath provider "style.css"
+    Gtk.cssProviderLoadFromResource provider "/auris/data/style.css"
     Just screen <- screenGetDefault
     Gtk.styleContextAddProviderForScreen screen provider (fromIntegral Gtk.STYLE_PROVIDER_PRIORITY_USER)
 

@@ -12,6 +12,16 @@ window {
   background-color:@bg_color;
 }
 
+menu {
+  border-radius: 4px;
+  background-color:@bg_color;
+  color: rgba(0, 0, 0, 0.8);
+  border: none;
+  box-shadow:  4px 4px 4px 0 @dark_shadow, 
+              -4px -4px 4px 0 @light_shadow;
+}
+
+
 button {
   min-height: 11px;
   min-width: 12px;
