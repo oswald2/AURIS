@@ -14,12 +14,7 @@ import           Data.PUS.Value
 import           Data.PUS.EncTime
 
 convertValue
-    :: Epoch
-    -> CorrelationCoefficients
-    -> PTC
-    -> PFC
-    -> TMValueSimple
-    -> Value
+    :: Epoch -> CorrelationCoefficients -> PTC -> PFC -> TMValueSimple -> Value
 convertValue epoch coeff ptc pfc val =
     let rawVal = initialValue BiE ptc pfc
     in
@@ -27,8 +22,16 @@ convertValue epoch coeff ptc pfc val =
             TMValInt    x -> Data.PUS.Value.setInt rawVal x
             TMValUInt   x -> Data.PUS.Value.setInt rawVal x
             TMValDouble x -> setDouble rawVal x
-            TMValTime x ->
-                ValCUCTime $ sunTimeToCUCTime epoch (mcsTimeToOBT x coeff)
+            TMValTime   x -> case ptcPfcEncoding ptc pfc of
+                Just enc -> ValCUCTime
+                    $ sunTimeToCUCTime epoch enc (mcsTimeToOBT x coeff)
+                Nothing -> trace
+                    (  "Could not determine time value PTC="
+                    <> textDisplay ptc
+                    <> " PFC="
+                    <> textDisplay pfc
+                    )
+                    ValUndefined
             TMValString x -> setString rawVal (ST.toText x)
             TMValOctet  x -> setOctet rawVal x
             TMValNothing  -> ValUndefined

@@ -16,12 +16,20 @@ module GUI.TCTab
 import           RIO
 import           RIO.Partial                    ( toEnum )
 import qualified RIO.Text                      as T
+import qualified RIO.ByteString                as B
+import           RIO.ByteString.Lazy            ( toStrict
+                                                , fromStrict
+                                                )
 import           Data.Text.Short                ( ShortText )
 import qualified Data.Text.Short               as ST
---import qualified Data.Text.IO                  as T
-
+import qualified Data.Text.IO                  as T
+import           Codec.Serialise
 
 import           GI.Gtk                        as Gtk
+import           GI.Gdk.Flags
+import           GI.Gdk.Objects.DragContext
+import           GI.Gdk.Structs.Atom
+
 import           GI.GtkSource
 import qualified GI.GtkSource.Objects.Buffer   as BUF
 import           GI.GtkSource.Interfaces.StyleSchemeChooser
@@ -29,17 +37,10 @@ import           GI.GtkSource.Interfaces.StyleSchemeChooser
 import           Data.GI.Base.Attributes        ( AttrOpTag(AttrSet) )
 
 import           Text.Show.Pretty               ( ppShow )
-import           Interface.Interface            ( Interface
-                                                , callInterface
-                                                , ActionTable
-                                                    ( actionSendTCRequest
-                                                    , actionSendTCGroup
-                                                    , actionLogMessage
-                                                    )
-                                                )
+import           Interface.Interface            
 
 import           GUI.Utils                      ( getObject )
-import           GUI.MessageDialogs             ( warningDialog )
+import           GUI.MessageDialogs             
 import           GUI.FileChooser
 import           GUI.Definitions
 
@@ -148,6 +149,23 @@ createTCTab cfg window builder = do
                   , _tcTabConfig             = cfg
                   , _tcTabConnMap            = getInterfaceMap cfg
                   }
+
+
+    content <- targetEntryNew
+        "application/tc-def"
+        0
+        1
+    treeViewEnableModelDragSource tcv
+                                  [ModifierTypeButton1Mask]
+                                  [content]
+                                  [DragActionCopy]
+
+    widgetDragDestSet textView
+                      [DestDefaultsAll]
+                      (Just [content])
+                      [DragActionCopy]
+
+    --void $ Gtk.on tcv #dragBegin $ onDragBegin g
 
     _ <- Gtk.on btClear #clicked $ setText g ""
     _ <- Gtk.on btInsert #clicked $ do
@@ -272,6 +290,64 @@ createTCTab cfg window builder = do
     return g
 
 
+-- onDragBegin :: TCTab -> DragContext -> IO ()
+-- onDragBegin g ctxt = do
+--     T.putStrLn "onDragBegin called"
+
+onDragDataGet
+    :: TCTab -> Interface -> DragContext -> SelectionData -> Word32 -> Word32 -> IO ()
+onDragDataGet g _interface _ctxt selection info _time = do
+    T.putStrLn $ "onDragDataGet called: " <> T.pack (show info)
+
+    sel                     <- treeViewGetSelection (_tcTabTCBrowser g)
+    (selected, model, iter) <- treeSelectionGetSelected sel
+    if selected
+        then do
+            filterModel' <- castTo TreeModelFilter model
+            case filterModel' of
+                Just filterModel -> do
+                    citer <- treeModelFilterConvertIterToChildIter
+                        filterModel
+                        iter
+                    idx  <- seqStoreIterToIndex citer
+                    val' <- seqStoreSafeGetValue (_tcTabTCModel g) idx
+                    case val' of
+                        Just val -> do
+                            let bin = toStrict (serialise val)
+                            atom <- atomIntern "AurisTC" True
+                            selectionDataSet selection
+                                             atom
+                                             8
+                                             bin
+                        Nothing -> return ()
+                Nothing -> return ()
+        else do
+            return ()
+
+
+
+onDragDataReceived
+    :: TCTab
+    -> Interface 
+    -> DragContext
+    -> Int32
+    -> Int32
+    -> SelectionData
+    -> Word32
+    -> Word32
+    -> IO ()
+onDragDataReceived g interface ctxt _x _y selection _info time = do
+    T.putStrLn $ "onDragDataReceived called"
+
+    bin <- selectionDataGetData selection
+    case deserialiseOrFail (fromStrict bin) of
+        Left _err -> do
+            dragFinish ctxt False False time
+        Right tcDef -> do
+            res <- tcTabAddNewTC g interface tcDef 
+            dragFinish ctxt res False time
+
+
 data TCAction =
   SendRqst TCRequest
   | SendGroup [TCRequest]
@@ -307,6 +383,10 @@ setupCallbacks gui interface = do
     -- interface on construction of a TCTab
     writeIORef (_tcTabLogFunc gui)
                (Just (callInterface interface actionLogMessage))
+
+    void $ Gtk.on (_tcTabTCBrowser gui) #dragDataGet $ onDragDataGet gui interface 
+    void $ Gtk.after (_tcTabTextView gui) #dragDataReceived $ onDragDataReceived gui interface 
+
 
 
 tcTabLog :: TCTab -> LogSource -> LogLevel -> Utf8Builder -> IO ()
@@ -405,8 +485,11 @@ tcTabSaveTCFile gui file = do
 initTCBrowser
     :: TreeView -> SearchEntry -> IO (SeqStore TCDef, TreeModelFilter)
 initTCBrowser tv searchEntry = do
-    model <- createScrollingTableFilter
+    model <- seqStoreNew []
+
+    res   <- createScrollingTableFilter
         tv
+        model
         searchEntry
         SingleSelection
         filterFunc
@@ -417,7 +500,7 @@ initTCBrowser tv searchEntry = do
         , ("APID"       , 60 , displayMaybeText tcDefApid)
         ]
 
-    return model
+    return res
   where
     filterFunc searchText row =
         (searchText `T.isInfixOf` T.toLower (ST.toText (row ^. tcDefName)))
@@ -441,3 +524,22 @@ tcTabSetTCs g tcs = do
     seqStoreClear model
     mapM_ (seqStoreAppend model) tcs
 
+
+tcTabAddNewTC :: TCTab -> Interface -> TCDef -> IO Bool
+tcTabAddNewTC g interface tcDef = do 
+    rqst <- callInterface interface actionGetTCSync tcDef "TC-TAB" BD 
+
+    txt <- getText g 
+    if T.null txt 
+        then do 
+            setText g (T.pack (ppShow [SendRqst rqst]))
+            return True 
+        else do 
+            case readMaybe (T.unpack txt) of 
+                Just actions -> do 
+                    let newActions = actions ++ [SendRqst rqst]
+                    setText g (T.pack (ppShow newActions))
+                    return True 
+                Nothing -> do 
+                    errorDialog "Could not parse already present TCs, cannot add TC"
+                    return False 

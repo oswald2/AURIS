@@ -29,7 +29,7 @@ defaultMissionSpecific cfg = PUSMissionSpecific
                                                   True
                                                   False
                                                   True
-    , _pmsTMDataFieldHeader = PUSTMStdHeader 0 0 0 (mkSourceID 0) nullCUCTime
+    , _pmsTMDataFieldHeader = PUSTMStdHeader 0 0 0 (mkSourceID 0) (nullCUCTime Cuc42)
     , _pmsTMFrameDataFieldHeader = Nothing
     , _pmsEpoch                  = epochUnix (cfgLeapSeconds cfg)
     }

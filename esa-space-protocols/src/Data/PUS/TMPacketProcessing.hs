@@ -18,6 +18,7 @@ import           Conduit
 import           Control.Lens                   ( (.~) )
 import           Data.HashTable.ST.Basic       as HT
 import qualified Data.Text.Short               as ST
+import           Data.Word.Word24
 import qualified VectorBuilder.Builder         as VB
 import qualified VectorBuilder.Vector          as VB
 
@@ -72,7 +73,9 @@ raiseTMParameterC
     => ConduitT (ExtractedDU TMPacket) (ExtractedDU TMPacket) m ()
 raiseTMParameterC = awaitForever $ \pkt -> do
     env <- ask
-    liftIO $ raiseEvent env (EVTelemetry (EVTMParameters (pkt ^. epDU . tmpParams)))
+    liftIO $ raiseEvent
+        env
+        (EVTelemetry (EVTMParameters (pkt ^. epDU . tmpParams)))
     yield pkt
 
 
@@ -945,7 +948,7 @@ extractParamValue epoch oct offset par =
 
     readTime off (CUC2_1 False) =
         let !sec = getValue @Word16 oct (toByteOffset off) BiE
-            !mic = getValue @Word8 oct (toByteOffset off + 1) BiE
+            !mic = getValue @Word8 oct (toByteOffset off + 2) BiE
             encTime s m = mkCUC_1 s m False
         in  case (sec, mic) of
                 (Just s, Just m) ->
@@ -953,7 +956,7 @@ extractParamValue epoch oct offset par =
                 _ -> Nothing
     readTime off (CUC2_1 True) =
         let !sec = getValue @Int16 oct (toByteOffset off) BiE
-            !mic = getValue @Word8 oct (toByteOffset off + 1) BiE
+            !mic = getValue @Word8 oct (toByteOffset off + 2) BiE
             encTime s m = mkCUC_1 s m True
         in  case (sec, mic) of
                 (Just s, Just m) ->
@@ -962,7 +965,7 @@ extractParamValue epoch oct offset par =
 
     readTime off (CUC2_2 False) =
         let !sec = getValue @Word16 oct (toByteOffset off) BiE
-            !mic = getValue @Word16 oct (toByteOffset off + 1) BiE
+            !mic = getValue @Word16 oct (toByteOffset off + 2) BiE
             encTime s m = mkCUC_2 s m False
         in  case (sec, mic) of
                 (Just s, Just m) ->
@@ -970,7 +973,7 @@ extractParamValue epoch oct offset par =
                 _ -> Nothing
     readTime off (CUC2_2 True) =
         let !sec = getValue @Int16 oct (toByteOffset off) BiE
-            !mic = getValue @Word16 oct (toByteOffset off + 1) BiE
+            !mic = getValue @Word16 oct (toByteOffset off + 2) BiE
             encTime s m = mkCUC_2 s m True
         in  case (sec, mic) of
                 (Just s, Just m) ->
@@ -979,7 +982,7 @@ extractParamValue epoch oct offset par =
 
     readTime off (CUC2_3 False) =
         let !sec = getValue @Word16 oct (toByteOffset off) BiE
-            !mic = getValue @Word24 oct (toByteOffset off + 1) BiE
+            !mic = getValue @Word24 oct (toByteOffset off + 2) BiE
             encTime s m = mkCUC_3 s m False
         in  case (sec, mic) of
                 (Just s, Just m) ->
@@ -987,7 +990,7 @@ extractParamValue epoch oct offset par =
                 _ -> Nothing
     readTime off (CUC2_3 True) =
         let !sec = getValue @Int16 oct (toByteOffset off) BiE
-            !mic = getValue @Word24 oct (toByteOffset off + 1) BiE
+            !mic = getValue @Word24 oct (toByteOffset off + 2) BiE
             encTime s m = mkCUC_3 s m True
         in  case (sec, mic) of
                 (Just s, Just m) ->
@@ -1008,7 +1011,7 @@ extractParamValue epoch oct offset par =
 
     readTime off (CUC3_1 False) =
         let !sec = getValue @Word24 oct (toByteOffset off) BiE
-            !mic = getValue @Word8 oct (toByteOffset off + 1) BiE
+            !mic = getValue @Word8 oct (toByteOffset off + 3) BiE
             encTime s m = mkCUC_1 s m False
         in  case (sec, mic) of
                 (Just s, Just m) ->
@@ -1016,7 +1019,7 @@ extractParamValue epoch oct offset par =
                 _ -> Nothing
     readTime off (CUC3_1 True) =
         let !sec = getValue @Int24 oct (toByteOffset off) BiE
-            !mic = getValue @Word8 oct (toByteOffset off + 1) BiE
+            !mic = getValue @Word8 oct (toByteOffset off + 3) BiE
             encTime s m = mkCUC_1 s m True
         in  case (sec, mic) of
                 (Just s, Just m) ->
@@ -1025,7 +1028,7 @@ extractParamValue epoch oct offset par =
 
     readTime off (CUC3_2 False) =
         let !sec = getValue @Word24 oct (toByteOffset off) BiE
-            !mic = getValue @Word16 oct (toByteOffset off + 1) BiE
+            !mic = getValue @Word16 oct (toByteOffset off + 3) BiE
             encTime s m = mkCUC_2 s m False
         in  case (sec, mic) of
                 (Just s, Just m) ->
@@ -1033,7 +1036,7 @@ extractParamValue epoch oct offset par =
                 _ -> Nothing
     readTime off (CUC3_2 True) =
         let !sec = getValue @Int24 oct (toByteOffset off) BiE
-            !mic = getValue @Word16 oct (toByteOffset off + 1) BiE
+            !mic = getValue @Word16 oct (toByteOffset off + 3) BiE
             encTime s m = mkCUC_2 s m True
         in  case (sec, mic) of
                 (Just s, Just m) ->
@@ -1042,7 +1045,7 @@ extractParamValue epoch oct offset par =
 
     readTime off (CUC3_3 False) =
         let !sec = getValue @Word24 oct (toByteOffset off) BiE
-            !mic = getValue @Word24 oct (toByteOffset off + 1) BiE
+            !mic = getValue @Word24 oct (toByteOffset off + 3) BiE
             encTime s m = mkCUC_3 s m False
         in  case (sec, mic) of
                 (Just s, Just m) ->
@@ -1050,7 +1053,7 @@ extractParamValue epoch oct offset par =
                 _ -> Nothing
     readTime off (CUC3_3 True) =
         let !sec = getValue @Int24 oct (toByteOffset off) BiE
-            !mic = getValue @Word24 oct (toByteOffset off + 1) BiE
+            !mic = getValue @Word24 oct (toByteOffset off + 3) BiE
             encTime s m = mkCUC_3 s m True
         in  case (sec, mic) of
                 (Just s, Just m) ->
@@ -1073,7 +1076,7 @@ extractParamValue epoch oct offset par =
 
     readTime off (CUC4_1 False) =
         let !sec = getValue @Word32 oct (toByteOffset off) BiE
-            !mic = getValue @Word8 oct (toByteOffset off + 1) BiE
+            !mic = getValue @Word8 oct (toByteOffset off + 4) BiE
             encTime s m = mkCUC_1 s m False
         in  case (sec, mic) of
                 (Just s, Just m) ->
@@ -1081,7 +1084,7 @@ extractParamValue epoch oct offset par =
                 _ -> Nothing
     readTime off (CUC4_1 True) =
         let !sec = getValue @Int32 oct (toByteOffset off) BiE
-            !mic = getValue @Word8 oct (toByteOffset off + 1) BiE
+            !mic = getValue @Word8 oct (toByteOffset off + 4) BiE
             encTime s m = mkCUC_1 s m True
         in  case (sec, mic) of
                 (Just s, Just m) ->
@@ -1090,7 +1093,7 @@ extractParamValue epoch oct offset par =
 
     readTime off (CUC4_2 False) =
         let !sec = getValue @Word32 oct (toByteOffset off) BiE
-            !mic = getValue @Word16 oct (toByteOffset off + 1) BiE
+            !mic = getValue @Word16 oct (toByteOffset off + 4) BiE
             encTime s m = mkCUC_2 s m False
         in  case (sec, mic) of
                 (Just s, Just m) ->
@@ -1098,7 +1101,7 @@ extractParamValue epoch oct offset par =
                 _ -> Nothing
     readTime off (CUC4_2 True) =
         let !sec = getValue @Int32 oct (toByteOffset off) BiE
-            !mic = getValue @Word16 oct (toByteOffset off + 1) BiE
+            !mic = getValue @Word16 oct (toByteOffset off + 4) BiE
             encTime s m = mkCUC_2 s m True
         in  case (sec, mic) of
                 (Just s, Just m) ->
@@ -1107,7 +1110,7 @@ extractParamValue epoch oct offset par =
 
     readTime off (CUC4_3 False) =
         let !sec = getValue @Word32 oct (toByteOffset off) BiE
-            !mic = getValue @Word24 oct (toByteOffset off + 1) BiE
+            !mic = getValue @Word24 oct (toByteOffset off + 4) BiE
             encTime s m = mkCUC_3 s m False
         in  case (sec, mic) of
                 (Just s, Just m) ->
@@ -1115,7 +1118,7 @@ extractParamValue epoch oct offset par =
                 _ -> Nothing
     readTime off (CUC4_3 True) =
         let !sec = getValue @Int32 oct (toByteOffset off) BiE
-            !mic = getValue @Word24 oct (toByteOffset off + 1) BiE
+            !mic = getValue @Word24 oct (toByteOffset off + 4) BiE
             encTime s m = mkCUC_3 s m True
         in  case (sec, mic) of
                 (Just s, Just m) ->
@@ -1124,8 +1127,8 @@ extractParamValue epoch oct offset par =
 
     readTime off UxTime =
         let !sec = getValue @Word32 oct (toByteOffset off) BiE
-            !mic = getValue @Word32 oct (toByteOffset off + 1) BiE
-            encTime s m = mkCUCTime (fromIntegral s) (fromIntegral m) False
+            !mic = getValue @Word32 oct (toByteOffset off + 4) BiE
+            encTime s m = mkCUCUnix (fromIntegral s) (fromIntegral m) False
         in  case (sec, mic) of
                 (Just s, Just m) ->
                     Just $ TMValTime $ cucTimeToSunTime epoch (encTime s m)

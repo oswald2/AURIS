@@ -136,7 +136,7 @@ main = hspec $ do
             pusHdr `shouldBe` fromJust back
 
         it "PUS DFH Conversion" $ do
-            let pusDfh = PUSTMStdHeader 0 3 25 (mkSourceID 0) nullCUCTime
+            let pusDfh = PUSTMStdHeader 0 3 25 (mkSourceID 0) (nullCUCTime Cuc42)
 
             let doc  = toDB pusDfh
                 back = fromDB doc
@@ -204,7 +204,7 @@ main = hspec $ do
                                     (mkSSC 10)
                                     0
                                     0
-                pusDfh' = PUSTMStdHeader 0 3 25 (mkSourceID 0) nullCUCTime
+                pusDfh' = PUSTMStdHeader 0 3 25 (mkSourceID 0) (nullCUCTime Cuc42)
                 payload = B.pack (take 10 (cycle [0 .. 255]))
 
             let doc  = toDB pusPkt

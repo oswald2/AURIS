@@ -120,7 +120,7 @@ import qualified Data.Time.Calendar            as TI
 import           Data.Aeson
 
 import qualified Text.Builder                  as TB
-import           Formatting
+--import           Formatting
 
 import           Text.Megaparsec
 --import           Text.Megaparsec.Char.Lexer
@@ -351,28 +351,20 @@ displayISO (SunTime t False) =
         date          = localDay t1 ^. gregorian
         time          = localTimeOfDay t1
         (secs, micro) = fromEnum (todSec time) `quotRem` 1_000_000
-    in  sformat
-            ( (left 4 '0' %. int)
-            % "-"
-            % (left 2 '0' %. int)
-            % "-"
-            % (left 2 '0' %. int)
-            % "T"
-            % (left 2 '0' %. int)
-            % "."
-            % (left 2 '0' %. int)
-            % "."
-            % (left 2 '0' %. int)
-            % "."
-            % (left 6 '0' %. int)
-            )
-            (ymdYear date)
-            (ymdMonth date)
-            (ymdDay date)
-            (todHour time)
-            (todMin time)
-            secs
-            micro
+    in  TB.run $
+            TB.padFromLeft 4 '0' (TB.decimal (ymdYear date))
+            <> TB.char '-'
+            <> TB.padFromLeft 2 '0' (TB.decimal (ymdMonth date))
+            <> TB.char '-'
+            <> TB.padFromLeft 2 '0' (TB.decimal (ymdDay date))
+            <> TB.char 'T'
+            <> TB.padFromLeft 2 '0' (TB.decimal (todHour time))
+            <> TB.char '.'
+            <> TB.padFromLeft 2 '0' (TB.decimal (todMin time))
+            <> TB.char '.'
+            <> TB.padFromLeft 2 '0' (TB.decimal secs)
+            <> TB.char '.'
+            <> TB.padFromLeft 6 '0' (TB.decimal micro)
 displayISO (SunTime t True) =
     let t1 :: LocalTime
         t1 = t ^. from microseconds . from posixTime . utcLocalTime utc
@@ -380,30 +372,21 @@ displayISO (SunTime t True) =
         time          = localTimeOfDay t1
         (secs, micro) = fromEnum (todSec time) `quotRem` 1_000_000
         sign          = if t < 0 then '-' else '+'
-    in  sformat
-            ( Formatting.char
-            % (left 4 '0' %. int)
-            % "-"
-            % (left 2 '0' %. int)
-            % "-"
-            % (left 2 '0' %. int)
-            % "T"
-            % (left 2 '0' %. int)
-            % "."
-            % (left 2 '0' %. int)
-            % "."
-            % (left 2 '0' %. shown)
-            % "."
-            % (left 6 '0' %. int)
-            )
-            sign
-            (ymdYear date)
-            (ymdMonth date)
-            (ymdDay date)
-            (todHour time)
-            (todMin time)
-            secs
-            micro
+    in  TB.run $ 
+            TB.char sign 
+            <> TB.padFromLeft 4 '0' (TB.decimal (ymdYear date))
+            <> TB.char '-'
+            <> TB.padFromLeft 2 '0' (TB.decimal (ymdMonth date))
+            <> TB.char '-'
+            <> TB.padFromLeft 2 '0' (TB.decimal (ymdDay date))
+            <> TB.char 'T'
+            <> TB.padFromLeft 2 '0' (TB.decimal (todHour time))
+            <> TB.char '.'
+            <> TB.padFromLeft 2 '0' (TB.decimal (todMin time))
+            <> TB.char '.'
+            <> TB.padFromLeft 2 '0' (TB.decimal secs)
+            <> TB.char '.'
+            <> TB.padFromLeft 6 '0' (TB.decimal micro)
 
 
 displayTimeMilli :: SunTime -> Text
@@ -414,25 +397,18 @@ displayTimeMilli (SunTime t False) =
         time          = localTimeOfDay t1
         dayOfYear     = odDay $ localDay t1 ^. ordinalDate
         (secs, micro) = fromEnum (todSec time) `quotRem` 1_000_000
-    in  sformat
-            ( (left 4 '0' %. int)
-            % "."
-            % (left 3 '0' %. int)
-            % "."
-            % (left 2 '0' %. int)
-            % "."
-            % (left 2 '0' %. int)
-            % "."
-            % (left 2 '0' %. int)
-            % "."
-            % (left 3 '0' %. int)
-            )
-            (ymdYear date)
-            dayOfYear
-            (todHour time)
-            (todMin time)
-            secs
-            (micro `quot` 1000)
+    in  TB.run $ 
+            TB.padFromLeft 4 '0' (TB.decimal (ymdYear date))
+            <> TB.char '.'
+            <> TB.padFromLeft 3 '0' (TB.decimal dayOfYear)
+            <> TB.char '.'
+            <> TB.padFromLeft 2 '0' (TB.decimal (todHour time))
+            <> TB.char '.'
+            <> TB.padFromLeft 2 '0' (TB.decimal (todMin time))
+            <> TB.char '.'
+            <> TB.padFromLeft 2 '0' (TB.decimal secs)
+            <> TB.char '.'
+            <> TB.padFromLeft 3 '0' (TB.decimal (micro `quot` 1000))
 displayTimeMilli tt =
     let secs  = sec `rem` 60
         mins  = sec `quot` 60 `rem` 60
@@ -442,27 +418,19 @@ displayTimeMilli tt =
         mic   = tdsMicro tt
         sec   = tdsSecs tt
         sign  = if sec < 0 then '-' else '+'
-    in  sformat
-            ( Formatting.char
-            % (left 4 '0' %. int)
-            % "."
-            % (left 3 '0' %. int)
-            % "."
-            % (left 2 '0' %. int)
-            % "."
-            % (left 2 '0' %. int)
-            % "."
-            % (left 2 '0' %. int)
-            % "."
-            % (left 3 '0' %. int)
-            )
-            sign
-            years
-            days
-            hours
-            mins
-            secs
-            ((abs mic) `quot` 1000)
+    in TB.run $ 
+            TB.char sign 
+            <> TB.padFromLeft 4 '0' (TB.decimal years)
+            <> TB.char '.'
+            <> TB.padFromLeft 3 '0' (TB.decimal days)
+            <> TB.char '.'
+            <> TB.padFromLeft 2 '0' (TB.decimal hours)
+            <> TB.char '.'
+            <> TB.padFromLeft 2 '0' (TB.decimal mins)
+            <> TB.char '.'
+            <> TB.padFromLeft 2 '0' (TB.decimal secs)
+            <> TB.char '.'
+            <> TB.padFromLeft 3 '0' (TB.decimal ((abs mic) `quot` 1000))
 
 
 
@@ -485,7 +453,7 @@ timeFromComponents y d h m s micro =
 
 
 instance Display SunTime where
-  -- | display a 'SunTime' in SCOS format (with day of year)
+    -- | display a 'SunTime' in SCOS format (with day of year)
     textDisplay (SunTime t False) =
         let t1 :: LocalTime
             t1 = t ^. from microseconds . from posixTime . utcLocalTime utc
@@ -493,25 +461,18 @@ instance Display SunTime where
             time          = localTimeOfDay t1
             dayOfYear     = odDay $ localDay t1 ^. ordinalDate
             (secs, micro) = fromEnum (todSec time) `quotRem` 1_000_000
-        in  sformat
-                ( (left 4 '0' %. int)
-                % "."
-                % (left 3 '0' %. int)
-                % "."
-                % (left 2 '0' %. int)
-                % "."
-                % (left 2 '0' %. int)
-                % "."
-                % (left 2 '0' %. int)
-                % "."
-                % (left 6 '0' %. int)
-                )
-                (ymdYear date)
-                dayOfYear
-                (todHour time)
-                (todMin time)
-                secs
-                micro
+        in  TB.run $ 
+                TB.padFromLeft 4 '0' (TB.decimal (ymdYear date))
+                <> TB.char '.'
+                <> TB.padFromLeft 3 '0' (TB.decimal dayOfYear)
+                <> TB.char '.'
+                <> TB.padFromLeft 2 '0' (TB.decimal (todHour time))
+                <> TB.char '.'
+                <> TB.padFromLeft 2 '0' (TB.decimal (todMin time))
+                <> TB.char '.'
+                <> TB.padFromLeft 2 '0' (TB.decimal secs)
+                <> TB.char '.'
+                <> TB.padFromLeft 6 '0' (TB.decimal micro)
     textDisplay tt =
         let secs  = sec `rem` 60
             mins  = sec `quot` 60 `rem` 60
@@ -521,27 +482,19 @@ instance Display SunTime where
             mic   = tdsMicro tt
             sec   = tdsSecs tt
             sign  = if sec < 0 then '-' else '+'
-        in  sformat
-                ( Formatting.char
-                % (left 4 '0' %. int)
-                % "."
-                % (left 3 '0' %. int)
-                % "."
-                % (left 2 '0' %. int)
-                % "."
-                % (left 2 '0' %. int)
-                % "."
-                % (left 2 '0' %. int)
-                % "."
-                % (left 6 '0' %. int)
-                )
-                sign
-                years
-                days
-                hours
-                mins
-                secs
-                (abs mic)
+        in  TB.run $ 
+                TB.char sign 
+                <> TB.padFromLeft 4 '0' (TB.decimal years)
+                <> TB.char '.'
+                <> TB.padFromLeft 3 '0' (TB.decimal days)
+                <> TB.char '.'
+                <> TB.padFromLeft 2 '0' (TB.decimal hours)
+                <> TB.char '.'
+                <> TB.padFromLeft 2 '0' (TB.decimal mins)
+                <> TB.char '.'
+                <> TB.padFromLeft 2 '0' (TB.decimal secs)
+                <> TB.char '.'
+                <> TB.padFromLeft 6 '0' (TB.decimal (abs mic))
 
 -- | Display a SunTime as a floating point value (in seconds)
 {-# INLINABLE displayDouble #-}

@@ -146,13 +146,13 @@ createScrollingTableSimple tv attribs = do
 
 createScrollingTableFilter
     :: TreeView
+    -> SeqStore row
     -> SearchEntry
     -> Selection 
     -> (Text -> row -> Bool)
     -> [(Text, Int32, row -> [AttrOp CellRendererText 'AttrSet])]
     -> IO (SeqStore row, TreeModelFilter)
-createScrollingTableFilter tv searchEntry sel filterFunc attribs = do
-    model       <- seqStoreNew []
+createScrollingTableFilter tv model searchEntry sel filterFunc attribs = do
     filterModel <- new TreeModelFilter [#childModel := model]
 
     Gtk.set
@@ -183,7 +183,7 @@ createScrollingTableFilter tv searchEntry sel filterFunc attribs = do
     return (model, filterModel)
 
   where
-    createColumn model (name, width, attr) = do
+    createColumn m (name, width, attr) = do
         col <- treeViewColumnNew
         treeViewColumnSetFixedWidth col width
         treeViewColumnSetSizing col TreeViewColumnSizingFixed
@@ -192,13 +192,13 @@ createScrollingTableFilter tv searchEntry sel filterFunc attribs = do
         treeViewColumnSetTitle col name
         renderer <- cellRendererTextNew
         cellLayoutPackStart col renderer True
-        cellLayoutSetAttributes col renderer model attr
+        cellLayoutSetAttributes col renderer m attr
         void $ treeViewAppendColumn tv col
         return (name, col, renderer)
 
-    filterFunction model entry func _ iter = do
+    filterFunction m entry func _ iter = do
         idx  <- seqStoreIterToIndex iter
-        val  <- seqStoreGetValue model idx
+        val  <- seqStoreGetValue m idx
         text <- get entry #text
         let searchText = T.toLower text
             !res = func searchText val 

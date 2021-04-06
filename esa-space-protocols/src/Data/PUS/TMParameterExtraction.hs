@@ -62,11 +62,17 @@ valueToTMValue _ validity (ValUInt64 _ x) =
   TMValue (TMValUInt x) validity
 valueToTMValue _ validity (ValInt8 x) =
   TMValue (TMValInt (fromIntegral x)) validity
+valueToTMValue _ validity (ValInt8X _ x) =
+  TMValue (TMValInt (fromIntegral x)) validity
 valueToTMValue _ validity (ValInt16 _ x) =
+  TMValue (TMValInt (fromIntegral x)) validity
+valueToTMValue _ validity (ValInt16X _ x) =
   TMValue (TMValInt (fromIntegral x)) validity
 valueToTMValue _ validity (ValInt24 _ x) =
   TMValue (TMValInt (fromIntegral x)) validity
 valueToTMValue _ validity (ValInt32 _ x) =
+  TMValue (TMValInt (fromIntegral x)) validity
+valueToTMValue _ validity (ValInt32X _ x) =
   TMValue (TMValInt (fromIntegral x)) validity
 valueToTMValue _ validity (ValInt64 _ x) =
   TMValue (TMValInt x) validity

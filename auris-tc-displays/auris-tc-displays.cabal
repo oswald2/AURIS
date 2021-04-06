@@ -94,6 +94,7 @@ library
     , mcs-interface
     , refined
     , filepath
+    , serialise
 
   default-extensions:
         

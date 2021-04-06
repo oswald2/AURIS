@@ -325,12 +325,12 @@ dfhParser PUSTCStdHeader{} = do
                              }
 
     pure hdr
-dfhParser PUSTMStdHeader{} = do
+dfhParser PUSTMStdHeader{ _stdTmOBTime = t } = do
     vers <- A.anyWord8
     tp   <- A.anyWord8
     st   <- A.anyWord8
     si   <- sourceIDParser
-    obt  <- cucTimeParser nullCUCTime
+    obt  <- cucTimeParser t
     let vers' = (vers .&. 0x70) `shiftR` 4
     return $! PUSTMStdHeader vers' (mkPUSType tp) (mkPUSSubType st) si obt
 
