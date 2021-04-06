@@ -44,8 +44,10 @@ import           Data.TC.RangeSet               ( RangeSet(..)
                                                 )
 import           Data.TC.Calibration
 import           Data.TC.TCDef
+import           Data.TC.ValueConversion
 
 import           Data.TM.Value
+import           Data.TM.Validity
 
 import           Data.MIB.Types
 import           Data.MIB.CPC
@@ -295,7 +297,14 @@ convertTCParamLocDef epoch coeff prfMap prvs numCalibs textCalibs cpc@CPCentry {
               (charToRadix (getDefaultChar _cpcRadix))
               _cdfValue
               cpc
-          def    = either (const TCParamNothing) id def'
+          def = either
+              (\err -> trace
+                  ("convertTCParamLocDef Error: " <> T.pack (show err))
+                  TCParamNothing
+              )
+              id
+              def'
+
           param' = convertCPC epoch coeff prfMap prvs numCalibs textCalibs cpc
       in  case param' of
               Left  err   -> Left err
@@ -415,23 +424,29 @@ determineDefaultValue
     -> ShortText
     -> CPCentry
     -> Either Text TCParamDefaultValue
-determineDefaultValue epoch coeff ptc pfc inter dispFormat radix val cpc
-    | ST.null val = Right TCParamNothing
-    | otherwise = case getDefaultChar (_cpcCateg cpc) of
+determineDefaultValue epoch coeff ptc pfc inter dispFormat radix val cpc =
+    case getDefaultChar (_cpcCateg cpc) of
         'A' -> Right $ TCCmdID val
         'P' -> Right $ TCParamID val
         _   -> case inter of
-            'E' -> case getVal dispFormat radix val of
-                Left err ->
-                    Left
-                        $  "Could not get default engineering value from '"
-                        <> ST.toText val
-                        <> "': "
-                        <> err
-                Right v -> Right $ TCParamEng v
-            _ ->
-                TCParamRaw
-                    <$> determineRawDefaultValue epoch coeff ptc pfc val cpc
+            'E' -> if ST.null val
+                then
+                    let value = initialValue BiE ptc pfc
+                        tmVal = valueToTMValue epoch clearValidity value
+                    in  Right $ TCParamEng (_tmvalValue tmVal)
+                else case getVal dispFormat radix val of
+                    Left err ->
+                        Left
+                            $  "Could not get default engineering value from '"
+                            <> ST.toText val
+                            <> "': "
+                            <> err
+                    Right v -> Right $ TCParamEng v
+            _ -> if ST.null val
+                then Right $ TCParamRaw (initialValue BiE ptc pfc)
+                else
+                    TCParamRaw
+                        <$> determineRawDefaultValue epoch coeff ptc pfc val cpc
 
 
 determineRawDefaultValue
@@ -461,16 +476,21 @@ determineRawDefaultValue epoch coeff ptc pfc val cpc =
                     TMValInt    x -> Data.PUS.Value.setInt rawVal x
                     TMValUInt   x -> Data.PUS.Value.setInt rawVal x
                     TMValDouble x -> setDouble rawVal x
-                    TMValTime   x -> 
-                        case ptcPfcEncoding ptc pfc of 
-                            Just enc -> ValCUCTime $ sunTimeToCUCTime epoch enc (mcsTimeToOBT x coeff)
-                            Nothing -> 
-                                trace ("Could not determine time value PTC=" 
-                                    <> textDisplay ptc <> " PFC=" <> textDisplay pfc)
-                                    ValUndefined 
+                    TMValTime   x -> case ptcPfcEncoding ptc pfc of
+                        Just enc -> ValCUCTime $ sunTimeToCUCTime
+                            epoch
+                            enc
+                            (mcsTimeToOBT x coeff)
+                        Nothing -> trace
+                            (  "Could not determine time value PTC="
+                            <> textDisplay ptc
+                            <> " PFC="
+                            <> textDisplay pfc
+                            )
+                            ValUndefined
                     TMValString x -> setString rawVal (ST.toText x)
                     TMValOctet  x -> setOctet rawVal x
-                    TMValNothing  -> ValUndefined
+                    TMValNothing  -> trace "Got TMValNothing" ValUndefined
 
 
 

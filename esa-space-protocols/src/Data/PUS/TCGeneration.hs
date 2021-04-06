@@ -198,16 +198,18 @@ genParamValue
     -> PFC
     -> TCParamDefaultValue
     -> Value
-genParamValue _     _     _     _   _   TCParamNothing = ValUndefined
+genParamValue _     _     _     _   _   TCParamNothing = trace "genParamValue: TCParamNothing" ValUndefined
 genParamValue _     _     _     _   _   (TCParamRaw v) = v
 genParamValue epoch coeff calib ptc pfc (TCParamEng v) = case calib of
     Just (TCNumCalib  c) -> convValue epoch coeff ptc pfc c v
     Just (TCTextCalib c) -> case v of
         TMValString t -> convValue epoch coeff ptc pfc c t
         _             -> convertValue epoch coeff ptc pfc v
-    Nothing -> initialValue BiE ptc pfc
-genParamValue _ _ _ _ _ (TCCmdID   v) = (ValString (ST.toByteString v)) -- TODO command ID 
-genParamValue _ _ _ _ _ (TCParamID v) = (ValString (ST.toByteString v)) -- TODO command ID 
+    Nothing -> 
+        let val = initialValue BiE ptc pfc
+        in trace ("genParamValue: PTC=" <> textDisplay ptc <> " PFC=" <> textDisplay pfc <> " Value: " <> T.pack (show val)) val 
+genParamValue _ _ _ _ _ (TCCmdID   v) = trace "genParamValue CmdID not yet implemented" (ValString (ST.toByteString v)) -- TODO command ID 
+genParamValue _ _ _ _ _ (TCParamID v) = trace "genParamValue ParamID not yet implemented" (ValString (ST.toByteString v)) -- TODO command ID 
 
 
 convValue
@@ -221,4 +223,6 @@ convValue
     -> Value
 convValue epoch coeff ptc pfc c v = case tcDeCalibrate c v of
     Just v1 -> convertValue epoch coeff ptc pfc v1
-    Nothing -> initialValue BiE ptc pfc
+    Nothing -> 
+        let val = initialValue BiE ptc pfc
+        in trace ("genParamValue: PTC=" <> textDisplay ptc <> " PFC=" <> textDisplay pfc <> " Value: " <> T.pack (show val)) val 
