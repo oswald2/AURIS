@@ -337,7 +337,7 @@ onDragDataReceived
     -> Word32
     -> IO ()
 onDragDataReceived g interface ctxt _x _y selection _info time = do
-    T.putStrLn $ "onDragDataReceived called"
+    T.putStrLn $ "onDragDataReceived called info: " <> textDisplay _info
 
     bin <- selectionDataGetData selection
     case deserialiseOrFail (fromStrict bin) of
@@ -385,7 +385,7 @@ setupCallbacks gui interface = do
                (Just (callInterface interface actionLogMessage))
 
     void $ Gtk.on (_tcTabTCBrowser gui) #dragDataGet $ onDragDataGet gui interface 
-    void $ Gtk.after (_tcTabTextView gui) #dragDataReceived $ onDragDataReceived gui interface 
+    void $ Gtk.on (_tcTabTextView gui) #dragDataReceived $ onDragDataReceived gui interface 
 
 
 

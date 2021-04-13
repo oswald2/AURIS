@@ -20,10 +20,7 @@ import           Data.PUS.TCRequest             ( tcReqRequestID
                                                 , tcReqVerifications
                                                 )
 
-import           General.PUSTypes               ( PktID
-                                                , RequestID
-                                                , SeqControl
-                                                )
+import           General.PUSTypes
 import           Data.PUS.Events                ( EventCommanding
                                                     ( EVTCVerificationUpdate
                                                     , EVTCVerificationNew
@@ -31,7 +28,7 @@ import           Data.PUS.Events                ( EventCommanding
                                                     )
                                                 , Event(EVCommanding)
                                                 )
-import           Data.PUS.Config                
+import           Data.PUS.Config
 import           Data.PUS.Verification
 
 import           Data.Fixed                     ( E6
@@ -129,7 +126,7 @@ processCommand _timerWheel _queue st (RegisterRequest rqst pktId ssc) = do
         $  "Verification: registerRequest got new request RqstID: "
         <> display rqstID
         <> " PktID: "
-        <> display pktId
+        <> pktIdDisplayPretty pktId
         <> " SSC: "
         <> display ssc
     liftIO $ raiseEvent env (EVCommanding (EVTCVerificationNew rqst verif))
@@ -304,23 +301,23 @@ setupTimers timerWheel rqstID pktID seqCtrl queue st newStatus = do
     let verCfg = cfgVerification cfg
 
     let gtTimeOut :: Fixed E6
-        gtTimeOut = fromIntegral (cfgTimeoutGT verCfg)
+        gtTimeOut   = fromIntegral (cfgTimeoutGT verCfg)
 
         oTimeOffset = gtTimeOut
-        oTimeOut = fromIntegral (cfgTimeoutO verCfg)
-        oTimePoint = oTimeOffset + oTimeOut
+        oTimeOut    = fromIntegral (cfgTimeoutO verCfg)
+        oTimePoint  = oTimeOffset + oTimeOut
 
         aTimeOffset = oTimePoint
-        aTimeOut = fromIntegral (cfgTimeoutA verCfg)
-        aTimePoint = aTimeOffset + aTimeOut
+        aTimeOut    = fromIntegral (cfgTimeoutA verCfg)
+        aTimePoint  = aTimeOffset + aTimeOut
 
         sTimeOffset = aTimePoint
-        sTimeOut = fromIntegral (cfgTimeoutS verCfg)
-        sTimePoint = sTimeOffset + sTimeOut
+        sTimeOut    = fromIntegral (cfgTimeoutS verCfg)
+        sTimePoint  = sTimeOffset + sTimeOut
 
         cTimeOffset = sTimePoint
-        cTimeOut = fromIntegral (cfgTimeoutC verCfg)
-        cTimePoint = cTimeOffset + cTimeOut
+        cTimeOut    = fromIntegral (cfgTimeoutC verCfg)
+        cTimePoint  = cTimeOffset + cTimeOut
 
 
     liftIO $ do
@@ -403,9 +400,9 @@ processCncGroundStage
 processCncGroundStage st key@(pktID, ssc) status setStage = do
     logDebug
         $  "processCncGroundStage: PktID: "
-        <> display pktID
+        <> pktIdDisplayPretty pktID
         <> " SSC: "
-        <> display ssc
+        <> seqCtrlDisplay ssc
         <> " Status: "
         <> display status
     case HM.lookup key (_stApidMap st) of
@@ -423,9 +420,9 @@ processCncGroundStage st key@(pktID, ssc) status setStage = do
         Nothing -> do
             logDebug
                 $  "Verification record for Key "
-                <> display pktID
+                <> pktIdDisplayPretty pktID
                 <> " SSC: "
-                <> display ssc
+                <> seqCtrlDisplay ssc
                 <> " Status: "
                 <> " has not been found"
             return st
@@ -443,9 +440,9 @@ processTMStage
 processTMStage st pktID ssc status setStage = do
     logDebug
         $  "processTMStage: PktID: "
-        <> display pktID
+        <> pktIdDisplayPretty pktID
         <> " SeqStatus: "
-        <> display ssc
+        <> seqCtrlDisplay ssc
         <> " Status: "
         <> display status
     case HM.lookup (pktID, ssc) (_stApidMap st) of
@@ -463,9 +460,9 @@ processTMStage st pktID ssc status setStage = do
         Nothing -> do
             logDebug
                 $  "Verification record for PktID "
-                <> display pktID
+                <> pktIdDisplayPretty pktID
                 <> " SeqStatus: "
-                <> display ssc
+                <> seqCtrlDisplay ssc
                 <> " has not been found"
             return st
 

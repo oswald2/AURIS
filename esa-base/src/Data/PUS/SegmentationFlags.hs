@@ -28,3 +28,9 @@ instance Serialise SegmentationFlags
 instance FromJSON SegmentationFlags
 instance ToJSON SegmentationFlags where
     toEncoding = genericToEncoding defaultOptions
+
+instance Display SegmentationFlags where 
+    display SegmentFirst = "FIRST"
+    display SegmentContinue = "CONTINUE"
+    display SegmentLast = "LAST"
+    display SegmentStandalone = "UNSEGMENTED"

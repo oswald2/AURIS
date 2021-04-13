@@ -81,6 +81,11 @@ module General.PUSTypes
     , pktIdDfh
     , pktIdAPID
     , SeqControl(..)
+    , seqCtrlGetFlags 
+    , seqCtrlGetSSC
+    , seqCtrlGetData 
+    , seqCtrlTextDisplay 
+    , seqCtrlDisplay 
     , ProtocolLevel(..)
     , CommandType(..)
     , DirectiveProtocolLevel(..)
@@ -117,6 +122,8 @@ import           System.FilePath                ( (</>) )
 import           General.APID                   ( APID(APID) )
 
 import           Protocol.ProtocolInterfaces
+
+import           Data.PUS.SegmentationFlags
 
 -- | Virtual Channel ID
 newtype VCID = VCID Word8
@@ -499,6 +506,31 @@ instance ToJSON SeqControl where
 instance Display SeqControl where
     display (SeqControl x) = display x
 
+seqCtrlGetFlags :: SeqControl -> SegmentationFlags
+seqCtrlGetFlags (SeqControl v) = case v .&. 0xC000 of
+    0x0000 -> SegmentContinue
+    0x4000 -> SegmentFirst
+    0x8000 -> SegmentLast
+    0xC000 -> SegmentStandalone
+    _      -> SegmentStandalone
+
+seqCtrlGetSSC :: SeqControl -> SSC
+seqCtrlGetSSC (SeqControl v) = SSC (v .&. 0x3FFF)
+
+seqCtrlGetData :: SeqControl -> (SegmentationFlags, SSC)
+seqCtrlGetData s = (seqCtrlGetFlags s, seqCtrlGetSSC s)
+
+
+seqCtrlTextDisplay :: SeqControl -> Text
+seqCtrlTextDisplay s =
+    "Flag: " <> textDisplay (seqCtrlGetFlags s) <> " SSC: " <> textDisplay
+        (seqCtrlGetSSC s)
+
+
+seqCtrlDisplay :: SeqControl -> Utf8Builder
+seqCtrlDisplay s =
+    "Flag: " <> display (seqCtrlGetFlags s) <> " SSC: " <> display
+        (seqCtrlGetSSC s)
 
 -- | Type for the source sequence count
 newtype SSC = SSC Word16
