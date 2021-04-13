@@ -130,6 +130,8 @@ runTMNctrsChain cfg pktQueue = do
             (EVAlarms
                 (EVEConnection (IfNctrs (cfgNctrsID cfg)) ConnTM Connected)
             )
+        logInfo $ "Connected TM connection on NCTRS " <> display (cfgNctrsID cfg)
+
         res <- try $ void $ runConduitRes (appSource app .| chain)
 
         liftIO
@@ -148,7 +150,9 @@ runTMNctrsChain cfg pktQueue = do
                     $  display @Text "NCTRS Interface Exception: "
                     <> displayShow e
                 throwM e
-            Right _ -> return ()
+            Right _ -> do 
+                logWarn $ "Disconnected TM connection on NCTRS " <> display (cfgNctrsID cfg)
+                return ()
 
 
 
@@ -175,6 +179,8 @@ runTCNctrsChain cfg cltuQueue = do
             (EVAlarms
                 (EVEConnection (IfNctrs (cfgNctrsID cfg)) ConnTC Connected)
             )
+        logInfo $ "Connected TC connection on NCTRS " <> display (cfgNctrsID cfg)
+
         res <- try $ void $ runConduitRes (chain .| appSink app)
 
         liftIO
@@ -193,7 +199,9 @@ runTCNctrsChain cfg cltuQueue = do
                     $  display @Text "NCTRS Interface Exception: "
                     <> displayShow e
                 throwM e
-            Right _ -> return ()
+            Right _ -> do
+                logWarn $ "Disconnected TC connection on NCTRS " <> display (cfgNctrsID cfg)
+                return ()
     tcRecvClient chain app = do
         res <- try $ void $ runConduitRes (appSource app .| chain)
         case res of
@@ -202,7 +210,9 @@ runTCNctrsChain cfg cltuQueue = do
                     $  display @Text "NCTRS Interface Exception: "
                     <> displayShow e
                 throwM e
-            Right _ -> return ()
+            Right _ -> do
+                logInfo $ "Disconnected TC connection on NCTRS " <> display (cfgNctrsID cfg)
+                return ()
 
 runAdminNctrsChain :: NctrsConfig -> RIO GlobalState ()
 runAdminNctrsChain cfg = do
@@ -226,6 +236,7 @@ runAdminNctrsChain cfg = do
             (EVAlarms
                 (EVEConnection (IfNctrs (cfgNctrsID cfg)) ConnAdmin Connected)
             )
+        logInfo $ "Connected ADMIN connection on NCTRS " <> display (cfgNctrsID cfg)
         res <- try $ void $ runConduitRes (appSource app .| chain)
 
         liftIO
@@ -244,7 +255,9 @@ runAdminNctrsChain cfg = do
                     $  display @Text "NCTRS Interface Exception: "
                     <> displayShow e
                 throwM e
-            Right _ -> return ()
+            Right _ -> do 
+                logWarn $ "Disconnected ADMIN connection on NCTRS " <> display (cfgNctrsID cfg)
+                return ()
 
 
 runTMCnCChain
@@ -274,6 +287,7 @@ runTMCnCChain cfg missionSpecific pktQueue = do
         liftIO $ raiseEvent
             env
             (EVAlarms (EVEConnection (IfCnc (cfgCncID cfg)) ConnTM Connected))
+        logInfo $ "Connected TM connection on C&C " <> display (cfgCncID cfg)
 
         res <- try $ void $ runConduitRes (appSource app .| chain)
 
@@ -290,7 +304,9 @@ runTMCnCChain cfg missionSpecific pktQueue = do
                     $  display @Text "C&C TM Interface Exception: "
                     <> displayShow e
                 throwM e
-            Right _ -> return ()
+            Right _ -> do
+                logWarn $ "Disconnected TM connection on C&C " <> display (cfgCncID cfg)
+                return ()
 
 
 runTCCnCChain
@@ -327,6 +343,7 @@ runTCCnCChain cfg missionSpecific duQueue pktQueue = do
     tcClient ifID chain app = do
         env <- ask
         liftIO $ raiseEvent env (EVAlarms (EVEConnection ifID ConnTC Connected))
+        logInfo $ "Connected TC connection on C&C " <> display (cfgCncID cfg)
 
         res <- try $ void $ runConduitRes (chain .| appSink app)
 
@@ -343,7 +360,9 @@ runTCCnCChain cfg missionSpecific duQueue pktQueue = do
                     $  display @Text "C&C TC Interface Exception: "
                     <> displayShow e
                 throwM e
-            Right _ -> return ()
+            Right _ -> do
+                logWarn $ "Disconnected TC connection on C&C " <> display (cfgCncID cfg)
+                return ()
     tcAckClient ifID chain app = do
         env <- ask
         logDebug "C&C TC Ack reader thread started"
@@ -358,7 +377,9 @@ runTCCnCChain cfg missionSpecific duQueue pktQueue = do
                     $  display @Text "C&C TC Interface Exception: "
                     <> displayShow e
                 throwM e
-            Right _ -> return ()
+            Right _ -> do 
+                logWarn $ "Disconnected TC connection on C&C " <> display (cfgCncID cfg)
+                return ()
         logDebug "C&C TC Ack reader thread leaves"
 
 
@@ -392,6 +413,7 @@ runEdenChain cfg missionSpecific pktQueue edenQueue = do
             (EVAlarms
                 (EVEConnection (IfEden (cfgEdenID cfg)) ConnSingle Connected)
             )
+        logInfo $ "Connected on EDEN " <> display (cfgEdenID cfg)
 
         res <- try $ race_ (tmChain app) (tcChain app)
 
@@ -411,7 +433,9 @@ runEdenChain cfg missionSpecific pktQueue edenQueue = do
                     $  display @Text "EDEN Interface Exception: "
                     <> displayShow e
                 throwM e
-            Right _ -> return ()
+            Right _ -> do
+                logWarn $ "Disconnected on EDEN " <> display (cfgEdenID cfg)
+                return ()
 
     tmChain app = do
         let chain =
