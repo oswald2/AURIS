@@ -471,9 +471,11 @@ pktIdDisplayPretty x =
         <> " Type: "
         <> display (pktIdType x)
         <> " DFH: "
-        <> if pktIdDfh x
+        <> (if pktIdDfh x
                then "True"
-               else "False" <> " APID: " <> display (pktIdAPID x)
+               else "False") 
+        <> " APID: " 
+        <> display (pktIdAPID x)
 
 pktIdVersion :: PktID -> Word8
 pktIdVersion (PktID x) =

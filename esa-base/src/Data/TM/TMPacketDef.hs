@@ -84,12 +84,14 @@ module Data.TM.TMPacketDef
   , fixedTMPacketDefs
   , tcEchoDef
   , tcEchoDefCC
+  , tmAckPktDef
+  , tmAckFailPktDef
   )
 where
 
 import           RIO
 import qualified RIO.Vector                    as V
-import           Data.Text.Short                ( ShortText )
+import           Data.Text.Short               as ST ( ShortText, pack )
 import           Data.HashTable.ST.Basic        ( IHashTable )
 import qualified Data.HashTable.ST.Basic       as HT
 import           Control.Lens                   ( makeLenses )
@@ -348,8 +350,8 @@ fixedTMPacketDefs = [
     , _tmpdCheck = False
     , _tmpdEvent = PIDNo
     , _tmpdParams = TMFixedParams (V.fromList 
-      [ simpleParamLocation "CnCAckPktID" 16 (uintParamDef "CnCAckPktID" "Packet ID of the C&C ACK packet" 16)
-        , simpleParamLocation "CnCAckSSC" 18 (uintParamDef "CnCAckSSC" "SSC of the C&C ACK packet" 16)
+      [ simpleParamLocation "CnCAckPktID" 16 (uintParamDef "CnCAckPktID" "Packet ID of the TC" 16)
+        , simpleParamLocation "CnCAckSSC" 18 (uintParamDef "CnCAckSSC" "SSC of the TC" 16)
       ])
     }
   , TMPacketDef {
@@ -368,13 +370,60 @@ fixedTMPacketDefs = [
       , _tmpdCheck = False
       , _tmpdEvent = PIDNo
       , _tmpdParams = TMFixedParams (V.fromList 
-        [ simpleParamLocation "CnCAckPktID" 16 (uintParamDef "CnCAckPktID" "Packet ID of the C&C ACK packet" 16)
-          , simpleParamLocation "CnCAckSSC" 18 (uintParamDef "CnCAckSSC" "SSC of the C&C ACK packet" 16)
+        [ simpleParamLocation "CnCAckPktID" 16 (uintParamDef "CnCAckPktID" "Packet ID of the TC" 16)
+          , simpleParamLocation "CnCAckSSC" 18 (uintParamDef "CnCAckSSC" "SSC of the TC" 16)
           , simpleParamLocation "CnCAckERR" 20 (uintParamDef "CnCAckERR" "Error Code for Acknowledge" 16)
         ])
     }
 
   ]
+
+tmAckPktDef :: APID -> PUSSubType -> TMPacketDef
+tmAckPktDef apid subType@(PUSSubType st) = 
+  TMPacketDef {
+    _tmpdSPID = SPID 5075
+    , _tmpdName = "TM_1_" <> ST.pack (show st)
+    , _tmpdDescr = "PUS Acknowledge Packet"
+    , _tmpdType = PUSType 1
+    , _tmpdSubType = subType
+    , _tmpdApid = apid
+    , _tmpdPI1Val = 0
+    , _tmpdPI2Val = 0
+    , _tmpdUnit = ""
+    , _tmpdTime = True 
+    , _tmpdInter = Nothing
+    , _tmpdValid = True
+    , _tmpdCheck = False
+    , _tmpdEvent = PIDNo
+    , _tmpdParams = TMFixedParams (V.fromList 
+      [ simpleParamLocation "AckPktID" 16 (uintParamDef "AckPktID" "Packet ID of the TC" 16)
+        , simpleParamLocation "AckSSC" 18 (uintParamDef "AckSSC" "SSC of the TC" 16)
+      ])
+    }
+
+tmAckFailPktDef :: APID -> PUSSubType -> TMPacketDef
+tmAckFailPktDef apid subType@(PUSSubType st) = 
+  TMPacketDef {
+      _tmpdSPID = SPID 5076
+      , _tmpdName = "TM_1_" <> ST.pack (show st)
+      , _tmpdDescr = "PUS Ack Fail Packet"
+      , _tmpdType = PUSType 1
+      , _tmpdSubType = subType
+      , _tmpdApid = apid
+      , _tmpdPI1Val = 0
+      , _tmpdPI2Val = 0
+      , _tmpdUnit = ""
+      , _tmpdTime = True 
+      , _tmpdInter = Nothing
+      , _tmpdValid = True
+      , _tmpdCheck = False
+      , _tmpdEvent = PIDNo
+      , _tmpdParams = TMFixedParams (V.fromList 
+        [ simpleParamLocation "AckPktID" 16 (uintParamDef "AckPktID" "Packet ID of the TC" 16)
+          , simpleParamLocation "AckSSC" 18 (uintParamDef "AckSSC" "SSC of the TC" 16)
+          , simpleParamLocation "AckERR" 20 (uintParamDef "AckERR" "Error Code for Acknowledge" 16)
+        ])
+    }
 
 
 tcEchoDef :: APID -> PUSType -> PUSSubType -> TMPacketDef 
