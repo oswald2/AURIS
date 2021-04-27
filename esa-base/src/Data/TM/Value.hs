@@ -20,29 +20,28 @@ the Data.PUS.Value which is used on the encoding/decoding layer.
     , TemplateHaskell
 #-}
 module Data.TM.Value
-  ( TMValueSimple(..)
-  , TMValue(..)
-  , compareVal
-  , isNumeric
-  , Data.TM.Value.isValid
-  , setValidity
-  , tmvalValue
-  , tmvalValidity
-  , NumType(..)
-  , Radix(..)
-  , parseShortTextToValueSimple
-  , parseShortTextToValue
-  , parseShortTextToDouble
-  , parseShortTextToInt64
-  , parseShortTextToWord64
-  , charToType
-  , charToRadix
-  , nullValue
-  , getInt
-  , getDouble
-  , toDouble
-  )
-where
+    ( TMValueSimple(..)
+    , TMValue(..)
+    , compareVal
+    , isNumeric
+    , Data.TM.Value.isValid
+    , setValidity
+    , tmvalValue
+    , tmvalValidity
+    , NumType(..)
+    , Radix(..)
+    , parseShortTextToValueSimple
+    , parseShortTextToValue
+    , parseShortTextToDouble
+    , parseShortTextToInt64
+    , parseShortTextToWord64
+    , charToType
+    , charToRadix
+    , nullValue
+    , getInt
+    , getDouble
+    , toDouble
+    ) where
 
 import           RIO                     hiding ( many )
 import           RIO.List.Partial               ( head )
@@ -67,7 +66,7 @@ import           General.PUSTypes
 import           General.Chunks
 import           General.Hexdump
 
-import           Text.Megaparsec
+import           Text.Megaparsec               as M
 import           Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer    as L
 
@@ -85,7 +84,7 @@ instance NFData NumType
 instance Serialise NumType
 instance FromJSON NumType
 instance ToJSON NumType where
-  toEncoding = genericToEncoding defaultOptions
+    toEncoding = genericToEncoding defaultOptions
 
 type Parser = Parsec Void Text
 
@@ -105,11 +104,14 @@ charToType _   = NumInteger
 parseShortTextToDouble :: NumType -> Radix -> ShortText -> Either Text Double
 parseShortTextToDouble typ radix x =
   -- trace ("parseTextToDouble: " <> T.pack (show typ ++ " " ++ show radix ++ show x)) $
-  case parse (doubleParser typ radix) "" (toText x) of
-    Left err ->
-      Left $ "Could not parse '" <> toText x <> "' into Double: " <> T.pack
-        (errorBundlePretty err)
-    Right xval -> Right xval
+    case parse (doubleParser typ radix) "" (toText x) of
+        Left err ->
+            Left
+                $  "Could not parse '"
+                <> toText x
+                <> "' into Double: "
+                <> T.pack (errorBundlePretty err)
+        Right xval -> Right xval
 
 
 {-# INLINABLE doubleParser #-}
@@ -119,12 +121,13 @@ doubleParser NumUInteger Decimal = fromIntegral <$> integer
 doubleParser NumUInteger Hex     = fromIntegral <$> hexInteger
 doubleParser NumUInteger Octal   = fromIntegral <$> octInteger
 doubleParser NumDouble _ =
-  Text.Megaparsec.try double <|> fromIntegral <$> signedInteger
+    M.try double <|> fromIntegral <$> signedInteger
 
 
 double :: Parser Double
-double = Text.Megaparsec.try (L.signed space L.float) 
-  <|> (fromIntegral <$> L.signed space integer)
+double =
+    M.try (L.signed space L.float)
+        <|> (fromIntegral <$> L.signed space integer)
 
 integer :: Parser Int64
 integer = L.lexeme space L.decimal
@@ -147,10 +150,17 @@ octInteger = L.lexeme space L.octal
 parseShortTextToInt64 :: NumType -> Radix -> ShortText -> Either Text Int64
 parseShortTextToInt64 typ radix x =
   -- trace ("parseShortTextToInt64: " <> T.pack (show typ ++ " " ++ show radix ++ show x)) $
-  case parseMaybe (intParser typ radix) (toText x) of
-    Nothing   -> Left $ "Could not parse '" <> toText x <> "' into Int64 (type=" 
-      <> T.pack (show typ) <> ", radix= " <> T.pack (show radix) <> ")"
-    Just xval -> Right xval
+    case parseMaybe (intParser typ radix) (toText x) of
+        Nothing ->
+            Left
+                $  "Could not parse '"
+                <> toText x
+                <> "' into Int64 (type="
+                <> T.pack (show typ)
+                <> ", radix= "
+                <> T.pack (show radix)
+                <> ")"
+        Just xval -> Right xval
 
 
 -- | parses a 'ShortText' to a integer value. It takes the 'NumType' and 'Radix' to determine
@@ -158,10 +168,17 @@ parseShortTextToInt64 typ radix x =
 parseShortTextToWord64 :: NumType -> Radix -> ShortText -> Either Text Word64
 parseShortTextToWord64 typ radix x =
   -- trace ("parseShortTextToInt64: " <> T.pack (show typ ++ " " ++ show radix ++ show x)) $
-  case parseMaybe (uintParser typ radix) (toText x) of
-    Nothing   -> Left $ "Could not parse '" <> toText x <> "' into UInt64 (type=" 
-      <> T.pack (show typ) <> ", radix= " <> T.pack (show radix) <> ")"
-    Just xval -> Right xval
+    case parseMaybe (uintParser typ radix) (toText x) of
+        Nothing ->
+            Left
+                $  "Could not parse '"
+                <> toText x
+                <> "' into UInt64 (type="
+                <> T.pack (show typ)
+                <> ", radix= "
+                <> T.pack (show radix)
+                <> ")"
+        Just xval -> Right xval
 
 
 intParser :: NumType -> Radix -> Parser Int64
@@ -172,7 +189,7 @@ intParser NumUInteger Decimal = integer
 intParser NumUInteger Hex     = fromIntegral <$> hexInteger
 intParser NumUInteger Octal   = fromIntegral <$> octInteger
 intParser NumDouble _ =
-  truncate <$> Text.Megaparsec.try double <|> signedInteger
+    truncate <$> M.try double <|> signedInteger
 
 uintParser :: NumType -> Radix -> Parser Word64
 uintParser NumInteger  Decimal = fromIntegral <$> signedInteger
@@ -181,8 +198,7 @@ uintParser NumInteger  Octal   = L.signed space L.octal
 uintParser NumUInteger Decimal = L.decimal
 uintParser NumUInteger Hex     = hexInteger
 uintParser NumUInteger Octal   = octInteger
-uintParser NumDouble _ =
-  truncate <$> Text.Megaparsec.try double <|> L.decimal
+uintParser NumDouble _ = truncate <$> M.try double <|> L.decimal
 
 -- | A simple value, without a validity. Contains the specified value
 data TMValueSimple =
@@ -230,64 +246,71 @@ compareVal (TMValDouble x) (TMValUInt   y) = Just $ compare x (fromIntegral y)
 compareVal _               _               = Nothing
 
 instance Eq TMValueSimple where
-  val1 == val2 = case compareVal val1 val2 of
-    Just EQ -> True
-    _       -> False
+    val1 == val2 = case compareVal val1 val2 of
+        Just EQ -> True
+        _       -> False
 
-instance Ord TMValueSimple where 
-  compare v1 v2 = 
-    fromMaybe LT $ compareVal v1 v2 
+instance Ord TMValueSimple where
+    compare v1 v2 = fromMaybe LT $ compareVal v1 v2
 
 instance FromJSON TMValueSimple where
-  parseJSON = withObject "TMValueSimple" $ \o -> asum
-    [ TMValInt <$> o .: "tmValInt"
-    , TMValUInt <$> o .: "tmValUInt"
-    , TMValDouble <$> o .: "tmValDouble"
-    , TMValTime <$> o .: "tmValTime"
-    , TMValString <$> o .: "tmValString"
-    , TMValOctet . getByteString64 <$> o .: "tmValOctet"
-    ]
+    parseJSON = withObject "TMValueSimple" $ \o -> asum
+        [ TMValInt <$> o .: "tmValInt"
+        , TMValUInt <$> o .: "tmValUInt"
+        , TMValDouble <$> o .: "tmValDouble"
+        , TMValTime <$> o .: "tmValTime"
+        , TMValString <$> o .: "tmValString"
+        , TMValOctet . getByteString64 <$> o .: "tmValOctet"
+        ]
 
 instance ToJSON TMValueSimple where
-  toJSON (TMValInt    x) = object ["tmValInt" .= x]
-  toJSON (TMValUInt   x) = object ["tmValUInt" .= x]
-  toJSON (TMValDouble x) = object ["tmValDouble" .= x]
-  toJSON (TMValTime   x) = object ["tmValTime" .= x]
-  toJSON (TMValString x) = object ["tmValString" .= x]
-  toJSON (TMValOctet  x) = object ["tmValOctet" .= makeByteString64 x]
-  toJSON TMValNothing    = object ["tmValNothing" .= ("" :: Text)]
-  toEncoding (TMValInt    x) = pairs ("tmValInt" .= x)
-  toEncoding (TMValUInt   x) = pairs ("tmValUInt" .= x)
-  toEncoding (TMValDouble x) = pairs ("tmValDouble" .= x)
-  toEncoding (TMValTime   x) = pairs ("tmValTime" .= x)
-  toEncoding (TMValString x) = pairs ("tmValString" .= x)
-  toEncoding (TMValOctet  x) = pairs ("tmValOctet" .= makeByteString64 x)
-  toEncoding TMValNothing    = pairs ("tmValNothing" .= ("" :: Text))
+    toJSON (TMValInt    x) = object ["tmValInt" .= x]
+    toJSON (TMValUInt   x) = object ["tmValUInt" .= x]
+    toJSON (TMValDouble x) = object ["tmValDouble" .= x]
+    toJSON (TMValTime   x) = object ["tmValTime" .= x]
+    toJSON (TMValString x) = object ["tmValString" .= x]
+    toJSON (TMValOctet  x) = object ["tmValOctet" .= makeByteString64 x]
+    toJSON TMValNothing    = object ["tmValNothing" .= ("" :: Text)]
+    toEncoding (TMValInt    x) = pairs ("tmValInt" .= x)
+    toEncoding (TMValUInt   x) = pairs ("tmValUInt" .= x)
+    toEncoding (TMValDouble x) = pairs ("tmValDouble" .= x)
+    toEncoding (TMValTime   x) = pairs ("tmValTime" .= x)
+    toEncoding (TMValString x) = pairs ("tmValString" .= x)
+    toEncoding (TMValOctet  x) = pairs ("tmValOctet" .= makeByteString64 x)
+    toEncoding TMValNothing    = pairs ("tmValNothing" .= ("" :: Text))
 
 
 instance Display TMValueSimple where
-  display (TMValInt    x) = display x
-  display (TMValUInt   x) = display x
-  display (TMValDouble x) = display x
-  display (TMValTime   x) = display x
-  display (TMValString x) = display (toText x)
-  display (TMValOctet  x) = display (hexdumpBS x)
-  display TMValNothing    = ""
+    display (TMValInt    x) = display x
+    display (TMValUInt   x) = display x
+    display (TMValDouble x) = display x
+    display (TMValTime   x) = display x
+    display (TMValString x) = display (toText x)
+    display (TMValOctet  x) = display (hexdumpBS x)
+    display TMValNothing    = ""
 
 
 -- | parses a 'ShortText' to a integer value. It takes the 'PTC' and 'PFC' type descriptors
 -- and returns a 'TMValueSimple' with the specified type
 parseShortTextToValueSimple
-  :: PTC -> PFC -> ShortText -> Either Text TMValueSimple
+    :: PTC -> PFC -> ShortText -> Either Text TMValueSimple
 parseShortTextToValueSimple ptc pfc x =
-  case parseMaybe (tmValueParser ptc pfc) (toText x) of
-    Nothing   -> Left $ "Could not parse '" <> toText x <> "' into TMValueSimple (PTC=" 
-      <> T.pack (show ptc) <> ", PFC=" <> T.pack (show pfc) <> ")"
-    Just xval -> Right xval
+    case parseMaybe (tmValueParser ptc pfc) (toText x) of
+        Nothing ->
+            Left
+                $  "Could not parse '"
+                <> toText x
+                <> "' into TMValueSimple (PTC="
+                <> T.pack (show ptc)
+                <> ", PFC="
+                <> T.pack (show pfc)
+                <> ")"
+        Just xval -> Right xval
 
 -- | parses a 'ShortText' to a integer value. It takes the 'PTC' and 'PFC' type descriptors
 -- and returns a 'TMValue' with the specified type and a clearValidity
-parseShortTextToValue :: PTC -> PFC -> ShortText -> Either Text TMValue
+parseShortTextToValue
+    :: PTC -> PFC -> ShortText -> Either Text TMValue
 parseShortTextToValue ptc pfc x =
     case parseShortTextToValueSimple ptc pfc x of
         Left  err -> Left err
@@ -298,42 +321,42 @@ parseShortTextToValue ptc pfc x =
 {-# INLINABLE tmValueParser #-}
 tmValueParser :: PTC -> PFC -> Parser TMValueSimple
 tmValueParser (PTC ptc) (PFC pfc)
-  | ptc == 1 || ptc == 2 || ptc == 3
-  = TMValUInt <$> uInteger
-  | ptc == 4
-  = TMValInt <$> signedInteger
-  | ptc == 5
-  = TMValDouble <$> double
-  | ptc == 6 && pfc > 0
-  = TMValUInt <$> uInteger
-  | ptc == 7 && pfc == 0
-  = TMValOctet . strToByteString <$> many hexDigitChar
-  | ptc == 7
-  = TMValOctet . strToByteString <$> count (2 * pfc) hexDigitChar
-  | ptc == 8 && pfc == 0
-  = TMValString . Data.Text.Short.fromText <$> takeRest
-  | ptc == 8
-  = TMValString . Data.Text.Short.fromText <$> takeP Nothing pfc
-  | ptc == 9 || ptc == 10
-  = TMValTime <$> sunTimeParser
-  | ptc == 11 || ptc == 13
-  = pure nullValueSimple
-  | otherwise
-  = fancyFailure
-    .  S.singleton
-    .  ErrorFail
-    $  "Illegal type for TMValue (PTC="
-    <> show ptc
-    <> ", PFC="
-    <> show pfc
-    <> ")"
+    | ptc == 1 || ptc == 2 || ptc == 3
+    = TMValUInt <$> (M.try uInteger <|> M.try hexInteger <|> octInteger)
+    | ptc == 4
+    = TMValInt <$> signedInteger
+    | ptc == 5
+    = TMValDouble <$> double
+    | ptc == 6 && pfc > 0
+    = TMValUInt <$> (M.try uInteger <|> M.try hexInteger <|> octInteger)
+    | ptc == 7 && pfc == 0
+    = TMValOctet . strToByteString <$> many hexDigitChar
+    | ptc == 7
+    = TMValOctet . strToByteString <$> count (2 * pfc) hexDigitChar
+    | ptc == 8 && pfc == 0
+    = TMValString . Data.Text.Short.fromText <$> takeRest
+    | ptc == 8
+    = TMValString . Data.Text.Short.fromText . T.take pfc <$> takeRest
+    | ptc == 9 || ptc == 10
+    = TMValTime <$> sunTimeParser
+    | ptc == 11 || ptc == 13
+    = pure nullValueSimple
+    | otherwise
+    = fancyFailure
+        .  S.singleton
+        .  ErrorFail
+        $  "Illegal type for TMValue (PTC="
+        <> show ptc
+        <> ", PFC="
+        <> show pfc
+        <> ")"
 
 
 {-# INLINABLE strToByteString #-}
 strToByteString :: [Char] -> ByteString
 strToByteString ls' =
-  let ls = chunks 2 $ if odd (length ls') then '0' : ls' else ls'
-  in  B.pack . map (fst . head . readHex) $ ls
+    let ls = chunks 2 $ if odd (length ls') then '0' : ls' else ls'
+    in  B.pack . map (fst . head . readHex) $ ls
 
 
 
@@ -345,31 +368,32 @@ strToByteString ls' =
 
 
 -- | The value, containing also a validity.
-data TMValue = TMValue {
-    _tmvalValue :: !TMValueSimple
+data TMValue = TMValue
+    { _tmvalValue    :: !TMValueSimple
     , _tmvalValidity :: !Validity
-    } deriving (Eq, Show, Generic)
+    }
+    deriving (Eq, Show, Generic)
 makeLenses ''TMValue
 
 instance NFData TMValue
 instance Serialise TMValue
 instance FromJSON TMValue
 instance ToJSON TMValue where
-  toEncoding = genericToEncoding defaultOptions
+    toEncoding = genericToEncoding defaultOptions
 
 
 instance ToDouble TMValue where
-  {-# INLINABLE toDouble #-}
-  toDouble TMValue { _tmvalValue = (TMValInt x) }    = fromIntegral x
-  toDouble TMValue { _tmvalValue = (TMValUInt x) }   = fromIntegral x
-  toDouble TMValue { _tmvalValue = (TMValDouble x) } = x
-  toDouble TMValue { _tmvalValue = (TMValTime x) }   = toDouble x
-  toDouble TMValue { _tmvalValue = (TMValString _) } = 0
-  toDouble TMValue { _tmvalValue = (TMValOctet _) }  = 0
-  toDouble TMValue { _tmvalValue = TMValNothing }    = 0
+    {-# INLINABLE toDouble #-}
+    toDouble TMValue { _tmvalValue = (TMValInt x) }    = fromIntegral x
+    toDouble TMValue { _tmvalValue = (TMValUInt x) }   = fromIntegral x
+    toDouble TMValue { _tmvalValue = (TMValDouble x) } = x
+    toDouble TMValue { _tmvalValue = (TMValTime x) }   = toDouble x
+    toDouble TMValue { _tmvalValue = (TMValString _) } = 0
+    toDouble TMValue { _tmvalValue = (TMValOctet _) }  = 0
+    toDouble TMValue { _tmvalValue = TMValNothing }    = 0
 
-instance Display TMValue where 
-  display (TMValue val _) = display val
+instance Display TMValue where
+    display (TMValue val _) = display val
 
 
 -- | a null value
