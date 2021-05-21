@@ -156,6 +156,8 @@ The real data processing paths (only the core processing, no GUI) that are curre
 
 [[./figures/data_pipelines.svg]]
 
+The automatic layout of graphviz as a bit unfortunate. If somebody knows how to generate a better layout, let me know.
+
 The main interfaces (network interfaces, application interface, GUI) are shown as colored rectangles. 
 Rainbow-colored rectangles show threads, boxes within them show either conduits or functions. 
 STM Queues are shown separate from threads, as (of course) they are accessed from multiple threads.
