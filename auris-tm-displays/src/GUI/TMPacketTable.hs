@@ -25,7 +25,7 @@ import           GUI.Colors
 data TMPacketTable = TMPacketTable
     { _tmptTable       :: TreeView
     , _tmptModel       :: SeqStore (ExtractedDU TMPacket)
-    , _tmptSortedModel :: TreeModelSort
+    --, _tmptSortedModel :: TreeModelSort
     }
 
 -- | Add a single row of a 'TMPacket'. Ensures, that 
@@ -57,62 +57,116 @@ createTMPacketTable :: Gtk.Builder -> IO TMPacketTable
 createTMPacketTable builder = do
     tv                    <- getObject builder "treeviewTMPUSPackets" TreeView
 
-    (_, model, sortModel) <- createSortedScrollingTable
+    model <- createScrollingTableSimple
         tv
         [ ( "SPID"
           , 70
-          , Nothing
           , \pkt -> [#text := textDisplay (pkt ^. epDU . tmpSPID)]
           )
         , ( "Mnemonic"
           , 80
-          , Nothing
           , \pkt -> [#text := ST.toText (pkt ^. epDU . tmpMnemonic)]
           )
         , ( "Description"
           , 250
-          , Nothing
           , \pkt -> [#text := ST.toText (pkt ^. epDU . tmpDescr)]
           )
         , ( "Generation Time"
           , 190
-          , Just (0, compareTimestamp)
           , \pkt -> [#text := textDisplay (pkt ^. epDU . tmpTimeStamp)]
           )
         , ( "ERT"
           , 190
-          , Just (1, compareERT)
           , \pkt -> [#text := textDisplay (pkt ^. epDU . tmpERT)]
           )
         , ( "APID"
           , 50
-          , Nothing
           , \pkt -> [#text := textDisplay (pkt ^. epDU . tmpAPID)]
           )
         , ( "T"
           , 30
-          , Nothing
           , \pkt -> [#text := textDisplay (pkt ^. epDU . tmpType)]
           )
         , ( "ST"
           , 30
-          , Nothing
           , \pkt -> [#text := textDisplay (pkt ^. epDU . tmpSubType)]
           )
-        , ("SSC", 60, Nothing, displaySSC)
+        , ("SSC", 60, displaySSC)
         , ( "VC"
           , 40
-          , Nothing
           , \pkt -> [#text := textDisplay (pkt ^. epDU . tmpVCID)]
           )
         , ( "Source"
           , 60
-          , Nothing
           , \pkt -> [#text := textDisplay (pkt ^. epDU . tmpSource)]
           )
         ]
 
-    return $ TMPacketTable tv model sortModel
+    return $ TMPacketTable tv model
+
+-- createTMPacketTable :: Gtk.Builder -> IO TMPacketTable
+-- createTMPacketTable builder = do
+--     tv                    <- getObject builder "treeviewTMPUSPackets" TreeView
+
+--     (_, model, sortModel) <- createSortedScrollingTable
+--         tv
+--         [ ( "SPID"
+--           , 70
+--           , Nothing
+--           , \pkt -> [#text := textDisplay (pkt ^. epDU . tmpSPID)]
+--           )
+--         , ( "Mnemonic"
+--           , 80
+--           , Nothing
+--           , \pkt -> [#text := ST.toText (pkt ^. epDU . tmpMnemonic)]
+--           )
+--         , ( "Description"
+--           , 250
+--           , Nothing
+--           , \pkt -> [#text := ST.toText (pkt ^. epDU . tmpDescr)]
+--           )
+--         , ( "Generation Time"
+--           , 190
+--           , Just (0, compareTimestamp)
+--           , \pkt -> [#text := textDisplay (pkt ^. epDU . tmpTimeStamp)]
+--           )
+--         , ( "ERT"
+--           , 190
+--           , Just (1, compareERT)
+--           , \pkt -> [#text := textDisplay (pkt ^. epDU . tmpERT)]
+--           )
+--         , ( "APID"
+--           , 50
+--           , Nothing
+--           , \pkt -> [#text := textDisplay (pkt ^. epDU . tmpAPID)]
+--           )
+--         , ( "T"
+--           , 30
+--           , Nothing
+--           , \pkt -> [#text := textDisplay (pkt ^. epDU . tmpType)]
+--           )
+--         , ( "ST"
+--           , 30
+--           , Nothing
+--           , \pkt -> [#text := textDisplay (pkt ^. epDU . tmpSubType)]
+--           )
+--         , ("SSC", 60, Nothing, displaySSC)
+--         , ( "VC"
+--           , 40
+--           , Nothing
+--           , \pkt -> [#text := textDisplay (pkt ^. epDU . tmpVCID)]
+--           )
+--         , ( "Source"
+--           , 60
+--           , Nothing
+--           , \pkt -> [#text := textDisplay (pkt ^. epDU . tmpSource)]
+--           )
+--         ]
+
+--     return $ TMPacketTable tv model sortModel
+
+
+
 
 displaySSC :: ExtractedDU TMPacket -> [AttrOp CellRendererText 'AttrSet]
 displaySSC pkt = case pkt ^. epGap of

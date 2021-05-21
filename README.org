@@ -148,12 +148,19 @@ get this things even set up when cd'ing in this environment!
    :CUSTOM_ID: data-processing
    :END:
 
-The architecture of the data processing backend looks like this:
+The (much simplified) architecture of the data processing backend looks like this:
 
 [[./architecture.svg]]
 
-The real code is a bit more involved and complicated and is constantly
-growing. All data processing is currently done in =esa-space-protocols=
+The real data processing paths (only the core processing, no GUI) that are currently implemented, can be seen here:
+
+[[./figures/data_pipelines.svg]]
+
+The main interfaces (network interfaces, application interface, GUI) are shown as colored rectangles. 
+Rainbow-colored rectangles show threads, boxes within them show either conduits or functions. 
+STM Queues are shown separate from threads, as (of course) they are accessed from multiple threads.
+
+All data processing is currently done in =esa-space-protocols=
 which is the main library.
 
 ** User Interface
@@ -179,27 +186,42 @@ There is more information available (restructuring and growing) on the Wiki on g
    :CUSTOM_ID: database
    :END:
 
-There is a preliminary implementation of a DB backend for events (thanks
-to Paolo and Matthias), as well as for TM Frames, but they are currently not used in AURISi. This is a task for later
+The initial goal was to support at least 2 backends: sqlite for testing campaigns
+and Postgres for MCS/CCS activities. After several tests, the current main backend is 
+MongoDB, as it showed to be the fastest for the use cases. The current DB backend 
+implementation can be found in =esa-db-mongodb=. If no backend is specified in the 
+AURISi configuration, it is started just for online processing. 
 
-The idea is to support at least 2 backends: sqlite for testing campaigns
-and Postgres for MCS/CCS activities.
+The DB backend is designed for streaming. There are currently three separate store processes 
+(one for TM Frames, one for PUS Packets and one for TM Packets),
+that just listen on queues, flush the queues if possible (so get all data currently in the queue as a list)
+and stores them into the DB. 
 
-** Satellite Information Base
+A separate query processor thread is directly attached to the application interface for 
+incoming requests from the outside (currently only GUI). This functionality is currently 
+very sparsely implemented, so retrievals are currently only very limited.
+
+** Satellite Mission Information Base
    :PROPERTIES:
    :CUSTOM_ID: satellite-information-base
    :END:
 
 Currently the MIB library is under work to load satellite information
-from a MIB in SCOS-2000 Format (Version 6.9). It may be, that a CDM
-library for EGS-CC based configurations will follow (probably).
+from a MIB in SCOS-2000 Format (Version 6.9). Currently, the TM information 
+can be loaded to decode TM Frames and TM Packets, most functionality for extraction
+is supported (with exception of deduced parameters and synthetic parameters).
+For commanding, basic TCs can be generated form the MIB, but some parameter types 
+are not yet supported (there are also bugs with calibrated parameters).
+
+It may be, that a CDM library for EGS-CC based configurations will follow (maybe).
 
 ** Protocols
    :PROPERTIES:
    :CUSTOM_ID: protocols
    :END:
 
-The currently working protocols are NCTRS (TC and TM, no ADMIN currently and no AD mode), C&C and EDEN. Since NCTRS is not that common
+The currently working protocols are NCTRS (TC and TM, no ADMIN currently and no AD mode), 
+C&C and EDEN. Since NCTRS is not that common
 anymore, other protocols will also be supported.
 
 Work has already begun on the implementation of an SLE library, to be
@@ -207,6 +229,10 @@ able to connect to ground stations without relay/routing software as for
 NCTRS. The SLE implementation is in a very early state and currently not
 usable and can be found here:
 [[https://github.com/oswald2/esa-sle][esa-sle]]
+This is in a very early state and not usable. An intermediate solution
+which uses ESA's C++ SLE API is in work, but this applies to ESA license
+schemes and will not be present on github.
+
 
 ** Notes
    :PROPERTIES:
@@ -220,7 +246,7 @@ usable and can be found here:
   =unsafeFreeze=. This allows to pass the HashTable out of the ST monad,
   but also only read-only functions are allowed. Currently, only
   =ilookup=, =fold= and =toList= are implemented.
-- The timer functionality is still undecided.
+- The timer functionality is still undecided. Currently, both =updatable-timers= and =timer-wheel= are used.
 - State machines need more research. Combining state machines with STM and timers is quite challenging. This is needed for the COP-1 machine for AD mode as well as for the Verification timers and the OBQM implementation.
 
 ** Contributing

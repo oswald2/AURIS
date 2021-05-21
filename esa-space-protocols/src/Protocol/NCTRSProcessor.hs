@@ -57,9 +57,7 @@ receiveTmNcduC = conduitParserEither ncduTmParser .| sink
                 (EVNCDUParseError (T.pack (errorMessage err)))
             sink
         Right (_, tc') -> do
-
             logDebug $ display ("Received TM NCDU: " :: Text) <> displayShow tc'
-
             yield tc'
             sink
 

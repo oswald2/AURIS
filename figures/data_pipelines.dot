@@ -1,0 +1,400 @@
+digraph DataPipelines {
+  rankdir="LR";
+  label="AURIS Data Flow Conduits";
+
+  subgraph cluster_Interfaces {
+    rank = same;
+
+    subgraph cluster_NCTRS {
+      rank = same;
+      style = filled;
+      color = yellow3;
+      node [shape=box,style=filled,color=white];
+
+      nctrs_tc [label="NCTRS TC",shape=box]
+      nctrs_tm [label="NCTRS TM", shape=box]
+      nctrs_admin [label="NCTRS TM", shape=box]
+
+      label = "NCTRS"
+    }
+
+    subgraph cluster_EDEN {
+      rank = same;
+      style = filled;
+      color = skyblue;
+      node [shape=box,style=filled,color=white];
+
+      eden [label="EDEN", shape=box];
+      label = "EDEN";
+    }
+
+    subgraph cluster_CC {
+      rank = same;
+      style = filled;
+      color = yellow;
+      node [shape=box,style=filled,color=white];
+
+      cc_tc [label="C&C TC", shape=box]
+      cc_tm [label="C&C TM", shape=box]
+    
+      label = "C&C";
+    }
+
+    fontsize = 24;
+    label = "Network Interfaces";
+  }
+
+  // NCTRS Conduits
+  subgraph cluster_Nctrs {
+    style = filled;
+    color = lightgrey;
+    fillcolor="blue:yellow";
+    node [shape=box, style= filled, color=white]
+
+    receiveTmNcduC -> ncduToTMFrameC -> tmFrameSwitchVC
+    label = "NCTRS TM Thread";
+  }
+
+  // EDEN Conduits
+  subgraph cluster_EDEN {
+    style = filled;
+    color = lightgrey;
+    fillcolor="blue:yellow";
+    node [shape=box, style= filled, color=white]
+
+    receiveEdenMessageC -> edenMessageProcessorC 
+    label = "EDEN TM Thread"
+  }
+
+  // NCTRS
+  nctrs_tm -> receiveTmNcduC;
+
+  // C&C Conduits
+  subgraph cluster_CC {
+    style = filled;
+    color = lightgrey;
+    fillcolor="blue:yellow";
+    node [shape=box, style= filled, color=white]
+
+    receiveCnCC -> cncToTMPacket 
+    label = "C&C TM Thread";
+  }
+
+  pktQueue [shape = record,label="PUS Packet Queue|{||}"]
+
+  // TM Chain Nodes 
+  subgraph cluster_TMPktChain {
+    style = filled;
+    color = lightgrey;
+    fillcolor="blue:yellow";
+    node [shape=box, style= filled, color=white]
+
+    packetProcessorC -> storeTMPacketC -> raiseTMPacketC 
+      -> raiseTMParameterC 
+
+    label = "TM Packet Processing Thread";
+  }
+
+  // EDEN TM 
+  eden -> receiveEdenMessageC;
+  edenMessageProcessorC -> pktQueue
+
+  // C&C TM 
+  cc_tm -> receiveCnCC;
+  cncToTMPacket -> pktQueue;
+
+  // Frame Queue 
+  subgraph cluster_frameQueueVC0 {
+    style = filled;
+    color = lightgrey;
+    fillcolor="blue:yellow";
+    node [shape=box, style= filled, color=white]
+
+    checkFrameCountC -> storeTMFrameC -> raiseFrameC 
+      -> extractPktFromTMFramesC -> pusPacketDecodeC 
+      -> pusPacketStoreC -> pusPacketGapCheckC;
+    label = "TM Frame Chain for VC0";
+  }
+
+  subgraph cluster_frameQueueVC1 {
+    style = filled;
+    color = lightgrey;
+    fillcolor="blue:yellow";
+    node [shape=box, style= filled, color=white]
+    
+    checkFrameCountC1 [label="checkFrameCountC"];
+    storeTMFrameC1  [label="storeTMFrameC"];
+    raiseFrameC1 [label="raiseFrameC"];
+    extractPktFromTMFramesC1 [label="extractPktFromTMFramesC"];
+    pusPacketDecodeC1  [label="pusPacketDecodeC"];
+    pusPacketStoreC1 [label="pusPacketStoreC"];
+    pusPacketGapCheckC1 [label="pusPacketGapCheckC"];
+
+    checkFrameCountC1 -> storeTMFrameC1 -> raiseFrameC1 
+      -> extractPktFromTMFramesC1 -> pusPacketDecodeC1
+      -> pusPacketStoreC1 -> pusPacketGapCheckC1;
+    label = "TM Frame Chain for VC1";
+  }
+
+  subgraph cluster_OtherVCs {
+    style = filled;
+    color = lightgrey;
+    fillcolor="blue:yellow";
+    other_vcs [label="More virtual channels", shape=plain, labelfontcolor=white]
+    label = "";
+  }
+
+  tmFrameSwitchVC -> checkFrameCountC;
+  tmFrameSwitchVC -> checkFrameCountC1;
+  tmFrameSwitchVC -> other_vcs;
+
+
+  pusPacketGapCheckC -> pktQueue;
+  pusPacketGapCheckC1 -> pktQueue;
+  other_vcs -> pktQueue;
+
+  pktQueue -> packetProcessorC
+
+  subgraph cluster_Interface {
+    rank = same;
+    style = filled;
+    color = lime;
+    ActionTable 
+    raiseEvent
+
+    ActionTable [shape=box,style=filled,color=white]
+    raiseEvent [shape=box,style=filled,color=white]
+
+    fontsize = 24;
+    label = "Application Interface";
+  }
+
+  commandQueue [shape = record,label="Command Queue|{||}"]
+  queryQueue [shape = record,label="Query Queue|{||}"]
+
+  raiseTMPacketC -> raiseEvent;
+  raiseTMParameterC -> raiseEvent;
+
+  ActionTable -> commandQueue;
+  ActionTable -> queryQueue;
+
+  subgraph cluster_coreThread {
+    style = filled;
+    color = lightgrey;
+    fillcolor="blue:yellow";
+    node [shape=box, style= filled, color=white]
+    
+    CommandProcessor;
+
+    label = "Core Thread";
+  }
+
+  commandQueue -> CommandProcessor;
+
+  subgraph cluster_dbQueryThread {
+    style = filled;
+    color = lightgrey;
+    fillcolor="blue:yellow";
+    node [shape=box, style= filled, color=white]
+    
+    QueryProcessor;
+
+    label = "DB Query Thread";
+  }
+
+  queryQueue -> QueryProcessor;
+
+  Database [shape=cylinder]
+
+  queryQueue -> QueryProcessor -> Database;
+  Database -> QueryProcessor -> raiseEvent;
+
+  subgraph cluster_frameStoreThread {
+    style = filled;
+    color = lightgrey;
+    fillcolor="blue:yellow";
+    node [shape=box, style= filled, color=white]
+    
+    FrameStore;
+
+    label = "TM Frame Store Thread";
+  }
+
+  storeTMFrameC -> FrameStore -> Database;
+  storeTMFrameC1 -> FrameStore -> Database;
+
+  subgraph cluster_pusPktStoreThread {
+    style = filled;
+    color = lightgrey;
+    fillcolor="blue:yellow";
+    node [shape=box, style= filled, color=white]
+    
+    PUSPacketStore [label = "PUS Packet Store"]
+
+    label = "PUS Packet Store Thread";
+  }
+
+  pusPacketStoreC -> PUSPacketStore -> Database;
+  pusPacketStoreC1 -> PUSPacketStore -> Database;
+
+  subgraph cluster_tmPktStoreThread {
+    style = filled;
+    color = lightgrey;
+    fillcolor="blue:yellow";
+    node [shape=box, style= filled, color=white]
+    
+    TMPacketStore [label = "TM Packet Store"]
+
+    label = "TM Packet Store Thread";
+  }
+
+  storeTMPacketC -> TMPacketStore -> Database;
+
+
+  tcRqstQueue [shape = record,label="TC Request Queue|{||}"]
+
+  CommandProcessor -> tcRqstQueue;
+
+  subgraph cluster_tcChain {
+    rankdir = "RL";
+    style = filled;
+    color = lightgrey;
+    fillcolor="blue:yellow";
+    node [shape=box, style= filled, color=white]
+  
+    tcPktEncoderC -> tcPktToEncPUSC -> switchProtocolPktC
+      -> tcSegmentEncoderC -> tcSegmentToTransferFrame
+      -> tcFrameEncodeC -> switchProtocolFrameC
+      -> tcFrameToCltuC;
+      
+    tcFrameToCltuC -> cltuEncodeRandomizedC -> switchProtocolCltuC;
+    tcFrameToCltuC ->cltuEncodeC -> switchProtocolCltuC;
+
+    label = "TC Encode Thread (currently BD Mode only)";
+  }
+
+  tcRqstQueue -> tcPktEncoderC;
+
+  subgraph cluster_ccTcSend {
+    rankdir = "RL";
+    style = filled;
+    color = lightgrey;
+    fillcolor="blue:yellow";
+    node [shape=box, style= filled, color=white]
+    
+    receivePktChannelC -> sendTCCncC
+
+    label = "C&C TC Send Thread";
+  }
+
+  ccTcQueue [shape = record,label="C&C TC Queue|{||}"]
+
+  ccTcQueue -> receivePktChannelC;
+  sendTCCncC -> cc_tc;
+  switchProtocolPktC -> ccTcQueue;
+
+  subgraph cluster_edenTcSend {
+    rankdir = "RL";
+    style = filled;
+    color = lightgrey;
+    fillcolor="blue:yellow";
+    node [shape=box, style= filled, color=white]
+
+    receiveQueueMsg -> createEdenMsgC -> encodeEdenMessageC;
+    label = "EDEN TC Send Thread";
+  }
+
+  edenTcQueue [shape = record,label="EDEN TC Queue|{||}"];
+
+  switchProtocolPktC -> edenTcQueue;
+  switchProtocolFrameC -> edenTcQueue;
+  switchProtocolCltuC -> edenTcQueue;
+  edenTcQueue -> receiveQueueMsg;
+  encodeEdenMessageC -> eden;
+
+
+  subgraph cluster_tcNctrs {
+    rankdir = "RL";
+    style = filled;
+    color = lightgrey;
+    fillcolor="blue:yellow";
+    node [shape=box, style= filled, color=white]
+
+    receiveCltuChannelC -> cltuToNcduC -> encodeTcNcduC;
+    label = "NCTRS TC Send Thread";
+  }
+    
+  nctrsTcQueue [shape = record,label="NCTRS TC Queue|{||}"];
+
+  switchProtocolCltuC -> nctrsTcQueue;
+  nctrsTcQueue -> receiveCltuChannelC;
+  encodeTcNcduC -> nctrs_tc;
+
+  subgraph cluster_tcNctrsAck {
+    rankdir = "RL";
+    style = filled;
+    color = lightgrey;
+    fillcolor="blue:yellow";
+    node [shape=box, style= filled, color=white]
+
+    receiveTcNcduC -> nctrsProcessorC;
+    label = "NCTRS TC Acknowledge Thread";
+  }
+
+  nctrs_tc -> receiveTcNcduC;
+
+  subgraph cluster_ccTcAck {
+    rankdir = "RL";
+    style = filled;
+    color = lightgrey;
+    fillcolor="blue:yellow";
+    node [shape=box, style= filled, color=white]
+
+    receiveCnCC -> cncProcessAcks;
+    label = "C&C TC Acknowledge Thread";
+  }
+
+  cc_tc -> receiveCnCC;
+
+  subgraph cluster_Verification {
+    rankdir = "RL";
+    style = filled;
+    color = lightgrey;
+    fillcolor="blue:yellow";
+    node [shape=box, style= filled, color=white]
+
+    processVerification;
+    
+    label = "TC Verification Processor";
+  }
+
+  verificationQueue [shape = record,label="TC Verificaiton Queue|{||}"];
+
+  cncProcessAcks -> verificationQueue;
+  nctrsProcessorC -> verificationQueue;
+  edenMessageProcessorC -> verificationQueue;
+  packetProcessorC -> verificationQueue;
+  verificationQueue -> processVerification;
+  processVerification -> raiseEvent;
+
+
+  subgraph cluster_GUI {
+    rank = same;
+    style = filled;
+    color = lightgrey;
+    fillcolor="firebrick4:firebrick1";
+
+    GUI [shape=box,style=filled,color=white,fontsize=24]
+
+    labelfontcolor = white;
+    fontcolor = white;
+    labelfontsize = 24;
+    fontsize = 24;
+    label = "GUI";
+  }
+
+  raiseEvent -> GUI;
+  GUI -> ActionTable;
+
+
+}

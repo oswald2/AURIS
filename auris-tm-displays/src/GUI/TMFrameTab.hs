@@ -247,6 +247,9 @@ createTMFTab window builder = do
                        }
     tmFrameTableRowReactive (g ^. tmfFrameTable)
         =:> guardMaybe (tmfTabDetails g)
+
+    switchLive g
+
     return g
 
 
@@ -353,11 +356,21 @@ setupCallbacks g interface = do
 --                        (tmfTabRewindReactive g interface)
 
 
-tmfTabPlayCB :: TMFrameTab -> Bool -> IO ()
-tmfTabPlayCB g True = do
+
+switchLive :: TMFrameTab -> IO ()
+switchLive g = do 
+    tmFrameTableSwitchLive (g ^. tmfFrameTable)
     tmFrameTableClearRows (g ^. tmfFrameTable)
     atomically $ writeTVar (g ^. tmfLiveState) Live
-    return ()
+
+switchStop :: TMFrameTab -> IO () 
+switchStop g = do
+    tmFrameTableSwitchOffline (g ^. tmfFrameTable)
+    atomically $ writeTVar (g ^. tmfLiveState) Stopped
+
+
+tmfTabPlayCB :: TMFrameTab -> Bool -> IO ()
+tmfTabPlayCB g True = switchLive g
 tmfTabPlayCB _ _ = return ()
 
 
@@ -365,13 +378,10 @@ tmfTabPlayReactive :: TMFrameTab -> ReactiveFieldWrite IO Bool
 tmfTabPlayReactive g = ReactiveFieldWrite setter
   where
     setter False = return ()
-    setter True  = do
-        tmFrameTableClearRows (g ^. tmfFrameTable)
-        atomically $ writeTVar (g ^. tmfLiveState) Live
+    setter True  = switchLive g
 
 tmfTabStopCB :: TMFrameTab -> Bool -> IO ()
-tmfTabStopCB g True = do
-    atomically $ writeTVar (g ^. tmfLiveState) Stopped
+tmfTabStopCB g True = switchStop g 
 tmfTabStopCB _ _ = return ()
 
 
@@ -379,8 +389,7 @@ tmfTabStopReactive :: TMFrameTab -> ReactiveFieldWrite IO Bool
 tmfTabStopReactive g = ReactiveFieldWrite setter
   where
     setter False = return ()
-    setter True  = do
-        atomically $ writeTVar (g ^. tmfLiveState) Stopped
+    setter True  = switchStop g
 
 
 

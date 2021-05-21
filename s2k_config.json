@@ -9,7 +9,7 @@
     "aurisPusConfig": {
         "cfgCnC": [
             {
-                "cfgCncHasCRC": true,
+                "cfgCncHasCRC": false,
                 "cfgCncPortTM": 33333,
                 "cfgCncHost": "localhost",
                 "cfgCncPortTC": 22222,
@@ -80,6 +80,6 @@
         }
     },
     "aurisLogLevel": {
-        "tag": "LogLevelDebug"
+        "tag": "LogLevelWarn"
     }
 }

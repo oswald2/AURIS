@@ -13,6 +13,8 @@ module GUI.TMFrameTable
     , tmFrameTableRowReactive
     , tmFrameTableAllRowsReactive
     , tmFrameTableAddRowReactive
+    , tmFrameTableSwitchLive
+    , tmFrameTableSwitchOffline
     ) where
 
 import           RIO
@@ -38,8 +40,18 @@ import           Data.ReactiveValue
 data TMFrameTable = TMFrameTable
     { _tmfrTable     :: TreeView
     , _tmfrModel     :: SeqStore (ExtractedDU TMFrame)
-    , _tmfrSortModel :: TreeModelSort
+    --, _tmfrSortModel :: TreeModelSort
     }
+
+
+tmFrameTableSwitchLive :: TMFrameTable -> IO () 
+tmFrameTableSwitchLive g = return ()
+  --treeViewSetModel (_tmfrTable g) (Just (_tmfrModel g))
+
+tmFrameTableSwitchOffline :: TMFrameTable -> IO () 
+tmFrameTableSwitchOffline g = return () 
+  --treeViewSetModel (_tmfrTable g) (Just (_tmfrSortModel g))
+
 
 
 tmFrameTableRowReactive :: TMFrameTable -> ReactiveFieldRead IO (Maybe (ExtractedDU TMFrame))
@@ -111,52 +123,45 @@ tmFrameTableGetLatestERT g = do
 createTMFrameTable :: Gtk.Builder -> IO TMFrameTable
 createTMFrameTable builder = do
     tv                    <- getObject builder "treeviewTMFrames" TreeView
-
-    (_, model, sortModel) <- createSortedScrollingTable
+    model <- createScrollingTableSimple
         tv
         [ ( "ERT"
           , 190
-          , Just (0, compareERT)
           , \pkt -> [#text := textDisplay (pkt ^. epERT)]
           )
         , ( "S/C ID"
           , 55
-          , Nothing
           , \pkt ->
               [#text := textDisplay (pkt ^. epDU . tmFrameHdr . tmFrameScID)]
           )
         , ( "V/C ID"
           , 50
-          , Nothing
           , \pkt ->
               [#text := textDisplay (pkt ^. epDU . tmFrameHdr . tmFrameVcID)]
           )
         , ( "VC FC"
           , 50
-          , Just (1, compareVCFC)
           , \pkt ->
               [#text := textDisplay (pkt ^. epDU . tmFrameHdr . tmFrameVCFC)]
           )
         , ( "MC FC"
           , 55
-          , Just (2, compareMCFC)
           , \pkt ->
               [#text := textDisplay (pkt ^. epDU . tmFrameHdr . tmFrameMCFC)]
           )
         , ( "DFH"
           , 44
-          , Nothing
           , \pkt ->
               [ #text := if pkt ^. epDU . tmFrameHdr . tmFrameDfh
                     then "T"
                     else "F"
               ]
           )
-        , ("SRC", 60, Nothing, \pkt -> [#text := textDisplay (pkt ^. epSource)])
-        , ("Gap" , 60, Nothing, \pkt -> gapAttrs (pkt ^. epGap))
-        , ("Qual", 40, Nothing, \pkt -> qualityAttrs (pkt ^. epQuality))
+        , ("SRC", 60, \pkt -> [#text := textDisplay (pkt ^. epSource)])
+        , ("Gap" , 60, \pkt -> gapAttrs (pkt ^. epGap))
+        , ("Qual", 40, \pkt -> qualityAttrs (pkt ^. epQuality))
         ]
-    return $ TMFrameTable tv model sortModel
+    return $ TMFrameTable tv model
 
   where
     gapAttrs Nothing = [#backgroundSet := False, #foregroundSet := False]
@@ -180,6 +185,81 @@ createTMFrameTable builder = do
           , #foregroundSet := True
           , #foregroundRgba := black
           ]
+
+-- -- | Create a 'TMFrameTable' from a 'Gtk.Builder'.
+-- createTMFrameTable :: Gtk.Builder -> IO TMFrameTable
+-- createTMFrameTable builder = do
+--     tv                    <- getObject builder "treeviewTMFrames" TreeView
+
+--     (_, model, sortModel) <- createSortedScrollingTable
+--         tv
+--         [ ( "ERT"
+--           , 190
+--           , Just (0, compareERT)
+--           , \pkt -> [#text := textDisplay (pkt ^. epERT)]
+--           )
+--         , ( "S/C ID"
+--           , 55
+--           , Nothing
+--           , \pkt ->
+--               [#text := textDisplay (pkt ^. epDU . tmFrameHdr . tmFrameScID)]
+--           )
+--         , ( "V/C ID"
+--           , 50
+--           , Nothing
+--           , \pkt ->
+--               [#text := textDisplay (pkt ^. epDU . tmFrameHdr . tmFrameVcID)]
+--           )
+--         , ( "VC FC"
+--           , 50
+--           , Just (1, compareVCFC)
+--           , \pkt ->
+--               [#text := textDisplay (pkt ^. epDU . tmFrameHdr . tmFrameVCFC)]
+--           )
+--         , ( "MC FC"
+--           , 55
+--           , Just (2, compareMCFC)
+--           , \pkt ->
+--               [#text := textDisplay (pkt ^. epDU . tmFrameHdr . tmFrameMCFC)]
+--           )
+--         , ( "DFH"
+--           , 44
+--           , Nothing
+--           , \pkt ->
+--               [ #text := if pkt ^. epDU . tmFrameHdr . tmFrameDfh
+--                     then "T"
+--                     else "F"
+--               ]
+--           )
+--         , ("SRC", 60, Nothing, \pkt -> [#text := textDisplay (pkt ^. epSource)])
+--         , ("Gap" , 60, Nothing, \pkt -> gapAttrs (pkt ^. epGap))
+--         , ("Qual", 40, Nothing, \pkt -> qualityAttrs (pkt ^. epQuality))
+--         ]
+--     return $ TMFrameTable tv model sortModel
+
+--   where
+--     gapAttrs Nothing = [#backgroundSet := False, #foregroundSet := False]
+--     gapAttrs (Just (low, _)) =
+--         [ #text := textDisplay low
+--         , #backgroundSet := True
+--         , #backgroundRgba := paleYellow
+--         , #foregroundSet := True
+--         , #foregroundRgba := black
+--         ]
+--     qualityAttrs flag
+--         | toBool flag
+--         = [ #text := ("GOOD" :: Text)
+--           , #backgroundSet := False
+--           , #foregroundSet := False
+--           ]
+--         | otherwise
+--         = [ #text := ("BAD" :: Text)
+--           , #backgroundRgba := paleYellow
+--           , #backgroundSet := True
+--           , #foregroundSet := True
+--           , #foregroundRgba := black
+--           ]
+
 
 compareERT :: ExtractedDU TMFrame -> ExtractedDU TMFrame -> Ordering
 compareERT f1 f2 = compare (f1 ^. epERT) (f2 ^. epERT)
