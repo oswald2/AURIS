@@ -1,0 +1,3 @@
+[submodule "sle-wrapper"]
+	path = sle-wrapper
+	url = https://oswald2@github.com/oswald2/sle-wrapper

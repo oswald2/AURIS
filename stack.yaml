@@ -17,7 +17,7 @@
 #
 # resolver: ./custom-snapshot.yaml
 # resolver: https://example.com/snapshots/2018-01-01.yaml
-resolver: lts-17.6
+resolver: lts-18.12
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -69,6 +69,9 @@ extra-deps:
 - gi-gtksource-3.0.23@sha256:f3676124cf9dc64bfff11576fb99462abdbb2eed3cc80d606acf4db15020079b,7765
 - keera-callbacks-0.1@sha256:8c0da05cfcbb056bd4ea4187f2a7e644fd92965e92952b7bae9c7ef4f041b992,1899
 - keera-hails-reactivevalues-0.7.0@sha256:dc04bc8823f4626a25f6a06b796694dd812c6c0b9e8d2231a991e4e20393e86c,3601
+- gi-cairo-connector-0.1.0@sha256:a79c34c4f22f81a938c5835f623de55fdf1f0f08435897bad68f58e01ffd1464,1213
+- gi-cairo-render-0.1.0@sha256:cb27b31b373c55c5b384a331e439d1ebc2fb3e02c8a58c9bfb83218d5467af2b,3553
+
 
 ghc-options: 
   "$targets": -freverse-errors 

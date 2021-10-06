@@ -22,7 +22,7 @@ module General.Padding
     , rightPadded
     , leftPaddedC
     , rightPaddedC
-    , padFromRight
+    , General.Padding.padFromRight
     ) where
 
 import           RIO
