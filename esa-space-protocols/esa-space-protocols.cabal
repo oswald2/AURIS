@@ -76,6 +76,7 @@ library
         Protocol.EDENEncoder
         Protocol.CnC
         Protocol.ProtocolSwitcher
+        Protocol.SLE
         Application.Chains
         Application.DataModel
         Verification.Commands
@@ -182,9 +183,14 @@ library
         , ghc-compact
 
     if flag(sle)
+        cpp-options: -DHAS_SLE
         Build-depends:
             esa-sle
-        cpp-options: -DHAS_SLE
+        exposed-modules:
+            Protocol.Internal.SLE 
+    else 
+        exposed-modules:
+            Protocol.Internal.SLEDummy
 
     ghc-options: 
         -O0 -g2 -Wall -Wcompat -Widentities -Wincomplete-record-updates

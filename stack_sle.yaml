@@ -82,7 +82,8 @@ flags:
     sle: True
   esa-space-protocols:
     sle: True
-
+  aurisi:
+    sle: True 
 
 # Extra package databases containing global packages
 # extra-package-dbs: []

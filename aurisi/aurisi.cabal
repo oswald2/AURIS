@@ -34,6 +34,11 @@ flag optimize
       build library with optimization
     default: False
 
+flag sle 
+    description:
+      Build with SLE support. Requires a valid installation of ESA's C++ SLE API
+    default: False 
+
 
 Executable AURISi
   Main-Is: AURISiMain.hs
@@ -97,8 +102,16 @@ Executable AURISi
     ghc-compact,
     keera-hails-reactivevalues
 
+  if flag(sle)
+    cpp-options: -DHAS_SLE
+    extra-lib-dirs: 
+      ../sle-wrapper/sle-wrapper/build/lib
+      /opt/platform3pp/P3PPSLE-API-64bit-5.1.0i3/lib
+    extra-libraries:
+      stdc++ dl z pthread sleapi sleinf asnsdk_50_sles15_64bit_gcc7 SLEwrapper :libcrypto.so.1.1 :libssl.so.1.1
+
+
   default-extensions:
-        
         BangPatterns
         BinaryLiterals
         ConstraintKinds
@@ -120,7 +133,6 @@ Executable AURISi
         InstanceSigs
         KindSignatures
         LambdaCase
-        
         MultiParamTypeClasses
         MultiWayIf
         NamedFieldPuns
@@ -144,16 +156,16 @@ Executable AURISi
   if flag(llvm)
         ghc-options: -O2 -Wall -Wcompat -Widentities -Wincomplete-record-updates
                      -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
-                     -funbox-strict-fields -fllvm -optlo-O3 -threaded -rtsopts -with-rtsopts=--nonmoving-gc
+                     -funbox-strict-fields -fllvm -optlo-O3 -threaded -rtsopts 
   else
     if flag(optimize)
         ghc-options: -O2 -Wall -Wcompat -Widentities -Wincomplete-record-updates
                      -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
-                     -funbox-strict-fields  -threaded -rtsopts -with-rtsopts=--nonmoving-gc
+                     -funbox-strict-fields  -threaded -rtsopts 
     else
         ghc-options: -O0 -g2 -Wall -Wcompat -Widentities -Wincomplete-record-updates
                      -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
-                     -funbox-strict-fields  -threaded -rtsopts -with-rtsopts=--nonmoving-gc
+                     -funbox-strict-fields  -threaded -rtsopts 
 
 
 

@@ -4,5 +4,9 @@
     "**/.project": true,
     "**/.settings": true,
     "**/.factorypath": true
+  },
+  "files.associations": {
+    "wscript": "python",
+    "SLEse.C": "cpp"
   }
 }

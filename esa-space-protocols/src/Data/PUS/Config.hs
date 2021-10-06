@@ -19,6 +19,7 @@ module Data.PUS.Config
     , NctrsConfig(..)
     , CncConfig(..)
     , EDENConfig(..)
+    , SLEConfig(..)
     , VerificationConfig(..)
     , cltuBlockSizeAsWord8
     , defaultConfig
@@ -33,14 +34,14 @@ module Data.PUS.Config
     ) where
 
 
-import           RIO
-import           RIO.List                       ( headMaybe )
-import qualified RIO.HashMap                   as HM
 import           Data.Aeson
 import           Data.ByteString.Lazy          as B
 import qualified Data.Text                     as T
 import           Data.Text.Short                ( ShortText )
 import qualified Data.Text.Short               as ST
+import           RIO
+import qualified RIO.HashMap                   as HM
+import           RIO.List                       ( headMaybe )
 
 import           General.PUSTypes
 
@@ -110,6 +111,22 @@ instance ToJSON EDENConfig where
     toEncoding = genericToEncoding defaultOptions
 
 
+data SLEConfig = SLEConfig
+    {
+    -- | Path to the SLE config file for the Service Element 
+      cfgSleSeConfig    :: !FilePath
+    -- | Path to the SLE config file for the Proxy
+    , cfgSleProxyConfig :: !FilePath
+    -- | the SLE service instance ID for the RAF service 
+    , cfgSleRafSII      :: !Text
+    }
+    deriving (Eq, Generic)
+
+instance FromJSON SLEConfig
+instance ToJSON SLEConfig where
+    toEncoding = genericToEncoding defaultOptions
+
+
 -- | Configuration data for the TC verifications. All timeouts 
 -- are specified in seconds
 data VerificationConfig = VerificationConfig
@@ -170,6 +187,8 @@ data Config = Config
     , cfgCnC                  :: [CncConfig]
     -- | Specifies the configuration of the available EDEN connections
     , cfgEDEN                 :: [EDENConfig]
+    -- | Specifies the SLE interface configuration
+    , cfgSLE                  :: Maybe SLEConfig 
     -- | Specifies default values for TC verifications
     , cfgVerification         :: VerificationConfig
     -- | Determines, whether incoming TM Frames are stored in the DB. This
@@ -234,6 +253,13 @@ defaultCncConfig = CncConfig { cfgCncID     = 1
                              }
 
 
+-- defaultSleConfig :: SLEConfig 
+-- defaultSleConfig = SLEConfig {
+--       cfgSleSeConfig    = "sle/SE_PROV_Config.txt"
+--     , cfgSleProxyConfig = "sle/PROXY_PROV_Config.txt"
+--     , cfgSleRafSII      = "sagr=3.spack=facility-PASS1.rsl-fg=1.raf=onlc1"
+--   }
+
 -- | a default configuration with typical values.
 defaultConfig :: Config
 defaultConfig = Config { cfgCltuBlockSize        = CltuBS_8
@@ -249,6 +275,7 @@ defaultConfig = Config { cfgCltuBlockSize        = CltuBS_8
                        , cfgNCTRS                = [defaultNctrsConfig]
                        , cfgCnC                  = [defaultCncConfig]
                        , cfgEDEN                 = [defaultEdenConfig]
+                       , cfgSLE                  = Nothing 
                        , cfgVerification         = defaultVerifConfig
                        , cfgStoreTMFrames        = True
                        , cfgStorePUSPackets      = True

@@ -15,7 +15,7 @@ import           Data.PUS.GlobalState           ( newGlobalState
 import           Data.PUS.MissionSpecific.Definitions
                                                 ( PUSMissionSpecific )
 import           Data.PUS.Events                ( EventFlag(..) )
--- import           Data.PUS.Config
+import           Data.PUS.Config
 import           Control.PUS.Classes            ( setDataModel )
 
 import           Interface.Interface            ( Interface
@@ -52,6 +52,9 @@ import           Data.Mongo.Processing          ( newDbState
 import           Persistence.Logging            ( logToDB )
 import           Persistence.DbResultProcessor  ( dbResultFunc )
 import           Persistence.DBQuery
+
+import           Protocol.SLE
+
 
 runProcessing
     :: AurisConfig
@@ -134,6 +137,10 @@ runProcessing cfg missionSpecific mibPath interface mainWindow coreQueue queryQu
 
                 -- Start the TC verification processor 
                 void $ async $ processVerification (glsVerifCommandQueue env)
+
+                forM_ (cfgSLE (aurisPusConfig cfg)) $ \sleCfg -> do 
+                    logInfo "Starting SLE interface..."
+                    void $ async $ startSLE sleCfg
 
                 -- run all processing chains (TM and TC) as well as the 
                 -- interface threads 
