@@ -46,3 +46,4 @@ AURIS_Unoptimzed.tar.bz2
 test-data/tm_10000_pkts.raw
 cnc_tc_10000.raw
 esa-base/src/Conduit/irgendwas.txt
+stack_sle.yaml.lock

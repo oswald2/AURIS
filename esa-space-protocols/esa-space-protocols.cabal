@@ -32,6 +32,11 @@ flag bench
         Build benchmarks
     default: False
 
+flag sle 
+    description:
+      build library with SLE support. Requires a valid installation of ESA's C++ SLE API
+    default: False 
+
 
 library
     exposed-modules:
@@ -176,19 +181,24 @@ library
         , word24
         , ghc-compact
 
+    if flag(sle)
+        Build-depends:
+            esa-sle
+        cpp-options: -DHAS_SLE
+
+    ghc-options: 
+        -O0 -g2 -Wall -Wcompat -Widentities -Wincomplete-record-updates
+                -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
+                -funbox-strict-fields
+
+    if flag(optimize)
+        ghc-options: -O2 
+    
     if flag(llvm)
-        ghc-options: -O2 -Wall -Wcompat -Widentities -Wincomplete-record-updates
-                     -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
-                     -funbox-strict-fields -fllvm -optlo-O3
-    else
-      if flag(optimize)
-        ghc-options: -O2 -Wall -Wcompat -Widentities -Wincomplete-record-updates
-                     -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
-                     -funbox-strict-fields
-      else
-        ghc-options: -O0 -g2 -Wall -Wcompat -Widentities -Wincomplete-record-updates
-                     -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
-                     -funbox-strict-fields
+        cpp-options: -DUSES_LLVM
+        ghc-options: -O2 -fllvm -optlo-O3
+
+
 
 -- executable WriteConfig
 --     main-is: WriteConfig.hs

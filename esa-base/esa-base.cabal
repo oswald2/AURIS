@@ -58,6 +58,11 @@ flag optimize
       build library with optimization
     default: False
 
+flag sle 
+    description:
+      build library with SLE support. Requires a valid installation of ESA's C++ SLE API
+    default: False 
+
 
 library
   -- Modules exported by the library.
@@ -214,16 +219,15 @@ library
   -- Base language which the package is written in.
   default-language:    Haskell2010
 
+  if flag(sle) 
+    cpp-options: -DHAS_SLE
+
+  ghc-options: -O0 -g2 -Wall -Wcompat -Widentities -Wincomplete-record-updates
+            -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
+            -funbox-strict-fields
+
+  if flag(optimize)
+        ghc-options: -O2 
+
   if flag(llvm)
-        ghc-options: -O2 -Wall -Wcompat -Widentities -Wincomplete-record-updates
-                     -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
-                     -funbox-strict-fields -fllvm -optlo-O3
-  else
-    if flag(optimize)
-        ghc-options: -O2 -Wall -Wcompat -Widentities -Wincomplete-record-updates
-                     -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
-                     -funbox-strict-fields
-    else
-        ghc-options: -O0 -g2 -Wall -Wcompat -Widentities -Wincomplete-record-updates
-                     -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
-                     -funbox-strict-fields
+        ghc-options: -O2 -fllvm -optlo-O3
