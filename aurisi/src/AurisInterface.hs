@@ -132,6 +132,8 @@ eventProcessor g (EventPUS (EVCommanding (EVTCVerificationUpdate rqst verif)))
 eventProcessor g (EventPUS (EVDB (EVDBTMFrames frames))) = do
     postGUIASync $ mwSetTMFrames g frames
 
+eventProcessor g (EventPUS (EVTelemetry (EVTMStatistics stats))) = do 
+    postGUIASync $ mwAddTMStatistic g stats
 
 eventProcessor _ _ = pure ()
 

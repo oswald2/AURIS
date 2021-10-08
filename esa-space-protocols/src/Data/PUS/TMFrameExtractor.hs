@@ -28,47 +28,52 @@ module Data.PUS.TMFrameExtractor
     , raiseFrameC
     , pusPacketGapCheckC
     , pusPacketStoreC
+    , packetStatC
+    , frameStatC
     ) where
 
-import           RIO                     hiding ( view
+import qualified Data.IntMap.Strict            as M
+import           RIO                     hiding ( (.~)
                                                 , (^.)
-                                                , (.~)
                                                 , to
+                                                , view
                                                 )
 import qualified RIO.ByteString                as B
-import qualified Data.IntMap.Strict            as M
-import qualified RIO.Text                      as T
 import qualified RIO.HashMap                   as HM
+import qualified RIO.Text                      as T
 
-import           Control.Lens
 import           ByteString.StrictBuilder
+import           Control.Lens
 
 import           Conduit
-import           Data.Conduit.TQueue
 import           Conduit.PayloadParser
 import           Data.Attoparsec.ByteString     ( Parser )
 import qualified Data.Attoparsec.ByteString    as A
+import           Data.Conduit.TQueue
 
 import           Control.PUS.Classes
 
-import           Data.PUS.TMFrame
-import           General.PUSTypes
-import           General.APID
-import           Data.PUS.PUSPacket
+import           Data.Thyme.Clock.POSIX        as Time
+
 import           Data.PUS.Config
+import           Data.PUS.EncTime
 import           Data.PUS.Events
-import           Data.PUS.MissionSpecific.Definitions
-import           Data.PUS.SegmentationFlags
 import           Data.PUS.ExtractedDU
 import           Data.PUS.ExtractedPUSPacket
+import           Data.PUS.MissionSpecific.Definitions
+import           Data.PUS.PUSPacket
+import           Data.PUS.SegmentationFlags
+import           Data.PUS.Statistics
+import           Data.PUS.TMFrame
 import           Data.PUS.TMStoreFrame
-import           Data.PUS.EncTime
+import           General.APID
+import           General.PUSTypes
 
 import           General.Time
 import           General.Types
 
-import           Protocol.ProtocolInterfaces
 import           General.SizeOf
+import           Protocol.ProtocolInterfaces
 
 import           General.Hexdump
 
@@ -714,29 +719,30 @@ pusPacketGapCheckC = worker Nothing
             APID ap = hdr ^. pusHdrAPID
             apid    = fromIntegral ap
         case hdr ^. pusHdrType of
-            PUSTM -> 
-                case sscs of
-                    Nothing -> do
-                        yield pkt
-                        worker (Just (M.singleton apid ssc))
-                    Just old -> do
-                        case M.lookup apid old of
-                            Nothing -> do
-                                yield pkt
-                                worker (Just (M.insert apid ssc old))
-                            Just oldSSC -> do
-                                if oldSSC + 1 == ssc
-                                    then yield pkt
-                                    else
-                                        yield
-                                            (  pkt
-                                            &  extrPacket
-                                            .  epGap
-                                            ?~ (fromIntegral oldSSC, fromIntegral ssc)
-                                            )
-                                worker (Just (M.insert apid ssc old))
+            PUSTM -> case sscs of
+                Nothing -> do
+                    yield pkt
+                    worker (Just (M.singleton apid ssc))
+                Just old -> do
+                    case M.lookup apid old of
+                        Nothing -> do
+                            yield pkt
+                            worker (Just (M.insert apid ssc old))
+                        Just oldSSC -> do
+                            if oldSSC + 1 == ssc
+                                then yield pkt
+                                else
+                                    yield
+                                        (  pkt
+                                        &  extrPacket
+                                        .  epGap
+                                        ?~ ( fromIntegral oldSSC
+                                           , fromIntegral ssc
+                                           )
+                                        )
+                            worker (Just (M.insert apid ssc old))
             PUSTC -> do
-                yield pkt 
+                yield pkt
                 worker sscs
 
 
@@ -761,6 +767,32 @@ tmFrameExtractionChain queue outQueue interf =
     sourceTBQueue queue .| tmFrameExtraction interf .| sinkTBQueue outQueue
 
 
+-- | A conduit which calculates the frame statistics
+frameStatC
+    :: (MonadIO m, MonadReader env m, HasConfig env, HasStats env)
+    => ConduitT (ExtractedDU TMFrame) (ExtractedDU TMFrame) m ()
+frameStatC = do
+    env <- ask
+    let !frameSize =
+            fromIntegral . cfgMaxTMFrameLen . cfgTMFrame $ env ^. getConfig
+    awaitForever $ \meta -> do
+        let frameStatVar = getFrameStats env
+        now <- liftIO $ getPOSIXTime
+        atomically $ modifyTVar' frameStatVar (statNewDU now frameSize)
+        yield meta
+
+
+packetStatC
+    :: (MonadIO m, MonadReader env m, HasStats env)
+    => ConduitT ExtractedPacket ExtractedPacket m ()
+packetStatC = do
+    awaitForever $ \meta -> do
+        pktStatVar <- getPacketStats <$> ask
+        let pktSize = fromIntegral $ B.length (meta ^. extrBytes)
+        now <- liftIO $ getPOSIXTime
+        atomically $ modifyTVar' pktStatVar (statNewDU now pktSize)
+        yield meta
+
 -- | A conduit chain. Reads 'TMFrame' s,
 -- extracts the packets from the frames, passes them to the PUS Packet
 -- parser and passes that on downstream.
@@ -774,8 +806,12 @@ tmFrameExtraction interf = do
         cfg             = st ^. getConfig
 
         frameChain      = if isJust (getDbBackend st) && cfgStoreTMFrames cfg
-            then checkFrameCountC interf .| storeTMFrameC .| raiseFrameC
-            else checkFrameCountC interf .| raiseFrameC
+            then
+                checkFrameCountC interf
+                .| storeTMFrameC
+                .| frameStatC
+                .| raiseFrameC
+            else checkFrameCountC interf .| frameStatC .| raiseFrameC
 
     let db = getDbBackend st
 
@@ -786,11 +822,13 @@ tmFrameExtraction interf = do
             .| pusPacketDecodeC interf
             .| pusPacketStoreC
             .| pusPacketGapCheckC
+            .| packetStatC
         else
             frameChain
             .| extractPktFromTMFramesC missionSpecific interf
             .| pusPacketDecodeC interf
             .| pusPacketGapCheckC
+            .| packetStatC
 
 
 checkGapsValid :: TMSegmentLen -> IntermediatePacket -> PUSHeader -> Bool

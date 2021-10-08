@@ -120,6 +120,7 @@ library
     Data.PUS.TCPacket
     Data.PUS.TCCnc
     Data.PUS.Verification
+    Data.PUS.Statistics
     Protocol.ProtocolInterfaces
     Conduit.PayloadParser
     Persistence.Conversion.Types
@@ -211,6 +212,9 @@ library
     , refined
     , sorted-list
     , bimap
+    , vector-space
+    , scientific
+    , time
 
 
   -- Directories containing source files.

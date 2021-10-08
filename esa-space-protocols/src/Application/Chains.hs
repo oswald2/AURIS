@@ -11,67 +11,69 @@ module Application.Chains
     , EdenID(..)
     ) where
 
-import           RIO
-import qualified RIO.HashMap                   as HM
 import           Conduit
+import           Conduit.SocketConnector        ( runGeneralTCPReconnectClient )
 import           Data.Conduit.Network
 import           Data.Conduit.TQueue            ( sinkTBQueue
                                                 , sourceTBQueue
                                                 )
-import           Conduit.SocketConnector        ( runGeneralTCPReconnectClient )
+import           RIO
+import qualified RIO.HashMap                   as HM
 
 import           Data.PUS.Config
-import           Data.PUS.GlobalState           
+import           Data.PUS.Events
+import           Data.PUS.ExtractedPUSPacket    ( ExtractedPacket )
+import           Data.PUS.GlobalState
 import           Data.PUS.MissionSpecific.Definitions
                                                 ( PUSMissionSpecific )
-import           Data.PUS.TMFrameExtractor      
-import           Data.PUS.TMPacketProcessing    ( packetProcessorC
-                                                , raiseTMPacketC
-                                                , storeTMPacketC
-                                                , raiseTMParameterC
-                                                )
 import           Data.PUS.NcduToTMFrame         ( ncduToTMFrameC )
-import           Data.PUS.Events                ( Event(EVAlarms)
-                                                , EventAlarm(EVEConnection)
-                                                )
-import           Data.PUS.ExtractedPUSPacket    ( ExtractedPacket )
-import           Data.PUS.TCPacketEncoder       ( tcPktEncoderC )
 import           Data.PUS.PUSPacketEncoder      ( tcPktToEncPUSC )
+import           Data.PUS.TCPacketEncoder       ( tcPktEncoderC )
 import           Data.PUS.TCTransferFrame       ( tcFrameEncodeC )
 import           Data.PUS.TCTransferFrameEncoder
                                                 ( tcFrameToCltuC
                                                 , tcSegmentToTransferFrame
                                                 )
+import           Data.PUS.TMFrameExtractor
+import           Data.PUS.TMPacketProcessing    ( packetProcessorC
+                                                , raiseTMPacketC
+                                                , raiseTMParameterC
+                                                , storeTMPacketC
+                                                )
 
-import           Data.PUS.SegmentEncoder        ( tcSegmentEncoderC )
-import           Data.PUS.CLTU                  ( cltuEncodeRandomizedC, cltuEncodeC )
+import           Data.PUS.CLTU                  ( cltuEncodeC
+                                                , cltuEncodeRandomizedC
+                                                )
 import           Data.PUS.CLTUEncoder           ( cltuToNcduC )
 import           Data.PUS.Counter               ( initialSSCCounterMap )
+import           Data.PUS.SegmentEncoder        ( tcSegmentEncoderC )
+import           Data.PUS.Statistics
 
-import           Protocol.NCTRSProcessor        ( receiveTcNcduC
-                                                , receiveTmNcduC
-                                                , receiveAdminNcduC
-                                                , encodeTcNcduC
-                                                , nctrsProcessorC
-                                                )
-import           Protocol.CnC                   ( receiveCnCC
-                                                , cncProcessAcks
+import           Protocol.CnC                   ( cncProcessAcks
                                                 , cncToTMPacket
+                                                , receiveCnCC
                                                 , sendTCCncC
                                                 )
 import           Protocol.EDEN                  ( encodeEdenMessageC
                                                 , receiveEdenMessageC
                                                 )
+import           Protocol.EDENEncoder           ( createEdenMsgC )
 import           Protocol.EDENProcessor         ( edenMessageProcessorC )
+import           Protocol.NCTRSProcessor        ( encodeTcNcduC
+                                                , nctrsProcessorC
+                                                , receiveAdminNcduC
+                                                , receiveTcNcduC
+                                                , receiveTmNcduC
+                                                )
 import           Protocol.ProtocolInterfaces    ( ConnType
-                                                    ( ConnSingle
-                                                    , ConnAdmin
-                                                    , ConnTM
+                                                    ( ConnAdmin
+                                                    , ConnSingle
                                                     , ConnTC
+                                                    , ConnTM
                                                     )
                                                 , ConnectionState
-                                                    ( Disconnected
-                                                    , Connected
+                                                    ( Connected
+                                                    , Disconnected
                                                     )
                                                 , ProtocolInterface
                                                     ( IfCnc
@@ -82,16 +84,22 @@ import           Protocol.ProtocolInterfaces    ( ConnType
 import           Protocol.ProtocolSwitcher      ( InterfaceSwitcherMap
                                                 , ProtocolQueue
                                                 , createInterfaceChannel
-                                                , switchProtocolPktC
-                                                , switchProtocolFrameC
-                                                , switchProtocolCltuC
-                                                , receivePktChannelC
                                                 , receiveCltuChannelC
+                                                , receivePktChannelC
                                                 , receiveQueueMsg
+                                                , switchProtocolCltuC
+                                                , switchProtocolFrameC
+                                                , switchProtocolPktC
                                                 )
-import           Protocol.EDENEncoder           ( createEdenMsgC )
 
 import           Control.PUS.Classes
+import           Data.PUS.Statistics            ( TMFrameStats(tmStatFrameTime)
+                                                )
+import           RIO                            ( HasLogFunc )
+
+import           Data.Thyme.Clock
+import           Data.Thyme.Clock.POSIX
+
 
 
 newtype NctrsID = NctrsID Word16
@@ -109,10 +117,7 @@ runTMNctrsChain cfg pktQueue = do
 
     (_thread, vcMap) <- setupFrameSwitcher (IfNctrs (cfgNctrsID cfg)) pktQueue
 
-    let chain =
-            receiveTmNcduC
-                .| ncduToTMFrameC
-                .| tmFrameSwitchVC vcMap
+    let chain = receiveTmNcduC .| ncduToTMFrameC .| tmFrameSwitchVC vcMap
 
     runGeneralTCPReconnectClient
         (clientSettings (fromIntegral (cfgNctrsPortTM cfg))
@@ -130,7 +135,8 @@ runTMNctrsChain cfg pktQueue = do
             (EVAlarms
                 (EVEConnection (IfNctrs (cfgNctrsID cfg)) ConnTM Connected)
             )
-        logInfo $ "Connected TM connection on NCTRS " <> display (cfgNctrsID cfg)
+        logInfo $ "Connected TM connection on NCTRS " <> display
+            (cfgNctrsID cfg)
 
         res <- try $ void $ runConduitRes (appSource app .| chain)
 
@@ -150,8 +156,9 @@ runTMNctrsChain cfg pktQueue = do
                     $  display @Text "NCTRS Interface Exception: "
                     <> displayShow e
                 throwM e
-            Right _ -> do 
-                logWarn $ "Disconnected TM connection on NCTRS " <> display (cfgNctrsID cfg)
+            Right _ -> do
+                logWarn $ "Disconnected TM connection on NCTRS " <> display
+                    (cfgNctrsID cfg)
                 return ()
 
 
@@ -179,7 +186,8 @@ runTCNctrsChain cfg cltuQueue = do
             (EVAlarms
                 (EVEConnection (IfNctrs (cfgNctrsID cfg)) ConnTC Connected)
             )
-        logInfo $ "Connected TC connection on NCTRS " <> display (cfgNctrsID cfg)
+        logInfo $ "Connected TC connection on NCTRS " <> display
+            (cfgNctrsID cfg)
 
         res <- try $ void $ runConduitRes (chain .| appSink app)
 
@@ -200,7 +208,8 @@ runTCNctrsChain cfg cltuQueue = do
                     <> displayShow e
                 throwM e
             Right _ -> do
-                logWarn $ "Disconnected TC connection on NCTRS " <> display (cfgNctrsID cfg)
+                logWarn $ "Disconnected TC connection on NCTRS " <> display
+                    (cfgNctrsID cfg)
                 return ()
     tcRecvClient chain app = do
         res <- try $ void $ runConduitRes (appSource app .| chain)
@@ -211,7 +220,8 @@ runTCNctrsChain cfg cltuQueue = do
                     <> displayShow e
                 throwM e
             Right _ -> do
-                logInfo $ "Disconnected TC connection on NCTRS " <> display (cfgNctrsID cfg)
+                logInfo $ "Disconnected TC connection on NCTRS " <> display
+                    (cfgNctrsID cfg)
                 return ()
 
 runAdminNctrsChain :: NctrsConfig -> RIO GlobalState ()
@@ -236,7 +246,8 @@ runAdminNctrsChain cfg = do
             (EVAlarms
                 (EVEConnection (IfNctrs (cfgNctrsID cfg)) ConnAdmin Connected)
             )
-        logInfo $ "Connected ADMIN connection on NCTRS " <> display (cfgNctrsID cfg)
+        logInfo $ "Connected ADMIN connection on NCTRS " <> display
+            (cfgNctrsID cfg)
         res <- try $ void $ runConduitRes (appSource app .| chain)
 
         liftIO
@@ -255,8 +266,9 @@ runAdminNctrsChain cfg = do
                     $  display @Text "NCTRS Interface Exception: "
                     <> displayShow e
                 throwM e
-            Right _ -> do 
-                logWarn $ "Disconnected ADMIN connection on NCTRS " <> display (cfgNctrsID cfg)
+            Right _ -> do
+                logWarn $ "Disconnected ADMIN connection on NCTRS " <> display
+                    (cfgNctrsID cfg)
                 return ()
 
 
@@ -271,6 +283,7 @@ runTMCnCChain cfg missionSpecific pktQueue = do
     let chain =
             receiveCnCC missionSpecific (IfCnc (cfgCncID cfg))
                 .| cncToTMPacket (IfCnc (cfgCncID cfg))
+                .| packetStatC
                 .| sinkTBQueue pktQueue
 
     runGeneralTCPReconnectClient
@@ -305,7 +318,8 @@ runTMCnCChain cfg missionSpecific pktQueue = do
                     <> displayShow e
                 throwM e
             Right _ -> do
-                logWarn $ "Disconnected TM connection on C&C " <> display (cfgCncID cfg)
+                logWarn $ "Disconnected TM connection on C&C " <> display
+                    (cfgCncID cfg)
                 return ()
 
 
@@ -320,8 +334,7 @@ runTCCnCChain cfg missionSpecific duQueue pktQueue = do
 
     let chain = receivePktChannelC duQueue .| sendTCCncC
         ackChain =
-            receiveCnCC missionSpecific ifID
-                .| cncProcessAcks ifID pktQueue
+            receiveCnCC missionSpecific ifID .| cncProcessAcks ifID pktQueue
         ifID = IfCnc (cfgCncID cfg)
 
     logDebug
@@ -361,7 +374,8 @@ runTCCnCChain cfg missionSpecific duQueue pktQueue = do
                     <> displayShow e
                 throwM e
             Right _ -> do
-                logWarn $ "Disconnected TC connection on C&C " <> display (cfgCncID cfg)
+                logWarn $ "Disconnected TC connection on C&C " <> display
+                    (cfgCncID cfg)
                 return ()
     tcAckClient ifID chain app = do
         env <- ask
@@ -377,8 +391,9 @@ runTCCnCChain cfg missionSpecific duQueue pktQueue = do
                     $  display @Text "C&C TC Interface Exception: "
                     <> displayShow e
                 throwM e
-            Right _ -> do 
-                logWarn $ "Disconnected TC connection on C&C " <> display (cfgCncID cfg)
+            Right _ -> do
+                logWarn $ "Disconnected TC connection on C&C " <> display
+                    (cfgCncID cfg)
                 return ()
         logDebug "C&C TC Ack reader thread leaves"
 
@@ -443,6 +458,7 @@ runEdenChain cfg missionSpecific pktQueue edenQueue = do
                     .| receiveEdenMessageC
                     .| edenMessageProcessorC missionSpecific
                                              (IfEden (cfgEdenID cfg))
+                    .| packetStatC
                     .| sinkTBQueue pktQueue
         runConduitRes chain
 
@@ -496,16 +512,18 @@ runTCChain missionSpecific switcherMap = do
     logDebug "runTCChain entering"
 
     rqstQueue <- view getRqstQueue
-    cfg <- view getConfig 
+    cfg       <- view getConfig
 
-    let cltuChain = if cfgRandomizerEnabled cfg then cltuEncodeRandomizedC else cltuEncodeC 
+    let cltuChain = if cfgRandomizerEnabled cfg
+            then cltuEncodeRandomizedC
+            else cltuEncodeC
         rqstChain =
             sourceTBQueue rqstQueue
                 .| concatC
                 .| tcPktEncoderC missionSpecific
                 .| tcPktToEncPUSC initialSSCCounterMap
                 .| switchProtocolPktC switcherMap
-    -- TODO: This chain is currently only BD mode! AD mode needs to be implemented
+-- TODO: This chain is currently only BD mode! AD mode needs to be implemented
                 .| tcSegmentEncoderC
                 .| tcSegmentToTransferFrame
                 .| tcFrameEncodeC
@@ -551,8 +569,10 @@ runChains missionSpecific = do
     let tmThreads    = conc $ runTMChain missionSpecific pktQueue
         tcThreads    = conc $ runTCChain missionSpecific switcherMap
         adminThreads = mconcat $ map (conc . runAdminNctrsChain) (cfgNCTRS cfg)
+        stats        = conc $ statThread
 
-    runConc (tmThreads <> tcThreads <> interfaceThreads <> adminThreads)
+    runConc
+        (tmThreads <> tcThreads <> interfaceThreads <> adminThreads <> stats)
 
     logDebug "runChains leaves"
   where
@@ -568,3 +588,67 @@ runChains missionSpecific = do
         (queue, newSm) <- createInterfaceChannel sm (IfCnc (cfgCncID x))
         return
             (newSm, ts <> conc (runTCCnCChain x missionSpecific queue pktQueue))
+
+
+
+
+
+
+statThread
+    :: ( MonadIO m
+       , MonadReader env m
+       , HasStats env
+       , HasRaiseEvent env
+       , HasLogFunc env
+       )
+    => m ()
+statThread = do
+    env <- ask
+    logDebug "Statistics thread starting..."
+    go env Nothing Nothing
+  where
+    go env oldFrameStats oldPktStats = do
+        threadDelay 2000000
+        let frameVar  = getFrameStats env
+            packetVar = getPacketStats env
+        frameStats <- readTVarIO frameVar
+        now        <- liftIO getPOSIXTime
+        fr         <- case oldFrameStats of
+            Nothing       -> pure $ TMFrameStats 0 0 0 0 0 nullTimeStamp
+            Just oldStats -> do
+                let (totalRate, totalDataRate) = statTotal frameStats
+                    (rate     , dataRate     ) = statCalc frameStats oldStats
+                pure $ TMFrameStats { tmStatFrameTotal      = totalRate
+                                    , tmStatFrameTotalBytes = totalDataRate
+                                    , tmStatFrameRate       = rate
+                                    , tmStatFrameBytes      = dataRate
+                                    , tmStatFramesN         = _statN frameStats
+                                    , tmStatFrameTime       = TimeStamp now
+                                    }
+
+        pktStats <- readTVarIO packetVar
+        pk       <- case oldPktStats of
+            Nothing       -> pure $ TMPacketStats 0 0 0 0 0 nullTimeStamp
+            Just oldStats -> do
+                let (totalRate, totalDataRate) = statTotal pktStats
+                    (rate     , dataRate     ) = statCalc pktStats oldStats
+                pure $ TMPacketStats { tmStatPacketTotal      = totalRate
+                                     , tmStatPacketTotalBytes = totalDataRate
+                                     , tmStatPacketRate       = rate
+                                     , tmStatPacketBytes      = dataRate
+                                     , tmStatPacketsN         = _statN pktStats
+                                     , tmStatPacketTime       = TimeStamp now
+                                     }
+
+        -- send statistics to GUI
+        liftIO $ raiseEvent
+            env
+            (EVTelemetry
+                (EVTMStatistics TMStatistics { _statFrame   = fr
+                                             , _statPackets = pk
+                                             }
+                )
+            )
+
+        go env (Just frameStats) (Just pktStats)
+

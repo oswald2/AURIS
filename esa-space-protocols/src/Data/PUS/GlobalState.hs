@@ -39,6 +39,8 @@ module Data.PUS.GlobalState
     , glsVerifCommandQueue
     , glsDatabase
     , glsQueryQueue
+    , glsFrameStatistics 
+    , glsPacketStatistics
     , newGlobalState
     , nextADCount
     ) where
@@ -55,30 +57,31 @@ import           Data.DataModel                 ( DataModel
                                                 , empty
                                                 )
 
+import           Data.PUS.COP1Types
 import           Data.PUS.Config
-import           Data.PUS.PUSState              ( defaultPUSState
-                                                , nextADCnt
-                                                , PUSState
+import           Data.PUS.EventHandler          ( cfgEvAll
+                                                , createEventConfig
+                                                , filteredRaiseEvent
                                                 )
 import           Data.PUS.Events                ( Event
                                                 , EventFlag
                                                 )
-import           Data.PUS.COP1Types
 import           Data.PUS.MissionSpecific.Definitions
                                                 ( PUSMissionSpecific )
-import           Data.PUS.TCRequest             ( TCRequest )
-import           Data.PUS.EventHandler          ( filteredRaiseEvent
-                                                , createEventConfig
-                                                , cfgEvAll
+import           Data.PUS.PUSState              ( PUSState
+                                                , defaultPUSState
+                                                , nextADCnt
                                                 )
+import           Data.PUS.TCRequest             ( TCRequest )
 
 import           General.PUSTypes
 import           General.Time
 
 import           Verification.Commands
 
-import           Persistence.DbBackend
+import           Data.PUS.Statistics
 import           Persistence.DBQuery
+import           Persistence.DbBackend
 
 --import           GHC.Compact
 
@@ -114,6 +117,8 @@ data GlobalState = GlobalState
     , glsVerifCommandQueue :: TBQueue VerifCommand
     , glsDatabase          :: Maybe DbBackend
     , glsQueryQueue        :: Maybe (TBQueue DBQuery)
+    , glsFrameStatistics   :: TVar Statistics
+    , glsPacketStatistics  :: TVar Statistics
     }
 
 -- | Constructor for the global state. Takes a configuration, a
@@ -139,6 +144,8 @@ newGlobalState cfg missionSpecific logErr raiseEvent eventFlags dbBackend queryQ
         let fop1 = HM.fromList $ zip vcids fopTVars
         rqstQueue  <- newTBQueueIO rqstQueueSize
         verifQueue <- newTBQueueIO 5000
+        frameStat <- newTVarIO initialStatistics
+        packetStat <- newTVarIO initialStatistics
 
         let eventCfg = createEventConfig eventFlags
             eventFn  = if eventCfg ^. cfgEvAll
@@ -157,6 +164,8 @@ newGlobalState cfg missionSpecific logErr raiseEvent eventFlags dbBackend queryQ
                                 , glsVerifCommandQueue = verifQueue
                                 , glsDatabase          = dbBackend
                                 , glsQueryQueue        = queryQueue
+                                , glsFrameStatistics   = frameStat
+                                , glsPacketStatistics  = packetStat
                                 }
         pure state
 

@@ -30,6 +30,7 @@ module Control.PUS.Classes
     , HasRaiseEvent(..)
     , HasVerif(..)
     , HasDatabase(..)
+    , HasStats(..)
     ) where
 
 import           RIO                     hiding ( to
@@ -51,6 +52,7 @@ import           Data.PUS.ExtractedDU           ( ExtractedDU )
 import           Data.PUS.PUSPacket             ( PUSPacket )
 import           Data.PUS.TMPacket              ( TMPacket )
 import           Data.PUS.Verification
+import           Data.PUS.Statistics
 
 import           General.PUSTypes
 import           General.Time
@@ -132,6 +134,12 @@ class HasDatabase env where
 
     queryDB :: env -> DBQuery -> IO ()
 
+
+-- | Class for app statistics
+class HasStats a where
+  getFrameStats :: a -> TVar Statistics
+  getPacketStats :: a -> TVar Statistics
+
 -- | Class for accessing the global state
 class (HasConfig env,
     HasDatabase env,
@@ -144,7 +152,8 @@ class (HasConfig env,
     HasRaiseEvent env,
     HasTCRqstQueue env,
     HasVerif env,
-    HasDatabase env) => HasGlobalState env
+    HasDatabase env,
+    HasStats env) => HasGlobalState env
 
 
 
@@ -221,6 +230,10 @@ instance HasDatabase GlobalState where
         case glsQueryQueue env of 
             Just queue -> atomically $ writeTBQueue queue query
             Nothing -> return ()
+
+instance HasStats GlobalState where 
+    getFrameStats = glsFrameStatistics  
+    getPacketStats = glsPacketStatistics
 
 instance HasGlobalState GlobalState
 

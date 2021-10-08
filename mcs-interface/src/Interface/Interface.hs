@@ -39,14 +39,14 @@ module Interface.Interface
     ) where
 
 
-import           RIO
-import qualified RIO.Vector                    as V
-import           Data.Text.Short                ( ShortText )
 import           Data.PUS.TCRequest
 import           Data.TC.TCDef
+import           Data.Text.Short                ( ShortText )
+import           RIO
+import qualified RIO.Vector                    as V
 
-import           Interface.Events
 import           Interface.CoreProcessor
+import           Interface.Events
 
 import           Persistence.DBQuery            ( DBQuery )
 
@@ -55,13 +55,15 @@ import           General.PUSTypes
 -- | Table of actions which can be called. Direction is from the 
 -- client (GUI, script, command line) to the MCS
 data ActionTable = ActionTable
-    { actionQuit          :: IO ()
-    , actionImportMIB     :: FilePath -> FilePath -> IO ()
-    , actionLogMessage    :: LogSource -> LogLevel -> Utf8Builder -> IO ()
-    , actionSendTCRequest :: TCRequest -> IO ()
-    , actionSendTCGroup   :: [TCRequest] -> IO ()
-    , actionQueryDB       :: DBQuery -> IO ()
+    { actionQuit             :: IO ()
+    , actionImportMIB        :: FilePath -> FilePath -> IO ()
+    , actionLogMessage       :: LogSource -> LogLevel -> Utf8Builder -> IO ()
+    , actionSendTCRequest    :: TCRequest -> IO ()
+    , actionSendTCGroup      :: [TCRequest] -> IO ()
+    , actionQueryDB          :: DBQuery -> IO ()
     , actionGetTCSync :: TCDef -> ShortText -> TransmissionMode -> IO TCRequest
+    , actionStatResetFrames  :: IO ()
+    , actionStatResetPackets :: IO ()
     }
 
 -- | Data type for the event handler.
@@ -98,6 +100,8 @@ actionTable queue Nothing = ActionTable
                                     queue
                                     (GetTCSync tcDef source transMode var)
                                 atomically $ takeTMVar var
+    , actionStatResetFrames  = callAction queue ResetStatsFrames
+    , actionStatResetPackets = callAction queue ResetStatsPackets
     }
 
 

@@ -23,24 +23,29 @@ module Data.PUS.Events
     , EventCOP1(..)
     , EventDB(..)
     , EventFlag(..)
+    , TMStatistics(..)
+    , TMFrameStats(..)
+    , TMPacketStats(..)
     ) where
 
 
 import           RIO
 
-import           Data.Aeson
 import           Codec.Serialise
+import           Data.Aeson
 import           Data.Fixed
 
-import           General.PUSTypes
-import           Data.PUS.PUSPacket             ( PUSPacket )
 import           Data.PUS.COP1Types
 import           Data.PUS.ExtractedDU           ( ExtractedDU )
+import           Data.PUS.PUSPacket             ( PUSPacket )
+import           Data.PUS.Statistics
+import           Data.PUS.TCRequest             ( TCRequest )
 import           Data.PUS.TMFrame               ( TMFrame )
 import           Data.PUS.TMPacket              ( TMPacket )
-import           Data.PUS.TCRequest             ( TCRequest )
 import           Data.PUS.Verification
+
 import           Data.TM.Parameter
+import           General.PUSTypes
 
 import           Data.DataModel
 
@@ -84,6 +89,7 @@ instance FromJSON EventCommanding
 instance ToJSON EventCommanding where
     toEncoding = genericToEncoding defaultOptions
 
+
 data EventTelemetry =
     -- | Event if a gap in the virtual channel frame count is detected. First
     -- value is the last frame count, second value the actual frame count
@@ -97,6 +103,7 @@ data EventTelemetry =
     | EVTMPUSPacketReceived (ExtractedDU PUSPacket)
     | EVTMPacketDecoded (ExtractedDU TMPacket)
     | EVTMParameters (Vector TMParameter)
+    | EVTMStatistics !TMStatistics
     deriving (Show, Generic)
 
 instance Serialise EventTelemetry

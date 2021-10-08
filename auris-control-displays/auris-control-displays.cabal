@@ -65,6 +65,7 @@ library
   exposed-modules:     
     GUI.ConnectionTab
     GUI.DataModelTab
+    GUI.StatisticsTab
 
   -- Modules included in this library but not exported.
   -- other-modules:
@@ -83,11 +84,18 @@ library
     , gi-gtk-hs
     , gi-gobject
     , gi-gdk
+    , gi-cairo 
+    , gi-cairo-connector 
+    , Chart
+    , Chart-gi-cairo
     , haskell-gi-base
     , esa-base
     , esa-space-protocols
+    , mcs-interface
     , gui-base
     , text-short
+    , text-builder
+    , time
 
   default-extensions:
         
@@ -129,6 +137,7 @@ library
         TypeFamilies
         TypeSynonymInstances
         ViewPatterns
+        NumericUnderscores
 
 
   -- Directories containing source files.

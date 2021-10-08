@@ -108,7 +108,7 @@ Executable AURISi
       ../sle-wrapper/sle-wrapper/build/lib
       /opt/platform3pp/P3PPSLE-API-64bit-5.1.0i3/lib
     extra-libraries:
-      stdc++ dl z pthread sleapi sleinf asnsdk_50_sles15_64bit_gcc7 SLEwrapper :libcrypto.so.1.1 :libssl.so.1.1
+      stdc++ gcc dl z pthread sleapi sleinf asnsdk_50_sles15_64bit_gcc7 SLEwrapper :libcrypto.so.1.1 :libssl.so.1.1
 
 
   default-extensions:

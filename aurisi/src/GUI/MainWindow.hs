@@ -19,6 +19,7 @@ module GUI.MainWindow
     , mwReleaseRqst
     , mwDisplayRqstVerification
     , mwSetMission
+    , mwAddTMStatistic
     , mwMessageDisplay
     , mwFrameTab
     , mwSetConnectionState
@@ -30,6 +31,7 @@ module GUI.MainWindow
     , mwConnTab
     , mwTCTab
     , mwTCHistory
+    , mwStatisticsTab
     , mwMenuItemImportMIB
     , mwLiveState
     ) where
@@ -50,6 +52,7 @@ import           GUI.ConnectionTab
 import           GUI.TCTab
 import           GUI.TCHistory
 import           GUI.DataModelTab
+import           GUI.StatisticsTab
 import           GUI.Utils
 import           GUI.Logo
 import           GUI.MessageDisplay
@@ -99,6 +102,7 @@ import qualified GI.GtkSource.Objects.Buffer   as BUF
 --import           Data.FileEmbed
 
 import           AurisConfig
+import Data.PUS.Events (TMStatistics)
 
 
 
@@ -115,6 +119,7 @@ data MainWindow = MainWindow
     , _mwTCTab             :: !TCTab
     , _mwTCHistory         :: !TCHistory
     , _mwDataModelTab      :: !DataModelTab
+    , _mwStatisticsTab     :: !StatisticsTab
     , _mwTimeLabel         :: !Label
     , _mwMenuItemImportMIB :: !Gtk.MenuItem
     , _mwLiveState         :: TVar LiveState
@@ -184,8 +189,9 @@ mwInitialiseDataModel window model = do
 -- gladeFile =
 --     T.decodeUtf8 $(makeRelativeToProject "src/MainWindow.glade" >>= embedFile)
 
-
-
+mwAddTMStatistic :: MainWindow -> TMStatistics -> IO () 
+mwAddTMStatistic window stats = 
+    statisticsTabDisplayStats (window ^. mwStatisticsTab) stats
 
 createMainWindow :: AurisConfig -> IO MainWindow
 createMainWindow cfg = do
@@ -226,6 +232,7 @@ createMainWindow cfg = do
     tcTab        <- createTCTab (aurisPusConfig cfg) window builder
     tcHistory    <- createTCHistory window builder
     dataModelTab <- createDataModelTab window builder
+    statisticsTab <- createStatisticsTab builder 
 
     setLogo logo 65 65
 
@@ -244,6 +251,7 @@ createMainWindow cfg = do
                          , _mwTCTab             = tcTab
                          , _mwTCHistory         = tcHistory
                          , _mwDataModelTab      = dataModelTab
+                         , _mwStatisticsTab     = statisticsTab 
                          , _mwMenuItemImportMIB = menuItemImportMIB
                          , _mwLiveState         = liveState
                          }

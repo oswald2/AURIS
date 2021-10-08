@@ -104,7 +104,7 @@ flags:
 # extra-lib-dirs: [/path/to/dir]
 #
 # Allow a newer minor version of GHC than the snapshot specifies
-# compiler-check: newer-minor
+compiler-check: newer-minor
 
 # if you want to profile, add SCC cost centres by hand for the functions you 
 # want to profile and then compile with:

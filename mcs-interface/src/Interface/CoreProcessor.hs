@@ -4,15 +4,17 @@ module Interface.CoreProcessor
     ) where
 
 
-import           RIO
-import           Data.Text.Short                ( ShortText )
 import           Application.DataModel
+import           Data.Text.Short                ( ShortText )
+import           RIO
 
 import           Control.PUS.Classes
 
 import           Data.PUS.Events
+import           Data.PUS.Statistics
 import           Data.PUS.TCGeneration
 import           Data.PUS.TCRequest
+
 import           Data.TC.TCDef
 import           Persistence.DBQuery
 
@@ -27,6 +29,8 @@ data InterfaceAction =
   | SendTCGroup [TCRequest]
   | QueryDB DBQuery
   | GetTCSync TCDef ShortText TransmissionMode (TMVar TCRequest)
+  | ResetStatsFrames
+  | ResetStatsPackets
   deriving (Generic)
 
 
@@ -68,7 +72,14 @@ processMsg (QueryDB query) = do
 processMsg (GetTCSync tcDef source transMode var) = do
     tc <- getTC source transMode tcDef
     atomically $ putTMVar var tc
-
+processMsg ResetStatsFrames = do
+    env <- ask
+    let frameVar = getFrameStats env
+    atomically $ writeTVar frameVar initialStatistics
+processMsg ResetStatsPackets = do
+    env <- ask
+    let pktVar = getPacketStats env
+    atomically $ writeTVar pktVar initialStatistics
 
 
 -- processMsg RequestAllTMFrames = do 

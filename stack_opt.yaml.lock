@@ -47,22 +47,64 @@ packages:
   original:
     hackage: timers-updatable-0.2.0.2
 - completed:
-    hackage: direct-sqlite-2.3.26@sha256:04e835402f1508abca383182023e4e2b9b86297b8533afbd4e57d1a5652e0c23,3718
-    pantry-tree:
-      size: 770
-      sha256: 11874ab21e10c5b54cd1e02a037b677dc1e2ee9986f38c599612c56654dc01c3
-  original:
-    hackage: direct-sqlite-2.3.26
-- completed:
     hackage: Chart-cairo-1.9.3@sha256:f484a7194ca08ed67f02aa626e2f8f4d1a9b50624e0d50e3ced62958f7481cca,925
     pantry-tree:
       size: 238
       sha256: 585b99e27718747d3c9a46bf46625774a06d102f77bf9fe8384d278914068ec7
   original:
     hackage: Chart-cairo-1.9.3@sha256:f484a7194ca08ed67f02aa626e2f8f4d1a9b50624e0d50e3ced62958f7481cca,925
+- completed:
+    hackage: refined-0.6.1@sha256:d5d713f0a2ad79d1c049d2d132fd8c2078b883b5ea3db876087eaec102843e57,2748
+    pantry-tree:
+      size: 562
+      sha256: 3b530f23657d5c8425b9512593417b2c65085719afa30e0d9d2bd72d4e4f7bd5
+  original:
+    hackage: refined-0.6.1@sha256:d5d713f0a2ad79d1c049d2d132fd8c2078b883b5ea3db876087eaec102843e57,2748
+- completed:
+    hackage: these-skinny-0.7.4@sha256:e29336a1a70a497e09d8266f8438efb30a807bafaa6b00f5a136f7493efb3160,1239
+    pantry-tree:
+      size: 262
+      sha256: 77f01554e40d8e910d00f95c35dde86df4f691e2955d9afdc16508114c4d1af2
+  original:
+    hackage: these-skinny-0.7.4@sha256:e29336a1a70a497e09d8266f8438efb30a807bafaa6b00f5a136f7493efb3160,1239
+- completed:
+    hackage: gi-gtksource-3.0.24@sha256:1d68209033f6208ef5e0df53ca93d0c42c729977a1488b71b35b0ca78ce75214,7762
+    pantry-tree:
+      size: 370
+      sha256: 3b61d1d2b7659538cedf8a1242d16dd17566a1e129b7b3934eb6c38ffa0e43ea
+  original:
+    hackage: gi-gtksource-3.0.24
+- completed:
+    hackage: keera-callbacks-0.1@sha256:8c0da05cfcbb056bd4ea4187f2a7e644fd92965e92952b7bae9c7ef4f041b992,1899
+    pantry-tree:
+      size: 275
+      sha256: c9799ad9460df71fb78f4970315f5dcfe14104501cd690ea9017468c9434df36
+  original:
+    hackage: keera-callbacks-0.1@sha256:8c0da05cfcbb056bd4ea4187f2a7e644fd92965e92952b7bae9c7ef4f041b992,1899
+- completed:
+    hackage: keera-hails-reactivevalues-0.7.0@sha256:dc04bc8823f4626a25f6a06b796694dd812c6c0b9e8d2231a991e4e20393e86c,3601
+    pantry-tree:
+      size: 479
+      sha256: 0163585e6cdc1daf37edf2e266eb7509ccf329cb218c11e9d92612a8ee779859
+  original:
+    hackage: keera-hails-reactivevalues-0.7.0@sha256:dc04bc8823f4626a25f6a06b796694dd812c6c0b9e8d2231a991e4e20393e86c,3601
+- completed:
+    hackage: gi-cairo-connector-0.1.0@sha256:a79c34c4f22f81a938c5835f623de55fdf1f0f08435897bad68f58e01ffd1464,1213
+    pantry-tree:
+      size: 238
+      sha256: 4414eca6922175779e3ec5d0eb932ee0d10307217a32ff6671a8f5efdd1bc4f0
+  original:
+    hackage: gi-cairo-connector-0.1.0@sha256:a79c34c4f22f81a938c5835f623de55fdf1f0f08435897bad68f58e01ffd1464,1213
+- completed:
+    hackage: gi-cairo-render-0.1.0@sha256:cb27b31b373c55c5b384a331e439d1ebc2fb3e02c8a58c9bfb83218d5467af2b,3553
+    pantry-tree:
+      size: 1655
+      sha256: 5cf0f21a23e2d49a50b0f46078890160d982469ff108d7a142eefa165347dc32
+  original:
+    hackage: gi-cairo-render-0.1.0@sha256:cb27b31b373c55c5b384a331e439d1ebc2fb3e02c8a58c9bfb83218d5467af2b,3553
 snapshots:
 - completed:
-    size: 555280
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/nightly/2020/12/4.yaml
-    sha256: 3c2d0d136b9b027091f50c28b0e6fa4e0ce780ac7b3a5982c3661f77eff5dd8e
-  original: lts-17.6
+    size: 586041
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/18/12.yaml
+    sha256: 80fc6391195ff00c36f2a605ecbb07de909bfaa2eaa9722a27e486a6ecf8ecb0
+  original: lts-18.12

@@ -20,6 +20,7 @@ import qualified GI.Gtk                        as Gtk
 import           GUI.MainWindow
 import           GUI.TMFrameTab
 import           GUI.TCTab 
+import           GUI.StatisticsTab
 
 import           Interface.Interface
 
@@ -33,6 +34,7 @@ setupCallbacks :: MainWindow -> Interface -> IO ()
 setupCallbacks window interface = do
   GUI.TMFrameTab.setupCallbacks (window ^. mwFrameTab) interface
   GUI.TCTab.setupCallbacks (window ^. mwTCTab) interface
+  GUI.StatisticsTab.setupCallbacks (window ^. mwStatisticsTab) interface
   void $ Gtk.on (window ^. mwMenuItemImportMIB) #activate $ importMIB window interface 
 
 
