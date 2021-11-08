@@ -31,7 +31,8 @@
         },
         "cfgVCIDs": [
             0,
-            1
+            1,
+            2
         ],
         "cfgLeapSeconds": {
             "fromLeaps": 17

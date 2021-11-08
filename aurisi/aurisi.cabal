@@ -44,15 +44,15 @@ Executable AURISi
   Main-Is: AURISiMain.hs
   c-sources: csrc/resources.c
   Other-modules:
-    GUI.MainWindow
-    GUI.MainWindowCallbacks
-    GUI.MainWindowActions
-    GUI.MessageTypes
-    GUI.MessageDisplay
-    GUI.MessageDetails
-    GUI.Logo
-    GUI.About
-    GUI.Theme
+    -- GUI.MainWindow
+    -- GUI.MainWindowCallbacks
+    -- GUI.MainWindowActions
+    -- GUI.MessageTypes
+    -- GUI.MessageDisplay
+    -- GUI.MessageDetails
+    -- GUI.Logo
+    -- GUI.About
+    -- GUI.Theme
     AurisInterface
     AurisProcessing
     AurisConfig
@@ -68,7 +68,7 @@ Executable AURISi
     lens,
     containers,
     esa-base,
-    esa-db-mongodb,
+    --esa-db-mongodb,
     esa-space-protocols,
     esa-mib,
     gui-base,
@@ -88,19 +88,18 @@ Executable AURISi
     file-embed,
     hashtables-mo,
     stm-conduit,
-    gi-gtk,
-    gi-gtk-hs,
-    gi-gdk,
-    gi-gdkpixbuf,
-    gi-gobject,
-    gi-gio,
-    gi-glib,
-    gi-gtksource,
+    -- gi-gtk,
+    -- gi-gtk-hs,
+    -- gi-gdk,
+    -- gi-gdkpixbuf,
+    -- gi-gobject,
+    -- gi-gio,
+    -- gi-glib,
+    -- gi-gtksource,
     tar,
     zlib,
-    stm,
-    ghc-compact,
-    keera-hails-reactivevalues
+    stm
+    -- keera-hails-reactivevalues
 
   if flag(sle)
     cpp-options: -DHAS_SLE
@@ -108,7 +107,7 @@ Executable AURISi
       ../sle-wrapper/sle-wrapper/build/lib
       /opt/platform3pp/P3PPSLE-API-64bit-5.1.0i3/lib
     extra-libraries:
-      stdc++ gcc dl z pthread sleapi sleinf asnsdk_50_sles15_64bit_gcc7 SLEwrapper :libcrypto.so.1.1 :libssl.so.1.1
+      stdc++ gcc_s dl z pthread asnsdk_50_sles15_64bit_gcc7 SLEwrapper sleapi sleinf :libcrypto.so.1.1 :libssl.so.1.1
 
 
   default-extensions:
@@ -165,7 +164,7 @@ Executable AURISi
     else
         ghc-options: -O0 -g2 -Wall -Wcompat -Widentities -Wincomplete-record-updates
                      -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
-                     -funbox-strict-fields  -threaded -rtsopts 
+                     -funbox-strict-fields  -threaded -rtsopts -v -optl-v
 
 
 

@@ -151,7 +151,8 @@ appActivateHandler cfg mibPath app = do
 
     -- setup the interface. We pass in a boolean if the system is configured to 
     -- use a database or not 
-    (interface, _eventThread, coreQueue, queryQueue) <- initialiseInterface mainWindow (isJust (aurisDbConfig cfg))
+    --(interface, _eventThread, coreQueue, queryQueue) <- initialiseInterface mainWindow (isJust (aurisDbConfig cfg))
+    (interface, _eventThread, coreQueue, queryQueue) <- initialiseInterface mainWindow False
 
     -- Setup the callbacks. Since we need the interface there, we can 
     -- do this only here

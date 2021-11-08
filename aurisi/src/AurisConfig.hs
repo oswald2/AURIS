@@ -26,7 +26,7 @@ import           Data.Aeson.Encode.Pretty       ( encodePretty )
 import           Data.PUS.Config
 import           System.FilePath
 
-import           Data.DbConfig.MongoDB
+--import           Data.DbConfig.MongoDB
 
 
 configPath :: FilePath
@@ -73,7 +73,7 @@ data AurisConfig = AurisConfig
     , aurisPusConfig :: Config
     -- | Minimum level of log messages that should be stored to database.
     -- Set 'Nothing' to disable logging to database.
-    , aurisDbConfig  :: Maybe DbConfigMongoDB
+    --, aurisDbConfig  :: Maybe DbConfigMongoDB
     , aurisTheme     :: AurisTheme 
     }
     deriving (Eq, Generic)
@@ -84,7 +84,7 @@ defaultConfig = AurisConfig { aurisPusConfig = Data.PUS.Config.defaultConfig
                             , aurisMission   = "DEFAULT"
                             , aurisLogLevel  = LogLevelInfo
                             , aurisMIB       = Nothing
-                            , aurisDbConfig  = Just defaultMongoDBConfig
+                            --, aurisDbConfig  = Just defaultMongoDBConfig
                             , aurisTheme     = ThemeLight
                             }
 

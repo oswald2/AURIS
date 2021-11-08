@@ -102,3 +102,4 @@ ghc-options:
 # stack build --profile --ghc-options="-fno-prof-auto"
 apply-ghc-options: everything
 rebuild-ghc-options: true
+ghc-options: -v -optl-v
