@@ -42,6 +42,7 @@ packages:
 - auris-tm-displays
 - auris-tc-displays
 - auris-control-displays
+- lib-aurisi
 - aurisi
 - Chart-gi-cairo
 
@@ -93,6 +94,8 @@ flags:
     optimize: true
   auris-control-displays:
     optimize: true 
+  lib-aurisi:
+    optimize: true
   aurisi:
     optimize: true
   gui-base:

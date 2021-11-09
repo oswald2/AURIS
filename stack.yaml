@@ -42,6 +42,7 @@ packages:
 - auris-tm-displays
 - auris-tc-displays
 - auris-control-displays
+- lib-aurisi
 - aurisi
 - Chart-gi-cairo
 

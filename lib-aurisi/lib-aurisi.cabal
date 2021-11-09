@@ -1,6 +1,6 @@
-name : aurisi
+name : lib-aurisi
 version : 0.0.0.1
-synopsis : Integrated GUI for the AURIS mission control system
+synopsis : Integrated GUI for the AURIS mission control system library
 description:
     The graphical user interface for the (integrated) version of AURIS
 license : BSD3
@@ -11,6 +11,9 @@ maintainer: michael.oswald@onikudaki.net
 homepage:
 category: UI,Graphics
 cabal-version: >=2.0
+
+extra-source-files:
+  theme.tar.gz
 
 source-repository head
   type: git
@@ -37,28 +40,71 @@ flag sle
     default: False 
 
 
+library 
+  exposed-modules:
+    GUI.MainWindow
+    GUI.MainWindowCallbacks
+    GUI.MainWindowActions
+    GUI.MessageTypes
+    GUI.MessageDisplay
+    GUI.MessageDetails
+    GUI.Logo
+    GUI.About
+    GUI.Theme
+    AurisInterface
+    AurisProcessing
+    AurisConfig
+    AurisMissionSpecific
+    AurisStart
+    Version
 
-executable AURISi
-  Main-Is: AURISiMain.hs
-  c-sources: csrc/resources.c
   Hs-Source-Dirs: src/
 
   Build-Depends:
     base == 4.*,
-    text,
+    text >= 1.2.2.0,
+    rio,
+    lens,
+    containers,
+    esa-base,
+    esa-db-mongodb,
+    esa-space-protocols,
+    esa-mib,
+    gui-base,
+    auris-tm-displays,
+    auris-tc-displays,
+    auris-control-displays,
+    mcs-interface,
+    optparse-generic,
+    gitrev,
+    aeson,
+    aeson-pretty,
+    conduit,
+    conduit-extra,
     directory,
     filepath,
-    rio,
-    lib-aurisi,
-    optparse-generic
+    text-short,
+    file-embed,
+    hashtables-mo,
+    stm-conduit,
+    gi-gtk,
+    gi-gtk-hs,
+    gi-gdk,
+    gi-gdkpixbuf,
+    gi-gobject,
+    gi-gio,
+    gi-glib,
+    gi-gtksource,
+    tar,
+    zlib,
+    stm,
+    ghc-compact,
+    keera-hails-reactivevalues
 
   if flag(sle)
+    Build-depends:
+          esa-sle
     cpp-options: -DHAS_SLE
-    extra-lib-dirs: 
-      ../sle-wrapper/sle-wrapper/build/lib
-      /opt/platform3pp/P3PPSLE-API-64bit-5.1.0i3/lib
-    extra-libraries:
-      stdc++ gcc dl z pthread sleapi sleinf asnsdk_50_sles15_64bit_gcc7 SLEwrapper :libcrypto.so.1.1 :libssl.so.1.1
 
 
   default-extensions:

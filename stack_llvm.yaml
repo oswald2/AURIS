@@ -41,6 +41,7 @@ packages:
 - auris-tm-displays
 - auris-tc-displays
 - auris-control-displays
+- lib-aurisi
 - aurisi
 - Chart-gi-cairo
 
@@ -87,6 +88,8 @@ flags:
   auris-control-displays:
     llvm: true
   aurisi:
+    llvm: true
+  lib-aurisi:
     llvm: true
   gui-base:
     llvm: true

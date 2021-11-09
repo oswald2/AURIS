@@ -16,5 +16,4 @@ packages:
 - ../mcs-interface 
 - ../esa-mib
 - ../esa-db
-- ../lib-aurisi
 
