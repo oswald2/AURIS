@@ -2,9 +2,7 @@ module AurisStart
     ( runApplication
     ) where
 
-import qualified Data.Text.IO                  as T
 import           RIO
-import qualified RIO.Text                      as T
 
 import           GUI.Definitions
 import           GUI.MainWindow
@@ -12,17 +10,10 @@ import           GUI.MainWindowCallbacks
 --import           GUI.About
 import           GUI.Theme
 
-import           Options.Generic
-
 import           AurisConfig
 import           AurisInterface
 import           AurisMissionSpecific
 import           AurisProcessing
-
-import           GHC.Conc                       ( getNumProcessors
-                                                , setNumCapabilities
-                                                )
-import           System.Directory               ( doesFileExist )
 
 import qualified Data.GI.Gtk.Threading         as Gtk
 import qualified GI.GLib.Constants             as GI
@@ -30,12 +21,11 @@ import qualified GI.GLib.Functions             as GI
 import           GI.Gio                        as Gio
 import qualified GI.Gtk                        as Gtk
 
-import           Version
 
 
 
 
-runApplication :: _
+runApplication :: AurisConfig -> Maybe FilePath -> IO () 
 runApplication cfg mibPath = do
     Gtk.setCurrentThreadAsGUIThread
     app <- new
