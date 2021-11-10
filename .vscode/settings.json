@@ -7,6 +7,8 @@
   },
   "files.associations": {
     "wscript": "python",
-    "SLEse.C": "cpp"
+    "SLEse.C": "cpp",
+    "SLEraf.C": "cpp",
+    "SLEsi.C": "cpp"
   }
 }

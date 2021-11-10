@@ -59,7 +59,7 @@
             }
         ],
         "cfgSLE": {
-            "cfgSleSeConfig": "sle/SE_PROV_Config.txt",
+            "cfgSleSeConfig": "sle-wrapper/files/SE_PROV_Config.txt",
             "cfgSleInstances": [
                 {
                     "tag": "SLEInstRAF",
@@ -73,7 +73,7 @@
                     }
                 }
             ],
-            "cfgSleProxyConfig": "sle/PROXY_PROV_Config.txt"
+            "cfgSleProxyConfig": "sle-wrapper/files/PROXY_PROV_Config.txt"
         },
         "cfgTMFrame": {
             "cfgMaxTMFrameLen": 1115,

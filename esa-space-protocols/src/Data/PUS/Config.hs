@@ -20,6 +20,9 @@ module Data.PUS.Config
     , CncConfig(..)
     , EDENConfig(..)
     , SLEConfig(..)
+    , SLEInstanceConfig(..)
+    , SLERafConfig(..)
+    , SLEDeliveryMode(..)
     , VerificationConfig(..)
     , cltuBlockSizeAsWord8
     , defaultConfig
@@ -110,6 +113,42 @@ instance FromJSON EDENConfig
 instance ToJSON EDENConfig where
     toEncoding = genericToEncoding defaultOptions
 
+data SLEInstanceConfig =
+  SLEInstRAF SLERafConfig
+  | SLEInstRCF
+  | SLEInstFCLTU
+  deriving (Eq, Generic)
+
+instance FromJSON SLEInstanceConfig
+instance ToJSON SLEInstanceConfig where
+    toEncoding = genericToEncoding defaultOptions
+
+
+data SLEDeliveryMode =
+  SLEOnlineComplete
+  | SLEOnlineTimely
+  | SLEOffline
+  deriving (Eq, Generic)
+
+instance FromJSON SLEDeliveryMode
+instance ToJSON SLEDeliveryMode where
+    toEncoding = genericToEncoding defaultOptions
+
+data SLERafConfig = SLERafConfig
+    {
+    -- | the SLE service instance ID for the RAF service 
+      cfgSleRafSII          :: !Text
+    , cfgSleRafPeerID       :: !Text
+    , cfgSleRafPort         :: !Text
+    , cfgSleRafDeliveryMode :: !SLEDeliveryMode
+    , cfgSleRafBufferSize   :: !Word64
+    , cfgSleRafLatencyLimit :: !Word16
+    }
+    deriving (Eq, Generic)
+
+instance FromJSON SLERafConfig
+instance ToJSON SLERafConfig where
+    toEncoding = genericToEncoding defaultOptions
 
 data SLEConfig = SLEConfig
     {
@@ -117,8 +156,8 @@ data SLEConfig = SLEConfig
       cfgSleSeConfig    :: !FilePath
     -- | Path to the SLE config file for the Proxy
     , cfgSleProxyConfig :: !FilePath
-    -- | the SLE service instance ID for the RAF service 
-    , cfgSleRafSII      :: !Text
+    -- | A list of instance configurations
+    , cfgSleInstances   :: [SLEInstanceConfig]
     }
     deriving (Eq, Generic)
 
@@ -188,7 +227,7 @@ data Config = Config
     -- | Specifies the configuration of the available EDEN connections
     , cfgEDEN                 :: [EDENConfig]
     -- | Specifies the SLE interface configuration
-    , cfgSLE                  :: Maybe SLEConfig 
+    , cfgSLE                  :: Maybe SLEConfig
     -- | Specifies default values for TC verifications
     , cfgVerification         :: VerificationConfig
     -- | Determines, whether incoming TM Frames are stored in the DB. This
@@ -253,12 +292,21 @@ defaultCncConfig = CncConfig { cfgCncID     = 1
                              }
 
 
--- defaultSleConfig :: SLEConfig 
--- defaultSleConfig = SLEConfig {
---       cfgSleSeConfig    = "sle/SE_PROV_Config.txt"
---     , cfgSleProxyConfig = "sle/PROXY_PROV_Config.txt"
---     , cfgSleRafSII      = "sagr=3.spack=facility-PASS1.rsl-fg=1.raf=onlc1"
---   }
+defaultSleConfig :: SLEConfig
+defaultSleConfig = SLEConfig
+    { cfgSleSeConfig    = "sle/SE_PROV_Config.txt"
+    , cfgSleProxyConfig = "sle/PROXY_PROV_Config.txt"
+    , cfgSleInstances   =
+        [ SLEInstRAF SLERafConfig
+              { cfgSleRafSII = "sagr=3.spack=facility-PASS1.rsl-fg=1.raf=onlc1"
+              , cfgSleRafPeerID       = "PARAGONTT"
+              , cfgSleRafPort         = "PORT_TM1"
+              , cfgSleRafDeliveryMode = SLEOnlineComplete
+              , cfgSleRafBufferSize   = 100
+              , cfgSleRafLatencyLimit = 1
+              }
+        ]
+    }
 
 -- | a default configuration with typical values.
 defaultConfig :: Config
@@ -275,7 +323,7 @@ defaultConfig = Config { cfgCltuBlockSize        = CltuBS_8
                        , cfgNCTRS                = [defaultNctrsConfig]
                        , cfgCnC                  = [defaultCncConfig]
                        , cfgEDEN                 = [defaultEdenConfig]
-                       , cfgSLE                  = Nothing 
+                       , cfgSLE                  = Just defaultSleConfig
                        , cfgVerification         = defaultVerifConfig
                        , cfgStoreTMFrames        = True
                        , cfgStorePUSPackets      = True
