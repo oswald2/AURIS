@@ -55,9 +55,9 @@ processing sleCfg queues sle = do
 
 convVersion :: SLEVersion -> SleVersion
 convVersion SLEVersion1 = SleVersion1
-convVersion SLEVersion2 = SleVersion1
-convVersion SLEVersion3 = SleVersion1
-convVersion SLEVersion4 = SleVersion1
+convVersion SLEVersion2 = SleVersion2
+convVersion SLEVersion3 = SleVersion3
+convVersion SLEVersion4 = SleVersion4
 
 
 startInstance
@@ -154,7 +154,7 @@ runRAF peerID rafCfg sii queue sle = do
                     logError $ "BIND for " <> displayShow sii <> " returned error: " <> display diag
                     loop
             RafStartSuccess sii -> do 
-                logInfo $ "BIND SUCCEEDED for" <> displayShow sii
+                logInfo $ "START SUCCEEDED for" <> displayShow sii
                 loop
             RafStartError sii diag -> do 
                     logError $ "START for " <> displayShow sii <> " returned error: " <> display diag
@@ -281,6 +281,9 @@ opReturnCB state hm sii seqCnt opType appID result invokeID dat =
             SleOpBind -> case result of
                 SleResultPositive -> sendToSii sii (RafBindSuccess sii)
                 SleResultNegative -> sendToSii sii (RafBindError sii dat)
+            SleOpStart -> case result of 
+                SleResultPositive -> sendToSii sii (RafStartSuccess sii)
+                SleResultNegative -> sendToSii sii (RafStartError sii dat)
   where
     sendToSii sii cmd = do
         case HM.lookup sii hm of
