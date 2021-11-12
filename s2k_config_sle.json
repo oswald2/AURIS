@@ -59,21 +59,23 @@
             }
         ],
         "cfgSLE": {
-            "cfgSleSeConfig": "sle-wrapper/files/SE_PROV_Config.txt",
+            "cfgSleSeConfig": "sle-wrapper/files/SE_USER_Config.txt",
+            "cfgSleProxyConfig": "sle-wrapper/files/PROXY_USER_Config.txt",
+            "cfgSlePeerID": "EGSCC",
             "cfgSleInstances": [
                 {
                     "tag": "SLEInstRAF",
                     "contents": {
-                        "cfgSleRafPort": "PORT_TM1",
+                        "cfgSleRafPort": "TMPORT",
                         "cfgSleRafPeerID": "PARAGONTT",
                         "cfgSleRafBufferSize": 100,
                         "cfgSleRafLatencyLimit": 1,
+                        "cfgSleRafVersion": "SLEVersion3",
                         "cfgSleRafDeliveryMode": "SLEOnlineComplete",
                         "cfgSleRafSII": "sagr=3.spack=facility-PASS1.rsl-fg=1.raf=onlc1"
                     }
                 }
-            ],
-            "cfgSleProxyConfig": "sle-wrapper/files/PROXY_PROV_Config.txt"
+            ]
         },
         "cfgTMFrame": {
             "cfgMaxTMFrameLen": 1115,

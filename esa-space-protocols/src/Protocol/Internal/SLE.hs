@@ -2,7 +2,11 @@ module Protocol.Internal.SLE
     ( startSLE
     ) where
 
+import           Control.PUS.Classes
 import           RIO
+import qualified RIO.HashMap                   as HM
+
+import           Data.PUS.Events
 
 import           SLE.Interface
 import           SLE.Log
@@ -15,52 +19,147 @@ import           Data.PUS.Config
 
 
 startSLE
-    :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env) => SLEConfig -> m ()
+    :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env, HasRaiseEvent env)
+    => SLEConfig
+    -> m ()
 startSLE sleCfg = do
-    state <- ask
-    let cbs = callbacks state
+    state   <- ask
+    queues' <- traverse (createQueue . SleSII . sleInstanceCfgSII)
+        $ cfgSleInstances sleCfg
+
+    let cbs    = callbacks state queues
+        queues = HM.fromList queues'
 
     withSLEUser (SeConfigFile (cfgSleSeConfig sleCfg))
                 (ProxyConfigFile (cfgSleProxyConfig sleCfg))
                 cbs
-                (processing sleCfg)
+                (processing sleCfg queues')
+  where
+    createQueue sii = do
+        q <- liftIO $ newTBQueueIO 100
+        pure (sii, q)
+
 
 processing
-    :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env)
+    :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env, HasRaiseEvent env)
     => SLEConfig
+    -> [(SleSII, TBQueue SleCmd)]
     -> SLE
     -> m ()
-processing sleCfg sle = do
-    let instances = map (conc . startInstance sle) $ cfgSleInstances sleCfg
-        threads   = foldr (<>) mempty instances
+processing sleCfg queues sle = do
+    let instances = zipWith inst (cfgSleInstances sleCfg) queues
+        inst i q = conc (startInstance sle (cfgSlePeerID sleCfg) i q)
+        threads = foldr (<>) mempty instances
     runConc threads
 
+
+convVersion :: SLEVersion -> SleVersion
+convVersion SLEVersion1 = SleVersion1
+convVersion SLEVersion2 = SleVersion1
+convVersion SLEVersion3 = SleVersion1
+convVersion SLEVersion4 = SleVersion1
+
+
 startInstance
-    :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env)
+    :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env, HasRaiseEvent env)
     => SLE
+    -> Text
     -> SLEInstanceConfig
+    -> (SleSII, TBQueue SleCmd)
     -> m ()
-startInstance sle (SLEInstRAF rafCfg) = do
+startInstance sle peerID (SLEInstRAF rafCfg) (sii, queue) = do
+    let version      = convVersion (cfgSleRafVersion rafCfg)
+        deliveryMode = convDeliveryMode (cfgSleRafDeliveryMode rafCfg)
+        sii          = SleSII (cfgSleRafSII rafCfg)
+    env <- ask
+
+    liftIO $ raiseEvent
+        env
+        (EVSLE
+            (EVSLEInitRaf sii version peerID (cfgSleRafPort rafCfg) deliveryMode
+            )
+        )
+
     res <- withSleRAFUser sle
                           (cfgSleRafSII rafCfg)
+                          version
                           (cfgSleRafPeerID rafCfg)
                           (cfgSleRafPort rafCfg)
                           Nothing
                           Nothing
-                          (convDeliveryMode (cfgSleRafDeliveryMode rafCfg))
+                          deliveryMode
                           (cfgSleRafBufferSize rafCfg)
                           (cfgSleRafLatencyLimit rafCfg)
-                          (\_ -> pure Nothing)
-    forM_ res $ \err -> 
-            logError
-                $  "SLE Instance "
-                <> display (cfgSleRafSII rafCfg)
-                <> " returned: "
-                <> display err
+                          (runRAF peerID rafCfg sii queue)
+    forM_ res $ \err ->
+        logError
+            $  "SLE Instance "
+            <> display (cfgSleRafSII rafCfg)
+            <> " returned: "
+            <> display err
     pure ()
-startInstance _ _ = pure ()
+startInstance _ _ _ _ = pure ()
 
 
+data SleCmd =
+  RafBindSuccess SleSII
+  | RafBindError SleSII Text
+  | RafStartSuccess SleSII
+  | RafStartError SleSII Text
+
+
+runRAF
+    :: (MonadUnliftIO m, MonadReader env m, HasRaiseEvent env, HasLogFunc env)
+    => Text
+    -> SLERafConfig
+    -> SleSII
+    -> TBQueue SleCmd
+    -> SLE
+    -> m (Maybe Text)
+runRAF peerID rafCfg sii queue sle = do
+    env <- ask
+    liftIO $ raiseEvent env (EVSLE (EVSLERafInitialised sii))
+    -- initiate the bind 
+    bindRes <- liftIO $ rafBind sle
+                                (cfgSleRafPeerID rafCfg)
+                                (cfgSleRafPort rafCfg)
+                                peerID
+                                (convVersion (cfgSleRafVersion rafCfg))
+    case bindRes of
+        Just err ->
+            logError
+                $  "Error on requesting SLE BIND for "
+                <> displayShow sii
+                <> ": "
+                <> display err
+        Nothing -> loop
+    pure Nothing
+
+  where
+    loop = do
+        cmd <- atomically $ readTBQueue queue
+        case cmd of
+            RafBindSuccess sii -> do
+                logInfo $ "BIND SUCCEEDED for" <> displayShow sii
+                startRes <- liftIO
+                    $ rafStart sle Nothing Nothing SleRafAllFrames
+                case startRes of
+                    Just err ->
+                        logError
+                            $  "Error on requesting SLE START: "
+                            <> display err
+                    Nothing -> do
+                        loop
+            RafBindError sii diag -> do 
+                    logError $ "BIND for " <> displayShow sii <> " returned error: " <> display diag
+                    loop
+            RafStartSuccess sii -> do 
+                logInfo $ "BIND SUCCEEDED for" <> displayShow sii
+                loop
+            RafStartError sii diag -> do 
+                    logError $ "START for " <> displayShow sii <> " returned error: " <> display diag
+                    loop
+            _ -> loop
 
 convDeliveryMode :: SLEDeliveryMode -> SleDeliveryMode
 convDeliveryMode SLEOnlineComplete = SleCompleteOnline
@@ -69,8 +168,9 @@ convDeliveryMode SLEOffline        = SleOffline
 
 
 
-callbacks :: HasLogFunc env => env -> Callbacks
-callbacks state = Callbacks
+callbacks
+    :: HasLogFunc env => env -> HashMap SleSII (TBQueue SleCmd) -> Callbacks
+callbacks state cmdQueues = Callbacks
     { cbLogHandler                 = sleLog state
     , cbNotifyHandler              = sleNotify state
     , cbTraceHandler               = tracer state
@@ -81,7 +181,7 @@ callbacks state = Callbacks
     , cbStatusReportHandler        = statusReportCB state
     , cbSyncNotifyHandler          = syncCB state
     , cbTransferDataHandler        = transferDataCB state
-    , cbOpReturnHandler            = opReturnCB state
+    , cbOpReturnHandler            = opReturnCB state cmdQueues
     , cbResumeDataTransferHandler  = resumeDataTransferCB state
     , cbProvisionPeriodEndsHandler = provisionEndsCB state
     , cbProtocolAbortHandler       = protocolAbortCB state
@@ -93,7 +193,7 @@ callbacks state = Callbacks
     , cbCLTUThrowEventHandler      = throwCB state
     , cbStopHandler                = stopCB state
     , cbRAFStartHandler            = rafStartCB state
-    , cbRCFStartHandler            = rcfStartCB state 
+    , cbRCFStartHandler            = rcfStartCB state
     }
 
 
@@ -155,8 +255,12 @@ transferDataCB state linkType seqCnt ert cont frame = runRIO state $ do
         <> " Frame: "
         <> displayShow frame
 
-opReturnCB :: (HasLogFunc env) => env -> SleOpReturnHandler
-opReturnCB state sii seqCnt opType appID result invokeID dat =
+opReturnCB
+    :: (HasLogFunc env)
+    => env
+    -> HashMap SleSII (TBQueue SleCmd)
+    -> SleOpReturnHandler
+opReturnCB state hm sii seqCnt opType appID result invokeID dat =
     runRIO state $ do
         logDebug
             $  "SLE OP RETURN: "
@@ -173,6 +277,15 @@ opReturnCB state sii seqCnt opType appID result invokeID dat =
             <> displayShow invokeID
             <> " Data: "
             <> displayShow dat
+        case opType of
+            SleOpBind -> case result of
+                SleResultPositive -> sendToSii sii (RafBindSuccess sii)
+                SleResultNegative -> sendToSii sii (RafBindError sii dat)
+  where
+    sendToSii sii cmd = do
+        case HM.lookup sii hm of
+            Just queue -> atomically $ writeTBQueue queue cmd
+            Nothing    -> pure ()
 
 resumeDataTransferCB :: (HasLogFunc env) => env -> SleResumeDataTransferHandler
 resumeDataTransferCB state sii = runRIO state $ do

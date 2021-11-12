@@ -23,6 +23,8 @@ module Data.PUS.Config
     , SLEInstanceConfig(..)
     , SLERafConfig(..)
     , SLEDeliveryMode(..)
+    , SLEVersion(..)
+    , sleInstanceCfgSII
     , VerificationConfig(..)
     , cltuBlockSizeAsWord8
     , defaultConfig
@@ -119,6 +121,11 @@ data SLEInstanceConfig =
   | SLEInstFCLTU
   deriving (Eq, Generic)
 
+sleInstanceCfgSII :: SLEInstanceConfig -> Text 
+sleInstanceCfgSII (SLEInstRAF raf) = cfgSleRafSII raf
+sleInstanceCfgSII _ = "undefined"
+
+
 instance FromJSON SLEInstanceConfig
 instance ToJSON SLEInstanceConfig where
     toEncoding = genericToEncoding defaultOptions
@@ -134,10 +141,25 @@ instance FromJSON SLEDeliveryMode
 instance ToJSON SLEDeliveryMode where
     toEncoding = genericToEncoding defaultOptions
 
+
+data SLEVersion =
+    SLEVersion1
+    | SLEVersion2
+    | SLEVersion3
+    | SLEVersion4
+    deriving (Eq, Ord, Show, Generic)
+
+instance FromJSON SLEVersion
+instance ToJSON SLEVersion where
+    toEncoding = genericToEncoding defaultOptions
+
+
+
 data SLERafConfig = SLERafConfig
     {
     -- | the SLE service instance ID for the RAF service 
       cfgSleRafSII          :: !Text
+    , cfgSleRafVersion      :: !SLEVersion
     , cfgSleRafPeerID       :: !Text
     , cfgSleRafPort         :: !Text
     , cfgSleRafDeliveryMode :: !SLEDeliveryMode
@@ -156,6 +178,8 @@ data SLEConfig = SLEConfig
       cfgSleSeConfig    :: !FilePath
     -- | Path to the SLE config file for the Proxy
     , cfgSleProxyConfig :: !FilePath
+    -- | The peer ID of AURIS itself
+    , cfgSlePeerID      :: !Text 
     -- | A list of instance configurations
     , cfgSleInstances   :: [SLEInstanceConfig]
     }
@@ -296,9 +320,11 @@ defaultSleConfig :: SLEConfig
 defaultSleConfig = SLEConfig
     { cfgSleSeConfig    = "sle/SE_PROV_Config.txt"
     , cfgSleProxyConfig = "sle/PROXY_PROV_Config.txt"
+    , cfgSlePeerID      = "AURIS"
     , cfgSleInstances   =
         [ SLEInstRAF SLERafConfig
               { cfgSleRafSII = "sagr=3.spack=facility-PASS1.rsl-fg=1.raf=onlc1"
+              , cfgSleRafVersion      = SLEVersion3
               , cfgSleRafPeerID       = "PARAGONTT"
               , cfgSleRafPort         = "PORT_TM1"
               , cfgSleRafDeliveryMode = SLEOnlineComplete

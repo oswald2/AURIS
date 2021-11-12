@@ -14,6 +14,7 @@ Contains just the Events, which can be raised by the library
     OverloadedStrings
     , DeriveGeneric
     , NoImplicitPrelude
+    , CPP
 #-}
 module Data.PUS.Events
     ( Event(..)
@@ -22,6 +23,9 @@ module Data.PUS.Events
     , EventAlarm(..)
     , EventCOP1(..)
     , EventDB(..)
+#ifdef HAS_SLE 
+    , EventSLE(..)
+#endif 
     , EventFlag(..)
     , TMStatistics(..)
     , TMFrameStats(..)
@@ -53,6 +57,9 @@ import           General.Time
 
 import           Protocol.ProtocolInterfaces
 
+#ifdef HAS_SLE 
+import SLE.Types
+#endif 
 
 data EventFlag =
     EVFlagCommanding
@@ -70,6 +77,9 @@ data Event = EVCommanding EventCommanding
     | EVTelemetry EventTelemetry
     | EVCOP1 EventCOP1
     | EVDB EventDB
+#ifdef HAS_SLE 
+    | EVSLE EventSLE
+#endif
     deriving (Show, Generic)
 
 instance Serialise Event
@@ -175,3 +185,15 @@ instance Serialise EventDB
 instance FromJSON EventDB
 instance ToJSON EventDB where
     toEncoding = genericToEncoding defaultOptions
+
+#ifdef HAS_SLE 
+data EventSLE = 
+    EVSLEInitRaf SleSII SleVersion Text Text SleDeliveryMode
+    | EVSLERafInitialised SleSII
+    deriving (Show, Generic)
+
+instance Serialise EventSLE
+instance FromJSON EventSLE
+instance ToJSON EventSLE where
+    toEncoding = genericToEncoding defaultOptions
+#endif

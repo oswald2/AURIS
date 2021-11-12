@@ -60,6 +60,7 @@
         ],
         "cfgSLE": {
             "cfgSleSeConfig": "sle/SE_PROV_Config.txt",
+            "cfgSlePeerID": "AURIS",
             "cfgSleInstances": [
                 {
                     "tag": "SLEInstRAF",
@@ -68,6 +69,7 @@
                         "cfgSleRafPeerID": "PARAGONTT",
                         "cfgSleRafBufferSize": 100,
                         "cfgSleRafLatencyLimit": 1,
+                        "cfgSleRafVersion": "SLEVersion3",
                         "cfgSleRafDeliveryMode": "SLEOnlineComplete",
                         "cfgSleRafSII": "sagr=3.spack=facility-PASS1.rsl-fg=1.raf=onlc1"
                     }

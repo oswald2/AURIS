@@ -9,6 +9,9 @@
     "wscript": "python",
     "SLEse.C": "cpp",
     "SLEraf.C": "cpp",
-    "SLEsi.C": "cpp"
+    "SLEsi.C": "cpp",
+    "Helpers.H": "cpp",
+    "AplServiceInform.C": "cpp",
+    "AplGUID.C": "cpp"
   }
 }
