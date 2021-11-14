@@ -5,6 +5,7 @@ module Protocol.Internal.SLE
 import           Control.PUS.Classes
 import           RIO
 import qualified RIO.HashMap                   as HM
+import qualified RIO.Text                      as T
 
 import           Data.PUS.Events
 
@@ -15,19 +16,35 @@ import           SLE.Types
 import           Text.Builder                   ( run )
 
 import           Data.PUS.Config
+import           Data.PUS.EncTime
+import           Data.PUS.TMFrame
+import           Data.PUS.TMFrameExtractor
+import           Data.PUS.TMStoreFrame
+
+import           General.Hexdump
+import           General.Time
+import           General.Types
+
+import           Protocol.ProtocolInterfaces
 
 
 
 startSLE
-    :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env, HasRaiseEvent env)
+    :: ( MonadUnliftIO m
+       , MonadReader env m
+       , HasLogFunc env
+       , HasConfig env
+       , HasRaiseEvent env
+       )
     => SLEConfig
+    -> SwitcherMap
     -> m ()
-startSLE sleCfg = do
+startSLE sleCfg vcMap = do
     state   <- ask
     queues' <- traverse (createQueue . SleSII . sleInstanceCfgSII)
         $ cfgSleInstances sleCfg
 
-    let cbs    = callbacks state queues
+    let cbs    = callbacks state vcMap queues
         queues = HM.fromList queues'
 
     withSLEUser (SeConfigFile (cfgSleSeConfig sleCfg))
@@ -67,7 +84,7 @@ startInstance
     -> SLEInstanceConfig
     -> (SleSII, TBQueue SleCmd)
     -> m ()
-startInstance sle peerID (SLEInstRAF rafCfg) (sii, queue) = do
+startInstance sle peerID (SLEInstRAF rafCfg) (_sii, queue) = do
     let version      = convVersion (cfgSleRafVersion rafCfg)
         deliveryMode = convDeliveryMode (cfgSleRafDeliveryMode rafCfg)
         sii          = SleSII (cfgSleRafSII rafCfg)
@@ -139,8 +156,8 @@ runRAF peerID rafCfg sii queue sle = do
     loop = do
         cmd <- atomically $ readTBQueue queue
         case cmd of
-            RafBindSuccess sii -> do
-                logInfo $ "BIND SUCCEEDED for" <> displayShow sii
+            RafBindSuccess sii2 -> do
+                logInfo $ "BIND SUCCEEDED for" <> displayShow sii2
                 startRes <- liftIO
                     $ rafStart sle Nothing Nothing SleRafAllFrames
                 case startRes of
@@ -150,16 +167,23 @@ runRAF peerID rafCfg sii queue sle = do
                             <> display err
                     Nothing -> do
                         loop
-            RafBindError sii diag -> do 
-                    logError $ "BIND for " <> displayShow sii <> " returned error: " <> display diag
-                    loop
-            RafStartSuccess sii -> do 
-                logInfo $ "START SUCCEEDED for" <> displayShow sii
+            RafBindError sii2 diag -> do
+                logError
+                    $  "BIND for "
+                    <> displayShow sii2
+                    <> " returned error: "
+                    <> display diag
                 loop
-            RafStartError sii diag -> do 
-                    logError $ "START for " <> displayShow sii <> " returned error: " <> display diag
-                    loop
-            _ -> loop
+            RafStartSuccess sii2 -> do
+                logInfo $ "START SUCCEEDED for" <> displayShow sii2
+                loop
+            RafStartError sii2 diag -> do
+                logError
+                    $  "START for "
+                    <> displayShow sii2
+                    <> " returned error: "
+                    <> display diag
+                loop
 
 convDeliveryMode :: SLEDeliveryMode -> SleDeliveryMode
 convDeliveryMode SLEOnlineComplete = SleCompleteOnline
@@ -169,8 +193,12 @@ convDeliveryMode SLEOffline        = SleOffline
 
 
 callbacks
-    :: HasLogFunc env => env -> HashMap SleSII (TBQueue SleCmd) -> Callbacks
-callbacks state cmdQueues = Callbacks
+    :: (HasLogFunc env, HasConfig env, HasRaiseEvent env)
+    => env
+    -> SwitcherMap
+    -> HashMap SleSII (TBQueue SleCmd)
+    -> Callbacks
+callbacks state vcMap cmdQueues = Callbacks
     { cbLogHandler                 = sleLog state
     , cbNotifyHandler              = sleNotify state
     , cbTraceHandler               = tracer state
@@ -180,7 +208,7 @@ callbacks state cmdQueues = Callbacks
     , cbTransferBufferHandler      = transferBufCB state
     , cbStatusReportHandler        = statusReportCB state
     , cbSyncNotifyHandler          = syncCB state
-    , cbTransferDataHandler        = transferDataCB state
+    , cbTransferDataHandler        = transferDataCB state vcMap
     , cbOpReturnHandler            = opReturnCB state cmdQueues
     , cbResumeDataTransferHandler  = resumeDataTransferCB state
     , cbProvisionPeriodEndsHandler = provisionEndsCB state
@@ -241,8 +269,12 @@ syncCB :: (HasLogFunc env) => env -> SleSyncNotifyHandler
 syncCB state _linkType msg = runRIO state $ do
     logDebug $ "SLE ASYNC: " <> display (run msg)
 
-transferDataCB :: (HasLogFunc env) => env -> SleTransferDataHandler
-transferDataCB state linkType seqCnt ert cont frame = runRIO state $ do
+transferDataCB
+    :: (HasLogFunc env, HasRaiseEvent env, HasConfig env)
+    => env
+    -> SwitcherMap
+    -> SleTransferDataHandler
+transferDataCB state vcMap linkType seqCnt ert cont frame = runRIO state $ do
     logDebug
         $  "SLE TRANSFER DATA: "
         <> displayShow linkType
@@ -254,6 +286,37 @@ transferDataCB state linkType seqCnt ert cont frame = runRIO state $ do
         <> displayShow cont
         <> " Frame: "
         <> displayShow frame
+    case decodeFrame (cfgTMFrame (state ^. getConfig)) frame of
+        Left err -> do
+            logError
+                $  "Error decoding frame: "
+                <> display (T.pack err)
+                <> ": "
+                <> display (HexBytes frame)
+        Right tmFrame -> do
+            let interf = case linkType of
+                    SleRAF       -> IfSle SleRAFIf
+                    SleRCF       -> IfSle SleRCFIf
+                    SleCLTU      -> IfSle SleFCLTUIf
+                    SleUnknown _ -> IfSle SleUnknownIf
+
+            case decodeCdsTime ert of
+                Left err ->
+                    logError
+                        $  "Error decoding Frame ERT: "
+                        <> display err
+                        <> display @Text ": "
+                        <> display (hexdumpBS ert)
+                Right decodedERT -> do
+                    let storeFrame = TMStoreFrame
+                            { _tmstFrame     = tmFrame
+                            , _tmstBinary    = HexBytes frame
+                            , _tmstInterface = interf
+                            , _tmstTime      = timeStamp
+                            }
+                        ep = epoch1958 (LeapSeconds 0)
+                        timeStamp = cdsTimeToSunTime ep decodedERT
+                    multiplexFrame vcMap storeFrame
 
 opReturnCB
     :: (HasLogFunc env)
@@ -281,12 +344,15 @@ opReturnCB state hm sii seqCnt opType appID result invokeID dat =
             SleOpBind -> case result of
                 SleResultPositive -> sendToSii sii (RafBindSuccess sii)
                 SleResultNegative -> sendToSii sii (RafBindError sii dat)
-            SleOpStart -> case result of 
+                _ -> pure ()
+            SleOpStart -> case result of
                 SleResultPositive -> sendToSii sii (RafStartSuccess sii)
                 SleResultNegative -> sendToSii sii (RafStartError sii dat)
+                _ -> pure ()
+            _ -> pure ()
   where
-    sendToSii sii cmd = do
-        case HM.lookup sii hm of
+    sendToSii sii2 cmd = do
+        case HM.lookup sii2 hm of
             Just queue -> atomically $ writeTBQueue queue cmd
             Nothing    -> pure ()
 

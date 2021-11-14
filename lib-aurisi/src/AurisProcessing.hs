@@ -130,20 +130,15 @@ runProcessing cfg missionSpecific mibPath interface mainWindow coreQueue queryQu
                 logInfo "Initialising User Interface with Data Model..."
                 liftIO $ postGUIASync $ mwInitialiseDataModel mainWindow model
 
-                logInfo "Starting TM and TC chains..."
-
                 -- Start the core processing thread (commands from GUI)
                 void $ async $ runCoreThread coreQueue
 
                 -- Start the TC verification processor 
                 void $ async $ processVerification (glsVerifCommandQueue env)
 
-                forM_ (cfgSLE (aurisPusConfig cfg)) $ \sleCfg -> do 
-                    logInfo "Starting SLE interface..."
-                    void $ async $ startSLE sleCfg
-
                 -- run all processing chains (TM and TC) as well as the 
                 -- interface threads 
+                logInfo "Starting TM and TC chains..."
                 runChains missionSpecific
 
 

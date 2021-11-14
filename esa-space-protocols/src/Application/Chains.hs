@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 module Application.Chains
     ( runChains
     , runTMChain
@@ -93,13 +94,10 @@ import           Protocol.ProtocolSwitcher      ( InterfaceSwitcherMap
                                                 )
 
 import           Control.PUS.Classes
-import           Data.PUS.Statistics            ( TMFrameStats(tmStatFrameTime)
-                                                )
-import           RIO                            ( HasLogFunc )
 
-import           Data.Thyme.Clock
 import           Data.Thyme.Clock.POSIX
 
+import           Protocol.SLE
 
 
 newtype NctrsID = NctrsID Word16
@@ -111,13 +109,15 @@ tmPacketQueueSize :: Natural
 tmPacketQueueSize = 5000
 
 
-runTMNctrsChain :: NctrsConfig -> TBQueue ExtractedPacket -> RIO GlobalState ()
-runTMNctrsChain cfg pktQueue = do
+runTMNctrsChain
+    :: NctrsConfig -> SwitcherMap -> RIO GlobalState ()
+runTMNctrsChain cfg vcMap = do
     logDebug "runTMNctrsChain entering"
 
-    (_thread, vcMap) <- setupFrameSwitcher (IfNctrs (cfgNctrsID cfg)) pktQueue
-
-    let chain = receiveTmNcduC .| ncduToTMFrameC .| tmFrameSwitchVC vcMap
+    let chain =
+            receiveTmNcduC
+                .| ncduToTMFrameC (IfNctrs (cfgNctrsID cfg))
+                .| tmFrameSwitchVC vcMap
 
     runGeneralTCPReconnectClient
         (clientSettings (fromIntegral (cfgNctrsPortTM cfg))
@@ -474,8 +474,8 @@ runEdenChain cfg missionSpecific pktQueue edenQueue = do
 
 
 runTMChain
-    :: PUSMissionSpecific -> TBQueue ExtractedPacket -> RIO GlobalState ()
-runTMChain missionSpecific pktQueue = do
+    :: PUSMissionSpecific -> SwitcherMap -> TBQueue ExtractedPacket -> RIO GlobalState ()
+runTMChain missionSpecific vcMap pktQueue = do
     logDebug "runTMChain entering"
 
     cfg <- view getConfig
@@ -491,7 +491,7 @@ runTMChain missionSpecific pktQueue = do
                 .| sinkNull
 
     let processingThread = conc $ runConduitRes chain
-        nctrsTMThread conf = conc $ runTMNctrsChain conf pktQueue
+        nctrsTMThread conf = conc $ runTMNctrsChain conf vcMap
         cncTMThread conf = conc $ runTMCnCChain conf missionSpecific pktQueue
 
         threads =
@@ -551,6 +551,9 @@ runChains missionSpecific = do
 
     pktQueue                    <- newTBQueueIO tmPacketQueueSize
 
+    (_vcThread, vcMap) <- setupFrameSwitcher pktQueue
+
+
     -- create the EDEN interface threads and the switcher map 
     (switcherMap1, edenThreads) <- foldM (edenIf pktQueue)
                                          (HM.empty, mempty)
@@ -566,13 +569,23 @@ runChains missionSpecific = do
                                              (switcherMap2, nctrsThreads)
                                              (cfgCnC cfg)
 
-    let tmThreads    = conc $ runTMChain missionSpecific pktQueue
+#ifdef HAS_SLE 
+    sleThreads <- case cfgSLE cfg of
+        Just sleCfg -> do 
+            logInfo "Starting SLE interface..."
+            pure $ conc $ startSLE sleCfg vcMap
+        Nothing -> pure mempty 
+#else 
+    let sleThreads = mempty 
+#endif 
+
+    let tmThreads    = conc $ runTMChain missionSpecific vcMap pktQueue
         tcThreads    = conc $ runTCChain missionSpecific switcherMap
         adminThreads = mconcat $ map (conc . runAdminNctrsChain) (cfgNCTRS cfg)
         stats        = conc $ statThread
 
     runConc
-        (tmThreads <> tcThreads <> interfaceThreads <> adminThreads <> stats)
+        (tmThreads <> tcThreads <> interfaceThreads <> adminThreads <> sleThreads <> stats)
 
     logDebug "runChains leaves"
   where

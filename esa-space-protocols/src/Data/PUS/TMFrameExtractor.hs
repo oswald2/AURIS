@@ -15,11 +15,13 @@ of the used 'Conduit' library automatically handles spillover-packets.
   TemplateHaskell
 #-}
 module Data.PUS.TMFrameExtractor
-    ( extractPktFromTMFramesC
+    ( SwitcherMap
+    , extractPktFromTMFramesC
     , tmFrameExtraction
     , tmFrameExtractionChain
     , setupFrameSwitcher
     , tmFrameSwitchVC
+    , multiplexFrame
     , pusPacketDecodeC
     , tmFrameEncodeC
     , tmFrameDecodeC
@@ -106,11 +108,11 @@ tmFrameEncodeC = awaitForever $ \frame -> do
 -- If the frame was ok, it is yield'ed to the next conduit.
 tmFrameDecodeC
     :: (MonadIO m, MonadReader env m, HasGlobalState env)
-    => ConduitT (CDSTime, ByteString) TMStoreFrame m ()
+    => ConduitT (CDSTime, ProtocolInterface, ByteString) TMStoreFrame m ()
 tmFrameDecodeC = do
     env <- ask
     let cfg = env ^. getConfig
-    awaitForever $ \(ert, x) -> do
+    awaitForever $ \(ert, interf, x) -> do
         case A.parseOnly (A.match (tmFrameParser (cfgTMFrame cfg))) x of
             Left err -> do
                 let msg = T.pack err
@@ -125,7 +127,7 @@ tmFrameDecodeC = do
                     Left err -> liftIO
                         $ raiseEvent env (EVTelemetry (EVTMFailedCRC err))
                     Right () -> do
-                        let f = TMStoreFrame time frame (HexBytes bs)
+                        let f = TMStoreFrame time interf frame (HexBytes bs)
                             time =
                                 cdsTimeToSunTime (epoch1958 (LeapSeconds 0)) ert
                         yield f
@@ -152,10 +154,9 @@ storeTMFrameC = do
 
 setupFrameSwitcher
     :: (MonadUnliftIO m, MonadThrow m, MonadReader env m, HasGlobalState env)
-    => ProtocolInterface
-    -> TBQueue ExtractedPacket
-    -> m (Async (), IntMap (TBQueue TMStoreFrame))
-setupFrameSwitcher interf outQueue = do
+    => TBQueue ExtractedPacket
+    -> m (Async (), SwitcherMap)
+setupFrameSwitcher outQueue = do
     st <- ask
     let vcids = cfgVCIDs (st ^. getConfig)
 
@@ -168,11 +169,9 @@ setupFrameSwitcher interf outQueue = do
 
     cont <- mapM proc vcids
     -- create the threads
-    let
-        threadFunc a@(_vcid, queue) = do
-            res <-
-                tryDeep $ runConduitRes
-                    (tmFrameExtractionChain queue outQueue interf)
+    let threadFunc a@(_vcid, queue) = do
+            res <- tryDeep
+                $ runConduitRes (tmFrameExtractionChain queue outQueue)
             case res of
                 Left  RestartVCException -> threadFunc a
                 Right x                  -> pure x
@@ -196,27 +195,33 @@ setupFrameSwitcher interf outQueue = do
 -- @outQueue is the final 'TBQueue', where extracted PUS Packets are sent
 -- for parameter processing
 tmFrameSwitchVC
-    :: (MonadUnliftIO m, MonadReader env m, HasGlobalState env)
-    => IntMap (TBQueue TMStoreFrame)
+    :: (MonadUnliftIO m, MonadReader env m, HasRaiseEvent env)
+    => SwitcherMap
     -> ConduitT TMStoreFrame Void m ()
 tmFrameSwitchVC vcMap = do
-    awaitForever $ \frame -> do
-        st <- ask
-        let
-            !vcid = fromIntegral
-                $ getVCID (frame ^. tmstFrame . tmFrameHdr . tmFrameVcID)
-        case M.lookup vcid vcMap of
-            Nothing -> do
-                liftIO $ raiseEvent st $ EVAlarms
-                    (EVIllegalTMFrame
-                        ("Received Frame with VC ID which was not configured: "
-                        <> T.pack (show vcid)
-                        <> ". Discarding Frame."
-                        )
-                    )
-            Just q -> do
-                atomically $ writeTBQueue q frame
+    awaitForever $ \frame -> lift $ multiplexFrame vcMap frame
 
+multiplexFrame
+    :: (MonadUnliftIO m, MonadReader env m, HasRaiseEvent env)
+    => SwitcherMap
+    -> TMStoreFrame
+    -> m ()
+multiplexFrame vcMap frame = do
+    st <- ask
+    let
+        !vcid = fromIntegral
+            $ getVCID (frame ^. tmstFrame . tmFrameHdr . tmFrameVcID)
+    case M.lookup vcid vcMap of
+        Nothing -> do
+            liftIO $ raiseEvent st $ EVAlarms
+                (EVIllegalTMFrame
+                    (  "Received Frame with VC ID which was not configured: "
+                    <> T.pack (show vcid)
+                    <> ". Discarding Frame."
+                    )
+                )
+        Just q -> do
+            atomically $ writeTBQueue q frame
 
 
 raiseFrameC
@@ -232,9 +237,8 @@ raiseFrameC = awaitForever $ \frame -> do
 
 checkFrameCountC
     :: (MonadIO m, MonadReader env m, HasGlobalState env)
-    => ProtocolInterface
-    -> ConduitT TMStoreFrame (ExtractedDU TMFrame) m ()
-checkFrameCountC pIf = go Nothing
+    => ConduitT TMStoreFrame (ExtractedDU TMFrame) m ()
+checkFrameCountC = go Nothing
   where
     go
         :: (MonadIO m, MonadReader env m, HasGlobalState env)
@@ -258,7 +262,7 @@ checkFrameCountC pIf = go Nothing
                                 { _epQuality = toFlag Good True
                                 , _epERT     = frame' ^. tmstTime
                                 , _epGap     = Nothing
-                                , _epSource  = pIf
+                                , _epSource  = frame' ^. tmstInterface
                                 , _epVCID    = IsVCID
                                     (frame ^. tmFrameHdr . tmFrameVcID)
                                 , _epDU      = frame
@@ -287,7 +291,7 @@ checkFrameCountC pIf = go Nothing
                                                 ( fromIntegral lastFC
                                                 , fromIntegral vcfc
                                                 )
-                                        , _epSource  = pIf
+                                        , _epSource  = frame' ^. tmstInterface
                                         , _epVCID    = IsVCID
                                             (frame ^. tmFrameHdr . tmFrameVcID)
                                         , _epDU      = frame
@@ -308,9 +312,8 @@ checkFrameCountC pIf = go Nothing
 extractPktFromTMFramesC
     :: (MonadIO m, MonadReader env m, HasGlobalState env)
     => PUSMissionSpecific
-    -> ProtocolInterface
     -> ConduitT (ExtractedDU TMFrame) ExtDuTMFrame m ()
-extractPktFromTMFramesC missionSpecific pIf = loop True B.empty
+extractPktFromTMFramesC missionSpecific = loop True B.empty
   where
     loop
         :: (MonadIO m, MonadReader env m, HasGlobalState env)
@@ -331,7 +334,7 @@ extractPktFromTMFramesC missionSpecific pIf = loop True B.empty
                 if isJust (frame ^. epGap)
                     then do
                         -- we have a gap, so process the spill-over packet
-                        rejectSpillOver spillOverData
+                        rejectSpillOver spillOverData (frame ^. epSource)
                         let (_prev, rest) = tmFrameGetPrevAndRest frame'
                         logDebug
                             $  display ("gap: prev: " :: Text)
@@ -382,8 +385,9 @@ extractPktFromTMFramesC missionSpecific pIf = loop True B.empty
     rejectSpillOver
         :: (MonadIO m, MonadReader env m, HasGlobalState env)
         => ByteString
+        -> ProtocolInterface
         -> ConduitT (ExtractedDU TMFrame) ExtDuTMFrame m ()
-    rejectSpillOver sp = do
+    rejectSpillOver sp pIf = do
         env <- ask
         if B.length sp >= fixedSizeOf @PUSHeader
             then do
@@ -470,11 +474,10 @@ segmentedPacketParser segLen = do
 pktReconstructorC
     :: (MonadIO m, MonadReader env m, HasLogFunc env)
     => PUSMissionSpecific
-    -> ProtocolInterface
     -> TMSegmentLen
     -> PktStore
     -> ConduitT (ExtDuTMFrame, PacketPart) ExtractedPacket m ()
-pktReconstructorC missionSpecific pIf segLen pktStore = do
+pktReconstructorC missionSpecific segLen pktStore = do
     x <- await
     case x of
         Nothing                            -> return ()
@@ -484,6 +487,7 @@ pktReconstructorC missionSpecific pIf segLen pktStore = do
                 pktKey = mkPktKey hdr
                 ert    = epu ^. epERT
                 vcid   = epu ^. epVCID
+                pIf    = epu ^. epSource
             case hdr ^. pusHdrSeqFlags of
                 SegmentStandalone -> do
                     processFinishedPacket missionSpecific
@@ -493,16 +497,16 @@ pktReconstructorC missionSpecific pIf segLen pktStore = do
                                           hdrBin
                                           vcid
                                           (ppBody part)
-                    pktReconstructorC missionSpecific pIf segLen pktStore
+                    pktReconstructorC missionSpecific segLen pktStore
                 SegmentFirst -> do
                     let newStore = processFirstSegment hdr part pktStore
-                    pktReconstructorC missionSpecific pIf segLen newStore
+                    pktReconstructorC missionSpecific segLen newStore
                 SegmentContinue -> do
                     newStore <- processContinuationSegment segLen
                                                            pktStore
                                                            pktKey
                                                            part
-                    pktReconstructorC missionSpecific pIf segLen newStore
+                    pktReconstructorC missionSpecific segLen newStore
                 SegmentLast -> do
                     newStore <- processLastSegment missionSpecific
                                                    pIf
@@ -512,7 +516,7 @@ pktReconstructorC missionSpecific pIf segLen pktStore = do
                                                    pktStore
                                                    pktKey
                                                    part
-                    pktReconstructorC missionSpecific pIf segLen newStore
+                    pktReconstructorC missionSpecific segLen newStore
 
 
 
@@ -684,16 +688,15 @@ instance GetPayload ExtDuTMFrame where
 -- which also indicates it's source interface
 pusPacketDecodeC
     :: (MonadIO m, MonadThrow m, MonadReader env m, HasGlobalState env)
-    => ProtocolInterface
-    -> ConduitT ExtDuTMFrame ExtractedPacket m ()
-pusPacketDecodeC pIf = do
+    => ConduitT ExtDuTMFrame ExtractedPacket m ()
+pusPacketDecodeC = do
     st <- ask
     let missionSpecific = st ^. getMissionSpecific
         pktStore        = HM.empty
         segLen          = cfgTMSegLength (cfgTMFrame (st ^. getConfig))
 
     payloadParserC (segmentedPacketParser segLen)
-        .| pktReconstructorC missionSpecific pIf segLen pktStore
+        .| pktReconstructorC missionSpecific segLen pktStore
 
 
 -- | Stores the extracted packet in the database and then yields it
@@ -761,10 +764,9 @@ tmFrameExtractionChain
     :: (MonadIO m, MonadThrow m, MonadReader env m, HasGlobalState env)
     => TBQueue TMStoreFrame
     -> TBQueue ExtractedPacket
-    -> ProtocolInterface
     -> ConduitT () Void m ()
-tmFrameExtractionChain queue outQueue interf =
-    sourceTBQueue queue .| tmFrameExtraction interf .| sinkTBQueue outQueue
+tmFrameExtractionChain queue outQueue =
+    sourceTBQueue queue .| tmFrameExtraction .| sinkTBQueue outQueue
 
 
 -- | A conduit which calculates the frame statistics
@@ -798,35 +800,30 @@ packetStatC = do
 -- parser and passes that on downstream.
 tmFrameExtraction
     :: (MonadIO m, MonadThrow m, MonadReader env m, HasGlobalState env)
-    => ProtocolInterface
-    -> ConduitT TMStoreFrame ExtractedPacket m ()
-tmFrameExtraction interf = do
+    => ConduitT TMStoreFrame ExtractedPacket m ()
+tmFrameExtraction = do
     st <- ask
     let missionSpecific = st ^. getMissionSpecific
         cfg             = st ^. getConfig
 
         frameChain      = if isJust (getDbBackend st) && cfgStoreTMFrames cfg
-            then
-                checkFrameCountC interf
-                .| storeTMFrameC
-                .| frameStatC
-                .| raiseFrameC
-            else checkFrameCountC interf .| frameStatC .| raiseFrameC
+            then checkFrameCountC .| storeTMFrameC .| frameStatC .| raiseFrameC
+            else checkFrameCountC .| frameStatC .| raiseFrameC
 
     let db = getDbBackend st
 
     if isJust db && cfgStorePUSPackets cfg
         then
             frameChain
-            .| extractPktFromTMFramesC missionSpecific interf
-            .| pusPacketDecodeC interf
+            .| extractPktFromTMFramesC missionSpecific
+            .| pusPacketDecodeC
             .| pusPacketStoreC
             .| pusPacketGapCheckC
             .| packetStatC
         else
             frameChain
-            .| extractPktFromTMFramesC missionSpecific interf
-            .| pusPacketDecodeC interf
+            .| extractPktFromTMFramesC missionSpecific
+            .| pusPacketDecodeC
             .| pusPacketGapCheckC
             .| packetStatC
 
