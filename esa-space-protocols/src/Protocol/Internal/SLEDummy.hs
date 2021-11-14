@@ -6,5 +6,5 @@ import           RIO
 
 import           Data.PUS.Config
 
-startSLE :: (Monad m) => SLEConfig -> m ()
+startSLE :: (Monad m) => SLEConfig -> SwitcherMap -> TBQueue SLECommand -> m ()
 startSLE _sleCfg = pure ()

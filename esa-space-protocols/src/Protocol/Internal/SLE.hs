@@ -26,6 +26,7 @@ import           General.Time
 import           General.Types
 
 import           Protocol.ProtocolInterfaces
+import           Protocol.ProtocolSLE
 
 
 
@@ -38,8 +39,9 @@ startSLE
        )
     => SLEConfig
     -> SwitcherMap
+    -> TBQueue SLECommand
     -> m ()
-startSLE sleCfg vcMap = do
+startSLE sleCfg vcMap cmdQueue = do
     state   <- ask
     queues' <- traverse (createQueue . SleSII . sleInstanceCfgSII)
         $ cfgSleInstances sleCfg
@@ -47,15 +49,25 @@ startSLE sleCfg vcMap = do
     let cbs    = callbacks state vcMap queues
         queues = HM.fromList queues'
 
-    withSLEUser (SeConfigFile (cfgSleSeConfig sleCfg))
-                (ProxyConfigFile (cfgSleProxyConfig sleCfg))
-                cbs
-                (processing sleCfg queues')
+    withSLEUser
+        (SeConfigFile (cfgSleSeConfig sleCfg))
+        (ProxyConfigFile (cfgSleProxyConfig sleCfg))
+        cbs
+        (\sle -> race_ (processing sleCfg queues' sle) (commandThread queues'))
   where
     createQueue sii = do
         q <- liftIO $ newTBQueueIO 100
         pure (sii, q)
 
+    commandThread queues = do
+        cmd <- atomically $ readTBQueue cmdQueue
+        case cmd of
+            SLETerminate -> atomically $ do
+                mapM_ (\q -> writeTBQueue (snd q) Terminate) queues
+                -- we loop over, as we use race_ above and wait for the 
+                -- interfaces to terminate. Our thread will be termianted
+                -- automatically when all others are shutdown
+        commandThread queues
 
 processing
     :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env, HasRaiseEvent env)
@@ -123,7 +135,15 @@ data SleCmd =
   | RafBindError SleSII Text
   | RafStartSuccess SleSII
   | RafStartError SleSII Text
+  | Terminate
+  deriving (Show)
 
+data RafState =
+    Terminated
+    | Init
+    | Bound
+    | Active
+    deriving (Show)
 
 runRAF
     :: (MonadUnliftIO m, MonadReader env m, HasRaiseEvent env, HasLogFunc env)
@@ -149,41 +169,61 @@ runRAF peerID rafCfg sii queue sle = do
                 <> displayShow sii
                 <> ": "
                 <> display err
-        Nothing -> loop
+        Nothing -> loop Init
     pure Nothing
 
   where
-    loop = do
-        cmd <- atomically $ readTBQueue queue
-        case cmd of
-            RafBindSuccess sii2 -> do
-                logInfo $ "BIND SUCCEEDED for" <> displayShow sii2
-                startRes <- liftIO
-                    $ rafStart sle Nothing Nothing SleRafAllFrames
-                case startRes of
-                    Just err ->
-                        logError
-                            $  "Error on requesting SLE START: "
-                            <> display err
-                    Nothing -> do
-                        loop
-            RafBindError sii2 diag -> do
-                logError
-                    $  "BIND for "
-                    <> displayShow sii2
-                    <> " returned error: "
-                    <> display diag
-                loop
-            RafStartSuccess sii2 -> do
-                logInfo $ "START SUCCEEDED for" <> displayShow sii2
-                loop
-            RafStartError sii2 diag -> do
-                logError
-                    $  "START for "
-                    <> displayShow sii2
-                    <> " returned error: "
-                    <> display diag
-                loop
+    loop state = do
+        cmd   <- atomically $ readTBQueue queue
+        newSt <- processCmd state cmd
+        case newSt of
+            Terminated -> pure ()
+            x          -> loop x
+
+    processCmd state Terminate = do
+        case state of
+            Active -> do
+                res <- liftIO $ rafStop sle
+                forM_ res $ \err -> logError $ "SLE STOP: " <> display err
+            _ -> pure ()
+        pure Terminated
+
+    processCmd Init (RafBindSuccess sii2) = do
+        logInfo $ "BIND SUCCEEDED for" <> displayShow sii2
+        startRes <- liftIO $ rafStart sle Nothing Nothing SleRafAllFrames
+        case startRes of
+            Just err -> do
+                logError $ "Error on requesting SLE START: " <> display err
+                pure Bound
+            Nothing -> do
+                pure Bound
+    processCmd Init (RafBindError sii2 diag) = do
+        logError
+            $  "BIND for "
+            <> displayShow sii2
+            <> " returned error: "
+            <> display diag
+        pure Init
+
+    processCmd Bound (RafStartSuccess sii2) = do
+        logInfo $ "START SUCCEEDED for" <> displayShow sii2
+        pure Active
+
+    processCmd Bound (RafStartError sii2 diag) = do
+        logError
+            $  "START for "
+            <> displayShow sii2
+            <> " returned error: "
+            <> display diag
+        pure Bound
+
+    processCmd state cmd = do
+        logWarn
+            $  "SLE: Illegal CMD "
+            <> displayShow cmd
+            <> " in state "
+            <> displayShow state
+        pure state
 
 convDeliveryMode :: SLEDeliveryMode -> SleDeliveryMode
 convDeliveryMode SLEOnlineComplete = SleCompleteOnline
@@ -314,7 +354,7 @@ transferDataCB state vcMap linkType seqCnt ert cont frame = runRIO state $ do
                             , _tmstInterface = interf
                             , _tmstTime      = timeStamp
                             }
-                        ep = epoch1958 (LeapSeconds 0)
+                        ep        = epoch1958 (LeapSeconds 0)
                         timeStamp = cdsTimeToSunTime ep decodedERT
                     multiplexFrame vcMap storeFrame
 
@@ -344,11 +384,11 @@ opReturnCB state hm sii seqCnt opType appID result invokeID dat =
             SleOpBind -> case result of
                 SleResultPositive -> sendToSii sii (RafBindSuccess sii)
                 SleResultNegative -> sendToSii sii (RafBindError sii dat)
-                _ -> pure ()
+                _                 -> pure ()
             SleOpStart -> case result of
                 SleResultPositive -> sendToSii sii (RafStartSuccess sii)
                 SleResultNegative -> sendToSii sii (RafStartError sii dat)
-                _ -> pure ()
+                _                 -> pure ()
             _ -> pure ()
   where
     sendToSii sii2 cmd = do

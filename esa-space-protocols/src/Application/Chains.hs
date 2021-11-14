@@ -569,11 +569,13 @@ runChains missionSpecific = do
                                              (switcherMap2, nctrsThreads)
                                              (cfgCnC cfg)
 
+    sleQueue <- newTBQueueIO 100 
+
 #ifdef HAS_SLE 
     sleThreads <- case cfgSLE cfg of
         Just sleCfg -> do 
             logInfo "Starting SLE interface..."
-            pure $ conc $ startSLE sleCfg vcMap
+            pure $ conc $ startSLE sleCfg vcMap sleQueue 
         Nothing -> pure mempty 
 #else 
     let sleThreads = mempty 

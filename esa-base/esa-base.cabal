@@ -122,6 +122,7 @@ library
     Data.PUS.Verification
     Data.PUS.Statistics
     Protocol.ProtocolInterfaces
+    Protocol.ProtocolSLE
     Conduit.PayloadParser
     Persistence.Conversion.Types
     Persistence.LogEvent
