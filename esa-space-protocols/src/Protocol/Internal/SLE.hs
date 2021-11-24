@@ -166,7 +166,7 @@ runRAF peerID rafCfg sii queue sle = do
         Just err ->
             logError
                 $  "Error on requesting SLE BIND for "
-                <> displayShow sii
+                <> display sii
                 <> ": "
                 <> display err
         Nothing -> loop Init
@@ -185,11 +185,14 @@ runRAF peerID rafCfg sii queue sle = do
             Active -> do
                 res <- liftIO $ rafStop sle
                 forM_ res $ \err -> logError $ "SLE STOP: " <> display err
+            Bound -> do
+                res <- liftIO $ rafUnbind sle SleUBREnd
+                forM_ res $ \err -> logError $ "SLE STOP: " <> display err
             _ -> pure ()
         pure Terminated
 
     processCmd Init (RafBindSuccess sii2) = do
-        logInfo $ "BIND SUCCEEDED for" <> displayShow sii2
+        logInfo $ "BIND SUCCEEDED for" <> display sii2
         startRes <- liftIO $ rafStart sle Nothing Nothing SleRafAllFrames
         case startRes of
             Just err -> do
@@ -200,19 +203,19 @@ runRAF peerID rafCfg sii queue sle = do
     processCmd Init (RafBindError sii2 diag) = do
         logError
             $  "BIND for "
-            <> displayShow sii2
+            <> display sii2
             <> " returned error: "
             <> display diag
         pure Init
 
     processCmd Bound (RafStartSuccess sii2) = do
-        logInfo $ "START SUCCEEDED for" <> displayShow sii2
+        logInfo $ "START SUCCEEDED for" <> display sii2
         pure Active
 
     processCmd Bound (RafStartError sii2 diag) = do
         logError
             $  "START for "
-            <> displayShow sii2
+            <> display sii2
             <> " returned error: "
             <> display diag
         pure Bound
@@ -290,8 +293,14 @@ asyncCB state msg = runRIO state $ do
     logDebug $ "SLE ASYNC: " <> display (run msg)
 
 peerAbortCB :: (HasLogFunc env) => env -> SlePeerAbortHandler
-peerAbortCB state msg = runRIO state $ do
-    logWarn $ "SLE PEER ABORT: " <> display (run msg)
+peerAbortCB state sii diag originator = runRIO state $ do
+    logWarn
+        $  "SLE PEER ABORT: "
+        <> display sii
+        <> " diagnostic: "
+        <> display diag
+        <> " originator: "
+        <> display originator
 
 
 transferBufCB :: env -> SleTransferBufferHandler
@@ -301,7 +310,7 @@ statusReportCB :: (HasLogFunc env) => env -> SleStatusReportHandler
 statusReportCB state linkType msg = runRIO state $ do
     logInfo
         $  "SLE STATUS REPORT: Link Type: "
-        <> displayShow linkType
+        <> display linkType
         <> ": "
         <> display (run msg)
 
@@ -317,13 +326,13 @@ transferDataCB
 transferDataCB state vcMap linkType seqCnt ert cont frame = runRIO state $ do
     logDebug
         $  "SLE TRANSFER DATA: "
-        <> displayShow linkType
+        <> display linkType
         <> " SeqCount: "
         <> display seqCnt
         <> " ERT: "
         <> displayShow ert
         <> " Cont: "
-        <> displayShow cont
+        <> display cont
         <> " Frame: "
         <> displayShow frame
     case decodeFrame (cfgTMFrame (state ^. getConfig)) frame of
@@ -371,15 +380,15 @@ opReturnCB state hm sii seqCnt opType appID result invokeID dat =
             <> " SeqCount: "
             <> display seqCnt
             <> " OP: "
-            <> displayShow opType
+            <> display opType
             <> " AppID: "
-            <> displayShow appID
+            <> display appID
             <> " Result: "
-            <> displayShow result
+            <> display result
             <> " InvokeID: "
-            <> displayShow invokeID
+            <> display invokeID
             <> " Data: "
-            <> displayShow dat
+            <> display dat
         case opType of
             SleOpBind -> case result of
                 SleResultPositive -> sendToSii sii (RafBindSuccess sii)
@@ -449,7 +458,7 @@ stopCB state sii appID = runRIO state $ do
         $  "SLE STOP: "
         <> display (run (sleSIIBuilder sii))
         <> " AppID: "
-        <> displayShow appID
+        <> display appID
 
 
 throwCB :: env -> SleThrowEventHandler
