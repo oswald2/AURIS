@@ -69,6 +69,7 @@ startSLE sleCfg vcMap cmdQueue = do
                 -- automatically when all others are shutdown
         commandThread queues
 
+
 processing
     :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env, HasRaiseEvent env)
     => SLEConfig

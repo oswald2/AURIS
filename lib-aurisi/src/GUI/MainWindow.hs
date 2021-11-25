@@ -33,6 +33,7 @@ module GUI.MainWindow
     , mwTCHistory
     , mwStatisticsTab
     , mwMenuItemImportMIB
+    , mwMenuItemQuit
     , mwLiveState
     ) where
 
@@ -122,6 +123,7 @@ data MainWindow = MainWindow
     , _mwStatisticsTab     :: !StatisticsTab
     , _mwTimeLabel         :: !Label
     , _mwMenuItemImportMIB :: !Gtk.MenuItem
+    , _mwMenuItemQuit      :: !Gtk.MenuItem
     , _mwLiveState         :: TVar LiveState
     }
 makeLenses ''MainWindow
@@ -253,6 +255,7 @@ createMainWindow cfg = do
                          , _mwDataModelTab      = dataModelTab
                          , _mwStatisticsTab     = statisticsTab 
                          , _mwMenuItemImportMIB = menuItemImportMIB
+                         , _mwMenuItemQuit      = menuItemQuit
                          , _mwLiveState         = liveState
                          }
 
@@ -260,10 +263,6 @@ createMainWindow cfg = do
         diag <- createAboutDialog
         void $ dialogRun diag
         widgetHide diag
-
-    void $ Gtk.on menuItemQuit #activate $ do
-        widgetDestroy window
-        mainQuit
 
     void $ Gtk.on menuItemLoadTC #activate $ tcTabLoadFile tcTab
     void $ Gtk.on menuItemSaveTC #activate $ tcTabSaveFile tcTab

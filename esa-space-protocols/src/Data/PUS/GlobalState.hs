@@ -39,8 +39,9 @@ module Data.PUS.GlobalState
     , glsVerifCommandQueue
     , glsDatabase
     , glsQueryQueue
-    , glsFrameStatistics 
+    , glsFrameStatistics
     , glsPacketStatistics
+    , glsSLECmdQueue
     , newGlobalState
     , nextADCount
     ) where
@@ -48,8 +49,12 @@ module Data.PUS.GlobalState
 
 import           RIO                     hiding ( to
                                                 , view
+                                                , lens
+                                                , (^.)
                                                 )
 import qualified RIO.HashMap                   as HM
+
+import           Control.Lens
 
 import           UnliftIO.STM                   ( )
 
@@ -72,6 +77,7 @@ import           Data.PUS.PUSState              ( PUSState
                                                 , defaultPUSState
                                                 , nextADCnt
                                                 )
+import           Data.PUS.Statistics
 import           Data.PUS.TCRequest             ( TCRequest )
 
 import           General.PUSTypes
@@ -79,23 +85,15 @@ import           General.Time
 
 import           Verification.Commands
 
-import           Data.PUS.Statistics
 import           Persistence.DBQuery
-import           Persistence.DbBackend
+import           Persistence.DbBackend         as DB
 
+import           Protocol.ProtocolSLE
+
+import           Control.PUS.Classes
 --import           GHC.Compact
 
 
--- | The AppState is just a type alias
-type AppState = TVar PUSState
-
--- | Stores the current correlation coefficient
-type CorrelationVar = TVar CorrelationCoefficients
-
--- | The state of the FOP1 machine
-type FOP1State = TVar FOPState
-
-type COP1State = HashMap VCID FOP1State
 
 
 rqstQueueSize :: Natural
@@ -119,6 +117,7 @@ data GlobalState = GlobalState
     , glsQueryQueue        :: Maybe (TBQueue DBQuery)
     , glsFrameStatistics   :: TVar Statistics
     , glsPacketStatistics  :: TVar Statistics
+    , glsSLECmdQueue       :: TBQueue SLECommand
     }
 
 -- | Constructor for the global state. Takes a configuration, a
@@ -144,8 +143,9 @@ newGlobalState cfg missionSpecific logErr raiseEvent eventFlags dbBackend queryQ
         let fop1 = HM.fromList $ zip vcids fopTVars
         rqstQueue  <- newTBQueueIO rqstQueueSize
         verifQueue <- newTBQueueIO 5000
-        frameStat <- newTVarIO initialStatistics
+        frameStat  <- newTVarIO initialStatistics
         packetStat <- newTVarIO initialStatistics
+        sleQueue   <- newTBQueueIO 10
 
         let eventCfg = createEventConfig eventFlags
             eventFn  = if eventCfg ^. cfgEvAll
@@ -166,6 +166,7 @@ newGlobalState cfg missionSpecific logErr raiseEvent eventFlags dbBackend queryQ
                                 , glsQueryQueue        = queryQueue
                                 , glsFrameStatistics   = frameStat
                                 , glsPacketStatistics  = packetStat
+                                , glsSLECmdQueue       = sleQueue
                                 }
         pure state
 
@@ -184,4 +185,89 @@ nextADCount st = do
 instance HasLogFunc GlobalState where
     logFuncL = lens glsLogFunc (\c lf -> c { glsLogFunc = lf })
 
+
+instance HasConfig GlobalState where
+    getConfig = to glsConfig
+
+instance HasPUSState GlobalState where
+    appStateG = to glsState
+
+instance HasMissionSpecific GlobalState where
+    getMissionSpecific = to glsMissionSpecific
+
+instance HasFOPState GlobalState where
+    copStateG = to glsFOP1
+    fopStateG vcid env = HM.lookup vcid (glsFOP1 env)
+
+instance HasCorrelationState GlobalState where
+    corrStateG = to glsCorrState
+
+instance HasDataModel GlobalState where
+    getDataModelVar = to glsDataModel
+
+instance HasRaiseEvent GlobalState where
+    raiseEvent = glsRaiseEvent
+
+instance HasTCRqstQueue GlobalState where
+    getRqstQueue = to glsTCRequestQueue
+
+instance HasVerif GlobalState where
+    registerRequest env rqst pktID ssc = atomically $ writeTBQueue
+        (glsVerifCommandQueue env)
+        (RegisterRequest rqst pktID ssc)
+    requestReleased env rqstID releaseTime status = atomically $ writeTBQueue
+        (glsVerifCommandQueue env)
+        (SetVerifR rqstID releaseTime status)
+    requestVerifyG env rqstID status = atomically
+        $ writeTBQueue (glsVerifCommandQueue env) (SetVerifG rqstID status)
+    requestVerifyT env rqstID status = atomically
+        $ writeTBQueue (glsVerifCommandQueue env) (SetVerifT rqstID status)
+    requestVerifyO env rqstID status = atomically
+        $ writeTBQueue (glsVerifCommandQueue env) (SetVerifO rqstID status)
+    requestVerifyGT env rqstID status = atomically
+        $ writeTBQueue (glsVerifCommandQueue env) (SetVerifGT rqstID status)
+    requestVerifyGTCnC env (pktID, seqC) status = atomically $ writeTBQueue
+        (glsVerifCommandQueue env)
+        (SerVerifGTCnC pktID seqC status)
+    requestVerifyTMA env (pktID, seqC) status = atomically $ writeTBQueue
+        (glsVerifCommandQueue env)
+        (SetVerifA pktID seqC status)
+    requestVerifyTMS env (pktID, seqC) status = atomically $ writeTBQueue
+        (glsVerifCommandQueue env)
+        (SetVerifS pktID seqC status)
+    requestVerifyTMC env (pktID, seqC) status = atomically $ writeTBQueue
+        (glsVerifCommandQueue env)
+        (SetVerifC pktID seqC status)
+    requestVerifyProgressTM env (pktID, seqC, idx) status =
+        atomically $ writeTBQueue
+            (glsVerifCommandQueue env)
+            (SetVerifP (fromIntegral idx) pktID seqC status)
+
+
+instance HasDatabase GlobalState where
+    getDbBackend env = glsDatabase env
+    storeTMFrame env frame =
+        maybe (return ()) (`DB.storeTMFrame` frame) (getDbBackend env)
+    storeTMFrames env frames =
+        maybe (return ()) (`DB.storeTMFrames` frames) (getDbBackend env)
+    storePUSPacket env pkt =
+        maybe (return ()) (`DB.storePUSPacket` pkt) (getDbBackend env)
+    storeTMPacket env pkt =
+        maybe (return ()) (`DB.storeTMPacket` pkt) (getDbBackend env)
+
+    queryDB env query = do
+        case glsQueryQueue env of
+            Just queue -> atomically $ writeTBQueue queue query
+            Nothing    -> return ()
+
+instance HasStats GlobalState where
+    getFrameStats  = glsFrameStatistics
+    getPacketStats = glsPacketStatistics
+
+instance HasTerminate GlobalState where
+    terminate env = do
+        atomically $ writeTBQueue (glsSLECmdQueue env) SLETerminate
+
+
+instance HasGlobalState GlobalState
 

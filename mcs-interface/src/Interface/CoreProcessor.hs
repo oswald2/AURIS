@@ -57,7 +57,7 @@ processMsg
     :: (MonadUnliftIO m, MonadReader env m, HasGlobalState env)
     => InterfaceAction
     -> m ()
-processMsg Quit                           = return ()
+processMsg Quit                           = ask >>= liftIO . terminate
 processMsg (ImportMIB path serializePath) = importMIB path serializePath
 processMsg (LogMsg source level msg     ) = logGeneric source level msg
 processMsg (SendTCRequest rqst          ) = do

@@ -88,7 +88,7 @@ actionTable queue (Just queryQueue) = (actionTable queue Nothing)
     { actionQueryDB = atomically . writeTBQueue queryQueue
     }
 actionTable queue Nothing = ActionTable
-    { actionQuit          = pure ()
+    { actionQuit          = callAction queue Quit
     , actionImportMIB     = \p s -> callAction queue (ImportMIB p s)
     , actionLogMessage    = \s l msg -> callAction queue (LogMsg s l msg)
     , actionSendTCRequest = callAction queue . SendTCRequest
