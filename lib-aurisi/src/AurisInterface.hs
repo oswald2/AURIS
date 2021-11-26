@@ -35,7 +35,6 @@ import           GUI.MainWindowActions          ( mwLogAlarm
 import           Data.GI.Gtk.Threading          ( postGUIASync )
 import           Persistence.DBQuery            ( DBQuery )
 
-import           Data.ReactiveValue
 
 
 aurisEventHandler :: TBQueue IfEvent -> IfEvent -> IO ()
@@ -55,8 +54,7 @@ eventProcessor g (EventPUS (EVTelemetry (EVTMPacketDecoded pkt))) = do
     postGUIASync (mwAddTMPacket g pkt)
 
 eventProcessor g (EventPUS (EVTelemetry (EVTMFrameReceived frame))) = do
-    --postGUIASync (mwAddTMFrame g frame)
-    reactiveValueWrite (mwAddTMFrameReactive g) frame
+    postGUIASync (mwAddTMFrame g frame)
 
 eventProcessor g (EventPUS (EVTelemetry (EVTMParameters params))) = do
     postGUIASync (mwAddTMParameters g params)

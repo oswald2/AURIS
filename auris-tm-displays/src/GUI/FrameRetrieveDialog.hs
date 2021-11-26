@@ -3,7 +3,6 @@ module GUI.FrameRetrieveDialog
     , newFrameRetrieveDialog
     , frameRetrieveDiag
     , frameRetrieveDiagGetQuery
-    , frameRetrieveDiagReactive
     ) where
 
 import           RIO
@@ -13,8 +12,6 @@ import           General.Time
 import           GI.Gtk                        as Gtk
 
 import           GUI.TimePicker
-
-import           Data.ReactiveValue
 
 import           Persistence.DBQuery            ( DbGetFrameRange(..) )
 
@@ -105,18 +102,3 @@ frameRetrieveDiagSetQuery g query = do
             toggleButtonSetActive (frCbTo g) True
             timePickerSetTime (frTo g) f
 
-frameRetrieveDiagReactive
-    :: FrameRetrieveDialog -> ReactiveFieldReadWrite IO (Maybe DbGetFrameRange)
-frameRetrieveDiagReactive g = ReactiveFieldReadWrite setter getter notifier
-  where
-    getter = do
-        res <- dialogRun (frDialog g)
-        widgetHide (frDialog g)
-        if res == fromIntegral (fromEnum ResponseTypeOk)
-            then Just <$> frameRetrieveDiagGetQuery g
-            else return Nothing
-
-    setter Nothing  = return ()
-    setter (Just q) = frameRetrieveDiagSetQuery g q
-
-    notifier _ = return ()

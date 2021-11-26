@@ -10,9 +10,6 @@ module GUI.TMFrameTable
     , tmFrameTableSetCallback
     , tmFrameTableGetLatestERT
     , tmFrameTableGetEarliestERT
-    , tmFrameTableRowReactive
-    , tmFrameTableAllRowsReactive
-    , tmFrameTableAddRowReactive
     , tmFrameTableSwitchLive
     , tmFrameTableSwitchOffline
     ) where
@@ -30,11 +27,8 @@ import           General.PUSTypes
 import           GUI.Utils
 import           GUI.Colors
 import           GUI.ScrollingTable
-import           GUI.Reactive.TreeView
 
 import           General.Time
-
-import           Data.ReactiveValue
 
 
 data TMFrameTable = TMFrameTable
@@ -53,13 +47,6 @@ tmFrameTableSwitchOffline g = return ()
   --treeViewSetModel (_tmfrTable g) (Just (_tmfrSortModel g))
 
 
-
-tmFrameTableRowReactive :: TMFrameTable -> ReactiveFieldRead IO (Maybe (ExtractedDU TMFrame))
-tmFrameTableRowReactive g =
-    treeViewSelectedRowReactive (_tmfrTable g) (_tmfrModel g)
-
-
-
 -- | Add a single row of a 'TMFrame' wrapped in a 'ExtractedDU'. Ensures, that 
 -- only 'defMaxRowTM' rows are present at maximum, removes old values if the
 -- size of the store is greater than this number (see "GUI.Definitions" for 
@@ -68,10 +55,6 @@ tmFrameTableRowReactive g =
 tmFrameTableAddRow :: TMFrameTable -> ExtractedDU TMFrame -> IO ()
 tmFrameTableAddRow g = addRowScrollingTable (_tmfrTable g) (_tmfrModel g)
 
-tmFrameTableAddRowReactive :: TMFrameTable -> ReactiveFieldWrite IO (ExtractedDU TMFrame) 
-tmFrameTableAddRowReactive g = ReactiveFieldWrite setter 
-  where 
-    setter frame = addRowScrollingTable (_tmfrTable g) (_tmfrModel g) frame
 
 
 -- | Set the internal model to the list of given 'TMFrame' values. In contrast
@@ -79,11 +62,6 @@ tmFrameTableAddRowReactive g = ReactiveFieldWrite setter
 -- intended to be used in retrieval, which depends on the requested data size
 tmFrameTableSetRows :: TMFrameTable -> [ExtractedDU TMFrame] -> IO ()
 tmFrameTableSetRows g = setRowsSeqStore (_tmfrModel g)
-
-tmFrameTableAllRowsReactive :: TMFrameTable -> ReactiveFieldWrite IO [ExtractedDU TMFrame]
-tmFrameTableAllRowsReactive g = ReactiveFieldWrite setter 
-  where 
-    setter frames = setRowsSeqStore (_tmfrModel g) frames
 
 
 tmFrameTableClearRows :: TMFrameTable -> IO ()

@@ -98,8 +98,7 @@ library
     tar,
     zlib,
     stm,
-    ghc-compact,
-    keera-hails-reactivevalues
+    ghc-compact
 
   if flag(sle)
     Build-depends:

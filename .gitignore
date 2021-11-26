@@ -16,6 +16,7 @@ cabal.sandbox.config
 *.hp
 *.eventlog
 .stack-work/
+.stack-work-profile/
 cabal.project.local
 cabal.project.local~
 .HTF/
@@ -47,3 +48,5 @@ test-data/tm_10000_pkts.raw
 cnc_tc_10000.raw
 esa-base/src/Conduit/irgendwas.txt
 stack_sle.yaml.lock
+AURISi_opt.tar.bz2
+AURISi_optimized_profile.prog

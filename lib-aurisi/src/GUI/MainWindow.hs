@@ -11,7 +11,6 @@ module GUI.MainWindow
     , createMainWindow
     , mwAddTMPacket
     , mwAddTMFrame
-    , mwAddTMFrameReactive
     , mwSetTMFrames
     , mwAddTMParameters
     , mwAddTMParameterDefinitions
@@ -80,8 +79,6 @@ import           Data.DataModel                 ( DataModel
                                                 , dmTCs
                                                 )
 
-import           Data.ReactiveValue
-
 import           Data.TM.Parameter              ( TMParameter )
 import           Data.TM.TMParameterDef         ( TMParameterDef
                                                 , fpName
@@ -135,11 +132,6 @@ mwAddTMPacket window pkt = do
 
 mwAddTMFrame :: MainWindow -> ExtractedDU TMFrame -> IO ()
 mwAddTMFrame window = tmfTabAddRow (window ^. mwFrameTab)
-
-mwAddTMFrameReactive
-    :: MainWindow -> ReactiveFieldWrite IO (ExtractedDU TMFrame)
-mwAddTMFrameReactive window = tmfTabAddRowReactive (window ^. mwFrameTab)
-
 
 mwSetTMFrames :: MainWindow -> [ExtractedDU TMFrame] -> IO ()
 mwSetTMFrames window = tmfTabSetFrames (window ^. mwFrameTab)
