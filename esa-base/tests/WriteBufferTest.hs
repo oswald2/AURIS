@@ -36,3 +36,7 @@ writeThread buf = do
     forM_ [1 .. 10] $ \x -> writeTimedBuffer buf x
     putStrLn "Waiting..."
     threadDelay 4_000_000
+    putStrLn "Writing 100 values..."
+    forM_ [1..100] $ \x -> writeTimedBuffer buf x
+    putStrLn "Waiting..."
+    threadDelay 4_000_000
