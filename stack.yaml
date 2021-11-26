@@ -71,7 +71,6 @@ extra-deps:
 - gi-cairo-connector-0.1.0@sha256:a79c34c4f22f81a938c5835f623de55fdf1f0f08435897bad68f58e01ffd1464,1213
 - gi-cairo-render-0.1.0@sha256:cb27b31b373c55c5b384a331e439d1ebc2fb3e02c8a58c9bfb83218d5467af2b,3553
 
-
 ghc-options: 
   "$targets": -freverse-errors 
 
