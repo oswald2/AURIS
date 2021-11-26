@@ -255,7 +255,7 @@ tmFrameThread cfg queue = do
                 fs <- flushTBQueue queue
                 return (f : fs)
             liftIO $ writeDB pipe tmFrameCollName (map toDB frames)
-            logInfo ("Stored " <> display (length frames) <> " TM Frames.")
+            logDebug ("Stored " <> display (length frames) <> " TM Frames.")
 
 eventStoreThread
     :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env)
