@@ -21,16 +21,16 @@ GECCOS]]
 
 Please note that these screenshots are preliminary. The displays are
 still subject to major changes, also most implementations are not
-complete. 
+complete.
 
-There are currently 2 themes available, one dark and one (newer) based 
+There are currently 2 themes available, one dark and one (newer) based
 on neumorphic principles
 
-** More Information 
+** More Information
 
 See also the [[https://github.com/oswald2/AURIS/wiki][wiki]] for more information.
 
-*** Dark Theme 
+*** Dark Theme
 
 Telemetry Frame Display:
 
@@ -65,7 +65,7 @@ Connections Tab:
 #+CAPTION: Connections display
 [[file:screenshots/Connections.png]]
 
-*** Neumorph Theme 
+*** Neumorph Theme
 
 Telemetry Frame Display:
 
@@ -105,13 +105,46 @@ Currently, building via stack is recommended. Cabal new-* commands
 should also work, but currently there is no cabal.project file
 available.
 
-In the current project, FLTK has been replaced by GTK. Therefore the
-dependencies are the same as the one required by the Haskell library =gi-gtk=.
+*** Dependencies
 
-There are 3 stack.yaml files provided:
- - stack.yaml: this is for developing with non-optimized code
- - stack_opt.yaml: this is for the optimized build (much slower)
- - stack_llvm:yaml: optimized build via LLVM (much much slower)
+AURIS uses GTK with the gobject introspection bindings in Haskell. So several packages need to be installed beforehand. On Ubuntu based systems these are the following:
+
+ - =make=
+ - =g++ (libstdc++)=
+ - =libgmp=
+ - =gobject-instrospection=
+ - GTK3 + development packages
+
+#+BEGIN_EXAMPLE
+sudo apt install build-essential libgmp-dev gobject-introspection libgirepository-1.0-dev libgtk-3-dev libgtksourceview-3.0-dev
+#+END_EXAMPLE
+
+*** Building with =stack=
+
+There following =stack.yaml= files provided:
+ - =stack.yaml=: this is for developing with non-optimized code and faster compile times
+ - =stack_opt.yaml=: this is for the optimized build (much slower)
+ - =stack_llvm:yaml=: optimized build via LLVM (much much slower)
+ - =stack_sle.yaml=: build with the SLE interface. CAUTION: this build requires the ESA C++ SLE API version 5.1.0 (or above) and the sle-wrapper library.
+
+To build it quickly, but without any optimization:
+
+#+BEGIN_EXAMPLE
+stack build
+#+END_EXAMPLE
+
+or:
+
+#+BEGIN_EXAMPLE
+stack install
+#+END_EXAMPLE
+
+To build with the other options, simply specify the desired stack file, e.g.:
+
+#+BEGIN_EXAMPLE
+stack --stack-yaml stack_llvm.yaml build
+#+END_EXAMPLE
+
 
 *** Using nix
     :PROPERTIES:
@@ -158,8 +191,8 @@ The real data processing paths (only the core processing, no GUI) that are curre
 
 The automatic layout of graphviz as a bit unfortunate. If somebody knows how to generate a better layout, let me know.
 
-The main interfaces (network interfaces, application interface, GUI) are shown as colored rectangles. 
-Rainbow-colored rectangles show threads, boxes within them show either conduits or functions. 
+The main interfaces (network interfaces, application interface, GUI) are shown as colored rectangles.
+Rainbow-colored rectangles show threads, boxes within them show either conduits or functions.
 STM Queues are shown separate from threads, as (of course) they are accessed from multiple threads.
 
 All data processing is currently done in =esa-space-protocols=
@@ -189,18 +222,18 @@ There is more information available (restructuring and growing) on the Wiki on g
    :END:
 
 The initial goal was to support at least 2 backends: sqlite for testing campaigns
-and Postgres for MCS/CCS activities. After several tests, the current main backend is 
-MongoDB, as it showed to be the fastest for the use cases. The current DB backend 
-implementation can be found in =esa-db-mongodb=. If no backend is specified in the 
-AURISi configuration, it is started just for online processing. 
+and Postgres for MCS/CCS activities. After several tests, the current main backend is
+MongoDB, as it showed to be the fastest for the use cases. The current DB backend
+implementation can be found in =esa-db-mongodb=. If no backend is specified in the
+AURISi configuration, it is started just for online processing.
 
-The DB backend is designed for streaming. There are currently three separate store processes 
+The DB backend is designed for streaming. There are currently three separate store processes
 (one for TM Frames, one for PUS Packets and one for TM Packets),
 that just listen on queues, flush the queues if possible (so get all data currently in the queue as a list)
-and stores them into the DB. 
+and stores them into the DB.
 
-A separate query processor thread is directly attached to the application interface for 
-incoming requests from the outside (currently only GUI). This functionality is currently 
+A separate query processor thread is directly attached to the application interface for
+incoming requests from the outside (currently only GUI). This functionality is currently
 very sparsely implemented, so retrievals are currently only very limited.
 
 ** Satellite Mission Information Base
@@ -209,10 +242,10 @@ very sparsely implemented, so retrievals are currently only very limited.
    :END:
 
 Currently the MIB library is under work to load satellite information
-from a MIB in SCOS-2000 Format (Version 6.9). Currently, the TM information 
+from a MIB in SCOS-2000 Format (Version 6.9). Currently, the TM information
 can be loaded to decode TM Frames and TM Packets, most functionality for extraction
 is supported (with exception of deduced parameters and synthetic parameters).
-For commanding, basic TCs can be generated form the MIB, but some parameter types 
+For commanding, basic TCs can be generated form the MIB, but some parameter types
 are not yet supported (there are also bugs with calibrated parameters).
 
 It may be, that a CDM library for EGS-CC based configurations will follow (maybe).
@@ -222,7 +255,7 @@ It may be, that a CDM library for EGS-CC based configurations will follow (maybe
    :CUSTOM_ID: protocols
    :END:
 
-The currently working protocols are NCTRS (TC and TM, no ADMIN currently and no AD mode), 
+The currently working protocols are NCTRS (TC and TM, no ADMIN currently and no AD mode),
 C&C and EDEN. Since NCTRS is not that common
 anymore, other protocols will also be supported.
 
@@ -253,11 +286,11 @@ schemes and will not be present on github.
 
 ** Contributing
 
-All contributions are welcome, though I am aware that there is quite an entry hurdle as the topic of mission control is a very 
+All contributions are welcome, though I am aware that there is quite an entry hurdle as the topic of mission control is a very
 niche topic and there is not really much broad knowledge available. Things to implement can be found on the Issues page on github.
-They are often broader topics, which should be split into sub-tasks before. I try to keep them up-to-date as far as possible. 
+They are often broader topics, which should be split into sub-tasks before. I try to keep them up-to-date as far as possible.
 
-As this is not a simple topic, please ask questions. For issues, this can be directly done in the Issues pages or on the dedicated 
+As this is not a simple topic, please ask questions. For issues, this can be directly done in the Issues pages or on the dedicated
 Discord server for the system [[https://discord.gg/S7MySPc5EW][Discord]].
 
 See the file [[CONTRIBUTING.md][CONTRIBUTING.md]] on how to contribute.
