@@ -15,43 +15,59 @@ the parameter
   TemplateHaskell
 #-}
 module Data.TM.Parameter
-  ( TMParameter(..)
-  , pName 
-  , pTime  
-  , pValue 
-  , pEngValue
+    ( TMParameter(..)
+    , pName
+    , pTime
+    , pValue
+    , pEngValue
+    , eqByName
+    , byName
+    , byValue
+    ) where
 
-  )
-where
-
-import           RIO
-import           Control.Lens                   ( makeLenses )
-import           Data.Text.Short
 import           Codec.Serialise
+import           Control.Lens                   ( makeLenses )
 import           Data.Aeson
+import           Data.Text.Short
+import           RIO
 
-import           General.Time
 import           Data.TM.Value
+import           General.Time
 
 
 
 
 
 -- | Parameter value data type
-data TMParameter = TMParameter {
+data TMParameter = TMParameter
+    {
     -- | the name of the parameter
-    _pName :: !ShortText
+      _pName     :: !ShortText
     -- | the timestamp of the paramter value
-    , _pTime :: !SunTime
+    , _pTime     :: !SunTime
     -- | the value of the parameter
-    , _pValue :: TMValue
+    , _pValue    :: TMValue
     -- | the engineering (calibrated) value if applicable
     , _pEngValue :: Maybe TMValue
-} deriving (Eq, Show, Generic)
+    }
+    deriving (Eq, Show, Generic)
 makeLenses ''TMParameter
+
+-- | Equality by name only 
+eqByName :: TMParameter -> TMParameter -> Bool
+eqByName p1 p2 = byName p1 p2 == EQ
+
+-- | Compare parameter values by name
+byName :: TMParameter -> TMParameter -> Ordering
+byName p1 p2 = compare (p1 ^. pName) (p2 ^. pName)
+
+-- | Compare parameter values by value 
+byValue :: TMParameter -> TMParameter -> Ordering
+byValue p1 p2 = compare (p1 ^. pValue) (p2 ^. pValue)
+
 
 instance NFData TMParameter
 instance Serialise TMParameter
 instance FromJSON TMParameter
 instance ToJSON TMParameter where
-  toEncoding = genericToEncoding defaultOptions
+    toEncoding = genericToEncoding defaultOptions

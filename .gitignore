@@ -50,3 +50,6 @@ esa-base/src/Conduit/irgendwas.txt
 stack_sle.yaml.lock
 AURISi_opt.tar.bz2
 AURISi_optimized_profile.prog
+lib-aurisi/data/ChartWidget.glade~
+chart_test.svg
+lib-aurisi/data/MainWindow.glade~

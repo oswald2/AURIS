@@ -62,9 +62,9 @@ import           Graphics.Rendering.Chart.Easy as Ch
 import           GUI.Chart
 import           GUI.NameDescrTable
 
+import qualified Data.Time.Clock               as TI
 import           GI.Cairo.Render.Connector      ( renderWithContext )
 import           GUI.Utils
-
 
 
 data GraphProperties = GraphProperties
@@ -94,6 +94,7 @@ data GraphWidget = GraphWidget
     , _gwParent           :: !Gtk.Box
     , _gwDrawingArea      :: !Gtk.DrawingArea
     , _gwParamSelection   :: !NameDescrTable
+    , _gwTimeRange        :: !Gtk.SpinButton
     , _gwGraph            :: TVar Graph
     , _gwPickFn           :: TVar (Maybe (PickFn ()))
     , _gwPropertiesDialog :: !GraphPropertiesDialog
@@ -135,14 +136,21 @@ setupGraphWidget window parent title paramSelector dialog = do
     let graph = emptyGraph title
     var  <- newTVarIO graph
     var2 <- newTVarIO Nothing
-    da   <- Gtk.drawingAreaNew
+
+    builder <- Gtk.builderNewFromResource "/auris/data/ChartWidget.glade"
+    da <- getObject builder "drawingAreaChart" Gtk.DrawingArea
+    chartBox <- getObject builder "boxChart" Gtk.Box 
+    entryTimeRange <- getObject builder "spinbuttonGraphRange" Gtk.SpinButton
+
     Gtk.widgetAddEvents da [GI.EventMaskButtonPressMask]
-    Gtk.boxPackStart parent da True True 0
+    
+    Gtk.boxPackStart parent chartBox True True 0
 
     let g = GraphWidget { _gwWindow           = window
                         , _gwParent           = parent
                         , _gwDrawingArea      = da
                         , _gwParamSelection   = paramSelector
+                        , _gwTimeRange        = entryTimeRange
                         , _gwGraph            = var
                         , _gwPickFn           = var2
                         , _gwPropertiesDialog = dialog
@@ -158,6 +166,10 @@ setupGraphWidget window parent title paramSelector dialog = do
                 Gtk.menuPopupAtPointer m Nothing
                 return True
             _ -> return False
+
+    void $ GI.on entryTimeRange #valueChanged $ do
+        val <- Gtk.spinButtonGetValue entryTimeRange
+        atomically $ modifyTVar' var (\gr -> graphSetTimeRange gr (realToFrac val))
 
     return g
 
@@ -222,9 +234,10 @@ redrawGraph gw = do
 -- this function is a bit slow and could be optimized.
 graphWidgetInsertParamValue :: GraphWidget -> RIO.Vector TMParameter -> IO ()
 graphWidgetInsertParamValue gw params = do
+    now <- TI.getCurrentTime
     atomically $ do
         graph <- readTVar (gw ^. gwGraph)
-        let newGraph = V.foldl graphInsertParamValue graph params
+        let !newGraph = graphInsertParamValue now graph (V.toList params)
         writeTVar (gw ^. gwGraph) newGraph
     redrawGraph gw
 
