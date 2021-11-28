@@ -82,7 +82,9 @@ flags:
   esa-space-protocols:
     sle: True
   lib-aurisi:
-    sle: true
+    sle: True
+  auris-control-displays:
+    sle: True 
   aurisi:
     sle: True 
 

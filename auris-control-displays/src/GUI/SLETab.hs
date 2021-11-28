@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 module GUI.SLETab
     ( SLETab
     , createSLETab
@@ -26,6 +27,10 @@ createSLETab cfg builder = do
     sleConnBox <- getObject builder "boxSleConnections" Box
     peer       <- getObject builder "entrySLEPeerID" Entry
 
+    notebook <- getObject builder "notebookSLE" Notebook
+
+#ifdef HAS_SLE 
+    Gtk.set notebook [ #page := 1 ]
     case cfgSLE cfg of
         Nothing -> do
             widgetSetSensitive sleContent False
@@ -48,6 +53,10 @@ createSLETab cfg builder = do
                            , sleRafStatusMap = rafMap
                            }
             pure (Just g)
+#else 
+    Gtk.set notebook [ #page := 1 ]
+    pure Nothing 
+#endif 
 
   where
     setupInstance parent (rafMap, rcfMap, cltuMap) (SLEInstRAF rafCfg) = do
