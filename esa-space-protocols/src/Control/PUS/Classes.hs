@@ -36,6 +36,7 @@ module Control.PUS.Classes
     , HasDatabase(..)
     , HasStats(..)
     , HasTerminate(..)
+    , terminate
     ) where
 
 import           RIO                     hiding ( (^.)
@@ -63,8 +64,6 @@ import           Data.PUS.Verification
 
 import           General.PUSTypes
 import           General.Time
-
-import           Verification.Commands
 
 import           Persistence.DBQuery            ( DBQuery )
 import           Persistence.DbBackend         as DB
@@ -165,7 +164,11 @@ class HasStats a where
 
 -- | Class for termination of the processign chains
 class HasTerminate a where
-    terminate :: a -> IO ()
+    appTerminate :: a -> IO ()
+
+
+terminate :: (MonadIO m, MonadReader env m, HasTerminate env) => m () 
+terminate = ask >>= liftIO . appTerminate
 
 -- | Class for accessing the global state
 class (HasConfig env,

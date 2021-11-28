@@ -265,7 +265,7 @@ instance HasStats GlobalState where
     getPacketStats = glsPacketStatistics
 
 instance HasTerminate GlobalState where
-    terminate env = do
+    appTerminate env = do
         atomically $ writeTBQueue (glsSLECmdQueue env) SLETerminate
 
 
