@@ -67,6 +67,7 @@ library
     GUI.ScrollingTable
     GUI.NameDescrTable
     GUI.StatusEntry
+    GUI.StatusButton
     GUI.TextView
     GUI.TreeView
     GUI.Definitions

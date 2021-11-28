@@ -49,6 +49,7 @@ import           GUI.TMPacketTab
 import           GUI.TMFrameTab
 import           GUI.TMParamTab
 import           GUI.ConnectionTab
+import           GUI.SLETab
 import           GUI.TCTab
 import           GUI.TCHistory
 import           GUI.DataModelTab
@@ -100,7 +101,7 @@ import qualified GI.GtkSource.Objects.Buffer   as BUF
 --import           Data.FileEmbed
 
 import           AurisConfig
-import Data.PUS.Events (TMStatistics)
+import           Data.PUS.Events (TMStatistics)
 
 
 
@@ -114,6 +115,7 @@ data MainWindow = MainWindow
     , _mwMission           :: !Gtk.Label
     , _mwFrameTab          :: !TMFrameTab
     , _mwConnTab           :: !ConnectionTab
+    , _mwSLETab            :: !(Maybe SLETab)
     , _mwTCTab             :: !TCTab
     , _mwTCHistory         :: !TCHistory
     , _mwDataModelTab      :: !DataModelTab
@@ -223,6 +225,7 @@ createMainWindow cfg = do
     tmpTab       <- createTMPTab window builder
     paramTab     <- createTMParamTab builder
     connTab      <- createConnectionTab (aurisPusConfig cfg) builder
+    sleTab       <- createSLETab (aurisPusConfig cfg) builder
     tcTab        <- createTCTab (aurisPusConfig cfg) window builder
     tcHistory    <- createTCHistory window builder
     dataModelTab <- createDataModelTab window builder
@@ -242,6 +245,7 @@ createMainWindow cfg = do
                          , _mwTimeLabel         = timeLabel
                          , _mwTMParamTab        = paramTab
                          , _mwConnTab           = connTab
+                         , _mwSLETab            = sleTab 
                          , _mwTCTab             = tcTab
                          , _mwTCHistory         = tcHistory
                          , _mwDataModelTab      = dataModelTab

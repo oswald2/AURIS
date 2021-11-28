@@ -25,9 +25,10 @@ import           General.Hexdump
 import           General.Time
 import           General.Types
 
+import           Protocol.Internal.RAF
+import           Protocol.Internal.SLETypes
 import           Protocol.ProtocolInterfaces
 import           Protocol.ProtocolSLE
-
 
 
 startSLE
@@ -83,12 +84,6 @@ processing sleCfg queues sle = do
     runConc threads
 
 
-convVersion :: SLEVersion -> SleVersion
-convVersion SLEVersion1 = SleVersion1
-convVersion SLEVersion2 = SleVersion2
-convVersion SLEVersion3 = SleVersion3
-convVersion SLEVersion4 = SleVersion4
-
 
 startInstance
     :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env, HasRaiseEvent env)
@@ -131,103 +126,7 @@ startInstance sle peerID (SLEInstRAF rafCfg) (_sii, queue) = do
 startInstance _ _ _ _ = pure ()
 
 
-data SleCmd =
-  RafBindSuccess SleSII
-  | RafBindError SleSII Text
-  | RafStartSuccess SleSII
-  | RafStartError SleSII Text
-  | Terminate
-  deriving (Show)
 
-data RafState =
-    Terminated
-    | Init
-    | Bound
-    | Active
-    deriving (Show)
-
-runRAF
-    :: (MonadUnliftIO m, MonadReader env m, HasRaiseEvent env, HasLogFunc env)
-    => Text
-    -> SLERafConfig
-    -> SleSII
-    -> TBQueue SleCmd
-    -> SLE
-    -> m (Maybe Text)
-runRAF peerID rafCfg sii queue sle = do
-    env <- ask
-    liftIO $ raiseEvent env (EVSLE (EVSLERafInitialised sii))
-    -- initiate the bind 
-    bindRes <- liftIO $ rafBind sle
-                                (cfgSleRafPeerID rafCfg)
-                                (cfgSleRafPort rafCfg)
-                                peerID
-                                (convVersion (cfgSleRafVersion rafCfg))
-    case bindRes of
-        Just err ->
-            logError
-                $  "Error on requesting SLE BIND for "
-                <> display sii
-                <> ": "
-                <> display err
-        Nothing -> loop Init
-    pure Nothing
-
-  where
-    loop state = do
-        cmd   <- atomically $ readTBQueue queue
-        newSt <- processCmd state cmd
-        case newSt of
-            Terminated -> pure ()
-            x          -> loop x
-
-    processCmd state Terminate = do
-        case state of
-            Active -> do
-                res <- liftIO $ rafStop sle
-                forM_ res $ \err -> logError $ "SLE STOP: " <> display err
-            Bound -> do
-                res <- liftIO $ rafUnbind sle SleUBREnd
-                forM_ res $ \err -> logError $ "SLE STOP: " <> display err
-            _ -> pure ()
-        pure Terminated
-
-    processCmd Init (RafBindSuccess sii2) = do
-        logInfo $ "BIND SUCCEEDED for" <> display sii2
-        startRes <- liftIO $ rafStart sle Nothing Nothing SleRafAllFrames
-        case startRes of
-            Just err -> do
-                logError $ "Error on requesting SLE START: " <> display err
-                pure Bound
-            Nothing -> do
-                pure Bound
-    processCmd Init (RafBindError sii2 diag) = do
-        logError
-            $  "BIND for "
-            <> display sii2
-            <> " returned error: "
-            <> display diag
-        pure Init
-
-    processCmd Bound (RafStartSuccess sii2) = do
-        logInfo $ "START SUCCEEDED for" <> display sii2
-        pure Active
-
-    processCmd Bound (RafStartError sii2 diag) = do
-        logError
-            $  "START for "
-            <> display sii2
-            <> " returned error: "
-            <> display diag
-        pure Bound
-
-    processCmd state cmd = do
-        logWarn
-            $  "SLE: Illegal CMD "
-            <> displayShow cmd
-            <> " in state "
-            <> displayShow state
-        pure state
 
 convDeliveryMode :: SLEDeliveryMode -> SleDeliveryMode
 convDeliveryMode SLEOnlineComplete = SleCompleteOnline

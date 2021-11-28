@@ -6,6 +6,7 @@
     <file>data/AurisLogo.svg</file>
     <file preprocess="xml-stripblanks">data/MainWindow.glade</file>
     <file preprocess="xml-stripblanks">data/ChartWidget.glade</file>
+    <file preprocess="xml-stripblanks">data/SLEStatus.glade</file>
     <file>data/style.css</file>
   </gresource>
 </gresources>

@@ -1,0 +1,60 @@
+module GUI.SLETab
+    ( SLETab
+    , createSLETab
+    ) where
+
+import           GI.Gtk                        as Gtk
+
+import           RIO                     hiding ( Builder )
+import qualified RIO.HashMap                   as HM
+
+import           Data.PUS.Config
+
+import           GUI.SLEConnections
+import           GUI.Utils
+
+
+data SLETab = SLETab
+    { sleTabConnBox   :: !Box
+    , sleRafStatusMap :: !(HashMap Text RafSiiStatus)
+    }
+
+
+createSLETab :: Config -> Builder -> IO (Maybe SLETab)
+createSLETab cfg builder = do
+    sleContent <- getObject builder "boxSleContent" Box
+    sleConnBox <- getObject builder "boxSleConnections" Box
+    peer       <- getObject builder "entrySLEPeerID" Entry
+
+    case cfgSLE cfg of
+        Nothing -> do
+            widgetSetSensitive sleContent False
+            widgetHide sleContent
+
+            pure Nothing
+        Just sleCfg -> do
+            widgetSetSensitive sleContent True
+
+            let instances = cfgSleInstances sleCfg
+            entrySetText peer (cfgSlePeerID sleCfg)
+
+            (rafMap, _rcfMap, _cltuMap) <- foldM
+                (setupInstance sleConnBox)
+                (HM.empty, HM.empty, HM.empty)
+                instances
+
+            let
+                g = SLETab { sleTabConnBox   = sleConnBox
+                           , sleRafStatusMap = rafMap
+                           }
+            pure (Just g)
+
+  where
+    setupInstance parent (rafMap, rcfMap, cltuMap) (SLEInstRAF rafCfg) = do
+        conn <- setupRAFConnection rafCfg
+        addRafConnection parent conn
+        let newRafMap = HM.insert (cfgSleRafSII rafCfg) conn rafMap
+        pure (newRafMap, rcfMap, cltuMap)
+
+    setupInstance _parent maps SLEInstRCF   = pure maps 
+    setupInstance _parent maps SLEInstFCLTU = pure maps 

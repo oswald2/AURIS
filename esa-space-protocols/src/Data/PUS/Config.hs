@@ -153,7 +153,11 @@ instance FromJSON SLEVersion
 instance ToJSON SLEVersion where
     toEncoding = genericToEncoding defaultOptions
 
-
+instance Display SLEVersion where 
+    display SLEVersion1 = "1"
+    display SLEVersion2 = "2"
+    display SLEVersion3 = "3"
+    display SLEVersion4 = "4"
 
 data SLERafConfig = SLERafConfig
     {

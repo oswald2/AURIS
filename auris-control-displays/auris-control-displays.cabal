@@ -66,6 +66,8 @@ library
     GUI.ConnectionTab
     GUI.DataModelTab
     GUI.StatisticsTab
+    GUI.SLEConnections
+    GUI.SLETab
 
   -- Modules included in this library but not exported.
   -- other-modules:
