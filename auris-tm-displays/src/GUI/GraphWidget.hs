@@ -92,6 +92,7 @@ makeLenses ''GraphPropertiesDialog
 data GraphWidget = GraphWidget
     { _gwWindow           :: !Gtk.Window
     , _gwParent           :: !Gtk.Box
+    , _gwChartBox         :: !Gtk.Box 
     , _gwDrawingArea      :: !Gtk.DrawingArea
     , _gwParamSelection   :: !NameDescrTable
     , _gwTimeRange        :: !Gtk.SpinButton
@@ -123,7 +124,7 @@ graphWidgetHide gw = do
 
 
 graphWidgetDestroy :: GraphWidget -> IO ()
-graphWidgetDestroy gw = Gtk.widgetDestroy (gw ^. gwDrawingArea)
+graphWidgetDestroy gw = Gtk.widgetDestroy (gw ^. gwChartBox)
 
 setupGraphWidget
     :: Gtk.Window
@@ -148,6 +149,7 @@ setupGraphWidget window parent title paramSelector dialog = do
 
     let g = GraphWidget { _gwWindow           = window
                         , _gwParent           = parent
+                        , _gwChartBox         = chartBox 
                         , _gwDrawingArea      = da
                         , _gwParamSelection   = paramSelector
                         , _gwTimeRange        = entryTimeRange
