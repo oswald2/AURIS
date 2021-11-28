@@ -3,14 +3,16 @@
   , TypeApplications
 #-}
 module GUI.Chart
-    ( Graph(..)
+    ( defaultGraphProperties
+    , GraphProperties(..)
+    , Graph(..)
     , graphGetParameterNames
     , graphInsertParamValue
     , graphClearValues
     , graphAddParameter
     , graphRemoveParameter
-    , graphName
     , graphParameters
+    , graphProperties
     , graphData
     , graphSetTimeRange
     , graphTimeAxisSettings
@@ -25,11 +27,30 @@ module GUI.Chart
     , chartLayout
     , chartStyles
     , defaultTimeScaleSettings
+    , gpTitle 
+    , gpBGColor
     ) where
 
 
 --import qualified RIO.Text                      as T
-import           RIO                     hiding ( (.~) )
+import RIO
+    ( map,
+      ($),
+      Num(negate),
+      Ord((>=)),
+      Show(..),
+      Foldable(foldl', toList),
+      Semigroup((<>)),
+      Bool(..),
+      Double,
+      Maybe(Just, Nothing),
+      (&),
+      (.),
+      zipWith,
+      (^.),
+      Map,
+      Text,
+      HashSet )
 import qualified RIO.HashSet                   as HS
 import           RIO.List                       ( cycle )
 import qualified RIO.Map                       as M
@@ -87,6 +108,12 @@ instance Show PlotVal where
             <> show (x ^. plotValValues)
             <> "}"
 
+data GraphProperties = GraphProperties
+    { _gpTitle   :: !Text
+    , _gpBGColor :: !(Colour Double)
+    }
+    deriving Show
+makeLenses ''GraphProperties
 
 newtype TimeScaleSettings = TimeScaleSettings
     { _tssInterval :: TI.NominalDiffTime
@@ -95,8 +122,7 @@ newtype TimeScaleSettings = TimeScaleSettings
 
 defaultTimeScaleSettings :: TimeScaleSettings
 defaultTimeScaleSettings =
-    let !range   = TI.secondsToNominalDiffTime 60
-    in  TimeScaleSettings range 
+    let !range = TI.secondsToNominalDiffTime 60 in TimeScaleSettings range
 
 
 chartColors :: [AlphaColour Double]
@@ -205,9 +231,9 @@ layoutTimeAxis _settings =
 
 
 -- | Create a 'Layout' to be used with the charts
-chartLayout :: TimeScaleSettings -> Layout TI.UTCTime Double
-chartLayout settings =
-    let graphBgColor = sRGB24 0x29 0x3d 0x5d
+chartLayout :: GraphProperties -> TimeScaleSettings -> Layout TI.UTCTime Double
+chartLayout props settings =
+    let graphBgColor = props ^. gpBGColor
     in  layout_background
             .~ FillStyleSolid (opaque graphBgColor)
             $  layout_plot_background
@@ -225,12 +251,16 @@ chartLayout settings =
 
 
 
+defaultGraphProperties :: GraphProperties
+defaultGraphProperties =
+    GraphProperties { _gpTitle = "Graph", _gpBGColor = sRGB24 0x29 0x3d 0x5d }
+
 
 data Graph = Graph
-    { _graphName             :: !Text
-    , _graphParameters       :: HashSet ShortText
-    , _graphData             :: Map ShortText PlotVal
-    , _graphTimeAxisSettings :: TimeScaleSettings
+    { _graphParameters       :: !(HashSet ShortText)
+    , _graphData             :: !(Map ShortText PlotVal)
+    , _graphProperties       :: !GraphProperties
+    , _graphTimeAxisSettings :: !TimeScaleSettings
     }
     deriving Show
 makeLenses ''Graph
@@ -240,10 +270,11 @@ graphGetParameterNames g = toList (g ^. graphParameters)
 
 
 emptyGraph :: Text -> Graph
-emptyGraph name = Graph name HS.empty M.empty defaultTimeScaleSettings
+emptyGraph name = Graph HS.empty M.empty defaultGraphProperties {_gpTitle = name } defaultTimeScaleSettings
 
-graphSetTimeRange :: Graph -> TI.NominalDiffTime -> Graph 
-graphSetTimeRange g range = g & graphTimeAxisSettings .~ (TimeScaleSettings range)
+graphSetTimeRange :: Graph -> TI.NominalDiffTime -> Graph
+graphSetTimeRange g range =
+    g & graphTimeAxisSettings .~ (TimeScaleSettings range)
 
 graphInsertParamValue :: TI.UTCTime -> Graph -> [TMParameter] -> Graph
 graphInsertParamValue now graph@Graph {..} params =
@@ -254,12 +285,15 @@ graphInsertParamValue now graph@Graph {..} params =
   where
     ins lowerTime g@Graph {..} paramGroup =
         let paramName = (head paramGroup) ^. pName
-        in  case M.lookup paramName _graphData of
+        in
+            case M.lookup paramName _graphData of
                 Nothing -> g
                 Just plotVal ->
-                    let 
+                    let
                         -- insert new values into multiset (time ordered)
-                        newSet = foldl' insertParam (plotVal ^. plotValValues) paramGroup
+                        newSet = foldl' insertParam
+                                        (plotVal ^. plotValValues)
+                                        paramGroup
                         -- remove values from the set, that are out of the time range to display
                         validSet = MS.filter (\(t, _) -> t >= lowerTime) newSet
                         -- now set the values in the plotVal again 

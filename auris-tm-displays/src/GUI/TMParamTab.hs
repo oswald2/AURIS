@@ -116,7 +116,7 @@ createTMParamTab builder = do
 
   -- graphWidget     <- setupGraphWidget window singleBox "Display 1" paramSel
 
-  propDialog <- setupGraphPropertiesDialog builder defaultGraphProperties
+  propDialog <- setupGraphPropertiesDialog window defaultGraphProperties
 
   ref <- newTVarIO emptyParDisplays
 

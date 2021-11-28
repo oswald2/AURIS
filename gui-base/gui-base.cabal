@@ -83,7 +83,7 @@ library
   -- other-extensions:
 
   -- Other library packages from which modules are imported.
-  build-depends:       base ==4.*
+  build-depends:       base
     , rio
     , containers
     , lens
@@ -97,6 +97,8 @@ library
     , esa-base
     , esa-space-protocols
     , time
+    , colour
+
 
 
   default-extensions:
