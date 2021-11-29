@@ -59,7 +59,7 @@ createSLETab cfg builder = do
                            }
             pure (Just g)
 #else 
-    Gtk.set notebook [ #page := 1 ]
+    Gtk.set notebook [ #page := 0 ]
     pure Nothing 
 #endif 
 
