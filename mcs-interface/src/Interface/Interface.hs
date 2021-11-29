@@ -64,6 +64,7 @@ data ActionTable = ActionTable
     , actionGetTCSync :: TCDef -> ShortText -> TransmissionMode -> IO TCRequest
     , actionStatResetFrames  :: IO ()
     , actionStatResetPackets :: IO ()
+    , actionBindRAF          :: Text -> IO () 
     }
 
 -- | Data type for the event handler.
@@ -102,6 +103,7 @@ actionTable queue Nothing = ActionTable
                                 atomically $ takeTMVar var
     , actionStatResetFrames  = callAction queue ResetStatsFrames
     , actionStatResetPackets = callAction queue ResetStatsPackets
+    , actionBindRAF          = \sii -> callAction queue (BindRAF sii) 
     }
 
 

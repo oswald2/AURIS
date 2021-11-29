@@ -15,64 +15,66 @@ module Data.PUS.TCTransferFrame
     ) where
 
 
-import           RIO                     hiding ( Builder
-                                                , (.~)
+import           RIO                     hiding ( (.~)
+                                                , Builder
                                                 )
 import qualified RIO.ByteString                as BS
 import qualified RIO.Text                      as T
 
 import           Control.Lens                   ( (.~) )
 import           Control.PUS.Classes            ( HasConfig(getConfig)
-                                                , HasRaiseEvent(raiseEvent)
                                                 , HasGlobalState
                                                 , HasPUSState(appStateG)
+                                                , raiseEvent
                                                 )
 
-import           Data.Bits                      ( Bits
-                                                    ( (.|.)
-                                                    , shiftR
-                                                    , shiftL
-                                                    , (.&.)
-                                                    )
-                                                )
-import           Data.Conduit                   ( awaitForever
-                                                , (.|)
-                                                , yield
-                                                , await
-                                                , ConduitT
-                                                )
-import           ByteString.StrictBuilder       ( bytes
-                                                , word8
-                                                , word16BE
+import           ByteString.StrictBuilder       ( Builder
                                                 , builderBytes
-                                                , Builder
+                                                , bytes
+                                                , word16BE
+                                                , word8
                                                 )
+import qualified Data.Attoparsec.Binary        as A
 import           Data.Attoparsec.ByteString     ( Parser )
 import qualified Data.Attoparsec.ByteString    as A
-import qualified Data.Attoparsec.Binary        as A
-import           Data.Conduit.Attoparsec        ( conduitParserEither
-                                                , ParseError(errorMessage)
+import           Data.Bits                      ( Bits
+                                                    ( (.&.)
+                                                    , (.|.)
+                                                    , shiftL
+                                                    , shiftR
+                                                    )
+                                                )
+import           Data.Conduit                   ( (.|)
+                                                , ConduitT
+                                                , await
+                                                , awaitForever
+                                                , yield
+                                                )
+import           Data.Conduit.Attoparsec        ( ParseError(errorMessage)
+                                                , conduitParserEither
                                                 )
 
-import           Data.PUS.TCFrameTypes
-import           Data.PUS.CRC                   ( crcParser
-                                                , crcCalc
+import           Data.PUS.CRC                   ( crcCalc
                                                 , crcEncodeBS
                                                 , crcLen
+                                                , crcParser
                                                 )
 import           Data.PUS.Config                ( Config(cfgSCID, cfgVCIDs) )
-import           Data.PUS.Events                ( EventAlarm(EVIllegalTCFrame)
-                                                , Event(EVAlarms)
+import           Data.PUS.Events                ( Event(EVAlarms)
+                                                , EventAlarm(EVIllegalTCFrame)
                                                 )
 import           Data.PUS.GlobalState           ( nextADCount )
+import           Data.PUS.TCFrameTypes
 
-import           General.PUSTypes               ( getVCID
-                                                , mkSCID
+import           General.PUSTypes               ( SCID
                                                 , getSCID
+                                                , getVCID
+                                                , mkSCID
                                                 , mkVCID
-                                                , SCID
                                                 )
-import           General.Types                  ( HexBytes(..), toBS )
+import           General.Types                  ( HexBytes(..)
+                                                , toBS
+                                                )
 
 
 -- | The lenght of the TC Transfer Frame Header in Bytes
@@ -120,9 +122,10 @@ tcFrameEncode (TCFrameTransport frame rqst) frameCnt =
         pl       = toBS $ frame ^. tcFrameData
         newPl    = if BS.null pl then BS.singleton 0 else pl
         encFrame = builderBytes $ tcFrameBuilder newFrame
-    in  EncodedTCFrame (frame ^. tcFrameSeq)
-                       (HexBytes (encFrame <> crcEncodeBS (crcCalc encFrame)))
-                       rqst
+    in  EncodedTCFrame
+            (frame ^. tcFrameSeq)
+            (HexBytes (encFrame <> crcEncodeBS (crcCalc encFrame)))
+            rqst
 
 {-# INLINABLE tcFrameBuilder #-}
 tcFrameBuilder :: TCTransferFrame -> Builder
@@ -196,9 +199,7 @@ tcFrameEncodeC = do
                     yield $ tcFrameEncode frame cnt
                     tcFrameEncodeC
                 FrameIllegal -> do
-                    st <- ask
-                    liftIO
-                        $ raiseEvent st
+                    raiseEvent
                         $ EVAlarms
                               (EVIllegalTCFrame
                                   "Illegal Frame on encode, frame discarded"
@@ -214,17 +215,16 @@ tcFrameDecodeC
 tcFrameDecodeC = conduitParserEither tcFrameParser .| proc
   where
     proc = awaitForever $ \x -> do
-        st <- ask
         case x of
             Left err -> do
                 let msg = T.pack (errorMessage err)
-                liftIO $ raiseEvent st (EVAlarms (EVIllegalTCFrame msg))
+                raiseEvent (EVAlarms (EVIllegalTCFrame msg))
                 proc
             Right (_, frame) -> do
                 cfg <- view getConfig
                 case checkTCFrame cfg frame of
                     Left err -> do
-                        liftIO $ raiseEvent st (EVAlarms (EVIllegalTCFrame err))
+                        raiseEvent (EVAlarms (EVIllegalTCFrame err))
                         proc
                     Right () -> do
                         yield frame

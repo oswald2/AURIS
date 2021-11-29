@@ -15,7 +15,7 @@ import           Data.PUS.GlobalState           ( newGlobalState
 import           Data.PUS.MissionSpecific.Definitions
                                                 ( PUSMissionSpecific )
 import           Data.PUS.Events                ( EventFlag(..) )
-import           Data.PUS.Config
+--import           Data.PUS.Config
 import           Control.PUS.Classes            ( setDataModel )
 
 import           Interface.Interface            ( Interface
@@ -53,7 +53,7 @@ import           Persistence.Logging            ( logToDB )
 import           Persistence.DbResultProcessor  ( dbResultFunc )
 import           Persistence.DBQuery
 
-import           Protocol.SLE
+-- import           Protocol.SLE
 
 
 runProcessing

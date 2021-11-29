@@ -73,14 +73,13 @@ import           Data.PUS.Events                ( Event
                                                 )
 import           Data.PUS.MissionSpecific.Definitions
                                                 ( PUSMissionSpecific )
-import           Data.PUS.PUSState              ( PUSState
-                                                , defaultPUSState
+import           Data.PUS.PUSState              ( defaultPUSState
                                                 , nextADCnt
                                                 )
 import           Data.PUS.Statistics
 import           Data.PUS.TCRequest             ( TCRequest )
 
-import           General.PUSTypes
+--import           General.PUSTypes
 import           General.Time
 
 import           Verification.Commands
@@ -132,7 +131,7 @@ newGlobalState
     -> Maybe DbBackend
     -> Maybe (TBQueue DBQuery)
     -> IO GlobalState
-newGlobalState cfg missionSpecific logErr raiseEvent eventFlags dbBackend queryQueue
+newGlobalState cfg missionSpecific logErr raiseEventF eventFlags dbBackend queryQueue
     = do
         st     <- defaultPUSState cfg
         tv     <- newTVarIO st
@@ -149,8 +148,8 @@ newGlobalState cfg missionSpecific logErr raiseEvent eventFlags dbBackend queryQ
 
         let eventCfg = createEventConfig eventFlags
             eventFn  = if eventCfg ^. cfgEvAll
-                then raiseEvent
-                else filteredRaiseEvent eventCfg raiseEvent
+                then raiseEventF
+                else filteredRaiseEvent eventCfg raiseEventF
 
         let state = GlobalState { glsConfig            = cfg
                                 , glsState             = tv
@@ -206,7 +205,7 @@ instance HasDataModel GlobalState where
     getDataModelVar = to glsDataModel
 
 instance HasRaiseEvent GlobalState where
-    raiseEvent = glsRaiseEvent
+    appRaiseEvent = glsRaiseEvent
 
 instance HasTCRqstQueue GlobalState where
     getRqstQueue = to glsTCRequestQueue
@@ -267,6 +266,11 @@ instance HasStats GlobalState where
 instance HasTerminate GlobalState where
     appTerminate env = do
         atomically $ writeTBQueue (glsSLECmdQueue env) SLETerminate
+
+instance HasSLE GlobalState where 
+    getSleCmdQueue = glsSLECmdQueue
+    appSendSLE env cmd = do 
+        atomically $ writeTBQueue (glsSLECmdQueue env) cmd 
 
 
 instance HasGlobalState GlobalState

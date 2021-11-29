@@ -31,22 +31,10 @@ runRAF
     -> SLE
     -> m (Maybe Text)
 runRAF peerID rafCfg sii queue sle = do
-    env <- ask
-    liftIO $ raiseEvent env (EVSLE (EVSLERafInitialised sii))
-    -- initiate the bind 
-    bindRes <- liftIO $ rafBind sle
-                                (cfgSleRafPeerID rafCfg)
-                                (cfgSleRafPort rafCfg)
-                                peerID
-                                (convVersion (cfgSleRafVersion rafCfg))
-    case bindRes of
-        Just err ->
-            logError
-                $  "Error on requesting SLE BIND for "
-                <> display sii
-                <> ": "
-                <> display err
-        Nothing -> loop Init
+    raiseEvent (EVSLE (EVSLERafInitialised sii))
+
+    loop Init
+    
     pure Nothing
 
   where
@@ -62,14 +50,37 @@ runRAF peerID rafCfg sii queue sle = do
             Active -> do
                 res <- liftIO $ rafStop sle
                 forM_ res $ \err -> logError $ "SLE STOP: " <> display err
+                res1 <- liftIO $ rafUnbind sle SleUBREnd
+                forM_ res1 $ \err -> logError $ "SLE UNBIND: " <> display err
             Bound -> do
                 res <- liftIO $ rafUnbind sle SleUBREnd
-                forM_ res $ \err -> logError $ "SLE STOP: " <> display err
+                forM_ res $ \err -> logError $ "SLE UNBIND: " <> display err
             _ -> pure ()
         pure Terminated
 
+    processCmd Init RafBind = do 
+        logInfo $ "Initiating BIND for " <> display sii 
+        bindRes <- liftIO $ rafBind sle
+                                    (cfgSleRafPeerID rafCfg)
+                                    (cfgSleRafPort rafCfg)
+                                    peerID
+                                    (convVersion (cfgSleRafVersion rafCfg))
+        case bindRes of
+            Just err ->
+                logError
+                    $  "Error on requesting SLE BIND for "
+                    <> display sii
+                    <> ": "
+                    <> display err
+            Nothing -> pure () 
+        pure Init 
+
+
     processCmd Init (RafBindSuccess sii2) = do
         logInfo $ "BIND SUCCEEDED for" <> display sii2
+        raiseEvent (EVSLE (EVSLERafBind sii))
+
+        -- now issue a start for the service 
         startRes <- liftIO $ rafStart sle Nothing Nothing SleRafAllFrames
         case startRes of
             Just err -> do
@@ -87,6 +98,7 @@ runRAF peerID rafCfg sii queue sle = do
 
     processCmd Bound (RafStartSuccess sii2) = do
         logInfo $ "START SUCCEEDED for" <> display sii2
+        raiseEvent (EVSLE (EVSLERafStart sii2))
         pure Active
 
     processCmd Bound (RafStartError sii2 diag) = do

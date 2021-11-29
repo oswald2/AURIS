@@ -2,6 +2,7 @@
     OverloadedStrings
     , BangPatterns
     , NoImplicitPrelude
+    , CPP
 #-}
 module AurisInterface
     ( initialiseInterface
@@ -31,9 +32,14 @@ import           GUI.MainWindowActions          ( mwLogAlarm
                                                 , mwLogInfo
                                                 , mwLogWarn
                                                 )
+import           GUI.SLEConnections             ( SleServiceStatus(..))
 
 import           Data.GI.Gtk.Threading          ( postGUIASync )
 import           Persistence.DBQuery            ( DBQuery )
+
+#ifdef HAS_SLE 
+import           SLE.Types 
+#endif 
 
 
 
@@ -132,6 +138,13 @@ eventProcessor g (EventPUS (EVDB (EVDBTMFrames frames))) = do
 
 eventProcessor g (EventPUS (EVTelemetry (EVTMStatistics stats))) = do 
     postGUIASync $ mwAddTMStatistic g stats
+
+
+#ifdef HAS_SLE 
+eventProcessor g (EventPUS (EVSLE (EVSLERafInitialised (SleSII sii)))) = do 
+    postGUIASync $ mwSetSleRafState g sii SleServiceInit
+
+#endif 
 
 eventProcessor _ _ = pure ()
 

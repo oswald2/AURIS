@@ -190,6 +190,10 @@ instance ToJSON EventDB where
 data EventSLE = 
     EVSLEInitRaf SleSII SleVersion Text Text SleDeliveryMode
     | EVSLERafInitialised SleSII
+    | EVSLERafBind SleSII 
+    | EVSLERafUnbind SleSII 
+    | EVSLERafStart SleSII 
+    | EVSLERafStop SleSII 
     deriving (Show, Generic)
 
 instance Serialise EventSLE

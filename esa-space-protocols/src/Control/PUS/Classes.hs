@@ -29,6 +29,7 @@ module Control.PUS.Classes
     , HasMissionSpecific(..)
     , HasDataModel(..)
     , HasTCRqstQueue(..)
+    , HasSLE(..)
     , getDataModel
     , setDataModel
     , HasRaiseEvent(..)
@@ -36,6 +37,8 @@ module Control.PUS.Classes
     , HasDatabase(..)
     , HasStats(..)
     , HasTerminate(..)
+    , raiseEvent
+    , sleCommand
     , terminate
     ) where
 
@@ -67,6 +70,8 @@ import           General.Time
 
 import           Persistence.DBQuery            ( DBQuery )
 import           Persistence.DbBackend         as DB
+
+import           Protocol.ProtocolSLE           ( SLECommand )
 
 --import           GHC.Compact
 
@@ -128,7 +133,13 @@ setDataModel env dm = do
 
 -- | class for raising an event to the user interfaces
 class HasRaiseEvent env where
-    raiseEvent :: env -> Event -> IO ()
+    appRaiseEvent :: env -> Event -> IO ()
+
+raiseEvent
+    :: (MonadIO m, MonadReader env m, HasRaiseEvent env) => Event -> m ()
+raiseEvent event = do
+    env <- ask
+    liftIO $ appRaiseEvent env event
 
 
 -- | Class used for TC verification.
@@ -167,8 +178,20 @@ class HasTerminate a where
     appTerminate :: a -> IO ()
 
 
-terminate :: (MonadIO m, MonadReader env m, HasTerminate env) => m () 
+terminate :: (MonadIO m, MonadReader env m, HasTerminate env) => m ()
 terminate = ask >>= liftIO . appTerminate
+
+-- | Class for SLE interaction 
+class HasSLE a where
+    getSleCmdQueue :: a -> TBQueue SLECommand 
+    appSendSLE :: a -> SLECommand -> IO ()
+
+-- | send the given SLE command to the SLE processor
+sleCommand :: (MonadIO m, MonadReader env m, HasSLE env) => SLECommand -> m ()
+sleCommand cmd = do
+    env <- ask
+    liftIO $ appSendSLE env cmd
+
 
 -- | Class for accessing the global state
 class (HasConfig env,
@@ -184,6 +207,7 @@ class (HasConfig env,
     HasVerif env,
     HasDatabase env,
     HasStats env,
+    HasSLE env,
     HasTerminate env) => HasGlobalState env
 
 

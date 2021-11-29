@@ -14,23 +14,26 @@ import           Data.PUS.Events
 import           Data.PUS.Statistics
 import           Data.PUS.TCGeneration
 import           Data.PUS.TCRequest
-
 import           Data.TC.TCDef
+
 import           Persistence.DBQuery
+
+import           Protocol.ProtocolSLE
 
 import           General.PUSTypes
 
 
 data InterfaceAction =
   Quit
-  | ImportMIB FilePath FilePath
-  | LogMsg LogSource LogLevel Utf8Builder
-  | SendTCRequest TCRequest
+  | ImportMIB !FilePath !FilePath
+  | LogMsg !LogSource !LogLevel !Utf8Builder
+  | SendTCRequest !TCRequest
   | SendTCGroup [TCRequest]
   | QueryDB DBQuery
-  | GetTCSync TCDef ShortText TransmissionMode (TMVar TCRequest)
+  | GetTCSync !TCDef !ShortText !TransmissionMode !(TMVar TCRequest)
   | ResetStatsFrames
   | ResetStatsPackets
+  | BindRAF !Text
   deriving (Generic)
 
 
@@ -80,7 +83,8 @@ processMsg ResetStatsPackets = do
     env <- ask
     let pktVar = getPacketStats env
     atomically $ writeTVar pktVar initialStatistics
-
+processMsg (BindRAF sii) = do
+    sleCommand (SLEBindRaf sii)
 
 -- processMsg RequestAllTMFrames = do 
 --   env <- ask
@@ -94,15 +98,15 @@ importMIB
     -> FilePath
     -> m ()
 importMIB path serializePath = do
-    logDebug "Loading data model..."
+    logInfo "Loading data model..."
     env    <- ask
     model' <- loadDataModel (LoadFromMIB path serializePath)
     case model' of
         Left err -> do
-            logDebug "Error loading MIB"
-            liftIO $ raiseEvent env (EVAlarms (EVMIBLoadError err))
+            logInfo "Error loading MIB"
+            raiseEvent (EVAlarms (EVMIBLoadError err))
         Right model -> do
             setDataModel env model
-            logDebug "Successfully loaded MIB"
-            liftIO $ raiseEvent env (EVAlarms (EVMIBLoaded model))
+            logInfo "Successfully loaded MIB"
+            raiseEvent (EVAlarms (EVMIBLoaded model))
 

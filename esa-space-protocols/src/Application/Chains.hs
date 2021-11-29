@@ -129,9 +129,7 @@ runTMNctrsChain cfg vcMap = do
     logDebug "runTMNctrsChain leaving"
   where
     tmClient chain app = do
-        env <- ask
-        liftIO $ raiseEvent
-            env
+        raiseEvent
             (EVAlarms
                 (EVEConnection (IfNctrs (cfgNctrsID cfg)) ConnTM Connected)
             )
@@ -140,16 +138,13 @@ runTMNctrsChain cfg vcMap = do
 
         res <- try $ void $ runConduitRes (appSource app .| chain)
 
-        liftIO
-            (raiseEvent
-                env
+        raiseEvent
                 (EVAlarms
                     (EVEConnection (IfNctrs (cfgNctrsID cfg))
                                    ConnTM
                                    Disconnected
                     )
                 )
-            )
         case res of
             Left (e :: SomeException) -> do
                 logError
@@ -180,27 +175,16 @@ runTCNctrsChain cfg cltuQueue = do
     logDebug "runTCNctrsChain leaving"
   where
     tcClient chain app = do
-        env <- ask
-        liftIO $ raiseEvent
-            env
-            (EVAlarms
-                (EVEConnection (IfNctrs (cfgNctrsID cfg)) ConnTC Connected)
-            )
+        raiseEvent (EVAlarms (EVEConnection (IfNctrs (cfgNctrsID cfg)) ConnTC Connected))
         logInfo $ "Connected TC connection on NCTRS " <> display
             (cfgNctrsID cfg)
 
         res <- try $ void $ runConduitRes (chain .| appSink app)
 
-        liftIO
-            (raiseEvent
-                env
-                (EVAlarms
-                    (EVEConnection (IfNctrs (cfgNctrsID cfg))
+        raiseEvent (EVAlarms (EVEConnection (IfNctrs (cfgNctrsID cfg))
                                    ConnTC
-                                   Disconnected
-                    )
-                )
-            )
+                                   Disconnected))
+            
         case res of
             Left (e :: SomeException) -> do
                 logError
@@ -240,9 +224,7 @@ runAdminNctrsChain cfg = do
     logDebug "runAdminNctrsChain leaving"
   where
     tmClient chain app = do
-        env <- ask
-        liftIO $ raiseEvent
-            env
+        raiseEvent
             (EVAlarms
                 (EVEConnection (IfNctrs (cfgNctrsID cfg)) ConnAdmin Connected)
             )
@@ -250,16 +232,14 @@ runAdminNctrsChain cfg = do
             (cfgNctrsID cfg)
         res <- try $ void $ runConduitRes (appSource app .| chain)
 
-        liftIO
-            (raiseEvent
-                env
+        raiseEvent
                 (EVAlarms
                     (EVEConnection (IfNctrs (cfgNctrsID cfg))
                                    ConnAdmin
                                    Disconnected
                     )
                 )
-            )
+
         case res of
             Left (e :: SomeException) -> do
                 logError
@@ -296,21 +276,17 @@ runTMCnCChain cfg missionSpecific pktQueue = do
     logDebug "runTMCnCChain leaving"
   where
     tmClient chain app = do
-        env <- ask
-        liftIO $ raiseEvent
-            env
+        raiseEvent
             (EVAlarms (EVEConnection (IfCnc (cfgCncID cfg)) ConnTM Connected))
         logInfo $ "Connected TM connection on C&C " <> display (cfgCncID cfg)
 
         res <- try $ void $ runConduitRes (appSource app .| chain)
 
-        liftIO
-            (raiseEvent
-                env
+        raiseEvent
                 (EVAlarms
                     (EVEConnection (IfCnc (cfgCncID cfg)) ConnTM Disconnected)
                 )
-            )
+
         case res of
             Left (e :: SomeException) -> do
                 logError
@@ -354,19 +330,16 @@ runTCCnCChain cfg missionSpecific duQueue pktQueue = do
     logDebug "runTCCnCChain leaving"
   where
     tcClient ifID chain app = do
-        env <- ask
-        liftIO $ raiseEvent env (EVAlarms (EVEConnection ifID ConnTC Connected))
+        raiseEvent (EVAlarms (EVEConnection ifID ConnTC Connected))
         logInfo $ "Connected TC connection on C&C " <> display (cfgCncID cfg)
 
         res <- try $ void $ runConduitRes (chain .| appSink app)
 
-        liftIO
-            (raiseEvent
-                env
+        raiseEvent
                 (EVAlarms
                     (EVEConnection (IfCnc (cfgCncID cfg)) ConnTC Disconnected)
                 )
-            )
+
         case res of
             Left (e :: SomeException) -> do
                 logError
@@ -378,13 +351,11 @@ runTCCnCChain cfg missionSpecific duQueue pktQueue = do
                     (cfgCncID cfg)
                 return ()
     tcAckClient ifID chain app = do
-        env <- ask
         logDebug "C&C TC Ack reader thread started"
 
         res <- try $ void $ runConduitRes (appSource app .| chain)
 
-        liftIO
-            (raiseEvent env (EVAlarms (EVEConnection ifID ConnTC Disconnected)))
+        raiseEvent (EVAlarms (EVEConnection ifID ConnTC Disconnected))
         case res of
             Left (e :: SomeException) -> do
                 logError
@@ -422,9 +393,7 @@ runEdenChain cfg missionSpecific pktQueue edenQueue = do
     logDebug "runEdenChain leaving"
   where
     edenClient app = do
-        env <- ask
-        liftIO $ raiseEvent
-            env
+        raiseEvent
             (EVAlarms
                 (EVEConnection (IfEden (cfgEdenID cfg)) ConnSingle Connected)
             )
@@ -432,16 +401,14 @@ runEdenChain cfg missionSpecific pktQueue edenQueue = do
 
         res <- try $ race_ (tmChain app) (tcChain app)
 
-        liftIO
-            (raiseEvent
-                env
+        raiseEvent
                 (EVAlarms
                     (EVEConnection (IfEden (cfgEdenID cfg))
                                    ConnSingle
                                    Disconnected
                     )
                 )
-            )
+
         case res of
             Left (e :: SomeException) -> do
                 logError
@@ -568,14 +535,12 @@ runChains missionSpecific = do
     (switcherMap, interfaceThreads) <- foldM (cncIf pktQueue)
                                              (switcherMap2, nctrsThreads)
                                              (cfgCnC cfg)
-
-    sleQueue <- newTBQueueIO 100 
-
 #ifdef HAS_SLE 
+    env <- ask
     sleThreads <- case cfgSLE cfg of
         Just sleCfg -> do 
             logInfo "Starting SLE interface..."
-            pure $ conc $ startSLE sleCfg vcMap sleQueue 
+            pure $ conc $ startSLE sleCfg vcMap (getSleCmdQueue env) 
         Nothing -> pure mempty 
 #else 
     let sleThreads = mempty 
@@ -656,8 +621,7 @@ statThread = do
                                      }
 
         -- send statistics to GUI
-        liftIO $ raiseEvent
-            env
+        raiseEvent
             (EVTelemetry
                 (EVTMStatistics TMStatistics { _statFrame   = fr
                                              , _statPackets = pk

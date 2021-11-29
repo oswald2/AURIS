@@ -1,6 +1,7 @@
 module GUI.SLEConnections
     ( RafSiiStatus
     , SleServiceStatus(..)
+    , setupCallbacks
     , setupRAFConnection
     , addRafConnection
     , updateRafStatus
@@ -8,14 +9,13 @@ module GUI.SLEConnections
 
 import           RIO
 
-import           GI.Gtk
+import           GI.Gtk                        as Gtk
 
 import           Data.PUS.Config
 
 -- import           Protocol.ProtocolInterfaces
+import           Interface.Interface
 
-import           GUI.StatusEntry
-import           GUI.StatusButton
 import           GUI.Utils
 
 
@@ -24,6 +24,7 @@ data RafSiiStatus = RafSiiStatus
     , _rafBtBind  :: !Button
     , _rafBtStart :: !Button
     , _rafStatus  :: !Entry
+    , _rafSII     :: !Text
     }
 
 
@@ -69,13 +70,14 @@ setupRAFConnection rafCfg = do
     labelSetLabel vers (textDisplay (cfgSleRafVersion rafCfg))
 
     widgetSetName status "error-entry"
-    widgetSetName bind "yellow-button"
-    widgetSetName start "yellow-button"
+    widgetSetName bind   "yellow-button"
+    widgetSetName start  "yellow-button"
 
     let g = RafSiiStatus { _rafFrame   = frame
                          , _rafBtBind  = bind
                          , _rafBtStart = start
                          , _rafStatus  = status
+                         , _rafSII     = cfgSleRafSII rafCfg
                          }
 
     updateRafStatus g SleServiceUninit
@@ -83,44 +85,55 @@ setupRAFConnection rafCfg = do
     pure g
 
 
-bindLabel :: Text 
+bindLabel :: Text
 bindLabel = "Bind"
 
-unbindLabel :: Text 
-unbindLabel ="Unbind"
+unbindLabel :: Text
+unbindLabel = "Unbind"
 
-startLabel :: Text 
+startLabel :: Text
 startLabel = "Start"
 
-stopLabel :: Text 
+stopLabel :: Text
 stopLabel = "Stop"
 
 
-updateRafStatus :: RafSiiStatus -> SleServiceStatus -> IO () 
-updateRafStatus g SleServiceUninit = do 
+setupCallbacks :: RafSiiStatus -> Interface -> IO ()
+setupCallbacks gui interface = do
+    void $ Gtk.on (_rafBtBind gui) #clicked $ do
+        callInterface interface actionBindRAF (_rafSII gui)
+
+    return () 
+
+updateRafStatus :: RafSiiStatus -> SleServiceStatus -> IO ()
+updateRafStatus g SleServiceUninit = do
     widgetSetName (_rafStatus g) "error-entry"
-    buttonSetLabel (_rafBtBind g) bindLabel 
-    buttonSetLabel (_rafBtStart g) startLabel 
-    widgetSetSensitive (_rafBtBind g) True 
-    widgetSetSensitive (_rafBtStart g) False 
+    entrySetText (_rafStatus g) (textDisplay SleServiceUninit)
+    buttonSetLabel (_rafBtBind g)  bindLabel
+    buttonSetLabel (_rafBtStart g) startLabel
+    widgetSetSensitive (_rafBtBind g)  True
+    widgetSetSensitive (_rafBtStart g) False
 
-updateRafStatus g SleServiceInit = do 
+updateRafStatus g SleServiceInit = do
     widgetSetName (_rafStatus g) "warn-entry"
-    buttonSetLabel (_rafBtBind g) bindLabel 
-    buttonSetLabel (_rafBtStart g) startLabel 
-    widgetSetSensitive (_rafBtBind g) True 
-    widgetSetSensitive (_rafBtStart g) False     
+    entrySetText (_rafStatus g) (textDisplay SleServiceInit)
+    buttonSetLabel (_rafBtBind g)  bindLabel
+    buttonSetLabel (_rafBtStart g) startLabel
+    widgetSetSensitive (_rafBtBind g)  True
+    widgetSetSensitive (_rafBtStart g) False
 
-updateRafStatus g SleServiceBound = do 
+updateRafStatus g SleServiceBound = do
     widgetSetName (_rafStatus g) "warn-entry"
-    buttonSetLabel (_rafBtBind g) unbindLabel 
-    buttonSetLabel (_rafBtStart g) startLabel 
-    widgetSetSensitive (_rafBtBind g) True 
-    widgetSetSensitive (_rafBtStart g) True         
+    entrySetText (_rafStatus g) (textDisplay SleServiceBound)
+    buttonSetLabel (_rafBtBind g)  unbindLabel
+    buttonSetLabel (_rafBtStart g) startLabel
+    widgetSetSensitive (_rafBtBind g)  True
+    widgetSetSensitive (_rafBtStart g) True
 
-updateRafStatus g SleServiceActive = do 
+updateRafStatus g SleServiceActive = do
     widgetSetName (_rafStatus g) "green-entry"
-    buttonSetLabel (_rafBtBind g) unbindLabel 
-    buttonSetLabel (_rafBtStart g) stopLabel 
-    widgetSetSensitive (_rafBtBind g) True 
-    widgetSetSensitive (_rafBtStart g) True         
+    entrySetText (_rafStatus g) (textDisplay SleServiceActive)
+    buttonSetLabel (_rafBtBind g)  unbindLabel
+    buttonSetLabel (_rafBtStart g) stopLabel
+    widgetSetSensitive (_rafBtBind g)  True
+    widgetSetSensitive (_rafBtStart g) True

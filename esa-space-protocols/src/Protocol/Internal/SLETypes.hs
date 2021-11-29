@@ -13,7 +13,9 @@ import           SLE.Types
 
 
 data SleCmd =
-  RafBindSuccess SleSII
+  RafBind 
+  | RafStart
+  | RafBindSuccess SleSII
   | RafBindError SleSII Text
   | RafStartSuccess SleSII
   | RafStartError SleSII Text

@@ -17,12 +17,13 @@ import           RIO.Partial                    ( toEnum )
 import qualified GI.Gtk                        as Gtk
 
 import           GUI.MainWindow
+import           GUI.SLETab                     ( setupCallbacks )
 import           GUI.StatisticsTab
 import           GUI.TCTab
 import           GUI.TMFrameTab
 
+-- import           Interface.Actions
 import           Interface.Interface
-import           Interface.Actions
 
 import           System.Directory
 import           System.FilePath
@@ -42,6 +43,8 @@ setupCallbacks window interface = do
     GUI.TMFrameTab.setupCallbacks (window ^. mwFrameTab) interface
     GUI.TCTab.setupCallbacks (window ^. mwTCTab) interface
     GUI.StatisticsTab.setupCallbacks (window ^. mwStatisticsTab) interface
+    forM_ (window ^. mwSLETab)
+        $ \sleTab -> GUI.SLETab.setupCallbacks sleTab interface
 
     void $ Gtk.on (window ^. mwMenuItemImportMIB) #activate $ importMIB
         window

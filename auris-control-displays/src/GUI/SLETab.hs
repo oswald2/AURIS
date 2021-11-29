@@ -1,7 +1,9 @@
 {-# LANGUAGE CPP #-}
 module GUI.SLETab
     ( SLETab
+    , GUI.SLETab.setupCallbacks
     , createSLETab
+    , updateRAFStatus
     ) where
 
 import           GI.Gtk                        as Gtk
@@ -13,6 +15,9 @@ import           Data.PUS.Config
 
 import           GUI.SLEConnections
 import           GUI.Utils
+import           GUI.SLEConnections
+
+import           Interface.Interface 
 
 
 data SLETab = SLETab
@@ -67,3 +72,16 @@ createSLETab cfg builder = do
 
     setupInstance _parent maps SLEInstRCF   = pure maps 
     setupInstance _parent maps SLEInstFCLTU = pure maps 
+
+
+setupCallbacks :: SLETab -> Interface -> IO () 
+setupCallbacks gui interface = do 
+    forM_ (HM.toList (sleRafStatusMap gui)) $ \(_, conn) -> do 
+        GUI.SLEConnections.setupCallbacks conn interface 
+
+
+updateRAFStatus :: SLETab -> Text -> SleServiceStatus -> IO () 
+updateRAFStatus gui sii status = do 
+    case HM.lookup sii (sleRafStatusMap gui) of 
+        Just raf -> updateRafStatus raf status 
+        Nothing -> pure () 

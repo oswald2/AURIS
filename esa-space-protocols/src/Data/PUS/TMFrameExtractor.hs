@@ -116,7 +116,7 @@ tmFrameDecodeC = do
         case A.parseOnly (A.match (tmFrameParser (cfgTMFrame cfg))) x of
             Left err -> do
                 let msg = T.pack err
-                liftIO $ raiseEvent env (EVAlarms (EVIllegalTMFrame msg))
+                lift $ raiseEvent (EVAlarms (EVIllegalTMFrame msg))
             Right (bs, frame) -> do
 
                 logDebug
@@ -124,8 +124,8 @@ tmFrameDecodeC = do
                     <> displayShow frame
 
                 case tmFrameCheckCRC (cfgTMFrame cfg) bs of
-                    Left err -> liftIO
-                        $ raiseEvent env (EVTelemetry (EVTMFailedCRC err))
+                    Left err -> lift
+                        $ raiseEvent (EVTelemetry (EVTMFailedCRC err))
                     Right () -> do
                         let f = TMStoreFrame time interf frame (HexBytes bs)
                             time =
@@ -207,13 +207,12 @@ multiplexFrame
     -> TMStoreFrame
     -> m ()
 multiplexFrame vcMap frame = do
-    st <- ask
     let
         !vcid = fromIntegral
             $ getVCID (frame ^. tmstFrame . tmFrameHdr . tmFrameVcID)
     case M.lookup vcid vcMap of
         Nothing -> do
-            liftIO $ raiseEvent st $ EVAlarms
+            raiseEvent $ EVAlarms
                 (EVIllegalTMFrame
                     (  "Received Frame with VC ID which was not configured: "
                     <> T.pack (show vcid)
@@ -228,9 +227,8 @@ raiseFrameC
     :: (MonadIO m, MonadReader env m, HasGlobalState env)
     => ConduitT (ExtractedDU TMFrame) (ExtractedDU TMFrame) m ()
 raiseFrameC = awaitForever $ \frame -> do
-    env <- ask
     logDebug $ "Raising frame: " <> display frame
-    liftIO $ raiseEvent env (EVTelemetry (EVTMFrameReceived frame))
+    raiseEvent (EVTelemetry (EVTMFrameReceived frame))
     yield frame
 
 
@@ -279,8 +277,7 @@ checkFrameCountC = go Nothing
                                 yieldNoGap
                                 go (Just vcfc)
                             else do
-                                st <- ask
-                                liftIO $ raiseEvent st $ EVTelemetry
+                                lift $ raiseEvent $ EVTelemetry
                                     (EVTMFrameGap lastFC vcfc)
                                 let
                                     ep = ExtractedDU
@@ -388,13 +385,12 @@ extractPktFromTMFramesC missionSpecific = loop True B.empty
         -> ProtocolInterface
         -> ConduitT (ExtractedDU TMFrame) ExtDuTMFrame m ()
     rejectSpillOver sp pIf = do
-        env <- ask
         if B.length sp >= fixedSizeOf @PUSHeader
             then do
                 case A.parseOnly pusPktHdrLenOnlyParser sp of
                     Left _err ->
-                        liftIO
-                            $ raiseEvent env
+                        lift
+                            $ raiseEvent
                             $ EVTelemetry
                             $ EVTMGarbledSpillOver (B.unpack sp)
                     Right pktLen -> do
@@ -408,18 +404,18 @@ extractPktFromTMFramesC missionSpecific = loop True B.empty
                                     newSp
                             of
                                 Left _err ->
-                                    liftIO
-                                        $ raiseEvent env
+                                    lift
+                                        $ raiseEvent
                                         $ EVTelemetry
                                         $ EVTMGarbledSpillOver (B.unpack newSp)
                                 Right pusPkt ->
-                                    liftIO
-                                        $ raiseEvent env
+                                    lift
+                                        $ raiseEvent
                                         $ EVTelemetry
                                         $ EVTMRejectedSpillOverPkt
                                               (pusPkt ^. protContent)
             else do
-                liftIO $ raiseEvent env $ EVTelemetry $ EVTMRejectSpillOver
+                raiseEvent $ EVTelemetry $ EVTMRejectSpillOver
                     (B.unpack sp)
 
 
@@ -852,7 +848,6 @@ raisePUSPacketC
     :: (MonadIO m, MonadReader env m, HasGlobalState env)
     => ConduitT ExtractedPacket ExtractedPacket m ()
 raisePUSPacketC = do
-    env <- ask
     awaitForever $ \p@(ExtractedPacket _ pkt) -> do
-        liftIO $ raiseEvent env (EVTelemetry (EVTMPUSPacketReceived pkt))
+        raiseEvent (EVTelemetry (EVTMPUSPacketReceived pkt))
         yield p

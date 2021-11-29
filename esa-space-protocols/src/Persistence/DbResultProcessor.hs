@@ -17,6 +17,5 @@ dbResultFunc
     -> m ()
 dbResultFunc (DBResultTMFrames frames)  = do
     logDebug $ "Query Result: " <> display (length frames) <> " rows."
-    env <- ask
-    liftIO $ raiseEvent env (EVDB (EVDBTMFrames frames))
+    raiseEvent (EVDB (EVDBTMFrames frames))
 dbResultFunc _ = return ()

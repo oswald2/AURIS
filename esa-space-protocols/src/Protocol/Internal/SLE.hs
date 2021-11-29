@@ -54,7 +54,7 @@ startSLE sleCfg vcMap cmdQueue = do
         (SeConfigFile (cfgSleSeConfig sleCfg))
         (ProxyConfigFile (cfgSleProxyConfig sleCfg))
         cbs
-        (\sle -> race_ (processing sleCfg queues' sle) (commandThread queues'))
+        (\sle -> race_ (processing sleCfg queues' sle) (commandThread queues))
   where
     createQueue sii = do
         q <- liftIO $ newTBQueueIO 100
@@ -64,10 +64,16 @@ startSLE sleCfg vcMap cmdQueue = do
         cmd <- atomically $ readTBQueue cmdQueue
         case cmd of
             SLETerminate -> atomically $ do
-                mapM_ (\q -> writeTBQueue (snd q) Terminate) queues
+                mapM_ (\q -> writeTBQueue (snd q) Terminate) (HM.toList queues)
                 -- we loop over, as we use race_ above and wait for the 
                 -- interfaces to terminate. Our thread will be termianted
                 -- automatically when all others are shutdown
+            SLEBindRaf sii' -> do 
+                let sii = SleSII sii'
+                case HM.lookup sii queues of 
+                    Just q -> do 
+                        atomically $ writeTBQueue q RafBind
+                    Nothing -> pure () 
         commandThread queues
 
 
@@ -96,15 +102,14 @@ startInstance sle peerID (SLEInstRAF rafCfg) (_sii, queue) = do
     let version      = convVersion (cfgSleRafVersion rafCfg)
         deliveryMode = convDeliveryMode (cfgSleRafDeliveryMode rafCfg)
         sii          = SleSII (cfgSleRafSII rafCfg)
-    env <- ask
 
-    liftIO $ raiseEvent
-        env
+    raiseEvent
         (EVSLE
             (EVSLEInitRaf sii version peerID (cfgSleRafPort rafCfg) deliveryMode
             )
         )
 
+    logDebug $ "Starting RAF instance for " <> display (cfgSleRafSII rafCfg)
     res <- withSleRAFUser sle
                           (cfgSleRafSII rafCfg)
                           version
