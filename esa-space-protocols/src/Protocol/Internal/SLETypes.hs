@@ -14,7 +14,10 @@ import           SLE.Types
 
 data SleCmd =
   RafBind 
+  | RafUnbind
   | RafStart
+  | RafStop
+  | PeerAbort SleSII SlePeerAbortDiagnostic SleAbortOriginator
   | RafBindSuccess SleSII
   | RafBindError SleSII Text
   | RafStartSuccess SleSII

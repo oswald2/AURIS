@@ -144,6 +144,18 @@ eventProcessor g (EventPUS (EVTelemetry (EVTMStatistics stats))) = do
 eventProcessor g (EventPUS (EVSLE (EVSLERafInitialised (SleSII sii)))) = do 
     postGUIASync $ mwSetSleRafState g sii SleServiceInit
 
+eventProcessor g (EventPUS (EVSLE (EVSLERafBind (SleSII sii)))) = do 
+    postGUIASync $ mwSetSleRafState g sii SleServiceBound
+
+eventProcessor g (EventPUS (EVSLE (EVSLERafUnbind (SleSII sii)))) = do 
+    postGUIASync $ mwSetSleRafState g sii SleServiceInit
+
+eventProcessor g (EventPUS (EVSLE (EVSLERafStart (SleSII sii)))) = do 
+    postGUIASync $ mwSetSleRafState g sii SleServiceActive
+
+eventProcessor g (EventPUS (EVSLE (EVSLERafStop (SleSII sii)))) = do 
+    postGUIASync $ mwSetSleRafState g sii SleServiceBound
+
 #endif 
 
 eventProcessor _ _ = pure ()

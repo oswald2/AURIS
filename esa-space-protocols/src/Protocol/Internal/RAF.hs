@@ -79,15 +79,8 @@ runRAF peerID rafCfg sii queue sle = do
     processCmd Init (RafBindSuccess sii2) = do
         logInfo $ "BIND SUCCEEDED for" <> display sii2
         raiseEvent (EVSLE (EVSLERafBind sii))
-
-        -- now issue a start for the service 
-        startRes <- liftIO $ rafStart sle Nothing Nothing SleRafAllFrames
-        case startRes of
-            Just err -> do
-                logError $ "Error on requesting SLE START: " <> display err
-                pure Bound
-            Nothing -> do
-                pure Bound
+        pure Bound
+    
     processCmd Init (RafBindError sii2 diag) = do
         logError
             $  "BIND for "
@@ -95,6 +88,25 @@ runRAF peerID rafCfg sii queue sle = do
             <> " returned error: "
             <> display diag
         pure Init
+
+    processCmd _ (PeerAbort sii2 _diag _originator) = do
+        raiseEvent (EVSLE (EVSLERafInitialised sii2))
+        pure Init 
+
+    processCmd Bound RafUnbind = do
+        res <- liftIO $ rafUnbind sle SleUBROtherReason
+        case res of 
+            Just err -> do 
+                logError $ "SLE UNBIND: " <> display err
+                pure Bound 
+            Nothing -> do 
+                raiseEvent (EVSLE (EVSLERafUnbind sii))
+                pure Init
+
+    processCmd Bound RafStart = do 
+        res <- liftIO $ rafStart sle Nothing Nothing SleRafAllFrames
+        forM_ res $ \err -> logError $ "SLE START: " <> display err
+        pure Bound 
 
     processCmd Bound (RafStartSuccess sii2) = do
         logInfo $ "START SUCCEEDED for" <> display sii2
@@ -108,6 +120,17 @@ runRAF peerID rafCfg sii queue sle = do
             <> " returned error: "
             <> display diag
         pure Bound
+
+    processCmd Active RafStop = do
+        res <- liftIO $ rafStop sle
+        case res of 
+            Just err -> do 
+                logError $ "SLE STOP: " <> display err
+                pure Active 
+            Nothing -> do 
+                raiseEvent (EVSLE (EVSLERafStop sii))
+                pure Bound
+
 
     processCmd state cmd = do
         logWarn

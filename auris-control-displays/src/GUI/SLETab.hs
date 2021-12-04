@@ -15,7 +15,6 @@ import           Data.PUS.Config
 
 import           GUI.SLEConnections
 import           GUI.Utils
-import           GUI.SLEConnections
 
 import           Interface.Interface 
 

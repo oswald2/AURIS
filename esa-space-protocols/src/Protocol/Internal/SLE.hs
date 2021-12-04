@@ -61,6 +61,14 @@ startSLE sleCfg vcMap cmdQueue = do
         pure (sii, q)
 
     commandThread queues = do
+        let sendTo sii' cmd = do
+                let sii = SleSII sii'
+                case HM.lookup sii queues of
+                    Just q -> do
+                        atomically $ writeTBQueue q cmd
+                    Nothing -> pure ()
+
+
         cmd <- atomically $ readTBQueue cmdQueue
         case cmd of
             SLETerminate -> atomically $ do
@@ -68,12 +76,12 @@ startSLE sleCfg vcMap cmdQueue = do
                 -- we loop over, as we use race_ above and wait for the 
                 -- interfaces to terminate. Our thread will be termianted
                 -- automatically when all others are shutdown
-            SLEBindRaf sii' -> do 
-                let sii = SleSII sii'
-                case HM.lookup sii queues of 
-                    Just q -> do 
-                        atomically $ writeTBQueue q RafBind
-                    Nothing -> pure () 
+            SLEBindRaf   sii' -> sendTo sii' RafBind
+            SLEUnbindRaf sii' -> sendTo sii' RafUnbind
+            SLEStartRaf  sii' -> sendTo sii' RafStart
+            SLEStopRaf   sii' -> sendTo sii' RafStop
+
+
         commandThread queues
 
 
@@ -152,7 +160,7 @@ callbacks state vcMap cmdQueues = Callbacks
     , cbTraceHandler               = tracer state
     , cbUnexpectedHandler          = unexpectedCB state
     , cbAsyncNotifyHandler         = asyncCB state
-    , cbPeerAbortHandler           = peerAbortCB state
+    , cbPeerAbortHandler           = peerAbortCB state cmdQueues
     , cbTransferBufferHandler      = transferBufCB state
     , cbStatusReportHandler        = statusReportCB state
     , cbSyncNotifyHandler          = syncCB state
@@ -197,8 +205,12 @@ asyncCB :: (HasLogFunc env) => env -> SleAsyncNotifyHandler
 asyncCB state msg = runRIO state $ do
     logDebug $ "SLE ASYNC: " <> display (run msg)
 
-peerAbortCB :: (HasLogFunc env) => env -> SlePeerAbortHandler
-peerAbortCB state sii diag originator = runRIO state $ do
+peerAbortCB
+    :: (HasLogFunc env)
+    => env
+    -> HashMap SleSII (TBQueue SleCmd)
+    -> SlePeerAbortHandler
+peerAbortCB state siiMap sii diag originator = runRIO state $ do
     logWarn
         $  "SLE PEER ABORT: "
         <> display sii
@@ -206,7 +218,9 @@ peerAbortCB state sii diag originator = runRIO state $ do
         <> display diag
         <> " originator: "
         <> display originator
-
+    case HM.lookup sii siiMap of
+        Nothing -> pure ()
+        Just q  -> atomically $ writeTBQueue q (PeerAbort sii diag originator)
 
 transferBufCB :: env -> SleTransferBufferHandler
 transferBufCB state _count = runRIO state $ pure ()

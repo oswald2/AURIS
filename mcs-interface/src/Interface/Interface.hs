@@ -64,7 +64,10 @@ data ActionTable = ActionTable
     , actionGetTCSync :: TCDef -> ShortText -> TransmissionMode -> IO TCRequest
     , actionStatResetFrames  :: IO ()
     , actionStatResetPackets :: IO ()
-    , actionBindRAF          :: Text -> IO () 
+    , actionBindRAF          :: Text -> IO ()
+    , actionUnbindRAF        :: Text -> IO ()
+    , actionStartRAF         :: Text -> IO ()
+    , actionStopRAF          :: Text -> IO ()
     }
 
 -- | Data type for the event handler.
@@ -89,21 +92,24 @@ actionTable queue (Just queryQueue) = (actionTable queue Nothing)
     { actionQueryDB = atomically . writeTBQueue queryQueue
     }
 actionTable queue Nothing = ActionTable
-    { actionQuit          = callAction queue Quit
-    , actionImportMIB     = \p s -> callAction queue (ImportMIB p s)
-    , actionLogMessage    = \s l msg -> callAction queue (LogMsg s l msg)
-    , actionSendTCRequest = callAction queue . SendTCRequest
-    , actionSendTCGroup   = callAction queue . SendTCGroup
-    , actionQueryDB       = \_ -> pure ()
-    , actionGetTCSync     = \tcDef source transMode -> do
-                                var <- newEmptyTMVarIO
-                                callAction
-                                    queue
-                                    (GetTCSync tcDef source transMode var)
-                                atomically $ takeTMVar var
+    { actionQuit             = callAction queue Quit
+    , actionImportMIB        = \p s -> callAction queue (ImportMIB p s)
+    , actionLogMessage       = \s l msg -> callAction queue (LogMsg s l msg)
+    , actionSendTCRequest    = callAction queue . SendTCRequest
+    , actionSendTCGroup      = callAction queue . SendTCGroup
+    , actionQueryDB          = \_ -> pure ()
+    , actionGetTCSync        = \tcDef source transMode -> do
+                                   var <- newEmptyTMVarIO
+                                   callAction
+                                       queue
+                                       (GetTCSync tcDef source transMode var)
+                                   atomically $ takeTMVar var
     , actionStatResetFrames  = callAction queue ResetStatsFrames
     , actionStatResetPackets = callAction queue ResetStatsPackets
-    , actionBindRAF          = \sii -> callAction queue (BindRAF sii) 
+    , actionBindRAF          = \sii -> callAction queue (BindRAF sii)
+    , actionUnbindRAF        = \sii -> callAction queue (UnbindRAF sii)
+    , actionStartRAF         = \sii -> callAction queue (StartRAF sii)
+    , actionStopRAF          = \sii -> callAction queue (StopRAF sii)
     }
 
 

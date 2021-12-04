@@ -34,6 +34,9 @@ data InterfaceAction =
   | ResetStatsFrames
   | ResetStatsPackets
   | BindRAF !Text
+  | UnbindRAF !Text
+  | StartRAF !Text 
+  | StopRAF !Text
   deriving (Generic)
 
 
@@ -85,6 +88,12 @@ processMsg ResetStatsPackets = do
     atomically $ writeTVar pktVar initialStatistics
 processMsg (BindRAF sii) = do
     sleCommand (SLEBindRaf sii)
+processMsg (UnbindRAF sii) = do
+    sleCommand (SLEUnbindRaf sii)
+processMsg (StartRAF sii) = do 
+    sleCommand (SLEStartRaf sii)
+processMsg (StopRAF sii) = do 
+    sleCommand (SLEStopRaf sii)
 
 -- processMsg RequestAllTMFrames = do 
 --   env <- ask

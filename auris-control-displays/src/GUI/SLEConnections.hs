@@ -63,6 +63,9 @@ setupRAFConnection rafCfg = do
 
     vers    <- getObject builder "labelRAFVersion" Label
 
+    buttonSetLabel bind  bindLabel
+    buttonSetLabel start startLabel
+
     entrySetText sii  (cfgSleRafSII rafCfg)
     entrySetText peer (cfgSleRafPeerID rafCfg)
     entrySetText port (cfgSleRafPort rafCfg)
@@ -86,24 +89,43 @@ setupRAFConnection rafCfg = do
 
 
 bindLabel :: Text
-bindLabel = "Bind"
+bindLabel = "BIND"
 
 unbindLabel :: Text
-unbindLabel = "Unbind"
+unbindLabel = "UNBIND"
 
 startLabel :: Text
-startLabel = "Start"
+startLabel = "START"
 
 stopLabel :: Text
-stopLabel = "Stop"
+stopLabel = "STOP"
 
 
 setupCallbacks :: RafSiiStatus -> Interface -> IO ()
 setupCallbacks gui interface = do
     void $ Gtk.on (_rafBtBind gui) #clicked $ do
-        callInterface interface actionBindRAF (_rafSII gui)
+        label <- buttonGetLabel (_rafBtBind gui)
+        if
+            | label == bindLabel -> callInterface interface
+                                                  actionBindRAF
+                                                  (_rafSII gui)
+            | label == unbindLabel -> callInterface interface
+                                                    actionUnbindRAF
+                                                    (_rafSII gui)
+            | otherwise -> return ()
 
-    return () 
+    void $ Gtk.on (_rafBtStart gui) #clicked $ do
+        label <- buttonGetLabel (_rafBtStart gui)
+        if
+            | label == startLabel -> callInterface interface
+                                                   actionStartRAF
+                                                   (_rafSII gui)
+            | label == stopLabel -> callInterface interface
+                                                  actionStopRAF
+                                                  (_rafSII gui)
+            | otherwise -> return ()
+
+    return ()
 
 updateRafStatus :: RafSiiStatus -> SleServiceStatus -> IO ()
 updateRafStatus g SleServiceUninit = do
@@ -135,5 +157,5 @@ updateRafStatus g SleServiceActive = do
     entrySetText (_rafStatus g) (textDisplay SleServiceActive)
     buttonSetLabel (_rafBtBind g)  unbindLabel
     buttonSetLabel (_rafBtStart g) stopLabel
-    widgetSetSensitive (_rafBtBind g)  True
+    widgetSetSensitive (_rafBtBind g)  False
     widgetSetSensitive (_rafBtStart g) True

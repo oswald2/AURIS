@@ -16,7 +16,7 @@ module GUI.TCTab
 import           RIO
 import           RIO.Partial                    ( toEnum )
 import qualified RIO.Text                      as T
-import qualified RIO.ByteString                as B
+-- import qualified RIO.ByteString                as B
 import           RIO.ByteString.Lazy            ( toStrict
                                                 , fromStrict
                                                 )
