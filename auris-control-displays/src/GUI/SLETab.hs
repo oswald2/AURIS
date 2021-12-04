@@ -3,7 +3,7 @@ module GUI.SLETab
     ( SLETab
     , GUI.SLETab.setupCallbacks
     , createSLETab
-    , updateRAFStatus
+    , updateSiStatus
     ) where
 
 import           GI.Gtk                        as Gtk
@@ -21,7 +21,7 @@ import           Interface.Interface
 
 data SLETab = SLETab
     { sleTabConnBox   :: !Box
-    , sleRafStatusMap :: !(HashMap Text RafSiiStatus)
+    , sleSiStatusMap :: !(HashMap Text SIStatus)
     }
 
 
@@ -47,14 +47,14 @@ createSLETab cfg builder = do
             let instances = cfgSleInstances sleCfg
             entrySetText peer (cfgSlePeerID sleCfg)
 
-            (rafMap, _rcfMap, _cltuMap) <- foldM
+            siMap <- foldM
                 (setupInstance sleConnBox)
-                (HM.empty, HM.empty, HM.empty)
+                HM.empty
                 instances
 
             let
                 g = SLETab { sleTabConnBox   = sleConnBox
-                           , sleRafStatusMap = rafMap
+                           , sleSiStatusMap = siMap
                            }
             pure (Just g)
 #else 
@@ -63,24 +63,29 @@ createSLETab cfg builder = do
 #endif 
 
   where
-    setupInstance parent (rafMap, rcfMap, cltuMap) (SLEInstRAF rafCfg) = do
+    setupInstance parent hm (SLEInstRAF rafCfg) = do
         conn <- setupRAFConnection rafCfg
         addRafConnection parent conn
-        let newRafMap = HM.insert (cfgSleRafSII rafCfg) conn rafMap
-        pure (newRafMap, rcfMap, cltuMap)
+        let newHM = HM.insert (cfgSleRafSII rafCfg) (RAFStatus conn) hm
+        pure newHM
+    setupInstance parent hm (SLEInstFCLTU cltuCfg) = do 
+        conn <- setupCLTUConnection cltuCfg
+        addCltuConnection parent conn
+        let newHM = HM.insert (cfgSleCltuSII cltuCfg) (CLTUStatus conn) hm
+        pure newHM
 
     setupInstance _parent maps SLEInstRCF   = pure maps 
-    setupInstance _parent maps SLEInstFCLTU = pure maps 
 
 
 setupCallbacks :: SLETab -> Interface -> IO () 
 setupCallbacks gui interface = do 
-    forM_ (HM.toList (sleRafStatusMap gui)) $ \(_, conn) -> do 
+    forM_ (HM.toList (sleSiStatusMap gui)) $ \(_, conn) -> do 
         GUI.SLEConnections.setupCallbacks conn interface 
 
 
-updateRAFStatus :: SLETab -> Text -> SleServiceStatus -> IO () 
-updateRAFStatus gui sii status = do 
-    case HM.lookup sii (sleRafStatusMap gui) of 
-        Just raf -> updateRafStatus raf status 
+updateSiStatus :: SLETab -> Text -> SleServiceStatus -> IO () 
+updateSiStatus gui sii status = do 
+    case HM.lookup sii (sleSiStatusMap gui) of 
+        Just (RAFStatus raf) -> updateRafStatus raf status 
+        Just (CLTUStatus cltu) -> updateCltuStatus cltu status
         Nothing -> pure () 

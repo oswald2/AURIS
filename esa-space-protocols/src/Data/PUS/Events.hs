@@ -194,6 +194,12 @@ data EventSLE =
     | EVSLERafUnbind SleSII 
     | EVSLERafStart SleSII 
     | EVSLERafStop SleSII 
+    | EVSLEInitFcltu SleSII SleVersion Text Text
+    | EVSLEFcltuInitialised SleSII
+    | EVSLEFcltuBind SleSII 
+    | EVSLEFcltuUnbind SleSII 
+    | EVSLEFcltuStart SleSII 
+    | EVSLEFcltuStop SleSII 
     deriving (Show, Generic)
 
 instance Serialise EventSLE

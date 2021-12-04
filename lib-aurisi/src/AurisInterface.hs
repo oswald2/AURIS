@@ -142,19 +142,35 @@ eventProcessor g (EventPUS (EVTelemetry (EVTMStatistics stats))) = do
 
 #ifdef HAS_SLE 
 eventProcessor g (EventPUS (EVSLE (EVSLERafInitialised (SleSII sii)))) = do 
-    postGUIASync $ mwSetSleRafState g sii SleServiceInit
+    postGUIASync $ mwSetSleSiState g sii SleServiceInit
 
 eventProcessor g (EventPUS (EVSLE (EVSLERafBind (SleSII sii)))) = do 
-    postGUIASync $ mwSetSleRafState g sii SleServiceBound
+    postGUIASync $ mwSetSleSiState g sii SleServiceBound
 
 eventProcessor g (EventPUS (EVSLE (EVSLERafUnbind (SleSII sii)))) = do 
-    postGUIASync $ mwSetSleRafState g sii SleServiceInit
+    postGUIASync $ mwSetSleSiState g sii SleServiceInit
 
 eventProcessor g (EventPUS (EVSLE (EVSLERafStart (SleSII sii)))) = do 
-    postGUIASync $ mwSetSleRafState g sii SleServiceActive
+    postGUIASync $ mwSetSleSiState g sii SleServiceActive
 
 eventProcessor g (EventPUS (EVSLE (EVSLERafStop (SleSII sii)))) = do 
-    postGUIASync $ mwSetSleRafState g sii SleServiceBound
+    postGUIASync $ mwSetSleSiState g sii SleServiceBound
+
+eventProcessor g (EventPUS (EVSLE (EVSLEFcltuInitialised (SleSII sii)))) = do 
+    postGUIASync $ mwSetSleSiState g sii SleServiceInit
+
+eventProcessor g (EventPUS (EVSLE (EVSLEFcltuBind (SleSII sii)))) = do 
+    postGUIASync $ mwSetSleSiState g sii SleServiceBound
+
+eventProcessor g (EventPUS (EVSLE (EVSLEFcltuUnbind (SleSII sii)))) = do 
+    postGUIASync $ mwSetSleSiState g sii SleServiceInit
+
+eventProcessor g (EventPUS (EVSLE (EVSLEFcltuStart (SleSII sii)))) = do 
+    postGUIASync $ mwSetSleSiState g sii SleServiceActive
+
+eventProcessor g (EventPUS (EVSLE (EVSLEFcltuStop (SleSII sii)))) = do 
+    postGUIASync $ mwSetSleSiState g sii SleServiceBound
+
 
 #endif 
 

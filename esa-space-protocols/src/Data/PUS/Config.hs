@@ -22,6 +22,8 @@ module Data.PUS.Config
     , SLEConfig(..)
     , SLEInstanceConfig(..)
     , SLERafConfig(..)
+    , SLECltuConfig(..)
+    , SlePlop(..)
     , SLEDeliveryMode(..)
     , SLEVersion(..)
     , sleInstanceCfgSII
@@ -118,11 +120,12 @@ instance ToJSON EDENConfig where
 data SLEInstanceConfig =
   SLEInstRAF SLERafConfig
   | SLEInstRCF
-  | SLEInstFCLTU
+  | SLEInstFCLTU SLECltuConfig
   deriving (Eq, Generic)
 
-sleInstanceCfgSII :: SLEInstanceConfig -> Text 
+sleInstanceCfgSII :: SLEInstanceConfig -> Text
 sleInstanceCfgSII (SLEInstRAF raf) = cfgSleRafSII raf
+sleInstanceCfgSII (SLEInstFCLTU cltu)  = cfgSleCltuSII cltu
 sleInstanceCfgSII _ = "undefined"
 
 
@@ -153,7 +156,7 @@ instance FromJSON SLEVersion
 instance ToJSON SLEVersion where
     toEncoding = genericToEncoding defaultOptions
 
-instance Display SLEVersion where 
+instance Display SLEVersion where
     display SLEVersion1 = "1"
     display SLEVersion2 = "2"
     display SLEVersion3 = "3"
@@ -176,6 +179,33 @@ instance FromJSON SLERafConfig
 instance ToJSON SLERafConfig where
     toEncoding = genericToEncoding defaultOptions
 
+
+data SlePlop =
+  SlePLOP1
+  | SlePLOP2
+  deriving (Eq, Ord, Enum, Generic)
+
+instance FromJSON SlePlop
+instance ToJSON SlePlop where
+    toEncoding = genericToEncoding defaultOptions
+
+
+data SLECltuConfig = SLECltuConfig
+    { cfgSleCltuSII          :: !Text
+    , cfgSleCltuVersion      :: !SLEVersion
+    , cfgSleCltuPeerID       :: !Text
+    , cfgSleCltuPort         :: !Text
+    , cfgSleCltuBufferSize   :: !Word64
+    , cfgSleCltuPlopInEffect :: !SlePlop
+    }
+    deriving (Eq, Generic)
+
+instance FromJSON SLECltuConfig
+instance ToJSON SLECltuConfig where
+    toEncoding = genericToEncoding defaultOptions
+
+
+
 data SLEConfig = SLEConfig
     {
     -- | Path to the SLE config file for the Service Element 
@@ -183,7 +213,7 @@ data SLEConfig = SLEConfig
     -- | Path to the SLE config file for the Proxy
     , cfgSleProxyConfig :: !FilePath
     -- | The peer ID of AURIS itself
-    , cfgSlePeerID      :: !Text 
+    , cfgSlePeerID      :: !Text
     -- | A list of instance configurations
     , cfgSleInstances   :: [SLEInstanceConfig]
     }
@@ -327,14 +357,22 @@ defaultSleConfig = SLEConfig
     , cfgSlePeerID      = "AURIS"
     , cfgSleInstances   =
         [ SLEInstRAF SLERafConfig
-              { cfgSleRafSII = "sagr=3.spack=facility-PASS1.rsl-fg=1.raf=onlc1"
-              , cfgSleRafVersion      = SLEVersion3
-              , cfgSleRafPeerID       = "PARAGONTT"
-              , cfgSleRafPort         = "PORT_TM1"
-              , cfgSleRafDeliveryMode = SLEOnlineComplete
-              , cfgSleRafBufferSize   = 100
-              , cfgSleRafLatencyLimit = 1
-              }
+            { cfgSleRafSII = "sagr=3.spack=facility-PASS1.rsl-fg=1.raf=onlc1"
+            , cfgSleRafVersion      = SLEVersion3
+            , cfgSleRafPeerID       = "PARAGONTT"
+            , cfgSleRafPort         = "PORT_TM1"
+            , cfgSleRafDeliveryMode = SLEOnlineComplete
+            , cfgSleRafBufferSize   = 100
+            , cfgSleRafLatencyLimit = 1
+            }
+        , SLEInstFCLTU SLECltuConfig
+            { cfgSleCltuSII = "sagr=3.spack=facility-PASS1.rsl-fg=1.cltu=cltu1"
+            , cfgSleCltuVersion      = SLEVersion3
+            , cfgSleCltuPeerID       = "PARAGONTT"
+            , cfgSleCltuPort         = "PORT_TC1"
+            , cfgSleCltuBufferSize   = 100
+            , cfgSleCltuPlopInEffect = SlePLOP2
+            }
         ]
     }
 

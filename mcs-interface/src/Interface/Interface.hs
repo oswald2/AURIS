@@ -68,6 +68,10 @@ data ActionTable = ActionTable
     , actionUnbindRAF        :: Text -> IO ()
     , actionStartRAF         :: Text -> IO ()
     , actionStopRAF          :: Text -> IO ()
+    , actionBindCLTU         :: Text -> IO ()
+    , actionUnbindCLTU       :: Text -> IO ()
+    , actionStartCLTU        :: Text -> IO ()
+    , actionStopCLTU         :: Text -> IO ()
     }
 
 -- | Data type for the event handler.
@@ -110,6 +114,10 @@ actionTable queue Nothing = ActionTable
     , actionUnbindRAF        = \sii -> callAction queue (UnbindRAF sii)
     , actionStartRAF         = \sii -> callAction queue (StartRAF sii)
     , actionStopRAF          = \sii -> callAction queue (StopRAF sii)
+    , actionBindCLTU         = \sii -> callAction queue (BindCLTU sii)
+    , actionUnbindCLTU       = \sii -> callAction queue (UnbindCLTU sii)
+    , actionStartCLTU        = \sii -> callAction queue (StartCLTU sii)
+    , actionStopCLTU         = \sii -> callAction queue (StopCLTU sii)
     }
 
 

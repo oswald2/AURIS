@@ -2205,6 +2205,8 @@ Author: Michael Oswald
                               <object class="GtkLabel">
                                 <property name="visible">True</property>
                                 <property name="can_focus">False</property>
+                                <property name="margin_left">3</property>
+                                <property name="margin_right">3</property>
                                 <property name="label" translatable="yes">AURIS Peer ID: </property>
                               </object>
                               <packing>
@@ -2217,6 +2219,8 @@ Author: Michael Oswald
                               <object class="GtkEntry" id="entrySLEPeerID">
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
+                                <property name="margin_left">3</property>
+                                <property name="margin_right">3</property>
                                 <property name="editable">False</property>
                                 <property name="width_chars">12</property>
                                 <property name="text" translatable="yes">AURIS</property>

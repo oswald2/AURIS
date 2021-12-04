@@ -12,6 +12,7 @@
     "SLEsi.C": "cpp",
     "Helpers.H": "cpp",
     "AplServiceInform.C": "cpp",
-    "AplGUID.C": "cpp"
+    "AplGUID.C": "cpp",
+    "SLEcltu.C": "cpp"
   }
 }

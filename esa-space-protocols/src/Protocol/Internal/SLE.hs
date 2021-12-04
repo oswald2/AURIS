@@ -25,6 +25,7 @@ import           General.Hexdump
 import           General.Time
 import           General.Types
 
+import           Protocol.Internal.FCLTU
 import           Protocol.Internal.RAF
 import           Protocol.Internal.SLETypes
 import           Protocol.ProtocolInterfaces
@@ -61,9 +62,8 @@ startSLE sleCfg vcMap cmdQueue = do
         pure (sii, q)
 
     commandThread queues = do
-        let sendTo sii' cmd = do
-                let sii = SleSII sii'
-                case HM.lookup sii queues of
+        let sendTo sii cmd = do
+                case HM.lookup (SleSII sii) queues of
                     Just q -> do
                         atomically $ writeTBQueue q cmd
                     Nothing -> pure ()
@@ -76,10 +76,15 @@ startSLE sleCfg vcMap cmdQueue = do
                 -- we loop over, as we use race_ above and wait for the 
                 -- interfaces to terminate. Our thread will be termianted
                 -- automatically when all others are shutdown
-            SLEBindRaf   sii' -> sendTo sii' RafBind
-            SLEUnbindRaf sii' -> sendTo sii' RafUnbind
-            SLEStartRaf  sii' -> sendTo sii' RafStart
-            SLEStopRaf   sii' -> sendTo sii' RafStop
+            SLEBindRaf     sii -> sendTo sii RafBind
+            SLEUnbindRaf   sii -> sendTo sii RafUnbind
+            SLEStartRaf    sii -> sendTo sii RafStart
+            SLEStopRaf     sii -> sendTo sii RafStop
+
+            SLEBindFcltu   sii -> sendTo sii FcltuBind
+            SLEUnbindFcltu sii -> sendTo sii FcltuUnbind
+            SLEStartFcltu  sii -> sendTo sii FcltuStart
+            SLEStopFcltu   sii -> sendTo sii FcltuStop
 
 
         commandThread queues
@@ -136,6 +141,36 @@ startInstance sle peerID (SLEInstRAF rafCfg) (_sii, queue) = do
             <> " returned: "
             <> display err
     pure ()
+
+startInstance sle peerID (SLEInstFCLTU cltuCfg) (_sii, queue) = do
+    let version = convVersion (cfgSleCltuVersion cltuCfg)
+        sii     = SleSII (cfgSleCltuSII cltuCfg)
+
+    raiseEvent
+        (EVSLE (EVSLEInitFcltu sii version peerID (cfgSleCltuPort cltuCfg)))
+
+    logDebug $ "Starting FCLTU instance for " <> display (cfgSleCltuSII cltuCfg)
+    res <- withSleFCLTUUser sle
+                            (cfgSleCltuSII cltuCfg)
+                            (convVersion (cfgSleCltuVersion cltuCfg))
+                            (cfgSleCltuPeerID cltuCfg)
+                            (cfgSleCltuPort cltuCfg)
+                            Nothing
+                            Nothing
+                            (cfgSleCltuBufferSize cltuCfg)
+                            (convPlop (cfgSleCltuPlopInEffect cltuCfg))
+                            (runFCLTU peerID cltuCfg sii queue)
+    forM_ res $ \err ->
+        logError
+            $  "SLE Instance "
+            <> display (cfgSleCltuSII cltuCfg)
+            <> " returned: "
+            <> display err
+    pure ()
+  where
+    convPlop SlePLOP1 = SlePlop1
+    convPlop SlePLOP2 = SlePlop2
+
 startInstance _ _ _ _ = pure ()
 
 
@@ -309,14 +344,27 @@ opReturnCB state hm sii seqCnt opType appID result invokeID dat =
             <> " Data: "
             <> display dat
         case opType of
-            SleOpBind -> case result of
-                SleResultPositive -> sendToSii sii (RafBindSuccess sii)
-                SleResultNegative -> sendToSii sii (RafBindError sii dat)
-                _                 -> pure ()
-            SleOpStart -> case result of
-                SleResultPositive -> sendToSii sii (RafStartSuccess sii)
-                SleResultNegative -> sendToSii sii (RafStartError sii dat)
-                _                 -> pure ()
+            SleOpBind -> case appID of
+                SleRtnAllFrames -> case result of
+                    SleResultPositive -> sendToSii sii (RafBindSuccess sii)
+                    SleResultNegative -> sendToSii sii (RafBindError sii dat)
+                    _                 -> pure ()
+                SleFwdCltu -> case result of
+                    SleResultPositive -> sendToSii sii (FcltuBindSuccess sii)
+                    SleResultNegative -> sendToSii sii (FcltuBindError sii dat)
+                    _                 -> pure ()
+                _ -> pure ()
+            SleOpStart -> case appID of
+                SleRtnAllFrames -> case result of
+                    SleResultPositive -> sendToSii sii (RafStartSuccess sii)
+                    SleResultNegative -> sendToSii sii (RafStartError sii dat)
+                    _                 -> pure ()
+                SleFwdCltu -> case result of
+                    SleResultPositive -> sendToSii sii (FcltuStartSuccess sii)
+                    SleResultNegative ->
+                        sendToSii sii (FcltuStartError sii dat)
+                    _ -> pure ()
+                _ -> pure ()
             _ -> pure ()
   where
     sendToSii sii2 cmd = do

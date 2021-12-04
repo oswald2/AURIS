@@ -35,7 +35,7 @@ module GUI.MainWindow
     , mwMenuItemImportMIB
     , mwMenuItemQuit
     , mwLiveState
-    , mwSetSleRafState
+    , mwSetSleSiState
     ) where
 
 import           Control.Lens                   ( makeLenses )
@@ -307,6 +307,8 @@ mwSetConnectionState
 mwSetConnectionState g = connTabSetConnection (_mwConnTab g)
 
 
-mwSetSleRafState :: MainWindow -> Text -> SleServiceStatus -> IO ()
-mwSetSleRafState gui sii status = do
-    forM_ (gui ^. mwSLETab) $ \tab -> updateRAFStatus tab sii status
+mwSetSleSiState :: MainWindow -> Text -> SleServiceStatus -> IO ()
+mwSetSleSiState gui sii status = do
+    forM_ (gui ^. mwSLETab) $ \tab -> updateSiStatus tab sii status
+
+    

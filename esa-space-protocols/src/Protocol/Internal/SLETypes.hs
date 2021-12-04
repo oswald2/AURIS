@@ -22,6 +22,14 @@ data SleCmd =
   | RafBindError SleSII Text
   | RafStartSuccess SleSII
   | RafStartError SleSII Text
+  | FcltuBind 
+  | FcltuUnbind
+  | FcltuStart
+  | FcltuStop
+  | FcltuBindSuccess SleSII
+  | FcltuBindError SleSII Text
+  | FcltuStartSuccess SleSII
+  | FcltuStartError SleSII Text
   | Terminate
   deriving (Show)
 

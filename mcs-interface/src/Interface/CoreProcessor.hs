@@ -37,6 +37,10 @@ data InterfaceAction =
   | UnbindRAF !Text
   | StartRAF !Text 
   | StopRAF !Text
+  | BindCLTU !Text
+  | UnbindCLTU !Text
+  | StartCLTU !Text 
+  | StopCLTU !Text
   deriving (Generic)
 
 
@@ -94,6 +98,14 @@ processMsg (StartRAF sii) = do
     sleCommand (SLEStartRaf sii)
 processMsg (StopRAF sii) = do 
     sleCommand (SLEStopRaf sii)
+processMsg (BindCLTU sii) = do
+    sleCommand (SLEBindFcltu sii)
+processMsg (UnbindCLTU sii) = do
+    sleCommand (SLEUnbindFcltu sii)
+processMsg (StartCLTU sii) = do 
+    sleCommand (SLEStartFcltu sii)
+processMsg (StopCLTU sii) = do 
+    sleCommand (SLEStopFcltu sii)
 
 -- processMsg RequestAllTMFrames = do 
 --   env <- ask

@@ -64,18 +64,6 @@
             "cfgSlePeerID": "EGSCC",
             "cfgSleInstances": [
                 {
-                    "tag": "SLEInstRAF",
-                    "contents": {
-                        "cfgSleRafPort": "TMPORT",
-                        "cfgSleRafPeerID": "PARAGONTT",
-                        "cfgSleRafBufferSize": 100,
-                        "cfgSleRafLatencyLimit": 1,
-                        "cfgSleRafVersion": "SLEVersion3",
-                        "cfgSleRafDeliveryMode": "SLEOnlineComplete",
-                        "cfgSleRafSII": "sagr=3.spack=facility-PASS1.rsl-fg=1.raf=onlc1"
-                    }
-                },
-                {
                     "tag": "SLEInstFCLTU",
                     "contents": {
                         "cfgSleCltuPort": "TCPORT",

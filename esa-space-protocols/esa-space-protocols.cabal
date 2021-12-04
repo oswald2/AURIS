@@ -190,6 +190,7 @@ library
             Protocol.Internal.SLETypes
             Protocol.Internal.SLE 
             Protocol.Internal.RAF
+            Protocol.Internal.FCLTU
     else 
         exposed-modules:
             Protocol.Internal.SLEDummy
