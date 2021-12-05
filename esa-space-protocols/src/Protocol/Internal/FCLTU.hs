@@ -5,8 +5,11 @@ module Protocol.Internal.FCLTU
 
 import           RIO
 
+import           Conduit
+
 import           Control.PUS.Classes
 
+import           Data.PUS.CLTU
 import           Data.PUS.Config
 import           Data.PUS.Events
 
@@ -14,6 +17,8 @@ import           SLE.Interface
 import           SLE.Types
 
 import           Protocol.Internal.SLETypes
+
+
 
 data CltuState =
     Terminated
@@ -34,7 +39,7 @@ runFCLTU peerID cltuCfg sii queue sle = do
     raiseEvent (EVSLE (EVSLEFcltuInitialised sii))
 
     loop Init
-    
+
     pure Nothing
 
   where
@@ -51,20 +56,23 @@ runFCLTU peerID cltuCfg sii queue sle = do
                 res <- liftIO $ fcltuStop sle
                 forM_ res $ \err -> logError $ "SLE FCLTU STOP: " <> display err
                 res1 <- liftIO $ fcltuUnbind sle SleUBREnd
-                forM_ res1 $ \err -> logError $ "SLE FCLTU UNBIND: " <> display err
+                forM_ res1
+                    $ \err -> logError $ "SLE FCLTU UNBIND: " <> display err
             Bound -> do
                 res <- liftIO $ fcltuUnbind sle SleUBREnd
-                forM_ res $ \err -> logError $ "SLE FCLTU UNBIND: " <> display err
+                forM_ res
+                    $ \err -> logError $ "SLE FCLTU UNBIND: " <> display err
             _ -> pure ()
         pure Terminated
 
-    processCmd Init FcltuBind = do 
-        logInfo $ "Initiating FCLTU BIND for " <> display sii 
-        bindRes <- liftIO $ fcltuBind sle
-                                    (cfgSleCltuPeerID cltuCfg)
-                                    (cfgSleCltuPort cltuCfg)
-                                    peerID
-                                    (convVersion (cfgSleCltuVersion cltuCfg))
+    processCmd Init FcltuBind = do
+        logInfo $ "Initiating FCLTU BIND for " <> display sii
+        bindRes <- liftIO $ fcltuBind
+            sle
+            (cfgSleCltuPeerID cltuCfg)
+            (cfgSleCltuPort cltuCfg)
+            peerID
+            (convVersion (cfgSleCltuVersion cltuCfg))
         case bindRes of
             Just err ->
                 logError
@@ -72,15 +80,15 @@ runFCLTU peerID cltuCfg sii queue sle = do
                     <> display sii
                     <> ": "
                     <> display err
-            Nothing -> pure () 
-        pure Init 
+            Nothing -> pure ()
+        pure Init
 
 
     processCmd Init (FcltuBindSuccess sii2) = do
         logInfo $ "FCLTU BIND SUCCEEDED for" <> display sii2
         raiseEvent (EVSLE (EVSLEFcltuBind sii))
         pure Bound
-    
+
     processCmd Init (FcltuBindError sii2 diag) = do
         logError
             $  "FCLTU BIND for "
@@ -91,22 +99,22 @@ runFCLTU peerID cltuCfg sii queue sle = do
 
     processCmd _ (PeerAbort sii2 _diag _originator) = do
         raiseEvent (EVSLE (EVSLEFcltuInitialised sii2))
-        pure Init 
+        pure Init
 
     processCmd Bound FcltuUnbind = do
         res <- liftIO $ fcltuUnbind sle SleUBROtherReason
-        case res of 
-            Just err -> do 
+        case res of
+            Just err -> do
                 logError $ "SLE FCLTU UNBIND: " <> display err
-                pure Bound 
-            Nothing -> do 
+                pure Bound
+            Nothing -> do
                 raiseEvent (EVSLE (EVSLEFcltuUnbind sii))
                 pure Init
 
-    processCmd Bound FcltuStart = do 
+    processCmd Bound FcltuStart = do
         res <- liftIO $ fcltuStart sle (CLTUID (-1))
         forM_ res $ \err -> logError $ "SLE FCLTU START: " <> display err
-        pure Bound 
+        pure Bound
 
     processCmd Bound (FcltuStartSuccess sii2) = do
         logInfo $ "FCLTU START SUCCEEDED for" <> display sii2
@@ -123,11 +131,11 @@ runFCLTU peerID cltuCfg sii queue sle = do
 
     processCmd Active FcltuStop = do
         res <- liftIO $ fcltuStop sle
-        case res of 
-            Just err -> do 
+        case res of
+            Just err -> do
                 logError $ "SLE FCLTU STOP: " <> display err
-                pure Active 
-            Nothing -> do 
+                pure Active
+            Nothing -> do
                 raiseEvent (EVSLE (EVSLEFcltuStop sii))
                 pure Bound
 
@@ -139,6 +147,33 @@ runFCLTU peerID cltuCfg sii queue sle = do
             <> " in state "
             <> displayShow state
         pure state
+
+
+
+
+cltuSendC :: (MonadIO m) => SLE -> ConduitT EncodedCLTU Void m ()
+cltuSendC sle = go (CLTUID 0)
+  where
+    go :: (MonadIO m) => CLTUID -> ConduitT EncodedCLTU Void m ()
+    go cltuID = do
+        awaitForever $ \(EncodedCLTU cltu _rqst) -> do
+            res <- liftIO
+                $   sendCLTU sle
+                             cltuID
+                             Nothing
+                             Nothing
+                             0
+                             SleSnProduceNotification
+                             cltu
+            case res of 
+                SleOK    -> go (cltuID + 1)
+                SleError -> do
+                    void $ liftIO $ cltuPeerAbort
+                        sle
+                        SlePADCommunicationsFailure
+                SleSuspend -> do
+                    -- TODO wait for signal 
+                    go (cltuID + 1)
 
 
 
