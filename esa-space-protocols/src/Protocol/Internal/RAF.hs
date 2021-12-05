@@ -14,6 +14,7 @@ import           SLE.Interface
 import           SLE.Types
 
 import           Protocol.Internal.SLETypes
+import           Protocol.ProtocolInterfaces
 
 data RafState =
     Terminated
@@ -22,6 +23,10 @@ data RafState =
     | Active
     deriving (Show)
 
+rafToIF :: RAF -> ProtocolInterface 
+rafToIF raf = IfSle (SleRAFIf (rafToWord8 raf)) 
+
+
 runRAF
     :: (MonadUnliftIO m, MonadReader env m, HasRaiseEvent env, HasLogFunc env)
     => Text
@@ -29,15 +34,18 @@ runRAF
     -> SleSII
     -> TBQueue SleCmd
     -> SLE
+    -> RAF 
     -> m (Maybe Text)
-runRAF peerID rafCfg sii queue sle = do
-    raiseEvent (EVSLE (EVSLERafInitialised sii))
+runRAF peerID rafCfg sii queue sle raf = do
+    raiseEvent (EVSLE (EVSLERafInitialised sii (rafToIF raf)))
 
     loop Init
     
     pure Nothing
 
   where
+    protIF = rafToIF raf 
+
     loop state = do
         cmd   <- atomically $ readTBQueue queue
         newSt <- processCmd state cmd
@@ -48,12 +56,12 @@ runRAF peerID rafCfg sii queue sle = do
     processCmd state Terminate = do
         case state of
             Active -> do
-                res <- liftIO $ rafStop sle
+                res <- liftIO $ rafStop sle raf 
                 forM_ res $ \err -> logError $ "SLE STOP: " <> display err
-                res1 <- liftIO $ rafUnbind sle SleUBREnd
+                res1 <- liftIO $ rafUnbind sle raf SleUBREnd
                 forM_ res1 $ \err -> logError $ "SLE UNBIND: " <> display err
             Bound -> do
-                res <- liftIO $ rafUnbind sle SleUBREnd
+                res <- liftIO $ rafUnbind sle raf SleUBREnd
                 forM_ res $ \err -> logError $ "SLE UNBIND: " <> display err
             _ -> pure ()
         pure Terminated
@@ -61,6 +69,7 @@ runRAF peerID rafCfg sii queue sle = do
     processCmd Init RafBind = do 
         logInfo $ "Initiating BIND for " <> display sii 
         bindRes <- liftIO $ rafBind sle
+                                    raf 
                                     (cfgSleRafPeerID rafCfg)
                                     (cfgSleRafPort rafCfg)
                                     peerID
@@ -78,7 +87,7 @@ runRAF peerID rafCfg sii queue sle = do
 
     processCmd Init (RafBindSuccess sii2) = do
         logInfo $ "BIND SUCCEEDED for" <> display sii2
-        raiseEvent (EVSLE (EVSLERafBind sii))
+        raiseEvent (EVSLE (EVSLERafBind sii protIF))
         pure Bound
     
     processCmd Init (RafBindError sii2 diag) = do
@@ -90,27 +99,27 @@ runRAF peerID rafCfg sii queue sle = do
         pure Init
 
     processCmd _ (PeerAbort sii2 _diag _originator) = do
-        raiseEvent (EVSLE (EVSLERafInitialised sii2))
+        raiseEvent (EVSLE (EVSLERafInitialised sii2 protIF))
         pure Init 
 
     processCmd Bound RafUnbind = do
-        res <- liftIO $ rafUnbind sle SleUBROtherReason
+        res <- liftIO $ rafUnbind sle raf SleUBROtherReason
         case res of 
             Just err -> do 
                 logError $ "SLE UNBIND: " <> display err
                 pure Bound 
             Nothing -> do 
-                raiseEvent (EVSLE (EVSLERafUnbind sii))
+                raiseEvent (EVSLE (EVSLERafUnbind sii protIF))
                 pure Init
 
     processCmd Bound RafStart = do 
-        res <- liftIO $ rafStart sle Nothing Nothing SleRafAllFrames
+        res <- liftIO $ rafStart sle raf Nothing Nothing SleRafAllFrames
         forM_ res $ \err -> logError $ "SLE START: " <> display err
         pure Bound 
 
     processCmd Bound (RafStartSuccess sii2) = do
         logInfo $ "START SUCCEEDED for" <> display sii2
-        raiseEvent (EVSLE (EVSLERafStart sii2))
+        raiseEvent (EVSLE (EVSLERafStart sii2 protIF))
         pure Active
 
     processCmd Bound (RafStartError sii2 diag) = do
@@ -122,13 +131,13 @@ runRAF peerID rafCfg sii queue sle = do
         pure Bound
 
     processCmd Active RafStop = do
-        res <- liftIO $ rafStop sle
+        res <- liftIO $ rafStop sle raf 
         case res of 
             Just err -> do 
                 logError $ "SLE STOP: " <> display err
                 pure Active 
             Nothing -> do 
-                raiseEvent (EVSLE (EVSLERafStop sii))
+                raiseEvent (EVSLE (EVSLERafStop sii protIF))
                 pure Bound
 
 

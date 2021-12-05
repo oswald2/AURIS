@@ -66,6 +66,7 @@ data EventFlag =
     | EVFlagTelemetry
     | EVFlagAlarm
     | EVFlagCOP1
+    | EVFlagSLE
     | EVFlagDB
     | EVFlagAll
     deriving (Eq, Ord, Enum, Show, Generic)
@@ -188,18 +189,18 @@ instance ToJSON EventDB where
 
 #ifdef HAS_SLE 
 data EventSLE = 
-    EVSLEInitRaf SleSII SleVersion Text Text SleDeliveryMode
-    | EVSLERafInitialised SleSII
-    | EVSLERafBind SleSII 
-    | EVSLERafUnbind SleSII 
-    | EVSLERafStart SleSII 
-    | EVSLERafStop SleSII 
-    | EVSLEInitFcltu SleSII SleVersion Text Text
-    | EVSLEFcltuInitialised SleSII
-    | EVSLEFcltuBind SleSII 
-    | EVSLEFcltuUnbind SleSII 
-    | EVSLEFcltuStart SleSII 
-    | EVSLEFcltuStop SleSII 
+    EVSLEInitRaf !SleSII !SleVersion !Text !Text
+    | EVSLERafInitialised !SleSII !ProtocolInterface
+    | EVSLERafBind !SleSII !ProtocolInterface
+    | EVSLERafUnbind !SleSII !ProtocolInterface
+    | EVSLERafStart !SleSII !ProtocolInterface
+    | EVSLERafStop !SleSII !ProtocolInterface
+    | EVSLEInitFcltu !SleSII !SleVersion !Text !Text
+    | EVSLEFcltuInitialised !SleSII !ProtocolInterface
+    | EVSLEFcltuBind !SleSII !ProtocolInterface
+    | EVSLEFcltuUnbind !SleSII !ProtocolInterface
+    | EVSLEFcltuStart !SleSII !ProtocolInterface
+    | EVSLEFcltuStop !SleSII !ProtocolInterface
     deriving (Show, Generic)
 
 instance Serialise EventSLE

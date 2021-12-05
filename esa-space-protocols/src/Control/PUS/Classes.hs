@@ -45,7 +45,6 @@ module Control.PUS.Classes
 import           RIO                     hiding ( (^.)
                                                 , to
                                                 )
-import qualified RIO.HashMap.Partial           as HM
 
 import           Control.Lens.Getter
 

@@ -307,8 +307,8 @@ mwSetConnectionState
 mwSetConnectionState g = connTabSetConnection (_mwConnTab g)
 
 
-mwSetSleSiState :: MainWindow -> Text -> SleServiceStatus -> IO ()
-mwSetSleSiState gui sii status = do
-    forM_ (gui ^. mwSLETab) $ \tab -> updateSiStatus tab sii status
+mwSetSleSiState :: MainWindow -> Text -> ProtocolInterface -> SleServiceStatus -> IO ()
+mwSetSleSiState gui sii protIF status = do
+    forM_ (gui ^. mwSLETab) $ \tab -> updateSiStatus tab sii protIF status
 
     

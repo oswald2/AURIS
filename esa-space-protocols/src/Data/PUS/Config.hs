@@ -169,9 +169,6 @@ data SLERafConfig = SLERafConfig
     , cfgSleRafVersion      :: !SLEVersion
     , cfgSleRafPeerID       :: !Text
     , cfgSleRafPort         :: !Text
-    , cfgSleRafDeliveryMode :: !SLEDeliveryMode
-    , cfgSleRafBufferSize   :: !Word64
-    , cfgSleRafLatencyLimit :: !Word16
     }
     deriving (Eq, Generic)
 
@@ -195,8 +192,6 @@ data SLECltuConfig = SLECltuConfig
     , cfgSleCltuVersion      :: !SLEVersion
     , cfgSleCltuPeerID       :: !Text
     , cfgSleCltuPort         :: !Text
-    , cfgSleCltuBufferSize   :: !Word64
-    , cfgSleCltuPlopInEffect :: !SlePlop
     }
     deriving (Eq, Generic)
 
@@ -361,17 +356,12 @@ defaultSleConfig = SLEConfig
             , cfgSleRafVersion      = SLEVersion3
             , cfgSleRafPeerID       = "PARAGONTT"
             , cfgSleRafPort         = "PORT_TM1"
-            , cfgSleRafDeliveryMode = SLEOnlineComplete
-            , cfgSleRafBufferSize   = 100
-            , cfgSleRafLatencyLimit = 1
             }
         , SLEInstFCLTU SLECltuConfig
             { cfgSleCltuSII = "sagr=3.spack=facility-PASS1.rsl-fg=1.cltu=cltu1"
             , cfgSleCltuVersion      = SLEVersion3
             , cfgSleCltuPeerID       = "PARAGONTT"
             , cfgSleCltuPort         = "PORT_TC1"
-            , cfgSleCltuBufferSize   = 100
-            , cfgSleCltuPlopInEffect = SlePLOP2
             }
         ]
     }

@@ -113,12 +113,11 @@ startInstance
     -> m ()
 startInstance sle peerID (SLEInstRAF rafCfg) (_sii, queue) = do
     let version      = convVersion (cfgSleRafVersion rafCfg)
-        deliveryMode = convDeliveryMode (cfgSleRafDeliveryMode rafCfg)
         sii          = SleSII (cfgSleRafSII rafCfg)
 
     raiseEvent
         (EVSLE
-            (EVSLEInitRaf sii version peerID (cfgSleRafPort rafCfg) deliveryMode
+            (EVSLEInitRaf sii version peerID (cfgSleRafPort rafCfg)
             )
         )
 
@@ -130,9 +129,6 @@ startInstance sle peerID (SLEInstRAF rafCfg) (_sii, queue) = do
                           (cfgSleRafPort rafCfg)
                           Nothing
                           Nothing
-                          deliveryMode
-                          (cfgSleRafBufferSize rafCfg)
-                          (cfgSleRafLatencyLimit rafCfg)
                           (runRAF peerID rafCfg sii queue)
     forM_ res $ \err ->
         logError
@@ -157,8 +153,6 @@ startInstance sle peerID (SLEInstFCLTU cltuCfg) (_sii, queue) = do
                             (cfgSleCltuPort cltuCfg)
                             Nothing
                             Nothing
-                            (cfgSleCltuBufferSize cltuCfg)
-                            (convPlop (cfgSleCltuPlopInEffect cltuCfg))
                             (runFCLTU peerID cltuCfg sii queue)
     forM_ res $ \err ->
         logError
@@ -167,19 +161,16 @@ startInstance sle peerID (SLEInstFCLTU cltuCfg) (_sii, queue) = do
             <> " returned: "
             <> display err
     pure ()
-  where
-    convPlop SlePLOP1 = SlePlop1
-    convPlop SlePLOP2 = SlePlop2
 
 startInstance _ _ _ _ = pure ()
 
 
 
 
-convDeliveryMode :: SLEDeliveryMode -> SleDeliveryMode
-convDeliveryMode SLEOnlineComplete = SleCompleteOnline
-convDeliveryMode SLEOnlineTimely   = SleTimelyOnline
-convDeliveryMode SLEOffline        = SleOffline
+-- convDeliveryMode :: SLEDeliveryMode -> SleDeliveryMode
+-- convDeliveryMode SLEOnlineComplete = SleCompleteOnline
+-- convDeliveryMode SLEOnlineTimely   = SleTimelyOnline
+-- convDeliveryMode SLEOffline        = SleOffline
 
 
 
@@ -298,9 +289,9 @@ transferDataCB state vcMap linkType seqCnt ert cont frame = runRIO state $ do
                 <> display (HexBytes frame)
         Right tmFrame -> do
             let interf = case linkType of
-                    SleRAF       -> IfSle SleRAFIf
-                    SleRCF       -> IfSle SleRCFIf
-                    SleCLTU      -> IfSle SleFCLTUIf
+                    SleRAF       -> IfSle (SleRAFIf undefined)
+                    SleRCF       -> IfSle (SleRCFIf undefined)
+                    SleCLTU      -> IfSle (SleFCLTUIf undefined)
                     SleUnknown _ -> IfSle SleUnknownIf
 
             case decodeCdsTime ert of

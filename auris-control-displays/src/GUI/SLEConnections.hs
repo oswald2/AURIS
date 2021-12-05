@@ -18,7 +18,7 @@ import           GI.Gtk                        as Gtk
 
 import           Data.PUS.Config
 
--- import           Protocol.ProtocolInterfaces
+import           Protocol.ProtocolInterfaces
 import           Interface.Interface
 
 import           GUI.Utils
@@ -106,7 +106,7 @@ setupRAFConnection rafCfg = do
                          , _rafSII     = cfgSleRafSII rafCfg
                          }
 
-    updateRafStatus g SleServiceUninit
+    updateRafStatus g (IfSle (SleRAFIf 0)) SleServiceUninit
 
     pure g
 
@@ -147,7 +147,7 @@ setupCLTUConnection cltuCfg = do
                          , _cltuSII     = cfgSleCltuSII cltuCfg
                          }
 
-    updateCltuStatus g SleServiceUninit
+    updateCltuStatus g (IfSle (SleFCLTUIf 0)) SleServiceUninit
 
     pure g
 
@@ -222,8 +222,8 @@ setupCltuCallbacks gui interface = do
 
     return ()
 
-updateRafStatus :: RafSiiStatus -> SleServiceStatus -> IO ()
-updateRafStatus g SleServiceUninit = do
+updateRafStatus :: RafSiiStatus -> ProtocolInterface -> SleServiceStatus -> IO ()
+updateRafStatus g _protIF SleServiceUninit = do
     widgetSetName (_rafStatus g) "error-entry"
     entrySetText (_rafStatus g) (textDisplay SleServiceUninit)
     buttonSetLabel (_rafBtBind g)  bindLabel
@@ -231,7 +231,7 @@ updateRafStatus g SleServiceUninit = do
     widgetSetSensitive (_rafBtBind g)  True
     widgetSetSensitive (_rafBtStart g) False
 
-updateRafStatus g SleServiceInit = do
+updateRafStatus g _protIF SleServiceInit = do
     widgetSetName (_rafStatus g) "warn-entry"
     entrySetText (_rafStatus g) (textDisplay SleServiceInit)
     buttonSetLabel (_rafBtBind g)  bindLabel
@@ -239,7 +239,7 @@ updateRafStatus g SleServiceInit = do
     widgetSetSensitive (_rafBtBind g)  True
     widgetSetSensitive (_rafBtStart g) False
 
-updateRafStatus g SleServiceBound = do
+updateRafStatus g _protIF SleServiceBound = do
     widgetSetName (_rafStatus g) "warn-entry"
     entrySetText (_rafStatus g) (textDisplay SleServiceBound)
     buttonSetLabel (_rafBtBind g)  unbindLabel
@@ -247,7 +247,7 @@ updateRafStatus g SleServiceBound = do
     widgetSetSensitive (_rafBtBind g)  True
     widgetSetSensitive (_rafBtStart g) True
 
-updateRafStatus g SleServiceActive = do
+updateRafStatus g _protIF SleServiceActive = do
     widgetSetName (_rafStatus g) "green-entry"
     entrySetText (_rafStatus g) (textDisplay SleServiceActive)
     buttonSetLabel (_rafBtBind g)  unbindLabel
@@ -258,8 +258,8 @@ updateRafStatus g SleServiceActive = do
 
 
 
-updateCltuStatus :: CltuSiiStatus -> SleServiceStatus -> IO ()
-updateCltuStatus g SleServiceUninit = do
+updateCltuStatus :: CltuSiiStatus -> ProtocolInterface -> SleServiceStatus -> IO ()
+updateCltuStatus g _protIF SleServiceUninit = do
     widgetSetName (_cltuStatus g) "error-entry"
     entrySetText (_cltuStatus g) (textDisplay SleServiceUninit)
     buttonSetLabel (_cltuBtBind g)  bindLabel
@@ -267,7 +267,7 @@ updateCltuStatus g SleServiceUninit = do
     widgetSetSensitive (_cltuBtBind g)  True
     widgetSetSensitive (_cltuBtStart g) False
 
-updateCltuStatus g SleServiceInit = do
+updateCltuStatus g _protIF SleServiceInit = do
     widgetSetName (_cltuStatus g) "warn-entry"
     entrySetText (_cltuStatus g) (textDisplay SleServiceInit)
     buttonSetLabel (_cltuBtBind g)  bindLabel
@@ -275,7 +275,7 @@ updateCltuStatus g SleServiceInit = do
     widgetSetSensitive (_cltuBtBind g)  True
     widgetSetSensitive (_cltuBtStart g) False
 
-updateCltuStatus g SleServiceBound = do
+updateCltuStatus g _protIF SleServiceBound = do
     widgetSetName (_cltuStatus g) "warn-entry"
     entrySetText (_cltuStatus g) (textDisplay SleServiceBound)
     buttonSetLabel (_cltuBtBind g)  unbindLabel
@@ -283,7 +283,7 @@ updateCltuStatus g SleServiceBound = do
     widgetSetSensitive (_cltuBtBind g)  True
     widgetSetSensitive (_cltuBtStart g) True
 
-updateCltuStatus g SleServiceActive = do
+updateCltuStatus g _protIF SleServiceActive = do
     widgetSetName (_cltuStatus g) "green-entry"
     entrySetText (_cltuStatus g) (textDisplay SleServiceActive)
     buttonSetLabel (_cltuBtBind g)  unbindLabel

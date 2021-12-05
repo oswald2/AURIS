@@ -54,17 +54,17 @@ instance ToJSON ConnType where
     toEncoding = genericToEncoding defaultOptions
 
 data SleIf =
-    SleRAFIf
-    | SleRCFIf
-    | SleFCLTUIf
+    SleRAFIf !Word8
+    | SleRCFIf !Word8
+    | SleFCLTUIf !Word8
     | SleUnknownIf
     deriving (Eq, Ord, Show, Read ,Generic )
 
 instance Display SleIf where
-    display SleRAFIf     = "RAF"
-    display SleRCFIf     = "RCF"
-    display SleFCLTUIf   = "FCLTU"
-    display SleUnknownIf = "UNKNOWN"
+    display (SleRAFIf   x) = "RAF " <> display x
+    display (SleRCFIf   x) = "RCF " <> display x
+    display (SleFCLTUIf x) = "FCLTU " <> display x
+    display SleUnknownIf   = "UNKNOWN"
 
 instance NFData SleIf
 instance Hashable SleIf

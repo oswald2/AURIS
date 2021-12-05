@@ -18,6 +18,8 @@ import           GUI.Utils
 
 import           Interface.Interface 
 
+import           Protocol.ProtocolInterfaces
+
 
 data SLETab = SLETab
     { sleTabConnBox   :: !Box
@@ -83,9 +85,9 @@ setupCallbacks gui interface = do
         GUI.SLEConnections.setupCallbacks conn interface 
 
 
-updateSiStatus :: SLETab -> Text -> SleServiceStatus -> IO () 
-updateSiStatus gui sii status = do 
+updateSiStatus :: SLETab -> Text -> ProtocolInterface -> SleServiceStatus -> IO () 
+updateSiStatus gui sii protIF status = do 
     case HM.lookup sii (sleSiStatusMap gui) of 
-        Just (RAFStatus raf) -> updateRafStatus raf status 
-        Just (CLTUStatus cltu) -> updateCltuStatus cltu status
+        Just (RAFStatus raf) -> updateRafStatus raf protIF status 
+        Just (CLTUStatus cltu) -> updateCltuStatus cltu protIF status
         Nothing -> pure () 

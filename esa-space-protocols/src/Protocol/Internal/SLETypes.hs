@@ -1,6 +1,11 @@
 module Protocol.Internal.SLETypes
     ( SleCmd(..)
     , convVersion
+    , ResumeSignal
+    , newResumeSignal
+    , signalResume
+    , waitResume
+    , trySignalResume
     ) where
 
 
@@ -13,7 +18,7 @@ import           SLE.Types
 
 
 data SleCmd =
-  RafBind 
+  RafBind
   | RafUnbind
   | RafStart
   | RafStop
@@ -22,7 +27,7 @@ data SleCmd =
   | RafBindError SleSII Text
   | RafStartSuccess SleSII
   | RafStartError SleSII Text
-  | FcltuBind 
+  | FcltuBind
   | FcltuUnbind
   | FcltuStart
   | FcltuStop
@@ -41,3 +46,16 @@ convVersion SLEVersion2 = SleVersion2
 convVersion SLEVersion3 = SleVersion3
 convVersion SLEVersion4 = SleVersion4
 
+newtype ResumeSignal = ResumeSignal (MVar ())
+
+newResumeSignal :: (MonadIO m) => m ResumeSignal
+newResumeSignal = ResumeSignal <$> newEmptyMVar
+
+waitResume :: (MonadIO m) => ResumeSignal -> m ()
+waitResume (ResumeSignal var) = takeMVar var
+
+signalResume :: (MonadIO m) => ResumeSignal -> m ()
+signalResume (ResumeSignal var) = putMVar var ()
+
+trySignalResume :: (MonadIO m) => ResumeSignal -> m Bool
+trySignalResume (ResumeSignal var) = tryPutMVar var ()

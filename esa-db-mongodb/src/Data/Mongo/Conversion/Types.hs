@@ -234,13 +234,15 @@ instance Val SPID where
 
 
 instance Val SleIf where
-    val SleRAFIf     = String "RAF"
-    val SleRCFIf     = String "RCF"
-    val SleFCLTUIf   = String "FCLTU"
-    val SleUnknownIf = String "UNKNOWN"
+    val (SleRAFIf   x) = Doc [ "si" := String "RAF", "nr" := Int32 (fromIntegral x)]
+    val (SleRCFIf   x) = Doc [ "si" := String "RCF", "nr" := Int32 (fromIntegral x)]
+    val (SleFCLTUIf x) = Doc [ "si" := String "FCLTU", "nr" := Int32 (fromIntegral x)]
+    val SleUnknownIf   = String "UNKNOWN"
 
-    cast' (String "RAF"    ) = Just SleRAFIf
-    cast' (String "RCF"    ) = Just SleRCFIf
-    cast' (String "FCLTU"  ) = Just SleFCLTUIf
-    cast' (String "UNKNOWN") = Just SleUnknownIf
-    cast' _ = Nothing 
+    cast' (Doc doc) = do 
+        si <- lookup "si" doc 
+        nr <- lookup "nr" doc 
+        case si of 
+            String "RAF" -> Just (SleRAFIf nr) 
+            String "RCF" -> Just (SleRCFIf nr) 
+            String "FCLTU" -> Just (SleFCLTUIf nr) 
