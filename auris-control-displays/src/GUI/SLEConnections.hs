@@ -70,8 +70,8 @@ addCltuConnection parent status = do
     boxPackStart parent (_cltuFrame status) False False 5
 
 
-setupRAFConnection :: SLERafConfig -> IO RafSiiStatus
-setupRAFConnection rafCfg = do
+setupRAFConnection :: SLERafConfig -> Word8 -> IO RafSiiStatus
+setupRAFConnection rafCfg n = do
     builder <- builderNewFromResource "/auris/data/SLEStatus.glade"
 
     frame   <- getObject builder "sleRAFFrame" Frame
@@ -88,6 +88,8 @@ setupRAFConnection rafCfg = do
 
     buttonSetLabel bind  bindLabel
     buttonSetLabel start startLabel
+
+    frameSetLabel frame (Just ("RAF " <> textDisplay n <> ":"))
 
     entrySetText sii  (cfgSleRafSII rafCfg)
     entrySetText peer (cfgSleRafPeerID rafCfg)
@@ -111,8 +113,8 @@ setupRAFConnection rafCfg = do
     pure g
 
 
-setupCLTUConnection :: SLECltuConfig -> IO CltuSiiStatus
-setupCLTUConnection cltuCfg = do
+setupCLTUConnection :: SLECltuConfig -> Word8 -> IO CltuSiiStatus
+setupCLTUConnection cltuCfg n = do
     builder <- builderNewFromResource "/auris/data/SLEStatus.glade"
 
     frame   <- getObject builder "sleCLTUFrame" Frame
@@ -129,6 +131,8 @@ setupCLTUConnection cltuCfg = do
 
     buttonSetLabel bind  bindLabel
     buttonSetLabel start startLabel
+
+    frameSetLabel frame (Just ("FCLTU " <> textDisplay n <> ":"))
 
     entrySetText sii  (cfgSleCltuSII cltuCfg)
     entrySetText peer (cfgSleCltuPeerID cltuCfg)

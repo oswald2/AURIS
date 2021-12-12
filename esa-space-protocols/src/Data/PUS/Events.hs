@@ -189,7 +189,7 @@ instance ToJSON EventDB where
 
 #ifdef HAS_SLE 
 data EventSLE = 
-    EVSLEInitRaf !SleSII !SleVersion !Text !Text
+    EVSLEInitRaf !ProtocolInterface !SleSII !SleVersion !Text !Text
     | EVSLERafInitialised !SleSII !ProtocolInterface
     | EVSLERafBind !SleSII !ProtocolInterface
     | EVSLERafUnbind !SleSII !ProtocolInterface

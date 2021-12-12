@@ -65,18 +65,18 @@ createSLETab cfg builder = do
 #endif 
 
   where
-    setupInstance parent hm (SLEInstRAF rafCfg) = do
-        conn <- setupRAFConnection rafCfg
+    setupInstance parent hm (SLEInstance { cfgSleInstanceNr = n, cfgSleInstanceConfig = SLEInstRAF rafCfg }) = do
+        conn <- setupRAFConnection rafCfg n 
         addRafConnection parent conn
         let newHM = HM.insert (cfgSleRafSII rafCfg) (RAFStatus conn) hm
         pure newHM
-    setupInstance parent hm (SLEInstFCLTU cltuCfg) = do 
-        conn <- setupCLTUConnection cltuCfg
+    setupInstance parent hm (SLEInstance { cfgSleInstanceNr = n, cfgSleInstanceConfig = SLEInstFCLTU cltuCfg }) = do 
+        conn <- setupCLTUConnection cltuCfg n
         addCltuConnection parent conn
         let newHM = HM.insert (cfgSleCltuSII cltuCfg) (CLTUStatus conn) hm
         pure newHM
 
-    setupInstance _parent maps SLEInstRCF   = pure maps 
+    setupInstance _parent maps _   = pure maps 
 
 
 setupCallbacks :: SLETab -> Interface -> IO () 

@@ -45,7 +45,7 @@ startSLE
     -> m ()
 startSLE sleCfg vcMap cmdQueue = do
     state   <- ask
-    queues' <- traverse (createQueue . SleSII . sleInstanceCfgSII)
+    queues' <- traverse (createQueue . SleSII . sleInstanceCfgSII . cfgSleInstanceConfig)
         $ cfgSleInstances sleCfg
 
     let cbs    = callbacks state vcMap queues
@@ -103,21 +103,20 @@ processing sleCfg queues sle = do
     runConc threads
 
 
-
 startInstance
     :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env, HasRaiseEvent env)
     => SLE
     -> Text
-    -> SLEInstanceConfig
+    -> SLEInstance
     -> (SleSII, TBQueue SleCmd)
     -> m ()
-startInstance sle peerID (SLEInstRAF rafCfg) (_sii, queue) = do
+startInstance sle peerID (SLEInstance { cfgSleInstanceNr = rafN, cfgSleInstanceConfig = SLEInstRAF rafCfg}) (_sii, queue) = do
     let version      = convVersion (cfgSleRafVersion rafCfg)
         sii          = SleSII (cfgSleRafSII rafCfg)
 
     raiseEvent
         (EVSLE
-            (EVSLEInitRaf sii version peerID (cfgSleRafPort rafCfg)
+            (EVSLEInitRaf (IfSle (SleRAFIf rafN)) sii version peerID (cfgSleRafPort rafCfg)
             )
         )
 
@@ -138,7 +137,7 @@ startInstance sle peerID (SLEInstRAF rafCfg) (_sii, queue) = do
             <> display err
     pure ()
 
-startInstance sle peerID (SLEInstFCLTU cltuCfg) (_sii, queue) = do
+startInstance sle peerID (SLEInstance { cfgSleInstanceNr = rafN, cfgSleInstanceConfig = SLEInstFCLTU cltuCfg}) (_sii, queue) = do
     let version = convVersion (cfgSleCltuVersion cltuCfg)
         sii     = SleSII (cfgSleCltuSII cltuCfg)
 
