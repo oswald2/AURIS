@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell 
+{-# LANGUAGE TemplateHaskell, CPP
 #-}
 module Data.PUS.EventHandler
     ( filteredRaiseEvent
@@ -73,7 +73,9 @@ filteredRaiseEvent cfg action e@EVAlarms{} = do
     when (_cfgEvAll cfg || _cfgEvAlarm cfg) $ action e
 filteredRaiseEvent cfg action e@EVCOP1{} = do
     when (_cfgEvAll cfg || _cfgEvCOP1 cfg) $ action e
-filteredRaiseEvent cfg action e@EVSLE{} = do
-    when (_cfgEvAll cfg || _cfgEvSLE cfg) $ action e
 filteredRaiseEvent cfg action e@EVDB{} = do
     when (_cfgEvAll cfg || _cfgEvDB cfg) $ action e
+#ifdef HAS_SLE
+filteredRaiseEvent cfg action e@EVSLE{} = do
+    when (_cfgEvAll cfg || _cfgEvSLE cfg) $ action e
+#endif
