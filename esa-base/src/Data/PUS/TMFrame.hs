@@ -11,6 +11,9 @@ This module is about the 'TMFrame' data type. A TM frame is the transport
 mechanism for TM packets stored in it's data part. Frames are identified by
 it's spacecraft ID as well as virtual channel ID and virutal channel frame count
 to check for correct sequences of TM frames.
+
+TODO: implement TM Frame secondary headers
+
 |-}
 {-# LANGUAGE OverloadedStrings
     , BangPatterns
@@ -24,6 +27,7 @@ module Data.PUS.TMFrame
     ( TMFrameConfig(..)
     , defaultTMFrameConfig
     , TMFrameHeader(..)
+    , TMFrameSecHeader(..)
     , TMFrame(..)
     , FirstHeaderPtrVal(..)
     , tmFrameVersion
@@ -41,6 +45,7 @@ module Data.PUS.TMFrame
     , tmFrameNoFirstHeader
     , tmSegmentLength
     , tmFrameHdr
+    , tmFrameSecHdr
     , tmFrameData
     , tmFrameOCF
     , tmFrameFECW
@@ -69,14 +74,14 @@ import qualified RIO.ByteString                as B
 
 import           Control.Lens                   ( makeLenses )
 
-import           Data.Attoparsec.ByteString     ( Parser )
-import qualified Data.Attoparsec.ByteString    as A
-import qualified Data.Attoparsec.Binary        as A
-import           Data.Bits
-import           Data.ByteString.Base64.Type
-import           Data.Aeson
 import           Codec.Serialise
 import           Conduit.PayloadParser
+import           Data.Aeson
+import qualified Data.Attoparsec.Binary        as A
+import           Data.Attoparsec.ByteString     ( Parser )
+import qualified Data.Attoparsec.ByteString    as A
+import           Data.Bits
+import           Data.ByteString.Base64.Type
 
 import           Closed
 
@@ -84,12 +89,16 @@ import           ByteString.StrictBuilder
 
 import           Data.PUS.CLCW
 import           Data.PUS.CRC
-import           General.PUSTypes
 import           Data.PUS.MissionSpecific.Definitions
 import           Data.PUS.TMFrameDfh
+import           General.PUSTypes
 
-import           General.SizeOf
 import           General.Hexdump
+import           General.SizeOf
+
+import           Text.Builder                   ( hexadecimal
+                                                , run
+                                                )
 
 
 
@@ -157,6 +166,26 @@ instance ToJSON TMFrameHeader where
     toEncoding = genericToEncoding defaultOptions
 
 
+data TMFrameSecHeader =
+    TMFrameEmptySecHeader
+    | TMFrameGAIASecHeader !Word32
+    deriving (Eq, Show, Read, Generic)
+
+instance NFData TMFrameSecHeader
+instance Serialise TMFrameSecHeader
+instance FromJSON TMFrameSecHeader
+instance ToJSON TMFrameSecHeader where
+    toEncoding = genericToEncoding defaultOptions
+
+tmSecHdrLen :: TMFrameSecHeader -> Int
+tmSecHdrLen TMFrameEmptySecHeader  = 0
+tmSecHdrLen TMFrameGAIASecHeader{} = 4
+
+
+instance Display TMFrameSecHeader where
+    display TMFrameEmptySecHeader    = mempty
+    display (TMFrameGAIASecHeader x) = "GAIA: vcfc_2=" <> display (run (hexadecimal x))
+
 
 
 tmFrameDefaultHeader :: TMFrameHeader
@@ -193,10 +222,11 @@ tmFrameNoFirstHeader = 0x7FF
 -- of the CLCW is indicated in the header via the 'tmFrameOpControl' flag, the
 -- presence of the CRC is indicated in the 'Config'
 data TMFrame = TMFrame
-    { _tmFrameHdr  :: TMFrameHeader
-    , _tmFrameData :: !ByteString
-    , _tmFrameOCF  :: Maybe Word32
-    , _tmFrameFECW :: Maybe CRC
+    { _tmFrameHdr    :: !TMFrameHeader
+    , _tmFrameSecHdr :: !TMFrameSecHeader
+    , _tmFrameData   :: !ByteString
+    , _tmFrameOCF    :: !(Maybe Word32)
+    , _tmFrameFECW   :: !(Maybe CRC)
     }
     deriving (Eq, Show, Read, Generic)
 makeLenses ''TMFrame
@@ -214,13 +244,15 @@ instance Display TMFrame where
             <> displayShow _tmFrameFECW
 
 
-instance NFData TMFrame 
+instance NFData TMFrame
 instance Serialise TMFrame
 instance FromJSON TMFrame where
     parseJSON = withObject "TMFrame" $ \v ->
         TMFrame
             <$> v
             .:  "tmFrameHdr"
+            <*> v
+            .:  "tmFrameSecHdr"
             <*> (getByteString64 <$> v .: "tmFrameData")
             <*> v
             .:  "tmFrameOCF"
@@ -231,6 +263,7 @@ instance FromJSON TMFrame where
 instance ToJSON TMFrame where
     toJSON r = object
         [ "tmFrameHdr" .= _tmFrameHdr r
+        , "tmFrameSecHdr" .= _tmFrameSecHdr r
         , "tmFrameData" .= makeByteString64 (_tmFrameData r)
         , "tmFrameOCF" .= _tmFrameOCF r
         , "tmFrameFECW" .= _tmFrameFECW r
@@ -238,6 +271,8 @@ instance ToJSON TMFrame where
     toEncoding r = pairs
         (  "tmFrameHdr"
         .= _tmFrameHdr r
+        <> "tmFrameSecHdr"
+        .= _tmFrameSecHdr r
         <> "tmFrameData"
         .= makeByteString64 (_tmFrameData r)
         <> "tmFrameOCF"
@@ -298,8 +333,13 @@ tmFrameBuilder f =
 
 
 {-# INLINABLE makeTMFrame #-}
-makeTMFrame :: Maybe Word32 -> TMFrameHeader -> ByteString -> TMFrame
-makeTMFrame clcw hdr pl = TMFrame hdr pl clcw Nothing
+makeTMFrame
+    :: Maybe Word32
+    -> TMFrameHeader
+    -> TMFrameSecHeader
+    -> ByteString
+    -> TMFrame
+makeTMFrame clcw hdr secHdr pl = TMFrame hdr secHdr pl clcw Nothing
 
 
 {-# INLINABLE tmFrameMaxDataLen #-}
@@ -433,15 +473,33 @@ tmFrameHeaderParser = do
     (dfh, sync, order, seg, fhp) <- unpackDFS <$> A.anyWord16be
     return (TMFrameHeader vers scid vcid opc mc vc dfh sync order seg fhp)
 
+
+-- | TODO: currently, only GAIA secondary header is handled !!!!
 {-# INLINABLE tmFrameParser #-}
 tmFrameParser :: TMFrameConfig -> Parser TMFrame
 tmFrameParser cfg = do
-    hdr <- tmFrameHeaderParser
+    hdr    <- tmFrameHeaderParser
+
+    secHdr <- if _tmFrameDfh hdr
+        then do
+            _  <- A.anyWord8
+            b1 <- A.anyWord8
+            b2 <- A.anyWord8
+            b3 <- A.anyWord8
+            let !val =
+                    (fromIntegral b1 `shiftL` 24)
+                        .|. (fromIntegral b2 `shiftL` 16)
+                        .|. (fromIntegral b3 `shiftL` 8)
+            return (TMFrameGAIASecHeader val)
+        else return TMFrameEmptySecHeader
+
     let stdLen = tmFrameMaxPayloadLen cfg hdr
-        payloadLen =
+        !payloadLen =
             stdLen
+                - (tmSecHdrLen secHdr)
                 - (if _tmFrameOpControl hdr then fixedSizeOf @CLCW else 0)
                 - (if cfgTMFrameHasCRC cfg then fixedSizeOf @CRC else 0)
+
     payload <- A.take payloadLen
 
     clcw    <- if _tmFrameOpControl hdr
@@ -450,7 +508,7 @@ tmFrameParser cfg = do
 
     crc <- if cfgTMFrameHasCRC cfg then Just <$> crcParser else return Nothing
 
-    return $! TMFrame hdr payload clcw crc
+    return $! TMFrame hdr secHdr payload clcw crc
 
 
 {-# INLINABLE tmFrameGetPrevAndRest #-}

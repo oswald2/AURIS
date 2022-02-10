@@ -24,6 +24,8 @@ import           General.Time
 
 
 
+
+
 data MessageDisplay = MessageDisplay
     { _msgdDetails :: !MessageDetailWindow
     , _msgdDisplay :: !TreeView

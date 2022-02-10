@@ -113,10 +113,14 @@ tmFrameDecodeC = do
     env <- ask
     let cfg = env ^. getConfig
     awaitForever $ \(ert, interf, x) -> do
+        logDebug $ "Frame Length: " <> display (B.length x) 
+            <> "\nFrame Data:\n" <> display (hexdumpBS x)
         case A.parseOnly (A.match (tmFrameParser (cfgTMFrame cfg))) x of
             Left err -> do
                 let msg = T.pack err
-                lift $ raiseEvent (EVAlarms (EVIllegalTMFrame msg))
+                lift $ raiseEvent (EVAlarms (EVIllegalTMFrame ("Could not parse TM Frame: " <> msg)))
+                logWarn $ "Could not parse TM Frame: " <> display msg
+                logDebug $ "TM Frame:\n" <> display (hexdumpBS x)
             Right (bs, frame) -> do
 
                 logDebug

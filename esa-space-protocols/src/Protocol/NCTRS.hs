@@ -122,6 +122,8 @@ import qualified Data.Attoparsec.Binary        as A
 import           ByteString.StrictBuilder
 
 import           General.PUSTypes
+import           General.Types
+
 import           Data.PUS.EncTime               ( CDSTime
                                                 , cdsTimeBuilder
                                                 , cdsTimeParser
@@ -346,13 +348,13 @@ instance FixedSize NcduTmDuHeader where
 -- | The complete NCTRS TM Data Unit
 data NcduTmDu = NcduTmDu
     { _ncduTmHeader :: NcduTmDuHeader
-    , _ncduTmData   :: !ByteString
+    , _ncduTmData   :: !HexBytes
     }
     deriving (Show, Read)
 makeLenses ''NcduTmDu
 
 instance SizeOf NcduTmDu where
-    sizeof NcduTmDu {..} = B.length _ncduTmData + fixedSizeOf @NcduTmDuHeader
+    sizeof NcduTmDu {..} = hexLength _ncduTmData + fixedSizeOf @NcduTmDuHeader
 
 -- | Responses for CLTU requests
 data NcduTcCltuRespAck =
@@ -564,7 +566,7 @@ ncduTmParser = do
     hdr <- ncduTmHeaderParser
     let len = fromIntegral (_ncduTmSize hdr) - fixedSizeOf @NcduTmDuHeader
     dat <- A.take len
-    return $! NcduTmDu hdr dat
+    return $! NcduTmDu hdr (HexBytes dat)
 
 
 convertType :: NcduHeaderType -> Word16
@@ -716,7 +718,7 @@ ncduTmDuBuilder :: NcduTmDu -> Builder
 ncduTmDuBuilder x =
     let size   = fromIntegral (sizeof x)
         newHdr = _ncduTmHeader x & ncduTmSize .~ size
-    in  ncduTmDuHeaderBuilder newHdr <> bytes (_ncduTmData x)
+    in  ncduTmDuHeaderBuilder newHdr <> bytes (toBS (_ncduTmData x))
 
 
 convertTmStreamType :: NcduTmStreamType -> Word8

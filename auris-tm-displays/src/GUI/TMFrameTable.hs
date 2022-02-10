@@ -138,6 +138,7 @@ createTMFrameTable builder = do
         , ("SRC", 60, \pkt -> [#text := textDisplay (pkt ^. epSource)])
         , ("Gap" , 60, \pkt -> gapAttrs (pkt ^. epGap))
         , ("Qual", 40, \pkt -> qualityAttrs (pkt ^. epQuality))
+        , ("SecHdr", 100, \pkt -> [#text := textDisplay (pkt ^. epDU . tmFrameSecHdr)])
         ]
     return $ TMFrameTable tv model
 
