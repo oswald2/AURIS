@@ -24,10 +24,10 @@ setLogo img width height = do
                                            width
                                            height
                                            True
-    imageSetFromPixbuf img (Just pixbuf)
+    imageSetFromPixbuf img pixbuf
 
 
 
-getLogoPixbuf :: Int32 -> Int32 -> IO Pixbuf
+getLogoPixbuf :: Int32 -> Int32 -> IO (Maybe Pixbuf)
 getLogoPixbuf width height = do
     pixbufNewFromResourceAtScale "/auris/data/AurisLogo.svg" width height True

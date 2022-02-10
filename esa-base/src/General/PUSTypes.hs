@@ -81,11 +81,11 @@ module General.PUSTypes
     , pktIdDfh
     , pktIdAPID
     , SeqControl(..)
-    , seqCtrlGetFlags 
+    , seqCtrlGetFlags
     , seqCtrlGetSSC
-    , seqCtrlGetData 
-    , seqCtrlTextDisplay 
-    , seqCtrlDisplay 
+    , seqCtrlGetData
+    , seqCtrlTextDisplay
+    , seqCtrlDisplay
     , ProtocolLevel(..)
     , CommandType(..)
     , DirectiveProtocolLevel(..)
@@ -95,31 +95,31 @@ module General.PUSTypes
     ) where
 
 
-import           RIO                     hiding ( Builder )
-import qualified RIO.ByteString.Lazy           as BL
-import           Codec.Serialise                ( Serialise
-                                                , deserialiseOrFail
-                                                , serialise
-                                                )
-import           Data.Aeson                     ( defaultOptions
-                                                , genericToEncoding
-                                                , FromJSON
-                                                , ToJSON(toEncoding)
-                                                )
 import           ByteString.StrictBuilder       ( Builder
                                                 , word16BE
                                                 , word8
                                                 )
+import           Codec.Serialise                ( Serialise
+                                                , deserialiseOrFail
+                                                , serialise
+                                                )
+import           Data.Aeson                     ( FromJSON
+                                                , ToJSON(toEncoding)
+                                                , defaultOptions
+                                                , genericToEncoding
+                                                )
+import qualified Data.Attoparsec.Binary        as A
 import           Data.Attoparsec.ByteString     ( Parser )
 import qualified Data.Attoparsec.ByteString    as A
-import qualified Data.Attoparsec.Binary        as A
-import           Data.Bits                      ( Bits((.&.), shiftR, (.|.)) )
+import           Data.Bits                      ( Bits((.&.), (.|.), shiftR) )
+import           General.APID                   ( APID(APID) )
+import           RIO                     hiding ( Builder )
+import qualified RIO.ByteString.Lazy           as BL
 import           System.Directory               ( createDirectoryIfMissing
                                                 , doesFileExist
                                                 , getHomeDirectory
                                                 )
 import           System.FilePath                ( (</>) )
-import           General.APID                   ( APID(APID) )
 
 import           Protocol.ProtocolInterfaces
 
@@ -471,10 +471,8 @@ pktIdDisplayPretty x =
         <> " Type: "
         <> display (pktIdType x)
         <> " DFH: "
-        <> (if pktIdDfh x
-               then "True"
-               else "False") 
-        <> " APID: " 
+        <> (if pktIdDfh x then "True" else "False")
+        <> " APID: "
         <> display (pktIdAPID x)
 
 pktIdVersion :: PktID -> Word8
@@ -739,6 +737,7 @@ data Destination =
   DestNctrs ProtocolInterface
   | DestCnc ProtocolInterface
   | DestEden ProtocolInterface CommandType
+  | DestSLE ProtocolInterface
   deriving (Eq, Show, Read, Generic)
 
 instance NFData Destination
@@ -751,6 +750,7 @@ instance Display Destination where
     display (DestNctrs i ) = display i
     display (DestCnc   i ) = display i
     display (DestEden i t) = display i <> " (" <> display t <> ")"
+    display (DestSLE i   ) = display i
 
 
 -- | The destination a 'TCDirective' can have. Since directives only make sense 
@@ -758,6 +758,7 @@ instance Display Destination where
 -- 'TCRequest' destination ('Destination'). 
 data DirectiveDestination =
   DirDestNctrs ProtocolInterface
+  | DirDestSLE ProtocolInterface
   | DirDestEden ProtocolInterface DirectiveProtocolLevel
   deriving (Eq, Show, Read, Generic)
 
@@ -769,6 +770,7 @@ instance ToJSON DirectiveDestination where
 
 instance Display DirectiveDestination where
     display (DirDestNctrs i ) = display i
+    display (DirDestSLE   i ) = display i
     display (DirDestEden i l) = display i <> " (" <> display l <> ")"
 
 
@@ -796,9 +798,11 @@ instance ProtocolDestination Destination where
     destination (DestNctrs x ) = x
     destination (DestCnc   x ) = x
     destination (DestEden x _) = x
+    destination (DestSLE x   ) = x
 
 instance ProtocolDestination DirectiveDestination where
     destination (DirDestNctrs x ) = x
+    destination (DirDestSLE   x ) = x
     destination (DirDestEden x _) = x
 
 instance ProtocolDestination ScoeDestination where

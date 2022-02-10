@@ -58,6 +58,37 @@
                 "cfgEdenPort": 40300
             }
         ],
+        "cfgSLE": {
+            "cfgSleSeConfig": "sle/SE_PROV_Config.txt",
+            "cfgSlePeerID": "AURIS",
+            "cfgSleInstances": [
+                {
+                    "cfgSleInstanceNr": 1,
+                    "cfgSleInstanceConfig": {
+                        "tag": "SLEInstRAF",
+                        "contents": {
+                            "cfgSleRafPort": "PORT_TM1",
+                            "cfgSleRafPeerID": "PARAGONTT",
+                            "cfgSleRafVersion": "SLEVersion3",
+                            "cfgSleRafSII": "sagr=3.spack=facility-PASS1.rsl-fg=1.raf=onlc1"
+                        }
+                    }
+                },
+                {
+                    "cfgSleInstanceNr": 1,
+                    "cfgSleInstanceConfig": {
+                        "tag": "SLEInstFCLTU",
+                        "contents": {
+                            "cfgSleCltuVersion": "SLEVersion3",
+                            "cfgSleCltuPort": "PORT_TC1",
+                            "cfgSleCltuPeerID": "PARAGONTT",
+                            "cfgSleCltuSII": "sagr=3.spack=facility-PASS1.rsl-fg=1.cltu=cltu1"
+                        }
+                    }
+                }
+            ],
+            "cfgSleProxyConfig": "sle/PROXY_PROV_Config.txt"
+        },
         "cfgTMFrame": {
             "cfgMaxTMFrameLen": 1115,
             "cfgTMSegLength": "TMSegment65536",

@@ -72,10 +72,10 @@ newConnectionStatus interface connType host port = do
     return g
 
   where
-    interf (IfNctrs x) t = t <> " (" <> textDisplay x <> ")"
-    interf (IfCnc   x) t = t <> " (" <> textDisplay x <> ")"
-    interf (IfEden  x) _ = "EDEN " <> textDisplay x
-
+    interf (  IfNctrs x) t = t <> " (" <> textDisplay x <> ")"
+    interf (  IfCnc   x) t = t <> " (" <> textDisplay x <> ")"
+    interf (  IfEden  x) _ = "EDEN " <> textDisplay x
+    interf i@(IfSle   _) _ = textDisplay i
 
 setConnectionState :: ConnectionStatus -> ConnectionState -> IO ()
 setConnectionState ConnectionStatus {..} Accepting =

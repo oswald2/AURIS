@@ -573,8 +573,7 @@ receiveEdenMessageC = conduitParserEither edenMessageParser .| sink
   where
     sink = awaitForever $ \case
         Left err -> do
-            st <- ask
-            liftIO $ raiseEvent st $ EVAlarms
+            raiseEvent $ EVAlarms
                 (EVEDENParseError (T.pack (errorMessage err)))
         Right (_, tc) -> do
             logDebug $ "receiveEdenMessageC: received: " <> display tc

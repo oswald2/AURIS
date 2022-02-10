@@ -127,6 +127,33 @@ button.toggle:checked#playtoggle {
               -4px -4px 4px 0 @dark_shadow;
 }
 
+button#yellow-button {
+  min-height: 11px;
+  min-width: 12px;
+  padding: 3px;
+  margin: 4px;
+  border-radius: 12px;
+  background-color: @yellow;
+  color: #000;
+  border: 1px solid rgba(255,255,255,0.20);
+  box-shadow:  4px 4px 4px 0 @dark_shadow, 
+              -4px -4px 4px 0 @light_shadow;
+}
+
+button:active#yellow-button {
+  min-height: 11px;
+  min-width: 12px;
+  padding: 3px;
+  margin: 4px;
+  border-radius: 12px;
+  background-color: @yellow;
+  color: #000;
+  border: 1px solid rgba(255,255,255,0.20);
+  box-shadow:  4px 4px 4px 0 @ligth_shadow, 
+              -4px -4px 4px 0 @dark_shadow;
+}
+
+
 
 #playtoggle:disabled * {
   background-color: @green;

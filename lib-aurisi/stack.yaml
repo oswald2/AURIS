@@ -1,0 +1,19 @@
+flags: {}
+resolver: lts-18.24
+extra-deps:
+- attoparsec-data-1.0.4.1
+- hw-prim-bits-0.1.0.4
+- attoparsec-time-1
+
+
+allow-newer: true
+packages:
+- .
+- ../auris-tmph
+- ../gui-base
+- ../esa-base 
+- ../esa-space-protocols
+- ../mcs-interface 
+- ../esa-mib
+- ../esa-db
+

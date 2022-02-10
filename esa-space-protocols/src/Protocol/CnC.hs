@@ -13,45 +13,45 @@ module Protocol.CnC
     , generateAckData
     ) where
 
-import           RIO
-import qualified RIO.ByteString                as BS
-import qualified Data.ByteString.Char8         as BS8
-import qualified RIO.Text                      as T
 import           ByteString.StrictBuilder       ( builderBytes
                                                 , bytes
                                                 )
+import qualified Data.ByteString.Char8         as BS8
+import           RIO
+import qualified RIO.ByteString                as BS
+import qualified RIO.Text                      as T
 
 import           Conduit
-import           Data.Conduit.Attoparsec
-import qualified Data.ByteString.Char8         as BCS
+import qualified Data.Attoparsec.Binary        as A
 import           Data.Attoparsec.ByteString.Char8
                                                as A
-import qualified Data.Attoparsec.Binary        as A
-import qualified Data.Vector                   as V
+import qualified Data.ByteString.Char8         as BCS
 import           Data.Char
+import           Data.Conduit.Attoparsec
+import qualified Data.Vector                   as V
 
-import           Data.PUS.PUSPacket
-import           Data.PUS.PUSDfh                ( pusSubType
-                                                , pusType
-                                                )
-import           Data.PUS.PUSPacketEncoder
+import           Data.PUS.Events
 import           Data.PUS.ExtractedDU
 import           Data.PUS.ExtractedPUSPacket
 import           Data.PUS.MissionSpecific.Definitions
-import           Data.PUS.Events
+import           Data.PUS.PUSDfh                ( pusSubType
+                                                , pusType
+                                                )
+import           Data.PUS.PUSPacket
+import           Data.PUS.PUSPacketEncoder
 import           Data.PUS.TCRequest
 import           Data.PUS.Verification
 
-import           Protocol.ProtocolInterfaces    ( protContent
-                                                , ProtocolInterface(IfCnc)
+import           Protocol.ProtocolInterfaces    ( ProtocolInterface(IfCnc)
                                                 , ProtocolPacket(ProtocolPacket)
+                                                , protContent
                                                 )
 
-import           General.Time
-import           General.PUSTypes
-import           General.Types
-import           General.Hexdump                ( hexdumpBS )
 import           Control.PUS.Classes
+import           General.Hexdump                ( hexdumpBS )
+import           General.PUSTypes
+import           General.Time
+import           General.Types
 
 
 -- if we have a SCOE packet, and it has a secondary header, it is a binary
@@ -78,12 +78,10 @@ receiveCnCC missionSpecific interf = do
             Just tc -> do
                 case tc of
                     Left err -> do
-                        env <- ask
                         let msg = "Error decoding CnC packet: "
                                 <> displayShow err
                         logError msg
-                        liftIO $ raiseEvent
-                            env
+                        raiseEvent
                             (EVAlarms (EVPacketAlarm (utf8BuilderToText msg)))
                         return ()
                     Right (_, res) -> do
@@ -116,7 +114,7 @@ cncProcessAcks interf queue = do
                     newPkt <- convertCncToTMPacket (byts, protPkt) interf
 
                     atomically $ writeTBQueue queue newPkt
-                    cncProcessAcks interf queue 
+                    cncProcessAcks interf queue
         Nothing -> return ()
 
 processBinaryAck
@@ -167,8 +165,8 @@ processAsciiAck
     -> m ()
 processAsciiAck protPkt = do
     let hdr   = protPkt ^. protContent . pusHdr
-    -- the ack is a TM packet, but the PktID to be used for verification is a 
-    -- TC, therefore, we need to set the type flag in the PktID
+-- the ack is a TM packet, but the PktID to be used for verification is a 
+-- TC, therefore, we need to set the type flag in the PktID
         pktID = pktIdSetType (hdr ^. pusHdrPktID) PUSTC
         seqC  = hdr ^. pusHdrSeqCtrl
         ack   = BS8.pack "ACK"

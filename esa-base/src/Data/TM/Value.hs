@@ -437,26 +437,7 @@ setValidity :: TMValue -> (Validity -> Validity) -> TMValue
 setValidity (TMValue val validity) f = TMValue val (f validity)
 
 
-
-
--- instance Eq TMIntValue where
---   TMInt  x == TMInt  y = x == y
---   TMUInt x == TMUInt y = x == y
---   TMInt  x == TMUInt y = (x >= 0) && (fromIntegral x == y)
---   TMUInt x == TMInt  y = (y >= 0) && (fromIntegral y == x)
-
-
--- instance Ord TMIntValue where
---   compare (TMInt  x) (TMInt  y) = compare x y
---   compare (TMUInt x) (TMUInt y) = compare x y
---   compare (TMInt x) (TMUInt y) =
---     if x < 0 then LT else compare (fromIntegral x) y
---   compare (TMUInt x) (TMInt y) =
---     if y < 0 then GT else compare x (fromIntegral y)
-
-
-
-
-
+instance Ord TMValue where
+    compare v1 v2 = fromMaybe LT $ compareVal (v1 ^. tmvalValue) (v2 ^. tmvalValue)
 
 

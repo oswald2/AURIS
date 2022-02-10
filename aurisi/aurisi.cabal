@@ -12,9 +12,6 @@ homepage:
 category: UI,Graphics
 cabal-version: >=2.0
 
-extra-source-files:
-  theme.tar.gz
-
 source-repository head
   type: git
   location: http://github.com/oswald2/AURIS
@@ -40,66 +37,20 @@ flag sle
     default: False 
 
 
-Executable AURISi
+
+executable AURISi
   Main-Is: AURISiMain.hs
   c-sources: csrc/resources.c
-  Other-modules:
-    -- GUI.MainWindow
-    -- GUI.MainWindowCallbacks
-    -- GUI.MainWindowActions
-    -- GUI.MessageTypes
-    -- GUI.MessageDisplay
-    -- GUI.MessageDetails
-    -- GUI.Logo
-    -- GUI.About
-    -- GUI.Theme
-    AurisInterface
-    AurisProcessing
-    AurisConfig
-    AurisMissionSpecific
-    Version
-
   Hs-Source-Dirs: src/
 
   Build-Depends:
     base == 4.*,
-    text >= 1.2.2.0,
-    rio,
-    lens,
-    containers,
-    esa-base,
-    --esa-db-mongodb,
-    esa-space-protocols,
-    esa-mib,
-    gui-base,
-    auris-tm-displays,
-    auris-tc-displays,
-    auris-control-displays,
-    mcs-interface,
-    optparse-generic,
-    gitrev,
-    aeson,
-    aeson-pretty,
-    conduit,
-    conduit-extra,
+    text,
     directory,
     filepath,
-    text-short,
-    file-embed,
-    hashtables-mo,
-    stm-conduit,
-    -- gi-gtk,
-    -- gi-gtk-hs,
-    -- gi-gdk,
-    -- gi-gdkpixbuf,
-    -- gi-gobject,
-    -- gi-gio,
-    -- gi-glib,
-    -- gi-gtksource,
-    tar,
-    zlib,
-    stm
-    -- keera-hails-reactivevalues
+    rio,
+    lib-aurisi,
+    optparse-generic
 
   if flag(sle)
     cpp-options: -DHAS_SLE
@@ -164,7 +115,8 @@ Executable AURISi
     else
         ghc-options: -O0 -g2 -Wall -Wcompat -Widentities -Wincomplete-record-updates
                      -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
-                     -funbox-strict-fields  -threaded -rtsopts -v -optl-v
+                     -funbox-strict-fields  -threaded -rtsopts 
+                     -- for more verbosity for debugging compilations, add: -v -optl-v
 
 
 

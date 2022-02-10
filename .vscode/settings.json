@@ -7,6 +7,12 @@
   },
   "files.associations": {
     "wscript": "python",
-    "SLEse.C": "cpp"
+    "SLEse.C": "cpp",
+    "SLEraf.C": "cpp",
+    "SLEsi.C": "cpp",
+    "Helpers.H": "cpp",
+    "AplServiceInform.C": "cpp",
+    "AplGUID.C": "cpp",
+    "SLEcltu.C": "cpp"
   }
 }

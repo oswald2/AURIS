@@ -1,5 +1,5 @@
 flags: {}
-resolver: lts-18.12
+resolver: lts-18.24
 extra-deps:
 - attoparsec-data-1.0.4.1
 - hw-prim-bits-0.1.0.4
@@ -16,4 +16,5 @@ packages:
 - ../mcs-interface 
 - ../esa-mib
 - ../esa-db
+- ../lib-aurisi
 

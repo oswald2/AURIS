@@ -23,6 +23,7 @@ module Data.PUS.EncTime
     , cdsTimeBuilder
     , cucTimeParser
     , cdsTimeParser
+    , decodeCdsTime
     , cucEncodingSize
     , cucTimeIsDelta
     , cucTimeSetDelta
@@ -41,7 +42,8 @@ module Data.PUS.EncTime
     ) where
 
 import           RIO                     hiding ( Builder )
---import qualified RIO.Text                      as T
+import qualified RIO.Text                      as T
+
 import           ByteString.StrictBuilder
 import           Control.Lens                   ( from )
 
@@ -455,6 +457,14 @@ cdsTimeParser = do
     milli <- A.anyWord32be
     micro <- A.anyWord16be
     pure $ CDSTime days milli (Just micro)
+
+
+{-# INLINABLE decodeCdsTime #-}
+decodeCdsTime :: ByteString -> Either Text CDSTime 
+decodeCdsTime dat = 
+    case A.parseOnly cdsTimeParser dat of 
+        Left err -> Left (T.pack err)
+        Right x -> Right x
 
 
 {-# INLINABLE toEncodedSec #-}

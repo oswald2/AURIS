@@ -14,23 +14,33 @@ import           Data.PUS.Events
 import           Data.PUS.Statistics
 import           Data.PUS.TCGeneration
 import           Data.PUS.TCRequest
-
 import           Data.TC.TCDef
+
 import           Persistence.DBQuery
+
+import           Protocol.ProtocolSLE
 
 import           General.PUSTypes
 
 
 data InterfaceAction =
   Quit
-  | ImportMIB FilePath FilePath
-  | LogMsg LogSource LogLevel Utf8Builder
-  | SendTCRequest TCRequest
+  | ImportMIB !FilePath !FilePath
+  | LogMsg !LogSource !LogLevel !Utf8Builder
+  | SendTCRequest !TCRequest
   | SendTCGroup [TCRequest]
   | QueryDB DBQuery
-  | GetTCSync TCDef ShortText TransmissionMode (TMVar TCRequest)
+  | GetTCSync !TCDef !ShortText !TransmissionMode !(TMVar TCRequest)
   | ResetStatsFrames
   | ResetStatsPackets
+  | BindRAF !Text
+  | UnbindRAF !Text
+  | StartRAF !Text 
+  | StopRAF !Text
+  | BindCLTU !Text
+  | UnbindCLTU !Text
+  | StartCLTU !Text 
+  | StopCLTU !Text
   deriving (Generic)
 
 
@@ -57,7 +67,7 @@ processMsg
     :: (MonadUnliftIO m, MonadReader env m, HasGlobalState env)
     => InterfaceAction
     -> m ()
-processMsg Quit                           = return ()
+processMsg Quit                           = terminate
 processMsg (ImportMIB path serializePath) = importMIB path serializePath
 processMsg (LogMsg source level msg     ) = logGeneric source level msg
 processMsg (SendTCRequest rqst          ) = do
@@ -80,7 +90,22 @@ processMsg ResetStatsPackets = do
     env <- ask
     let pktVar = getPacketStats env
     atomically $ writeTVar pktVar initialStatistics
-
+processMsg (BindRAF sii) = do
+    sleCommand (SLEBindRaf sii)
+processMsg (UnbindRAF sii) = do
+    sleCommand (SLEUnbindRaf sii)
+processMsg (StartRAF sii) = do 
+    sleCommand (SLEStartRaf sii)
+processMsg (StopRAF sii) = do 
+    sleCommand (SLEStopRaf sii)
+processMsg (BindCLTU sii) = do
+    sleCommand (SLEBindFcltu sii)
+processMsg (UnbindCLTU sii) = do
+    sleCommand (SLEUnbindFcltu sii)
+processMsg (StartCLTU sii) = do 
+    sleCommand (SLEStartFcltu sii)
+processMsg (StopCLTU sii) = do 
+    sleCommand (SLEStopFcltu sii)
 
 -- processMsg RequestAllTMFrames = do 
 --   env <- ask
@@ -94,15 +119,15 @@ importMIB
     -> FilePath
     -> m ()
 importMIB path serializePath = do
-    logDebug "Loading data model..."
+    logInfo "Loading data model..."
     env    <- ask
     model' <- loadDataModel (LoadFromMIB path serializePath)
     case model' of
         Left err -> do
-            logDebug "Error loading MIB"
-            liftIO $ raiseEvent env (EVAlarms (EVMIBLoadError err))
+            logInfo "Error loading MIB"
+            raiseEvent (EVAlarms (EVMIBLoadError err))
         Right model -> do
             setDataModel env model
-            logDebug "Successfully loaded MIB"
-            liftIO $ raiseEvent env (EVAlarms (EVMIBLoaded model))
+            logInfo "Successfully loaded MIB"
+            raiseEvent (EVAlarms (EVMIBLoaded model))
 

@@ -137,9 +137,9 @@ makeLenses ''FOPData
 --   let newst = initializeState fops
 --   purged <- purgeWaitQueue fopData
 --   let action = do
---         when purged $ liftIO $ raiseEvent env $ EVCOP1
+--         when purged $ raiseEvent $ EVCOP1
 --           (EVADPurgedWaitQueue vcid)
---         liftIO $ raiseEvent env $ EVCOP1 (EVADInitializedWithoutCLCW vcid)
+--         raiseEvent $ EVCOP1 (EVADInitializedWithoutCLCW vcid)
 --         nextState fopData cancelTimer
 --   pure (newst, action)
 
@@ -194,7 +194,7 @@ makeLenses ''FOPData
 --       let newst2 = newst1 & fopBCout .~ toFlag Ready True
 --           -- action execute after return from STM call
 --       let action = do
---             when purged $ liftIO $ raiseEvent env $ EVCOP1
+--             when purged $ raiseEvent $ EVCOP1
 --               (EVADPurgedWaitQueue (fopData ^. fvcid))
 --             nextState fopData cancelTimer
 --       pure (newst2, action)
@@ -269,7 +269,7 @@ makeLenses ''FOPData
 --       let newst2 = newst1 & fopBCout .~ toFlag Ready True
 -- -- action execute after return from STM call
 --           action = do
---             when purged $ liftIO $ raiseEvent env $ EVCOP1
+--             when purged $ raiseEvent $ EVCOP1
 --               (EVADPurgedWaitQueue (fopData ^. fvcid))
 --             nextState fopData cancelTimer
 --       pure (newst2, action)

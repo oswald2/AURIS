@@ -101,6 +101,7 @@ import           Data.PUS.MissionSpecific.Definitions
 import           Protocol.ProtocolInterfaces    ( isCnc
                                                 , isEden
                                                 , isNctrs
+                                                , isSLE
                                                 , ProtocolInterface(IfCnc)
                                                 , ProtocolPacket(ProtocolPacket)
                                                 )
@@ -496,6 +497,14 @@ pusPktParserPayload
 pusPktParserPayload missionSpecific comm hdr = do
     (dfh, hasCRC) <- if
         | isNctrs comm
+        -> if hdr ^. pusHdrDfhFlag
+            then case hdr ^. pusHdrType of
+                PUSTM -> (, True)
+                    <$> dfhParser (missionSpecific ^. pmsTMDataFieldHeader)
+                PUSTC -> (, True)
+                    <$> dfhParser (missionSpecific ^. pmsTCDataFieldHeader)
+            else return (PUSEmptyHeader, True)
+        | isSLE comm
         -> if hdr ^. pusHdrDfhFlag
             then case hdr ^. pusHdrType of
                 PUSTM -> (, True)

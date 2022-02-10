@@ -11,7 +11,6 @@ module GUI.MainWindow
     , createMainWindow
     , mwAddTMPacket
     , mwAddTMFrame
-    -- , mwAddTMFrameReactive
     , mwSetTMFrames
     , mwAddTMParameters
     , mwAddTMParameterDefinitions
@@ -30,47 +29,52 @@ module GUI.MainWindow
     , mwProgress
     , mwConnTab
     , mwTCTab
+    , mwSLETab
     , mwTCHistory
     , mwStatisticsTab
     , mwMenuItemImportMIB
+    , mwMenuItemQuit
     , mwLiveState
+    , mwSetSleSiState
     ) where
 
+import           Control.Lens                   ( makeLenses )
 import           RIO
+import           RIO.List                       ( sortBy )
 import qualified RIO.Text                      as T
 --import qualified Data.Text.Encoding            as T
 import qualified RIO.Vector                    as V
-import           RIO.List                       ( sortBy )
-import           Control.Lens                   ( makeLenses )
 
 import qualified Data.HashTable.ST.Basic       as HT
 
-import           GUI.TMPacketTab
-import           GUI.TMFrameTab
-import           GUI.TMParamTab
-import           GUI.ConnectionTab
-import           GUI.TCTab
-import           GUI.TCHistory
-import           GUI.DataModelTab
-import           GUI.StatisticsTab
-import           GUI.Utils
-import           GUI.Logo
-import           GUI.MessageDisplay
-import           GUI.MessageDetails
 import           GUI.About
+import           GUI.ConnectionTab
+import           GUI.DataModelTab
+import           GUI.Logo
+import           GUI.MessageDetails
+import           GUI.MessageDisplay
+import           GUI.SLEConnections             ( SleServiceStatus(..) )
+import           GUI.SLETab
+import           GUI.StatisticsTab
+import           GUI.TCHistory
+import           GUI.TCTab
+import           GUI.TMFrameTab
+import           GUI.TMPacketTab
+import           GUI.TMParamTab
+import           GUI.Utils
 
 
-import           Data.PUS.TMPacket              ( TMPacket )
 import           Data.PUS.ExtractedDU           ( ExtractedDU )
-import           Data.PUS.TMFrame               ( TMFrame )
-import           Data.PUS.TCRequest             ( TCRequest )
-import           Data.PUS.LiveState             ( defaultLiveState
-                                                , LiveState
+import           Data.PUS.LiveState             ( LiveState
+                                                , defaultLiveState
                                                 )
+import           Data.PUS.TCRequest             ( TCRequest )
+import           Data.PUS.TMFrame               ( TMFrame )
+import           Data.PUS.TMPacket              ( TMPacket )
 
-import           Protocol.ProtocolInterfaces    ( ProtocolInterface
-                                                , ConnType
+import           Protocol.ProtocolInterfaces    ( ConnType
                                                 , ConnectionState
+                                                , ProtocolInterface
                                                 )
 
 import           Data.DataModel                 ( DataModel
@@ -79,20 +83,18 @@ import           Data.DataModel                 ( DataModel
                                                 , dmTCs
                                                 )
 
---import           Data.ReactiveValue
-
+import           Data.TC.TCDef                  ( tcDefName )
 import           Data.TM.Parameter              ( TMParameter )
 import           Data.TM.TMParameterDef         ( TMParameterDef
                                                 , fpName
                                                 )
-import           Data.TC.TCDef                  ( tcDefName )
+import           General.PUSTypes               ( RequestID )
 import           General.Time                   ( SunTime
                                                 , displayTimeMilli
                                                 , getCurrentTime
                                                 )
-import           General.PUSTypes               ( RequestID )
 
-import           Data.PUS.Verification      ( Verification )
+import           Data.PUS.Verification          ( Verification )
 
 import           GI.Gtk                        as Gtk
 import           GI.GtkSource
@@ -102,7 +104,7 @@ import qualified GI.GtkSource.Objects.Buffer   as BUF
 --import           Data.FileEmbed
 
 import           AurisConfig
-import Data.PUS.Events (TMStatistics)
+import           Data.PUS.Events                ( TMStatistics )
 
 
 
@@ -116,12 +118,14 @@ data MainWindow = MainWindow
     , _mwMission           :: !Gtk.Label
     , _mwFrameTab          :: !TMFrameTab
     , _mwConnTab           :: !ConnectionTab
+    , _mwSLETab            :: !(Maybe SLETab)
     , _mwTCTab             :: !TCTab
     , _mwTCHistory         :: !TCHistory
     , _mwDataModelTab      :: !DataModelTab
     , _mwStatisticsTab     :: !StatisticsTab
     , _mwTimeLabel         :: !Label
     , _mwMenuItemImportMIB :: !Gtk.MenuItem
+    , _mwMenuItemQuit      :: !Gtk.MenuItem
     , _mwLiveState         :: TVar LiveState
     }
 makeLenses ''MainWindow
@@ -133,11 +137,6 @@ mwAddTMPacket window pkt = do
 
 mwAddTMFrame :: MainWindow -> ExtractedDU TMFrame -> IO ()
 mwAddTMFrame window = tmfTabAddRow (window ^. mwFrameTab)
-
--- mwAddTMFrameReactive
---     :: MainWindow -> ReactiveFieldWrite IO (ExtractedDU TMFrame)
--- mwAddTMFrameReactive window = tmfTabAddRowReactive (window ^. mwFrameTab)
-
 
 mwSetTMFrames :: MainWindow -> [ExtractedDU TMFrame] -> IO ()
 mwSetTMFrames window = tmfTabSetFrames (window ^. mwFrameTab)
@@ -189,8 +188,8 @@ mwInitialiseDataModel window model = do
 -- gladeFile =
 --     T.decodeUtf8 $(makeRelativeToProject "src/MainWindow.glade" >>= embedFile)
 
-mwAddTMStatistic :: MainWindow -> TMStatistics -> IO () 
-mwAddTMStatistic window stats = 
+mwAddTMStatistic :: MainWindow -> TMStatistics -> IO ()
+mwAddTMStatistic window stats =
     statisticsTabDisplayStats (window ^. mwStatisticsTab) stats
 
 createMainWindow :: AurisConfig -> IO MainWindow
@@ -221,18 +220,19 @@ createMainWindow cfg = do
                                    StyleSchemeChooserButton
 
     -- create the message display
-    msgDetails   <- createMsgDetailWindow window builder
-    msgDisp      <- createMessageDisplay msgDetails builder
+    msgDetails    <- createMsgDetailWindow window builder
+    msgDisp       <- createMessageDisplay msgDetails builder
 
     -- create the tabs in the notebook
-    tmfTab       <- createTMFTab window builder
-    tmpTab       <- createTMPTab window builder
-    paramTab     <- createTMParamTab builder
-    connTab      <- createConnectionTab (aurisPusConfig cfg) builder
-    tcTab        <- createTCTab (aurisPusConfig cfg) window builder
-    tcHistory    <- createTCHistory window builder
-    dataModelTab <- createDataModelTab window builder
-    statisticsTab <- createStatisticsTab builder 
+    tmfTab        <- createTMFTab window builder
+    tmpTab        <- createTMPTab window builder
+    paramTab      <- createTMParamTab builder
+    connTab       <- createConnectionTab (aurisPusConfig cfg) builder
+    sleTab        <- createSLETab (aurisPusConfig cfg) builder
+    tcTab         <- createTCTab (aurisPusConfig cfg) window builder
+    tcHistory     <- createTCHistory window builder
+    dataModelTab  <- createDataModelTab window builder
+    statisticsTab <- createStatisticsTab builder
 
     setLogo logo 65 65
 
@@ -248,11 +248,13 @@ createMainWindow cfg = do
                          , _mwTimeLabel         = timeLabel
                          , _mwTMParamTab        = paramTab
                          , _mwConnTab           = connTab
+                         , _mwSLETab            = sleTab
                          , _mwTCTab             = tcTab
                          , _mwTCHistory         = tcHistory
                          , _mwDataModelTab      = dataModelTab
-                         , _mwStatisticsTab     = statisticsTab 
+                         , _mwStatisticsTab     = statisticsTab
                          , _mwMenuItemImportMIB = menuItemImportMIB
+                         , _mwMenuItemQuit      = menuItemQuit
                          , _mwLiveState         = liveState
                          }
 
@@ -260,10 +262,6 @@ createMainWindow cfg = do
         diag <- createAboutDialog
         void $ dialogRun diag
         widgetHide diag
-
-    void $ Gtk.on menuItemQuit #activate $ do
-        widgetDestroy window
-        mainQuit
 
     void $ Gtk.on menuItemLoadTC #activate $ tcTabLoadFile tcTab
     void $ Gtk.on menuItemSaveTC #activate $ tcTabSaveFile tcTab
@@ -309,3 +307,8 @@ mwSetConnectionState
 mwSetConnectionState g = connTabSetConnection (_mwConnTab g)
 
 
+mwSetSleSiState :: MainWindow -> Text -> ProtocolInterface -> SleServiceStatus -> IO ()
+mwSetSleSiState gui sii protIF status = do
+    forM_ (gui ^. mwSLETab) $ \tab -> updateSiStatus tab sii protIF status
+
+    

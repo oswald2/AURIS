@@ -2,6 +2,7 @@
     OverloadedStrings
     , BangPatterns
     , NoImplicitPrelude
+    , CPP
 #-}
 module AurisInterface
     ( initialiseInterface
@@ -31,11 +32,14 @@ import           GUI.MainWindowActions          ( mwLogAlarm
                                                 , mwLogInfo
                                                 , mwLogWarn
                                                 )
+import           GUI.SLEConnections             ( SleServiceStatus(..))
 
 import           Data.GI.Gtk.Threading          ( postGUIASync )
 import           Persistence.DBQuery            ( DBQuery )
 
--- import           Data.ReactiveValue
+#ifdef HAS_SLE 
+import           SLE.Types 
+#endif 
 
 
 aurisEventHandler :: TBQueue IfEvent -> IfEvent -> IO ()
@@ -56,7 +60,6 @@ eventProcessor g (EventPUS (EVTelemetry (EVTMPacketDecoded pkt))) = do
 
 eventProcessor g (EventPUS (EVTelemetry (EVTMFrameReceived frame))) = do
     postGUIASync (mwAddTMFrame g frame)
-    --reactiveValueWrite (mwAddTMFrameReactive g) frame
 
 eventProcessor g (EventPUS (EVTelemetry (EVTMParameters params))) = do
     postGUIASync (mwAddTMParameters g params)
@@ -134,6 +137,41 @@ eventProcessor g (EventPUS (EVDB (EVDBTMFrames frames))) = do
 
 eventProcessor g (EventPUS (EVTelemetry (EVTMStatistics stats))) = do 
     postGUIASync $ mwAddTMStatistic g stats
+
+
+#ifdef HAS_SLE 
+eventProcessor g (EventPUS (EVSLE (EVSLERafInitialised (SleSII sii) commIF))) = do 
+    postGUIASync $ mwSetSleSiState g sii commIF SleServiceInit
+
+eventProcessor g (EventPUS (EVSLE (EVSLERafBind (SleSII sii) commIF))) = do 
+    postGUIASync $ mwSetSleSiState g sii commIF SleServiceBound
+
+eventProcessor g (EventPUS (EVSLE (EVSLERafUnbind (SleSII sii) commIF))) = do 
+    postGUIASync $ mwSetSleSiState g sii commIF SleServiceInit
+
+eventProcessor g (EventPUS (EVSLE (EVSLERafStart (SleSII sii) commIF))) = do 
+    postGUIASync $ mwSetSleSiState g sii commIF SleServiceActive
+
+eventProcessor g (EventPUS (EVSLE (EVSLERafStop (SleSII sii) commIF))) = do 
+    postGUIASync $ mwSetSleSiState g sii commIF SleServiceBound
+
+eventProcessor g (EventPUS (EVSLE (EVSLEFcltuInitialised (SleSII sii) commIF))) = do 
+    postGUIASync $ mwSetSleSiState g sii commIF SleServiceInit
+
+eventProcessor g (EventPUS (EVSLE (EVSLEFcltuBind (SleSII sii) commIF))) = do 
+    postGUIASync $ mwSetSleSiState g sii commIF SleServiceBound
+
+eventProcessor g (EventPUS (EVSLE (EVSLEFcltuUnbind (SleSII sii) commIF))) = do 
+    postGUIASync $ mwSetSleSiState g sii commIF SleServiceInit
+
+eventProcessor g (EventPUS (EVSLE (EVSLEFcltuStart (SleSII sii) commIF))) = do 
+    postGUIASync $ mwSetSleSiState g sii commIF SleServiceActive
+
+eventProcessor g (EventPUS (EVSLE (EVSLEFcltuStop (SleSII sii) commIF))) = do 
+    postGUIASync $ mwSetSleSiState g sii commIF SleServiceBound
+
+
+#endif 
 
 eventProcessor _ _ = pure ()
 

@@ -1,10 +1,8 @@
 module GUI.LiveControls
     ( LiveControl
     , createLiveControl
-    , liveControlSetMode
     , liveControlGetWidget
     , setupCallbacks
-    , liveControlConnect
     , PlayCB(..)
     , StopCB(..)
     , RetrieveCB(..)
@@ -17,11 +15,6 @@ import           RIO
 import           GI.Gtk                        as Gtk
 
 import           Data.PUS.LiveState
-
-import           Data.ReactiveValue
-
-import           GUI.Reactive.ToggleButton
-import           GUI.Reactive.Button
 
 
 data LiveControl = LiveControl
@@ -118,34 +111,7 @@ setupCallbacks lc (PlayCB playAction) (StopCB stopAction) (RetrieveCB retrieveAc
                 liveControlSetStop lc
                 stopAction True
 
-liveControlConnect
-    :: ( ReactiveValueWrite c1 () IO
-       , ReactiveValueWrite c2 Bool IO
-       , ReactiveValueWrite c3 Bool IO
-       , ReactiveValueWrite c4 () IO
-       , ReactiveValueWrite c5 () IO
-       )
-    => LiveControl
-    -> c3
-    -> c2
-    -> c4
-    -> c1
-    -> c5
-    -> IO ()
-liveControlConnect lc playReactive stopReactive retrieveReactive rewindReactive forwardReactive
-    = do
-        toggleButtonActiveReactive (_lcBtPlay lc) =:> playReactive 
-        toggleButtonActiveReactive (_lcBtStop lc) =:> stopReactive 
-        buttonActivateField (_lcBtRetrieve lc) =:> retrieveReactive 
-        buttonActivateField (_lcBtRewind lc) =:> rewindReactive 
-        buttonActivateField (_lcBtForward lc) =:> forwardReactive
 
-
-liveControlSetMode :: LiveControl -> ReactiveFieldWrite IO LiveStateState
-liveControlSetMode ctrl = ReactiveFieldWrite setter
-  where
-    setter Live    = liveControlSetLive ctrl
-    setter Stopped = liveControlSetStop ctrl
 
 
 liveControlSetLive :: LiveControl -> IO ()

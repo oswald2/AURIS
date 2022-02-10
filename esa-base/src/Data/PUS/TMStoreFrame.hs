@@ -7,28 +7,34 @@
 #-}
 module Data.PUS.TMStoreFrame
     ( TMStoreFrame(..)
+    , SwitcherMap
     , tmstTime
     , tmstFrame
     , tmstBinary
+    , tmstInterface
     ) where
 
 import           RIO
 
-import           Data.Aeson
 import           Codec.Serialise
+import           Data.Aeson
 
-import           Control.Lens                   ( makeLenses )
 import           Conduit.PayloadParser
+import           Control.Lens                   ( makeLenses )
 
+import           Data.PUS.TMFrame
 import           General.Time
 import           General.Types
-import           Data.PUS.TMFrame
 
+import           Protocol.ProtocolInterfaces
+
+type SwitcherMap = IntMap (TBQueue TMStoreFrame)
 
 data TMStoreFrame = TMStoreFrame
-    { _tmstTime   :: !SunTime
-    , _tmstFrame  :: !TMFrame
-    , _tmstBinary :: HexBytes
+    { _tmstTime      :: !SunTime
+    , _tmstInterface :: !ProtocolInterface
+    , _tmstFrame     :: !TMFrame
+    , _tmstBinary    :: HexBytes
     }
     deriving (Eq, Show, Generic)
 makeLenses ''TMStoreFrame

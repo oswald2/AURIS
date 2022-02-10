@@ -36,10 +36,9 @@ receiveTcNcduC = conduitParserEither ncduTcParser .| sink
   where
     sink = awaitForever $ \case
         Left err -> do
-            st <- ask
             let errorMsg = T.pack (errorMessage err)
             logError $ display errorMsg
-            liftIO $ raiseEvent st $ EVAlarms (EVNCDUParseError errorMsg)
+            raiseEvent $ EVAlarms (EVNCDUParseError errorMsg)
             sink
         Right (_, tc') -> do
             yield tc'
@@ -52,8 +51,7 @@ receiveTmNcduC = conduitParserEither ncduTmParser .| sink
   where
     sink = awaitForever $ \case
         Left err -> do
-            st <- ask
-            liftIO $ raiseEvent st $ EVAlarms
+            raiseEvent $ EVAlarms
                 (EVNCDUParseError (T.pack (errorMessage err)))
             sink
         Right (_, tc') -> do
@@ -68,8 +66,7 @@ receiveAdminNcduC = conduitParserEither ncduAdminMessageParser .| sink
   where
     sink = awaitForever $ \case
         Left err -> do
-            st <- ask
-            liftIO $ raiseEvent st $ EVAlarms
+            lift $ raiseEvent $ EVAlarms
                 (EVNCDUParseError (T.pack (errorMessage err)))
             sink
         Right (_, tc') -> do

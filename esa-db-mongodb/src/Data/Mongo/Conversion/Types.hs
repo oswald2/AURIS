@@ -1,19 +1,20 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Data.Mongo.Conversion.Types where
 
-import           RIO                     hiding ( lookup )
 import           Data.Bson
 import           Data.Text.Short               as ST
+import           RIO                     hiding ( lookup )
 
-import           General.Types
-import           General.PUSTypes
 import           General.APID
+import           General.PUSTypes
 import           General.Time
+import           General.Types
 
-import           Data.TM.Value                 as TM
-import           Data.TM.Validity
 import           Data.PUS.SegmentationFlags
+import           Data.TM.Validity
+import           Data.TM.Value                 as TM
 
+import           Protocol.ProtocolInterfaces
 
 
 instance Val (Flag Good) where
@@ -85,7 +86,7 @@ instance Val EduVCID where
             String "IsSCOE" -> Just IsSCOE
             Int32  vcid     -> Just (IsVCID (VCID (fromIntegral vcid)))
             _               -> Nothing
-    cast' _ = Nothing 
+    cast' _ = Nothing
 
 instance Val SegmentationFlags where
     val SegmentStandalone = String "UNSEG"
@@ -219,14 +220,29 @@ instance Val TMValue where
             ]
 
     cast' (Doc doc) = do
-        v <- lookup "val" doc 
-        va <- lookup "validity" doc 
+        v  <- lookup "val" doc
+        va <- lookup "validity" doc
         return (TMValue v va)
-    cast' _ = Nothing 
+    cast' _ = Nothing
 
 
-instance Val SPID where 
+instance Val SPID where
     val (SPID x) = Int32 (fromIntegral x)
 
     cast' (Int32 x) = Just (SPID (fromIntegral x))
-    cast' _ = Nothing 
+    cast' _         = Nothing
+
+
+instance Val SleIf where
+    val (SleRAFIf   x) = Doc [ "si" := String "RAF", "nr" := Int32 (fromIntegral x)]
+    val (SleRCFIf   x) = Doc [ "si" := String "RCF", "nr" := Int32 (fromIntegral x)]
+    val (SleFCLTUIf x) = Doc [ "si" := String "FCLTU", "nr" := Int32 (fromIntegral x)]
+    val SleUnknownIf   = String "UNKNOWN"
+
+    cast' (Doc doc) = do 
+        si <- lookup "si" doc 
+        nr <- lookup "nr" doc 
+        case si of 
+            String "RAF" -> Just (SleRAFIf nr) 
+            String "RCF" -> Just (SleRCFIf nr) 
+            String "FCLTU" -> Just (SleFCLTUIf nr) 

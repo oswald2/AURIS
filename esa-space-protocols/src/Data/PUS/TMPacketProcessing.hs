@@ -63,8 +63,7 @@ raiseTMPacketC
     :: (MonadIO m, MonadReader env m, HasGlobalState env)
     => ConduitT (ExtractedDU TMPacket) (ExtractedDU TMPacket) m ()
 raiseTMPacketC = awaitForever $ \pkt -> do
-    env <- ask
-    liftIO $ raiseEvent env (EVTelemetry (EVTMPacketDecoded pkt))
+    raiseEvent (EVTelemetry (EVTMPacketDecoded pkt))
     yield pkt
 
 
@@ -72,9 +71,7 @@ raiseTMParameterC
     :: (MonadIO m, MonadReader env m, HasGlobalState env)
     => ConduitT (ExtractedDU TMPacket) (ExtractedDU TMPacket) m ()
 raiseTMParameterC = awaitForever $ \pkt -> do
-    env <- ask
-    liftIO $ raiseEvent
-        env
+    lift $ raiseEvent
         (EVTelemetry (EVTMParameters (pkt ^. epDU . tmpParams)))
     yield pkt
 
@@ -336,7 +333,6 @@ processPacket pktDef (TMPacketKey _apid _t _st pi1 pi2) pkt@(ExtractedPacket _ p
         case _tmpdEvent pktDef of
             PIDNo       -> return ()
             PIDInfo txt -> do
-                env <- ask
                 let msg =
                         utf8BuilderToText
                             $  display ("SPID: " :: Text)
@@ -351,9 +347,8 @@ processPacket pktDef (TMPacketKey _apid _t _st pi1 pi2) pkt@(ExtractedPacket _ p
                             <> display (_tmpSSC tmPacket)
                             <> " Msg: "
                             <> display (ST.toText txt)
-                liftIO $ raiseEvent env (EVAlarms (EVPacketInfo msg))
+                raiseEvent (EVAlarms (EVPacketInfo msg))
             PIDWarning txt -> do
-                env <- ask
                 let msg =
                         utf8BuilderToText
                             $  display ("SPID: " :: Text)
@@ -368,9 +363,8 @@ processPacket pktDef (TMPacketKey _apid _t _st pi1 pi2) pkt@(ExtractedPacket _ p
                             <> display (_tmpSSC tmPacket)
                             <> " Msg: "
                             <> display (ST.toText txt)
-                liftIO $ raiseEvent env (EVAlarms (EVPacketWarn msg))
+                raiseEvent (EVAlarms (EVPacketWarn msg))
             PIDAlarm txt -> do
-                env <- ask
                 let msg =
                         utf8BuilderToText
                             $  display ("SPID: " :: Text)
@@ -385,7 +379,7 @@ processPacket pktDef (TMPacketKey _apid _t _st pi1 pi2) pkt@(ExtractedPacket _ p
                             <> display (_tmpSSC tmPacket)
                             <> " Msg: "
                             <> display (ST.toText txt)
-                liftIO $ raiseEvent env (EVAlarms (EVPacketAlarm msg))
+                raiseEvent (EVAlarms (EVPacketAlarm msg))
         return du
 
 

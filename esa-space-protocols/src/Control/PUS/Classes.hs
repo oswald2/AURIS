@@ -17,7 +17,11 @@ access control to IO functions. Used within the encoding conduits.
     , RankNTypes
 #-}
 module Control.PUS.Classes
-    ( HasConfig(..)
+    ( AppState
+    , FOP1State
+    , COP1State
+    , CorrelationVar
+    , HasConfig(..)
     , HasPUSState(..)
     , HasGlobalState
     , HasFOPState(..)
@@ -25,44 +29,66 @@ module Control.PUS.Classes
     , HasMissionSpecific(..)
     , HasDataModel(..)
     , HasTCRqstQueue(..)
+    , HasSLE(..)
     , getDataModel
     , setDataModel
     , HasRaiseEvent(..)
     , HasVerif(..)
     , HasDatabase(..)
     , HasStats(..)
+    , HasTerminate(..)
+    , raiseEvent
+    , sleCommand
+    , terminate
     ) where
 
-import           RIO                     hiding ( to
-                                                , (^.)
+import           RIO                     hiding ( (^.)
+                                                , to
                                                 )
-import qualified RIO.HashMap.Partial           as HM
 
 import           Control.Lens.Getter
 
 import           Data.DataModel
+import           Data.PUS.COP1Types
 import           Data.PUS.Config
 import           Data.PUS.Events
-import           Data.PUS.TMFrame               ( TMFrame )
-import           Data.PUS.GlobalState
+import           Data.PUS.ExtractedDU           ( ExtractedDU )
+--import           Data.PUS.GlobalState
 import           Data.PUS.MissionSpecific.Definitions
                                                 ( PUSMissionSpecific )
-import           Data.PUS.TCRequest
-import           Data.PUS.ExtractedDU           ( ExtractedDU )
 import           Data.PUS.PUSPacket             ( PUSPacket )
+import           Data.PUS.PUSState              ( PUSState )
+import           Data.PUS.Statistics
+import           Data.PUS.TCRequest
+import           Data.PUS.TMFrame               ( TMFrame )
 import           Data.PUS.TMPacket              ( TMPacket )
 import           Data.PUS.Verification
-import           Data.PUS.Statistics
 
 import           General.PUSTypes
 import           General.Time
 
-import           Verification.Commands
-
-import           Persistence.DbBackend         as DB
 import           Persistence.DBQuery            ( DBQuery )
+import           Persistence.DbBackend         as DB
+
+import           Protocol.ProtocolSLE           ( SLECommand )
 
 --import           GHC.Compact
+
+
+
+
+-- | The AppState is just a type alias
+type AppState = TVar PUSState
+
+-- | Stores the current correlation coefficient
+type CorrelationVar = TVar CorrelationCoefficients
+
+-- | The state of the FOP1 machine
+type FOP1State = TVar FOPState
+
+type COP1State = HashMap VCID FOP1State
+
+
 
 -- | This class specifies how to get a configuration
 class HasConfig env where
@@ -79,7 +105,7 @@ class HasMissionSpecific env where
 -- | Class for getting the FOP1 State
 class HasFOPState env where
     copStateG :: Getter env COP1State
-    fopStateG :: VCID -> env -> FOP1State
+    fopStateG :: VCID -> env -> Maybe FOP1State
 
 
 -- | class for getting the time correlation coefficients
@@ -106,7 +132,13 @@ setDataModel env dm = do
 
 -- | class for raising an event to the user interfaces
 class HasRaiseEvent env where
-    raiseEvent :: env -> Event -> IO ()
+    appRaiseEvent :: env -> Event -> IO ()
+
+raiseEvent
+    :: (MonadIO m, MonadReader env m, HasRaiseEvent env) => Event -> m ()
+raiseEvent event = do
+    env <- ask
+    liftIO $ appRaiseEvent env event
 
 
 -- | Class used for TC verification.
@@ -140,6 +172,26 @@ class HasStats a where
   getFrameStats :: a -> TVar Statistics
   getPacketStats :: a -> TVar Statistics
 
+-- | Class for termination of the processign chains
+class HasTerminate a where
+    appTerminate :: a -> IO ()
+
+
+terminate :: (MonadIO m, MonadReader env m, HasTerminate env) => m ()
+terminate = ask >>= liftIO . appTerminate
+
+-- | Class for SLE interaction 
+class HasSLE a where
+    getSleCmdQueue :: a -> TBQueue SLECommand 
+    appSendSLE :: a -> SLECommand -> IO ()
+
+-- | send the given SLE command to the SLE processor
+sleCommand :: (MonadIO m, MonadReader env m, HasSLE env) => SLECommand -> m ()
+sleCommand cmd = do
+    env <- ask
+    liftIO $ appSendSLE env cmd
+
+
 -- | Class for accessing the global state
 class (HasConfig env,
     HasDatabase env,
@@ -153,87 +205,9 @@ class (HasConfig env,
     HasTCRqstQueue env,
     HasVerif env,
     HasDatabase env,
-    HasStats env) => HasGlobalState env
+    HasStats env,
+    HasSLE env,
+    HasTerminate env) => HasGlobalState env
 
 
-
-instance HasConfig GlobalState where
-    getConfig = to glsConfig
-
-instance HasPUSState GlobalState where
-    appStateG = to glsState
-
-instance HasMissionSpecific GlobalState where
-    getMissionSpecific = to glsMissionSpecific
-
-instance HasFOPState GlobalState where
-    copStateG = to glsFOP1
-    fopStateG vcid env = glsFOP1 env HM.! vcid
-
-instance HasCorrelationState GlobalState where
-    corrStateG = to glsCorrState
-
-instance HasDataModel GlobalState where
-    getDataModelVar = to glsDataModel
-
-instance HasRaiseEvent GlobalState where
-    raiseEvent = glsRaiseEvent
-
-instance HasTCRqstQueue GlobalState where
-    getRqstQueue = to glsTCRequestQueue
-
-instance HasVerif GlobalState where
-    registerRequest env rqst pktID ssc = atomically $ writeTBQueue
-        (glsVerifCommandQueue env)
-        (RegisterRequest rqst pktID ssc)
-    requestReleased env rqstID releaseTime status = atomically $ writeTBQueue
-        (glsVerifCommandQueue env)
-        (SetVerifR rqstID releaseTime status)
-    requestVerifyG env rqstID status = atomically
-        $ writeTBQueue (glsVerifCommandQueue env) (SetVerifG rqstID status)
-    requestVerifyT env rqstID status = atomically
-        $ writeTBQueue (glsVerifCommandQueue env) (SetVerifT rqstID status)
-    requestVerifyO env rqstID status = atomically
-        $ writeTBQueue (glsVerifCommandQueue env) (SetVerifO rqstID status)
-    requestVerifyGT env rqstID status = atomically
-        $ writeTBQueue (glsVerifCommandQueue env) (SetVerifGT rqstID status)
-    requestVerifyGTCnC env (pktID, seqC) status = atomically $ writeTBQueue
-        (glsVerifCommandQueue env)
-        (SerVerifGTCnC pktID seqC status)
-    requestVerifyTMA env (pktID, seqC) status = atomically $ writeTBQueue
-        (glsVerifCommandQueue env)
-        (SetVerifA pktID seqC status)
-    requestVerifyTMS env (pktID, seqC) status = atomically $ writeTBQueue
-        (glsVerifCommandQueue env)
-        (SetVerifS pktID seqC status)
-    requestVerifyTMC env (pktID, seqC) status = atomically $ writeTBQueue
-        (glsVerifCommandQueue env)
-        (SetVerifC pktID seqC status)
-    requestVerifyProgressTM env (pktID, seqC, idx) status =
-        atomically $ writeTBQueue
-            (glsVerifCommandQueue env)
-            (SetVerifP (fromIntegral idx) pktID seqC status)
-
-
-instance HasDatabase GlobalState where
-    getDbBackend env = glsDatabase env
-    storeTMFrame env frame =
-        maybe (return ()) (`DB.storeTMFrame` frame) (getDbBackend env)
-    storeTMFrames env frames =
-        maybe (return ()) (`DB.storeTMFrames` frames) (getDbBackend env)
-    storePUSPacket env pkt =
-        maybe (return ()) (`DB.storePUSPacket` pkt) (getDbBackend env)
-    storeTMPacket env pkt =
-        maybe (return ()) (`DB.storeTMPacket` pkt) (getDbBackend env)
-
-    queryDB env query = do
-        case glsQueryQueue env of 
-            Just queue -> atomically $ writeTBQueue queue query
-            Nothing -> return ()
-
-instance HasStats GlobalState where 
-    getFrameStats = glsFrameStatistics  
-    getPacketStats = glsPacketStatistics
-
-instance HasGlobalState GlobalState
 

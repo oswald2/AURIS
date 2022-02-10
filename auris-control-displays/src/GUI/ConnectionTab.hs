@@ -24,9 +24,9 @@ type ConnMap = HashMap (ProtocolInterface, ConnType) ConnectionStatus
 
 data ConnectionTab = ConnectionTab {
   _connTabEntries :: ConnMap
-  , _connTabNctrsBox :: Box
-  , _connTabCncBox :: Box
-  , _connTabEdenBox :: Box
+  , _connTabNctrsBox :: !Box
+  , _connTabCncBox :: !Box
+  , _connTabEdenBox :: !Box
   }
 
 
@@ -139,6 +139,7 @@ createConnectionTab config builder = do
                         }
 
   return g
+
 
 -- | Displays the given connection status. The 'ProtocolInterface' and 'ConnType' 
 -- are for determining the exact connection to be displayed with 'ConnectionState'

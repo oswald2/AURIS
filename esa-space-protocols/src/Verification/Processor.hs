@@ -11,6 +11,7 @@ import qualified RIO.HashMap                   as HM
 import           Control.Lens                   ( makeLenses )
 import           Control.PUS.Classes            ( HasRaiseEvent(..)
                                                 , HasConfig(..)
+                                                , raiseEvent 
                                                 )
 
 
@@ -121,7 +122,6 @@ processCommand _timerWheel _queue st (RegisterRequest rqst pktId ssc) = do
                 .~ HM.insert rqstID (pktId, ssc, var) (_stRqstMap st)
                 &  stApidMap
                 .~ HM.insert (pktId, ssc) (rqstID, var) (_stApidMap st)
-    env <- ask
     logDebug
         $  "Verification: registerRequest got new request RqstID: "
         <> display rqstID
@@ -129,26 +129,24 @@ processCommand _timerWheel _queue st (RegisterRequest rqst pktId ssc) = do
         <> pktIdDisplayPretty pktId
         <> " SSC: "
         <> display ssc
-    liftIO $ raiseEvent env (EVCommanding (EVTCVerificationNew rqst verif))
+    raiseEvent (EVCommanding (EVTCVerificationNew rqst verif))
     return newSt
 
 -- Process the Release Stage
 processCommand timerWheel queue st (SetVerifR rqstID releaseTime status) = do
     case HM.lookup rqstID (_stRqstMap st) of
         Just (pktID, ssc, var) -> do
-            env                 <- ask
             (action, newStatus) <- atomically $ do
                 verif <- readTVar var
                 let newStatus = setReleaseStage status verif
                 writeTVar var newStatus
                 return
-                    ( liftIO
-                        (raiseEvent
-                            env
+                    ( 
+                        raiseEvent
                             (EVCommanding
                                 (EVTCRelease rqstID releaseTime newStatus)
                             )
-                        )
+                        
                     , newStatus
                     )
             action
@@ -475,14 +473,13 @@ doUpdate
     -> (t -> Verification -> Verification)
     -> m Verification
 doUpdate rqstID status var setStage = do
-    env                 <- ask
     (action, newStatus) <- atomically $ do
         verif <- readTVar var
         let newStatus = setStage status verif
         writeTVar var newStatus
         let action = do
                 let event = EVTCVerificationUpdate rqstID newStatus
-                liftIO $ raiseEvent env (EVCommanding event)
+                raiseEvent (EVCommanding event)
         return (action, newStatus)
     action
     return newStatus

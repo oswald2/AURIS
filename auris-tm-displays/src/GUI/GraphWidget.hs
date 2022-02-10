@@ -24,7 +24,6 @@ module GUI.GraphWidget
     , plotValLineType
     , plotValPointStyle
     , plotValValues
-    , graphName
     , graphParameters
     , graphData
     , gwParamSelection
@@ -62,28 +61,18 @@ import           Graphics.Rendering.Chart.Easy as Ch
 import           GUI.Chart
 import           GUI.NameDescrTable
 
+import qualified Data.Time.Clock               as TI
 import           GI.Cairo.Render.Connector      ( renderWithContext )
+import           GI.Gtk.Objects                 ( builderNewFromResource )
 import           GUI.Utils
 
 
 
-data GraphProperties = GraphProperties
-    { _gpTitle :: !Text
-    }
-makeLenses ''GraphProperties
-
-defaultGraphProperties :: GraphProperties
-defaultGraphProperties = GraphProperties { _gpTitle = "Graph" }
-
-applyGraphProperties :: Graph -> GraphProperties -> Graph
-applyGraphProperties g props = g & graphName .~ (props ^. gpTitle)
-
-graphToProperties :: Graph -> GraphProperties
-graphToProperties g = GraphProperties { _gpTitle = g ^. graphName }
 
 data GraphPropertiesDialog = GraphPropertiesDialog
-    { _gpdDialog :: !Gtk.Dialog
-    , _gpdTitle  :: !Gtk.Entry
+    { _gpdDialog  :: !Gtk.Dialog
+    , _gpdTitle   :: !Gtk.Entry
+    , _gpdBGColor :: !Gtk.ColorButton
     }
 makeLenses ''GraphPropertiesDialog
 
@@ -92,8 +81,10 @@ makeLenses ''GraphPropertiesDialog
 data GraphWidget = GraphWidget
     { _gwWindow           :: !Gtk.Window
     , _gwParent           :: !Gtk.Box
+    , _gwChartBox         :: !Gtk.Box
     , _gwDrawingArea      :: !Gtk.DrawingArea
     , _gwParamSelection   :: !NameDescrTable
+    , _gwTimeRange        :: !Gtk.SpinButton
     , _gwGraph            :: TVar Graph
     , _gwPickFn           :: TVar (Maybe (PickFn ()))
     , _gwPropertiesDialog :: !GraphPropertiesDialog
@@ -107,8 +98,7 @@ graphWidgetGetParamNames w =
 
 graphWidgetSetChartName :: GraphWidget -> Text -> IO ()
 graphWidgetSetChartName w name = do
-    let f x = x & graphName .~ name
-    atomically $ modifyTVar (w ^. gwGraph) f
+    atomically $ modifyTVar (w ^. gwGraph) $ \g -> g & graphProperties . gpTitle .~ name
 
 
 graphWidgetShow :: GraphWidget -> IO ()
@@ -122,7 +112,7 @@ graphWidgetHide gw = do
 
 
 graphWidgetDestroy :: GraphWidget -> IO ()
-graphWidgetDestroy gw = Gtk.widgetDestroy (gw ^. gwDrawingArea)
+graphWidgetDestroy gw = Gtk.widgetDestroy (gw ^. gwChartBox)
 
 setupGraphWidget
     :: Gtk.Window
@@ -133,16 +123,24 @@ setupGraphWidget
     -> IO GraphWidget
 setupGraphWidget window parent title paramSelector dialog = do
     let graph = emptyGraph title
-    var  <- newTVarIO graph
-    var2 <- newTVarIO Nothing
-    da   <- Gtk.drawingAreaNew
+    var            <- newTVarIO graph
+    var2           <- newTVarIO Nothing
+
+    builder        <- Gtk.builderNewFromResource "/auris/data/ChartWidget.glade"
+    da             <- getObject builder "drawingAreaChart" Gtk.DrawingArea
+    chartBox       <- getObject builder "boxChart" Gtk.Box
+    entryTimeRange <- getObject builder "spinbuttonGraphRange" Gtk.SpinButton
+
     Gtk.widgetAddEvents da [GI.EventMaskButtonPressMask]
-    Gtk.boxPackStart parent da True True 0
+
+    Gtk.boxPackStart parent chartBox True True 0
 
     let g = GraphWidget { _gwWindow           = window
                         , _gwParent           = parent
+                        , _gwChartBox         = chartBox
                         , _gwDrawingArea      = da
                         , _gwParamSelection   = paramSelector
+                        , _gwTimeRange        = entryTimeRange
                         , _gwGraph            = var
                         , _gwPickFn           = var2
                         , _gwPropertiesDialog = dialog
@@ -158,6 +156,11 @@ setupGraphWidget window parent title paramSelector dialog = do
                 Gtk.menuPopupAtPointer m Nothing
                 return True
             _ -> return False
+
+    void $ GI.on entryTimeRange #valueChanged $ do
+        val <- Gtk.spinButtonGetValue entryTimeRange
+        atomically
+            $ modifyTVar' var (\gr -> graphSetTimeRange gr (realToFrac val))
 
     return g
 
@@ -222,9 +225,10 @@ redrawGraph gw = do
 -- this function is a bit slow and could be optimized.
 graphWidgetInsertParamValue :: GraphWidget -> RIO.Vector TMParameter -> IO ()
 graphWidgetInsertParamValue gw params = do
+    now <- TI.getCurrentTime
     atomically $ do
         graph <- readTVar (gw ^. gwGraph)
-        let newGraph = V.foldl graphInsertParamValue graph params
+        let !newGraph = graphInsertParamValue now graph (V.toList params)
         writeTVar (gw ^. gwGraph) newGraph
     redrawGraph gw
 
@@ -295,11 +299,12 @@ graphAddParameters var ls = do
 chart :: Graph -> Renderable ()
 chart Graph {..} = toRenderable layout
   where
+    properties = _graphProperties 
     plots = map (plotValToPlot . snd) $ M.toList _graphData
     layout =
-        chartLayout _graphTimeAxisSettings
+        chartLayout properties _graphTimeAxisSettings
             &  layout_title
-            .~ T.unpack _graphName
+            .~ T.unpack (properties ^. gpTitle)
             &  layout_plots
             .~ plots
 
@@ -362,8 +367,8 @@ showPropertiesDialog :: GraphWidget -> IO ()
 showPropertiesDialog g = do
     let diag = g ^. gwPropertiesDialog
 
-    props <- graphToProperties <$> readTVarIO (g ^. gwGraph)
-    setProperties diag props
+    gr <- readTVarIO (g ^. gwGraph)
+    setProperties diag (gr ^. graphProperties)
 
     resp <- Gtk.dialogRun (diag ^. gpdDialog)
     Gtk.widgetHide (diag ^. gpdDialog)
@@ -379,20 +384,22 @@ applyProperties :: GraphWidget -> GraphProperties -> IO ()
 applyProperties gw gp = do
     atomically $ do
         graph <- readTVar (gw ^. gwGraph)
-        let !newGraph = applyGraphProperties graph gp
+        let !newGraph = graph & graphProperties .~ gp
         writeTVar (gw ^. gwGraph) newGraph
     return ()
 
 
 setupGraphPropertiesDialog
-    :: Gtk.Builder -> GraphProperties -> IO GraphPropertiesDialog
-setupGraphPropertiesDialog builder props = do
+    :: Gtk.Window -> GraphProperties -> IO GraphPropertiesDialog
+setupGraphPropertiesDialog window props = do
 
-    window <- getObject builder "mainWindow" Gtk.Window
-    diag   <- getObject builder "graphPropertiesDialog" Gtk.Dialog
+    builder <- builderNewFromResource "/auris/data/ChartWidget.glade"
+
+    diag    <- getObject builder "graphPropertiesDialog" Gtk.Dialog
     Gtk.windowSetTransientFor diag (Just window)
 
-    title <- getObject builder "graphTitleEntry" Gtk.Entry
+    title   <- getObject builder "graphTitleEntry" Gtk.Entry
+    bgColor <- getObject builder "colorButtonBackground" Gtk.ColorButton
 
     void $ Gtk.dialogAddButton
         diag
@@ -404,7 +411,10 @@ setupGraphPropertiesDialog builder props = do
 
     Gtk.entrySetText title (props ^. gpTitle)
 
-    let g = GraphPropertiesDialog { _gpdDialog = diag, _gpdTitle = title }
+    let g = GraphPropertiesDialog { _gpdDialog  = diag
+                                  , _gpdTitle   = title
+                                  , _gpdBGColor = bgColor
+                                  }
 
     return g
 
@@ -412,11 +422,15 @@ setupGraphPropertiesDialog builder props = do
 setProperties :: GraphPropertiesDialog -> GraphProperties -> IO ()
 setProperties g props = do
     Gtk.entrySetText (g ^. gpdTitle) (props ^. gpTitle)
+    bg <- convertColour (props ^. gpBGColor)
+    Gtk.colorChooserSetRgba (g ^. gpdBGColor) bg
 
 getProperties :: GraphPropertiesDialog -> IO GraphProperties
 getProperties g = do
-    title <- Gtk.entryGetText (g ^. gpdTitle)
+    title   <- Gtk.entryGetText (g ^. gpdTitle)
+    bg      <- Gtk.colorChooserGetRgba (g ^. gpdBGColor)
+    bgColor <- convertRGBA bg
 
-    let !p = GraphProperties { _gpTitle = title }
+    let !p = GraphProperties { _gpTitle = title, _gpBGColor = bgColor }
 
     return p

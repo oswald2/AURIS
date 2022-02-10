@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell 
+{-# LANGUAGE TemplateHaskell, CPP
 #-}
 module Data.PUS.EventHandler
     ( filteredRaiseEvent
@@ -23,6 +23,7 @@ data EventConfig = EventConfig
     { _cfgEvCommanding :: !Bool
     , _cfgEvTelemetry  :: !Bool
     , _cfgEvAlarm      :: !Bool
+    , _cfgEvSLE        :: !Bool 
     , _cfgEvCOP1       :: !Bool
     , _cfgEvDB         :: !Bool
     , _cfgEvAll        :: !Bool
@@ -35,6 +36,7 @@ defaultEventCfg = EventConfig { _cfgEvCommanding = True
                               , _cfgEvAlarm      = True
                               , _cfgEvCOP1       = True
                               , _cfgEvDB         = True
+                              , _cfgEvSLE        = True 
                               , _cfgEvAll        = True
                               }
 
@@ -46,6 +48,7 @@ createEventConfig = foldl' setFlag defaultEventCfg
     setFlag cfg EVFlagTelemetry  = cfg & cfgEvTelemetry .~ True
     setFlag cfg EVFlagAlarm      = cfg & cfgEvAlarm .~ True
     setFlag cfg EVFlagCOP1       = cfg & cfgEvCOP1 .~ True
+    setFlag cfg EVFlagSLE        = cfg & cfgEvSLE .~ True
     setFlag cfg EVFlagDB         = cfg & cfgEvDB .~ True
     setFlag cfg EVFlagAll =
         cfg
@@ -72,3 +75,7 @@ filteredRaiseEvent cfg action e@EVCOP1{} = do
     when (_cfgEvAll cfg || _cfgEvCOP1 cfg) $ action e
 filteredRaiseEvent cfg action e@EVDB{} = do
     when (_cfgEvAll cfg || _cfgEvDB cfg) $ action e
+#ifdef HAS_SLE
+filteredRaiseEvent cfg action e@EVSLE{} = do
+    when (_cfgEvAll cfg || _cfgEvSLE cfg) $ action e
+#endif

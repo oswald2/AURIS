@@ -5,6 +5,9 @@ module Protocol.Internal.SLEDummy
 import           RIO
 
 import           Data.PUS.Config
+import           Data.PUS.TMStoreFrame          ( SwitcherMap )
 
-startSLE :: (Monad m) => SLEConfig -> m ()
-startSLE _sleCfg = pure ()
+import           Protocol.ProtocolSLE           ( SLECommand )
+
+startSLE :: (Monad m) => SLEConfig -> SwitcherMap -> TBQueue SLECommand -> m ()
+startSLE _sleCfg _switcherMap _queue = pure ()

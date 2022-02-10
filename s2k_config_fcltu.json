@@ -1,0 +1,89 @@
+{
+    "aurisDbConfig": {
+        "cfgMongoHost": "localhost",
+        "cfgMongoPort": null
+    },
+    "aurisMIB": null,
+    "aurisTheme": "ThemeLight",
+    "aurisMission": "DEFAULT",
+    "aurisPusConfig": {
+        "cfgCnC": [
+            {
+                "cfgCncHasCRC": true,
+                "cfgCncPortTM": 10000,
+                "cfgCncHost": "localhost",
+                "cfgCncPortTC": 11000,
+                "cfgCncName": "SCOE 1",
+                "cfgCncID": 1
+            }
+        ],
+        "cfgUnknownSPID": 5071,
+        "cfgStoreTMFrames": true,
+        "cfgRandomizerEnabled": false,
+        "cfgVerification": {
+            "cfgTimeoutC": 30,
+            "cfgTimeoutGT": 20,
+            "cfgTimeoutS": 30,
+            "cfgTimeoutA": 30,
+            "cfgTimeoutO": 20
+        },
+        "cfgEpoch": "UnixTime",
+        "cfgInterfacePort": 55555,
+        "cfgRandomizerStartValue": 255,
+        "cfgVCIDs": [
+            0,
+            1
+        ],
+        "cfgLeapSeconds": {
+            "fromLeaps": 17
+        },
+        "cfgSCID": 0,
+        "cfgNCTRS": [
+            {
+                "cfgNctrsPortTC": 20009,
+                "cfgNctrsID": 1,
+                "cfgNctrsHost": "localhost",
+                "cfgNctrsName": "NCTRS A",
+                "cfgNctrsPortADM": 20010,
+                "cfgNctrsPortTM": 2502
+            }
+        ],
+        "cfgCltuBlockSize": "CltuBS_8",
+        "cfgStorePUSPackets": true,
+        "cfgEDEN": [
+            {
+                "cfgEdenName": "EDEN 1",
+                "cfgEdenID": 1,
+                "cfgEdenHost": "localhost",
+                "cfgEdenPort": 40300
+            }
+        ],
+        "cfgSLE": {
+            "cfgSleSeConfig": "sle-wrapper/files/SE_USER_Config.txt",
+            "cfgSleProxyConfig": "sle-wrapper/files/PROXY_USER_Config.txt",
+            "cfgSlePeerID": "EGSCC",
+            "cfgSleInstances": [
+                {
+                    "tag": "SLEInstFCLTU",
+                    "contents": {
+                        "cfgSleCltuPort": "TCPORT",
+                        "cfgSleCltuPeerID": "PARAGONTT",
+                        "cfgSleCltuVersion": "SLEVersion3",
+                        "cfgSleCltuSII": "sagr=3.spack=facility-PASS1.fsl-fg=1.cltu=cltu1",
+                        "cfgSleCltuBufferSize": 100,
+                        "cfgSleCltuPlopInEffect": "SlePLOP2"
+                    }
+                }
+
+            ]
+        },
+        "cfgTMFrame": {
+            "cfgMaxTMFrameLen": 1115,
+            "cfgTMSegLength": "TMSegment65536",
+            "cfgTMFrameHasCRC": true
+        }
+    },
+    "aurisLogLevel": {
+        "tag": "LogLevelDebug"
+    }
+}

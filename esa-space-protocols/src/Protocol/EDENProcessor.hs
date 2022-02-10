@@ -100,7 +100,6 @@ handleEdenMessage missionSpecific interf counters eden
                     (hexdumpBS (toBS dat))
                 case handleEdenPacket missionSpecific interf (eden ^. edenDataField) counters of
                     Left err -> do
-                        env <- ask
                         let
                             msg =
                                 display
@@ -110,7 +109,7 @@ handleEdenMessage missionSpecific interf counters eden
                                     <> display (" " :: Text)
                                     <> displayShow eden
                         logError msg
-                        liftIO $ raiseEvent env $ EVAlarms $ EVPacketAlarm
+                        raiseEvent $ EVAlarms $ EVPacketAlarm
                             (utf8BuilderToText msg)
                         return (Left (utf8BuilderToText msg))
                     Right (pkt, newCounters) -> do
