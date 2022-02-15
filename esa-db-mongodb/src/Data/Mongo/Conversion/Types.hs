@@ -176,7 +176,7 @@ instance Val TMValueSimple where
     val (TMValTime   x) = Doc ["type" =: String "Time", "value" =: val x]
     val (TMValString x) = Doc ["type" =: String "String", "value" =: val x]
     val (TMValOctet x) =
-        Doc ["type" =: String "Octet", "value" =: Bin (Binary x)]
+        Doc ["type" =: String "Octet", "value" =: Bin (Binary (toBS x))]
     val TMValNothing = Doc ["type" =: String "Nothing", "value" =: Null]
 
     cast' (Doc doc) = do
@@ -246,3 +246,5 @@ instance Val SleIf where
             String "RAF" -> Just (SleRAFIf nr) 
             String "RCF" -> Just (SleRCFIf nr) 
             String "FCLTU" -> Just (SleFCLTUIf nr) 
+            _ -> Nothing 
+    cast' _ = Nothing 

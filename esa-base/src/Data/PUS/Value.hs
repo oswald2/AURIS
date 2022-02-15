@@ -229,8 +229,8 @@ data Value =
     | ValDouble Endian !Double
     | ValString !ByteString
     | ValFixedString !Word16 !ByteString
-    | ValOctet !ByteString
-    | ValFixedOctet !Word16 !ByteString
+    | ValOctet !HexBytes
+    | ValFixedOctet !Word16 !HexBytes
     | ValCUCTime CUCTime
     | ValUndefined
     deriving (Eq, Ord, Read, Show, Generic)
@@ -308,10 +308,10 @@ instance AE.ToJSON Value where
         , "width" .= width
         ]
     toJSON (ValOctet x) = object
-        ["valType" .= ("ValOctet" :: Text), "value" .= makeByteString64 x]
+        ["valType" .= ("ValOctet" :: Text), "value" .= makeByteString64 (toBS x)]
     toJSON (ValFixedOctet width x) = object
         [ "valType" .= ("ValFixedOctet" :: Text)
-        , "value" .= makeByteString64 x
+        , "value" .= makeByteString64 (toBS x)
         , "width" .= width
         ]
     toJSON (ValCUCTime x) =
@@ -435,12 +435,12 @@ instance AE.ToJSON Value where
         .= width
         )
     toEncoding (ValOctet x) = pairs
-        ("valType" .= ("ValOctet" :: Text) <> "value" .= makeByteString64 x)
+        ("valType" .= ("ValOctet" :: Text) <> "value" .= makeByteString64 (toBS x))
     toEncoding (ValFixedOctet width x) = pairs
         (  "valType"
         .= ("ValFixedOctet" :: Text)
         <> "value"
-        .= makeByteString64 x
+        .= makeByteString64 (toBS x)
         <> "width"
         .= width
         )
@@ -482,12 +482,12 @@ instance FromJSON Value where
         Just (AE.String "ValFixedString") ->
             ValFixedString <$> o .: "width" <*> (encodeUtf8 <$> o .: "value")
         Just (AE.String "ValOctet") ->
-            ValOctet . getByteString64 <$> o .: "value"
+            ValOctet . HexBytes . getByteString64 <$> o .: "value"
         Just (AE.String "ValFixedOctet") ->
             ValFixedOctet
                 <$> o
                 .:  "width"
-                <*> (getByteString64 <$> o .: "value")
+                <*> (HexBytes . getByteString64 <$> o .: "value")
         Just (AE.String "ValCUCTime"  ) -> ValCUCTime <$> o .: "value"
         Just (AE.String "ValUndefined") -> pure ValUndefined
         _                               -> pure ValUndefined
@@ -537,9 +537,9 @@ initialValue b (PTC 5) (PFC 2 ) = ValDouble b 0.0
 initialValue _ (PTC 8) (PFC 0 ) = ValString B.empty
 initialValue _ (PTC 8) (PFC x) =
     ValFixedString (fromIntegral x) (BC.replicate x ' ')
-initialValue _ (PTC 7) (PFC 0) = ValOctet B.empty
+initialValue _ (PTC 7) (PFC 0) = ValOctet hexBytesEmpty
 initialValue _ (PTC 7) (PFC x) =
-    ValFixedOctet (fromIntegral x) (B.replicate x 0)
+    ValFixedOctet (fromIntegral x) (HexBytes (B.replicate x 0))
 initialValue _ (PTC 9 ) (PFC 15) = ValCUCTime $ nullCUCTime Cuc4
 initialValue _ (PTC 9 ) (PFC 16) = ValCUCTime $ nullCUCTime Cuc41
 initialValue _ (PTC 9 ) (PFC 17) = ValCUCTime $ nullCUCTime Cuc42
@@ -574,7 +574,7 @@ instance BitSizes Value where
     bitSize (ValString x)    = bytesToBitSize . mkByteSize $ B.length x
     bitSize (ValFixedString width _) =
         bytesToBitSize . mkByteSize $ fromIntegral width
-    bitSize (ValOctet x) = bytesToBitSize . mkByteSize $ B.length x
+    bitSize (ValOctet x) = bytesToBitSize . mkByteSize $ hexLength x
     bitSize (ValFixedOctet width _) =
         bytesToBitSize . mkByteSize $ fromIntegral width
     bitSize (ValCUCTime x) = bytesToBitSize . mkByteSize $ sizeof x
@@ -656,8 +656,8 @@ instance Display Value where
     display (ValString x   ) = displayBytesUtf8 x
     display (ValFixedString n x) =
         displayBytesUtf8 $ leftPaddedC ' ' (fromIntegral n) x
-    display (ValOctet x       ) = display $ hexdumpLineBS x
-    display (ValFixedOctet _ x) = display $ hexdumpLineBS x
+    display (ValOctet x       ) = display $ hexdumpLineBS (toBS x)
+    display (ValFixedOctet _ x) = display $ hexdumpLineBS (toBS x)
     display (ValCUCTime x     ) = display x
     display ValUndefined        = display ("UNDEFINED" :: Text)
 
@@ -691,10 +691,10 @@ instance GetInt Word64 where
     getInt (ValFixedString _ x) = case parseOnly decimal x of
         Left  _   -> 0
         Right val -> val
-    getInt (ValOctet x) = case parseOnly anyWord64be x of
+    getInt (ValOctet x) = case parseOnly anyWord64be (toBS x) of
         Left  _   -> 0
         Right val -> val
-    getInt (ValFixedOctet _ x) = case parseOnly anyWord64be x of
+    getInt (ValFixedOctet _ x) = case parseOnly anyWord64be (toBS x) of
         Left  _   -> 0
         Right val -> val
     getInt (ValCUCTime x) = fromIntegral $ timeToMicro x
@@ -725,10 +725,10 @@ instance GetInt Int64 where
     getInt (ValFixedString _ x) = case parseOnly decimal x of
         Left  _   -> 0
         Right val -> val
-    getInt (ValOctet x) = case parseOnly anyWord64be x of
+    getInt (ValOctet x) = case parseOnly anyWord64be (toBS x) of
         Left  _   -> 0
         Right val -> fromIntegral val
-    getInt (ValFixedOctet _ x) = case parseOnly anyWord64be x of
+    getInt (ValFixedOctet _ x) = case parseOnly anyWord64be (toBS x) of
         Left  _   -> 0
         Right val -> fromIntegral val
     getInt (ValCUCTime x) = timeToMicro x
@@ -761,8 +761,8 @@ instance GetInt Integer where
     getInt (ValFixedString _ x) = case parseOnly decimal x of
         Left  _   -> 0
         Right val -> val
-    getInt (ValOctet x       ) = fromBytesToInteger BiE x
-    getInt (ValFixedOctet _ x) = fromBytesToInteger BiE x
+    getInt (ValOctet x       ) = fromBytesToInteger BiE (toBS x)
+    getInt (ValFixedOctet _ x) = fromBytesToInteger BiE (toBS x)
     getInt (ValCUCTime x     ) = fromIntegral (timeToMicro x)
     getInt ValUndefined        = 0
 
@@ -816,9 +816,9 @@ instance SetInt Integer where
         ' '
         (fromIntegral width)
         (builderBytes (asciiIntegral x))
-    setInt (ValOctet _) x = ValOctet (toBytes x)
+    setInt (ValOctet _) x = ValOctet (HexBytes (toBytes x))
     setInt (ValFixedOctet width _) x =
-        ValOctet (rightPadded 0 (fromIntegral width) (toBytes x))
+        ValOctet (HexBytes (rightPadded 0 (fromIntegral width) (toBytes x)))
     setInt (ValCUCTime _) x =
         ValCUCTime (microToCUC Cuc4 (fromIntegral x) False)
     setInt ValUndefined _ = ValUndefined
@@ -855,9 +855,9 @@ instance SetInt Word64 where
         ' '
         (fromIntegral width)
         (builderBytes (asciiIntegral x))
-    setInt (ValOctet _           ) x = ValOctet (builderBytes (word64BE x))
+    setInt (ValOctet _           ) x = ValOctet (HexBytes (builderBytes (word64BE x)))
     setInt (ValFixedOctet width _) x = ValFixedOctet width
-        $ rightPadded 0 (fromIntegral width) (builderBytes (word64BE x))
+        (HexBytes (rightPadded 0 (fromIntegral width) (builderBytes (word64BE x))))
     setInt (ValCUCTime _) x =
         ValCUCTime (microToCUC Cuc4 (fromIntegral x) False)
     setInt ValUndefined _ = ValUndefined
@@ -894,11 +894,11 @@ instance SetInt Int64 where
         ' '
         (fromIntegral width)
         (builderBytes (asciiIntegral x))
-    setInt (ValOctet _) x = ValOctet (builderBytes (word64BE (fromIntegral x)))
-    setInt (ValFixedOctet width _) x = ValFixedOctet width $ rightPadded
+    setInt (ValOctet _) x = ValOctet (HexBytes (builderBytes (word64BE (fromIntegral x))))
+    setInt (ValFixedOctet width _) x = ValFixedOctet width (HexBytes (rightPadded
         0
         (fromIntegral width)
-        (builderBytes (word64BE (fromIntegral x)))
+        (builderBytes (word64BE (fromIntegral x)))))
     setInt (ValCUCTime _) x = ValCUCTime (microToCUC Cuc4 x False)
     setInt ValUndefined   _ = ValUndefined
 
@@ -927,11 +927,11 @@ setDouble (ValDouble  b _        ) x = ValDouble b x
 setDouble (ValString _           ) x = ValString (encodeUtf8 (textDisplay x))
 setDouble (ValFixedString width _) x = ValFixedString width
     $ rightPaddedC ' ' (fromIntegral width) (encodeUtf8 (textDisplay x))
-setDouble (ValOctet _) x = ValOctet (builderBytes (word64BE (truncate x)))
-setDouble (ValFixedOctet width _) x = ValFixedOctet width $ rightPadded
+setDouble (ValOctet _) x = ValOctet (HexBytes (builderBytes (word64BE (truncate x))))
+setDouble (ValFixedOctet width _) x = ValFixedOctet width (HexBytes (rightPadded
     0
     (fromIntegral width)
-    (builderBytes (word64BE (truncate x)))
+    (builderBytes (word64BE (truncate x)))))
 setDouble (ValCUCTime _) x = ValCUCTime (microToCUC Cuc4 (truncate x) False)
 setDouble ValUndefined   _ = ValUndefined
 
@@ -958,9 +958,9 @@ instance SetString ShortText where
 
 {-# INLINABLE setOctet #-}
 setOctet :: Value -> ByteString -> Value
-setOctet (ValOctet _) x = ValOctet x
+setOctet (ValOctet _) x = ValOctet (HexBytes x)
 setOctet (ValFixedOctet width _) x =
-    ValFixedOctet width $ rightPadded 0 (fromIntegral width) x
+    ValFixedOctet width (HexBytes (rightPadded 0 (fromIntegral width) x))
 setOctet v _ = v
 
 
@@ -1019,9 +1019,9 @@ setAlignedValue vec !off (ValDouble b x) = setValue vec off b x
 setAlignedValue vec !off (ValString x  ) = copyBS vec off x
 setAlignedValue vec !off (ValFixedString width x) =
     copyBS vec off (rightPaddedC ' ' (fromIntegral width) x)
-setAlignedValue vec !off (ValOctet x) = copyBS vec off x
+setAlignedValue vec !off (ValOctet x) = copyBS vec off (toBS x)
 setAlignedValue vec !off (ValFixedOctet width x) =
-    copyBS vec off (rightPadded 0 (fromIntegral width) x)
+    copyBS vec off (rightPadded 0 (fromIntegral width) (toBS x))
 setAlignedValue vec !off (ValCUCTime x) = setValue vec off BiE x
 setAlignedValue _   _    _              = pure ()
 
@@ -1040,9 +1040,9 @@ getAlignedValue byts off (ValDouble b _) = ValDouble b <$> getValue byts off b
 getAlignedValue byts off (ValString _  ) = ValString <$> getValueOctet byts off
 getAlignedValue byts off (ValFixedString len _) =
     ValFixedString len <$> getValueOctetLen byts off (fromIntegral len)
-getAlignedValue byts off (ValOctet _) = ValOctet <$> getValueOctet byts off
+getAlignedValue byts off (ValOctet _) = ValOctet . HexBytes <$> getValueOctet byts off
 getAlignedValue byts off (ValFixedOctet len _) =
-    ValFixedOctet len <$> getValueOctetLen byts off (fromIntegral len)
+    ValFixedOctet len . HexBytes <$> getValueOctetLen byts off (fromIntegral len)
 getAlignedValue byts off (ValCUCTime (CUCTime enc _ _ _)) =
     ValCUCTime <$> getValueCucTime byts off BiE enc
 getAlignedValue _ _ _ = Just ValUndefined
@@ -1221,12 +1221,12 @@ valueBuilder (ValFixedString l x) =
 valueBuilder (ValOctet x) =
     padFromRight typeColumn ' ' (TB.text "STRING")
         <> emptyEndian
-        <> octetBuilder x
+        <> octetBuilder (toBS x)
 
 valueBuilder (ValFixedOctet l x) =
     padFromRight typeColumn ' ' (TB.text "STRING" <> TB.decimal l)
         <> emptyEndian
-        <> octetBuilder x
+        <> octetBuilder (toBS x)
 
 valueBuilder (ValCUCTime x) =
     padFromRight typeColumn ' ' (encToText (cucGetEncoding x))

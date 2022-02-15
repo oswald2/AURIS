@@ -50,13 +50,16 @@ module General.Types
     , decodeHashTable
     , HexBytes(..)
     , hexLength
+    , hexBytesEmpty
+    , parseHexLine
     ) where
 
 
 import           RIO
-import           Data.Binary
 import qualified RIO.ByteString                as B
 import qualified RIO.Text                      as T
+
+import           Data.Binary
 import           Data.Aeson                     ( withText
                                                 , defaultOptions
                                                 , genericToEncoding
@@ -88,8 +91,9 @@ import           Data.HashTable.ST.Basic        ( IHashTable )
 import qualified Data.HashTable.ST.Basic       as HT
 import           Data.Attoparsec.Text           ( Parser )
 import qualified Data.Attoparsec.Text          as A
-import           Data.Char                      ( ord
+import           Data.Char                      ( digitToInt
                                                 , isHexDigit
+                                                , isSpace
                                                 )
 import           Text.Read                      ( Read(..) )
 import qualified Text.Builder                  as TB
@@ -487,21 +491,24 @@ instance (Eq k, Hashable k, FromJSON k, FromJSON v) => FromJSON (IHashTable k v)
 -- | A newtype wrapper around 'ByteString' for text-serialising a 'ByteString'
 -- into a hex-coded string value
 newtype HexBytes = HexBytes { toBS :: ByteString }
-  deriving(Eq, Generic)
+  deriving(Eq, Ord, Generic)
 
+hexBytesEmpty :: HexBytes 
+hexBytesEmpty = HexBytes B.empty
 
 hexLength :: HexBytes -> Int
 hexLength (HexBytes x) = B.length x
 
 parseHexLine :: Parser HexBytes
 parseHexLine = do
+    A.skip isSpace
     HexBytes . B.pack <$> many parseByte
 
 parseByte :: Parser Word8
 parseByte = do
     a <- A.satisfy isHexDigit
     b <- A.satisfy isHexDigit
-    return $ fromIntegral (ord a `shiftL` 4 .|. ord b)
+    return $ fromIntegral (digitToInt a `shiftL` 4 .|. digitToInt b)
 
 instance NFData HexBytes
 
@@ -532,7 +539,10 @@ instance Show HexBytes where
 instance Read HexBytes where
     readsPrec _ str = case A.parse parseHexLine (T.pack str) of
         A.Fail{}      -> []
-        A.Partial _   -> []
+        A.Partial cont -> case cont T.empty of 
+            A.Fail {} -> []
+            A.Partial _ -> []
+            A.Done rest x -> [(x, T.unpack rest)]
         A.Done rest x -> [(x, T.unpack rest)]
 
 

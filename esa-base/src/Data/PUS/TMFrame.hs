@@ -184,7 +184,7 @@ tmSecHdrLen TMFrameGAIASecHeader{} = 4
 
 instance Display TMFrameSecHeader where
     display TMFrameEmptySecHeader    = mempty
-    display (TMFrameGAIASecHeader x) = "GAIA: vcfc_2=" <> display (run (hexadecimal x))
+    display (TMFrameGAIASecHeader x) = "GAIA: vcfc_2=0x" <> display (run (hexadecimal x))
 
 
 

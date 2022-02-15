@@ -9,50 +9,50 @@ module Data.PUS.TMPacketProcessing
     ) where
 
 
-import           RIO                     hiding ( (.~) )
-import qualified RIO.ByteString                as B
-import qualified RIO.Vector                    as V
-import qualified RIO.Text                      as T
-import           RIO.List                       ( iterate )
 import           Conduit
 import           Control.Lens                   ( (.~) )
 import           Data.HashTable.ST.Basic       as HT
 import qualified Data.Text.Short               as ST
 import           Data.Word.Word24
+import           RIO                     hiding ( (.~) )
+import qualified RIO.ByteString                as B
+import           RIO.List                       ( iterate )
+import qualified RIO.Text                      as T
+import qualified RIO.Vector                    as V
 import qualified VectorBuilder.Builder         as VB
 import qualified VectorBuilder.Vector          as VB
 
-import qualified Data.Attoparsec.ByteString    as A
 import qualified Data.Attoparsec.Binary        as A
+import qualified Data.Attoparsec.ByteString    as A
 
 import           Control.PUS.Classes
 import           Data.DataModel
 
-import           Data.TM.TMPacketDef
-import           Data.TM.TMParameterDef
 import           Data.TM.PIVals
 import           Data.TM.Parameter
-import           Data.TM.Value
+import           Data.TM.TMPacketDef
+import           Data.TM.TMParameterDef
 import           Data.TM.Validity
+import           Data.TM.Value
 
+import           Data.PUS.CRC
 import           Data.PUS.Config
-import           Data.PUS.ExtractedDU
-import           Data.PUS.ExtractedPUSPacket
-import           Data.PUS.PUSPacket
-import           Data.PUS.PUSDfh
-import           Data.PUS.TMPacket
 --import           Data.PUS.MissionSpecific.Definitions
 import           Data.PUS.EncTime
-import           Data.PUS.PUSState
-import           Data.PUS.CRC
 import           Data.PUS.Events
+import           Data.PUS.ExtractedDU
+import           Data.PUS.ExtractedPUSPacket
+import           Data.PUS.PUSDfh
+import           Data.PUS.PUSPacket
+import           Data.PUS.PUSState
+import           Data.PUS.TMPacket
 import           Data.PUS.Verification
 
 import           General.GetBitField
-import           General.Types
-import           General.Time
 import           General.Hexdump
 import           General.PUSTypes
+import           General.Time
+import           General.Types
 
 
 
@@ -71,8 +71,7 @@ raiseTMParameterC
     :: (MonadIO m, MonadReader env m, HasGlobalState env)
     => ConduitT (ExtractedDU TMPacket) (ExtractedDU TMPacket) m ()
 raiseTMParameterC = awaitForever $ \pkt -> do
-    lift $ raiseEvent
-        (EVTelemetry (EVTMParameters (pkt ^. epDU . tmpParams)))
+    lift $ raiseEvent (EVTelemetry (EVTMParameters (pkt ^. epDU . tmpParams)))
     yield pkt
 
 
@@ -112,44 +111,43 @@ packetProcessorC = awaitForever $ \pkt@(ExtractedPacket _oct pusPkt) -> do
 
     let def' = getPackeDefinition model pkt
     case def' of
-        Just (key, def) -> createAndYieldPacket key def pkt 
-        Nothing -> do
+        Just (key, def) -> createAndYieldPacket key def pkt
+        Nothing         -> do
             -- if we have a packet, that is not found in the data model,
             -- we check first if it is a standard packet and we can provide a 
             -- default TMPacketDef for it
-            let hdr = pusPkt ^. epDU . pusHdr
+            let hdr     = pusPkt ^. epDU . pusHdr
                 (t, st) = pusPkt ^. epDU . pusDfh . dfhTypes
-                apid = hdr ^. pusHdrAPID
-                key = TMPacketKey apid t st 0 0
-            case t of 
-                PUSType 1 -> 
-                    case st of 
-                         PUSSubType 1 -> do
-                            let def = tmAckPktDef apid (PUSSubType 1)
-                            createAndYieldPacket key def pkt
-                         PUSSubType 2 -> do
-                            let def = tmAckFailPktDef apid (PUSSubType 2)
-                            createAndYieldPacket key def pkt
-                         PUSSubType 3 -> do
-                            let def = tmAckPktDef apid (PUSSubType 3)
-                            createAndYieldPacket key def pkt
-                         PUSSubType 4 -> do
-                            let def = tmAckFailPktDef apid (PUSSubType 4)
-                            createAndYieldPacket key def pkt
-                         PUSSubType 5 -> do
-                            let def = tmAckPktDef apid (PUSSubType 5)
-                            createAndYieldPacket key def pkt
-                         PUSSubType 6 -> do
-                            let def = tmAckFailPktDef apid (PUSSubType 6)
-                            createAndYieldPacket key def pkt
-                         PUSSubType 7 -> do
-                            let def = tmAckPktDef apid (PUSSubType 7)
-                            createAndYieldPacket key def pkt
-                         PUSSubType 8 -> do
-                            let def = tmAckFailPktDef apid (PUSSubType 8)
-                            createAndYieldPacket key def pkt
-                         _ -> yieldUnknownPacket cfg pkt 
-                _ -> yieldUnknownPacket cfg pkt 
+                apid    = hdr ^. pusHdrAPID
+                key     = TMPacketKey apid t st 0 0
+            case t of
+                PUSType 1 -> case st of
+                    PUSSubType 1 -> do
+                        let def = tmAckPktDef apid (PUSSubType 1)
+                        createAndYieldPacket key def pkt
+                    PUSSubType 2 -> do
+                        let def = tmAckFailPktDef apid (PUSSubType 2)
+                        createAndYieldPacket key def pkt
+                    PUSSubType 3 -> do
+                        let def = tmAckPktDef apid (PUSSubType 3)
+                        createAndYieldPacket key def pkt
+                    PUSSubType 4 -> do
+                        let def = tmAckFailPktDef apid (PUSSubType 4)
+                        createAndYieldPacket key def pkt
+                    PUSSubType 5 -> do
+                        let def = tmAckPktDef apid (PUSSubType 5)
+                        createAndYieldPacket key def pkt
+                    PUSSubType 6 -> do
+                        let def = tmAckFailPktDef apid (PUSSubType 6)
+                        createAndYieldPacket key def pkt
+                    PUSSubType 7 -> do
+                        let def = tmAckPktDef apid (PUSSubType 7)
+                        createAndYieldPacket key def pkt
+                    PUSSubType 8 -> do
+                        let def = tmAckFailPktDef apid (PUSSubType 8)
+                        createAndYieldPacket key def pkt
+                    _ -> yieldUnknownPacket cfg pkt
+                _ -> yieldUnknownPacket cfg pkt
 
   where
     createAndYieldPacket key def pkt@(ExtractedPacket oct pusPkt) = do
@@ -160,48 +158,45 @@ packetProcessorC = awaitForever $ \pkt@(ExtractedPacket _oct pusPkt) -> do
                 checkCRC pusPkt def key oct
             else yieldM $ processPacket def key pkt
 
-    yieldUnknownPacket cfg pkt@(ExtractedPacket _oct pusPkt) = do 
-                    logWarn
-                        $  "No packet defintion found for packet: APID:"
-                        <> display (pusPkt ^. epDU . pusHdr . pusHdrAPID)
-                        <> " Type:"
-                        <> display (pusType (pusPkt ^. epDU . pusDfh))
-                        <> " SubType:"
-                        <> display (pusSubType (pusPkt ^. epDU . pusDfh))
-                    (timeStamp, _epoch) <- getTimeStamp (pkt ^. extrPacket)
+    yieldUnknownPacket cfg pkt@(ExtractedPacket _oct pusPkt) = do
+        logWarn
+            $  "No packet defintion found for packet: APID:"
+            <> display (pusPkt ^. epDU . pusHdr . pusHdrAPID)
+            <> " Type:"
+            <> display (pusType (pusPkt ^. epDU . pusDfh))
+            <> " SubType:"
+            <> display (pusSubType (pusPkt ^. epDU . pusDfh))
+        (timeStamp, _epoch) <- getTimeStamp (pkt ^. extrPacket)
 
-                    let param = TMParameter
-                            { _pName     = "Content"
-                            , _pTime     = timeStamp
-                            , _pValue    = TMValue
-                                            (TMValOctet
-                                                (toBS (pusPkt ^. epDU . pusData))
-                                            )
-                                            clearValidity
-                            , _pEngValue = Nothing
-                            }
+        let param = TMParameter
+                { _pName     = "Content"
+                , _pTime     = timeStamp
+                , _pValue    = TMValue (TMValOctet (pusPkt ^. epDU . pusData))
+                                       clearValidity
+                , _pEngValue = Nothing
+                }
 
-                        tmpkt = TMPacket
-                            { _tmpSPID      = cfgUnknownSPID cfg
-                            , _tmpMnemonic  = "UNKNOWN PACKET"
-                            , _tmpDescr     = ""
-                            , _tmpAPID      = pusPkt ^. epDU . pusHdr . pusHdrAPID
-                            , _tmpType      = pusType (pusPkt ^. epDU . pusDfh)
-                            , _tmpSubType   = pusSubType (pusPkt ^. epDU . pusDfh)
-                            , _tmpPI1       = 0
-                            , _tmpPI2       = 0
-                            , _tmpERT       = pusPkt ^. epERT
-                            , _tmpTimeStamp = timeStamp
-                            , _tmpVCID      = pusPkt ^. epVCID
-                            , _tmpSSC       = pusPkt ^. epDU . pusHdr . pusHdrSSC
-                            , _tmpEvent     = PIDNo
-                            , _tmpSource    = pusPkt ^. epSource
-                            , _tmpParams    = V.singleton param
-                            }
+            tmpkt = TMPacket
+                { _tmpSPID      = cfgUnknownSPID cfg
+                , _tmpMnemonic  = "UNKNOWN PACKET"
+                , _tmpDescr     = ""
+                , _tmpAPID      = pusPkt ^. epDU . pusHdr . pusHdrAPID
+                , _tmpType      = pusType (pusPkt ^. epDU . pusDfh)
+                , _tmpSubType   = pusSubType (pusPkt ^. epDU . pusDfh)
+                , _tmpPI1       = 0
+                , _tmpPI2       = 0
+                , _tmpERT       = pusPkt ^. epERT
+                , _tmpTimeStamp = timeStamp
+                , _tmpVCID      = pusPkt ^. epVCID
+                , _tmpSSC       = pusPkt ^. epDU . pusHdr . pusHdrSSC
+                , _tmpEvent     = PIDNo
+                , _tmpSource    = pusPkt ^. epSource
+                , _tmpParams    = V.singleton param
+                }
 
-                        du = pusPkt { _epDU = tmpkt }
+            du = pusPkt { _epDU = tmpkt }
 
-                    yield du
+        yield du
 
 
     checkCRC pusPkt def key oct = do
@@ -306,7 +301,7 @@ processPacket pktDef (TMPacketKey _apid _t _st pi1 pi2) pkt@(ExtractedPacket _ p
 
         params' <- getParameters timestamp epoch pktDef pkt
 
-        logDebug $ display ("Got Parameters: " :: Text) <> displayShow params'
+        -- logDebug $ display ("Got Parameters: " :: Text) <> displayShow params'
 
         let params = fromMaybe V.empty params'
 
@@ -896,10 +891,10 @@ extractParamValue epoch oct offset par =
 
     readOctet off (Just w) =
         let val = B.take w $ B.drop (unByteOffset (toByteOffset off)) oct
-        in  TMValOctet val
+        in  TMValOctet (HexBytes val)
     readOctet off Nothing =
         let val = B.drop (unByteOffset (toByteOffset off)) oct
-        in  TMValOctet val
+        in  TMValOctet (HexBytes val)
 
     readTime off (CUC1 False) =
         let !sec = getValue @Word8 oct (toByteOffset off) BiE

@@ -213,7 +213,7 @@ data TMValueSimple =
     -- | the value is a string
     | TMValString !ShortText
     -- | the value is an octet string (binary value)
-    | TMValOctet !ByteString
+    | TMValOctet !HexBytes
     -- | A value containing nothing
     | TMValNothing
     deriving(Show, Generic)
@@ -260,7 +260,7 @@ instance FromJSON TMValueSimple where
         , TMValDouble <$> o .: "tmValDouble"
         , TMValTime <$> o .: "tmValTime"
         , TMValString <$> o .: "tmValString"
-        , TMValOctet . getByteString64 <$> o .: "tmValOctet"
+        , TMValOctet . HexBytes . getByteString64 <$> o .: "tmValOctet"
         ]
 
 instance ToJSON TMValueSimple where
@@ -269,14 +269,14 @@ instance ToJSON TMValueSimple where
     toJSON (TMValDouble x) = object ["tmValDouble" .= x]
     toJSON (TMValTime   x) = object ["tmValTime" .= x]
     toJSON (TMValString x) = object ["tmValString" .= x]
-    toJSON (TMValOctet  x) = object ["tmValOctet" .= makeByteString64 x]
+    toJSON (TMValOctet  x) = object ["tmValOctet" .= makeByteString64 (toBS x)]
     toJSON TMValNothing    = object ["tmValNothing" .= ("" :: Text)]
     toEncoding (TMValInt    x) = pairs ("tmValInt" .= x)
     toEncoding (TMValUInt   x) = pairs ("tmValUInt" .= x)
     toEncoding (TMValDouble x) = pairs ("tmValDouble" .= x)
     toEncoding (TMValTime   x) = pairs ("tmValTime" .= x)
     toEncoding (TMValString x) = pairs ("tmValString" .= x)
-    toEncoding (TMValOctet  x) = pairs ("tmValOctet" .= makeByteString64 x)
+    toEncoding (TMValOctet  x) = pairs ("tmValOctet" .= makeByteString64 (toBS x))
     toEncoding TMValNothing    = pairs ("tmValNothing" .= ("" :: Text))
 
 
@@ -286,7 +286,7 @@ instance Display TMValueSimple where
     display (TMValDouble x) = display x
     display (TMValTime   x) = display x
     display (TMValString x) = display (toText x)
-    display (TMValOctet  x) = display (hexdumpBS x)
+    display (TMValOctet  x) = display (hexdumpBS (toBS x))
     display TMValNothing    = ""
 
 
@@ -330,9 +330,9 @@ tmValueParser (PTC ptc) (PFC pfc)
     | ptc == 6 && pfc > 0
     = TMValUInt <$> (M.try uInteger <|> M.try hexInteger <|> octInteger)
     | ptc == 7 && pfc == 0
-    = TMValOctet . strToByteString <$> many hexDigitChar
+    = TMValOctet . HexBytes . strToByteString <$> many hexDigitChar
     | ptc == 7
-    = TMValOctet . strToByteString <$> count (2 * pfc) hexDigitChar
+    = TMValOctet . HexBytes . strToByteString <$> count (2 * pfc) hexDigitChar
     | ptc == 8 && pfc == 0
     = TMValString . Data.Text.Short.fromText <$> takeRest
     | ptc == 8

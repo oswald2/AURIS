@@ -8,6 +8,7 @@ import qualified RIO.Text                      as T
 import qualified Data.Text.Short               as ST
 
 import           General.Time
+import           General.Types 
 import           General.PUSTypes
 
 import           Data.TM.Value
@@ -15,6 +16,8 @@ import Data.TM.Validity
     ( setStringNotUtf8, setUndefinedValue, Validity )
 import           Data.PUS.Value
 import           Data.PUS.EncTime
+
+
 
 convertValue
     :: Epoch -> CorrelationCoefficients -> PTC -> PFC -> TMValueSimple -> Value
@@ -36,7 +39,7 @@ convertValue epoch coeff ptc pfc val =
                     )
                     ValUndefined
             TMValString x -> setString rawVal (ST.toText x)
-            TMValOctet  x -> setOctet rawVal x
+            TMValOctet  x -> setOctet rawVal (toBS x)
             TMValNothing  -> trace "Got TMValNothing" ValUndefined
 
 

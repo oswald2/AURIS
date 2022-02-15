@@ -204,7 +204,7 @@ runTCNctrsChain cfg cltuQueue = do
                     <> displayShow e
                 throwM e
             Right _ -> do
-                logInfo $ "Disconnected TC connection on NCTRS " <> display
+                logWarn $ "Disconnected TC connection on NCTRS " <> display
                     (cfgNctrsID cfg)
                 return ()
 

@@ -248,7 +248,7 @@ main = hspec $ do
                         , _pTime     = now
                         , _pValue = TMValue (TMValDouble 3.1415) clearValidity
                         , _pEngValue = Just
-                            (TMValue (TMValOctet payl) clearValidity)
+                            (TMValue (TMValOctet (HexBytes payl)) clearValidity)
                         }
                     ]
                 payl = B.pack [1 .. 255]

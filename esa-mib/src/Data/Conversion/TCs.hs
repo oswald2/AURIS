@@ -489,7 +489,7 @@ determineRawDefaultValue epoch coeff ptc pfc val cpc =
                             )
                             ValUndefined
                     TMValString x -> setString rawVal (ST.toText x)
-                    TMValOctet  x -> setOctet rawVal x
+                    TMValOctet  x -> setOctet rawVal (toBS x)
                     TMValNothing  -> trace "Got TMValNothing" ValUndefined
 
 
