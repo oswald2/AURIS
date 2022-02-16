@@ -16,25 +16,24 @@ import           Data.Mongo.Conversion.Types    ( )
 instance MongoDbConversion TMFrame Document where
     toDB TMFrame {..} =
         [ "header" =: toDB _tmFrameHdr
-        , "sec_header" =: toDB _tmFrameSecHdr
+        , "sec_header" =: val _tmFrameSecHdr
         , "data" =: Binary _tmFrameData
         , "OCF" =: valMaybe ((fromIntegral <$> _tmFrameOCF) :: Maybe Int32)
         ]
     fromDB doc = do
         hdr'    <- lookup "header" doc
         hdr     <- fromDB hdr'
-        secHdr' <- lookup "sec_header" doc
-        secHdr  <- fromDB secHdr'
+        let secHdr = fromMaybe TMFrameEmptySecHeader (lookup "sec_header" doc)
         d       <- lookup "data" doc
         ocf     <- lookup "OCF" doc
         return $ TMFrame hdr secHdr d ocf Nothing
 
 
-instance MongoDbConversion TMFrameSecHeader Document where
-    toDB TMFrameEmptySecHeader    = ["sec_id" =: Null]
-    toDB (TMFrameGAIASecHeader x) = ["sec_id" =: String "GAIA", "vcfc_2" =: Int64 (fromIntegral x)]
+instance Val TMFrameSecHeader where
+    val TMFrameEmptySecHeader   = Null
+    val (TMFrameGAIASecHeader x) = Doc ["sec_id" =: String "GAIA", "vcfc_2" =: Int64 (fromIntegral x)]
 
-    fromDB doc = 
+    cast' (Doc doc) = 
         let s = lookup "sec_id" doc 
         in
         case s of 
@@ -45,6 +44,24 @@ instance MongoDbConversion TMFrameSecHeader Document where
                     Just (Int64 x) -> Just $ TMFrameGAIASecHeader (fromIntegral x)
                     _ -> Nothing
             _ -> Just TMFrameEmptySecHeader 
+    cast' _             = Just TMFrameEmptySecHeader 
+
+
+-- instance MongoDbConversion TMFrameSecHeader Document where
+--     toDB TMFrameEmptySecHeader    = ["sec_id" =: Null]
+--     toDB (TMFrameGAIASecHeader x) = ["sec_id" =: String "GAIA", "vcfc_2" =: Int64 (fromIntegral x)]
+
+--     fromDB doc = 
+--         let s = lookup "sec_id" doc 
+--         in
+--         case s of 
+--             Just (String "GAIA") -> 
+--                 let vc = lookup "vcfc_2" doc 
+--                 in 
+--                 case vc of 
+--                     Just (Int64 x) -> Just $ TMFrameGAIASecHeader (fromIntegral x)
+--                     _ -> Nothing
+--             _ -> Just TMFrameEmptySecHeader 
                     
 
 

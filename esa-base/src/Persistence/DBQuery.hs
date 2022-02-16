@@ -65,6 +65,7 @@ instance ToJSON DbGetNextNFrames where
 
 data DBResult =
     DBResultTMFrames [ExtractedDU TMFrame]
+    | DBResultTMFramesFinished
     | DBResultEvents
     deriving (Show, Generic)
 

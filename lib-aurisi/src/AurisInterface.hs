@@ -132,12 +132,16 @@ eventProcessor g (EventPUS (EVCommanding (EVTCVerificationUpdate rqst verif)))
     = do
         postGUIASync (mwDisplayRqstVerification g rqst verif)
 
-eventProcessor g (EventPUS (EVDB (EVDBTMFrames frames))) = do
-    postGUIASync $ mwSetTMFrames g frames
-
 eventProcessor g (EventPUS (EVTelemetry (EVTMStatistics stats))) = do 
     postGUIASync $ mwAddTMStatistic g stats
 
+
+-- Database Events
+eventProcessor g (EventPUS (EVDB (EVDBTMFrames frames))) = do 
+    postGUIASync $ mwAddTMFrames g frames
+
+eventProcessor g (EventPUS (EVDB EVDBTMFramesFinished)) = do 
+    postGUIASync $ mwTMFrameRetrievalFinished g 
 
 #ifdef HAS_SLE 
 eventProcessor g (EventPUS (EVSLE (EVSLERafInitialised (SleSII sii) commIF))) = do 

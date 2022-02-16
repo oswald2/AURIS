@@ -388,6 +388,8 @@ queryHandler resultF pipe (FrNext q) = do
     logDebug $ "QueryPrev: " <> displayShow q 
     frameFromN resultF pipe (dbnStart q) (dbnN q)
 
+resultSize :: BatchSize
+resultSize = 1000
 
 
 collectQuery :: (MonadIO m, MongoDbConversion b Document) 
@@ -395,48 +397,65 @@ collectQuery :: (MonadIO m, MongoDbConversion b Document)
     -> Pipe 
     -> Query 
     -> ([b] -> DBResult)
+    -> DBResult
     -> m ()
-collectQuery resultF pipe query constr = do 
+collectQuery resultF pipe query constr finishConstr = do 
     access pipe master dbName $ do 
         cursor <- find query 
-        records <- mapMaybe fromDB <$> rest cursor
-        lift $ resultF $ constr records
+        -- we send the results in batches of size @resultSize@
+        let sendF = do 
+                docs <- nextBatch cursor 
+                let records = mapMaybe fromDB docs 
+
+                -- traceM $ "Docs returned: " <> textDisplay (length docs)
+                -- traceM $ "Records returned: " <> textDisplay (length records)
+                if null records 
+                    then lift $ resultF $ finishConstr 
+                    else do 
+                        lift $ resultF $ constr records 
+                        sendF
+        -- execute the function
+        sendF 
+        closeCursor cursor
+
 
 frameFromTo
     :: (MonadIO m) => (DBResult -> m ()) -> Pipe -> SunTime -> SunTime -> m ()
 frameFromTo resultF pipe start stop = do
     let query = (select ["ert" =: ["$gte" =: timeToMicro start, "$lte" =: timeToMicro stop]]
-                    tmFrameCollName) { sort = ["ert" =: Int32 (-1)] }
-    collectQuery resultF pipe query DBResultTMFrames
+                    tmFrameCollName) { sort = ["ert" =: Int32 (-1)], batchSize = resultSize }
+
+    -- traceM $ utf8BuilderToText $ "Query: " <> displayShow query
+    collectQuery resultF pipe query DBResultTMFrames DBResultTMFramesFinished
 
 frameFrom
     :: (MonadIO m) => (DBResult -> m ()) -> Pipe -> SunTime -> m ()
 frameFrom resultF pipe start = do
     let query = (select ["ert" =: ["$gte" =: timeToMicro start]] 
-                    tmFrameCollName) { sort = ["ert" =: Int32 (-1)] }
-    collectQuery resultF pipe query DBResultTMFrames
+                    tmFrameCollName) { sort = ["ert" =: Int32 (-1)], batchSize = resultSize }
+    collectQuery resultF pipe query DBResultTMFrames DBResultTMFramesFinished
 
 frameFromN
     :: (MonadIO m) => (DBResult -> m ()) -> Pipe -> SunTime -> Word32 -> m ()
 frameFromN resultF pipe start n = do
     let query = (select ["ert" =: ["$gte" =: timeToMicro start]] 
-                    tmFrameCollName) { sort = ["ert" =: Int32 (-1)], limit = n }
-    collectQuery resultF pipe query DBResultTMFrames
+                    tmFrameCollName) { sort = ["ert" =: Int32 (-1)], batchSize = n }
+    collectQuery resultF pipe query DBResultTMFrames DBResultTMFramesFinished
 
 
 frameTo
     :: (MonadIO m) => (DBResult -> m ()) -> Pipe -> SunTime -> m ()
 frameTo resultF pipe stop = do
     let query = (select ["ert" =: ["$lte" =: timeToMicro stop]]
-                    tmFrameCollName) { sort = ["ert" =: Int32 (-1)] }
-    collectQuery resultF pipe query DBResultTMFrames
+                    tmFrameCollName) { sort = ["ert" =: Int32 (-1)], batchSize = resultSize }
+    collectQuery resultF pipe query DBResultTMFrames DBResultTMFramesFinished
 
 frameToN
     :: (MonadIO m) => (DBResult -> m ()) -> Pipe -> SunTime -> Word32 -> m ()
 frameToN resultF pipe stop n = do
     let query = (select ["ert" =: ["$lte" =: timeToMicro stop]]
-                    tmFrameCollName) { sort = ["ert" =: Int32 (-1)], limit = n }
-    collectQuery resultF pipe query DBResultTMFrames
+                    tmFrameCollName) { sort = ["ert" =: Int32 (-1)], batchSize = n }
+    collectQuery resultF pipe query DBResultTMFrames DBResultTMFramesFinished
 
 
 cleanFramesTable

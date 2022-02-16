@@ -1,0 +1,52 @@
+[ SendRqst
+    TCRequest
+      { _tcReqRequestID = RequestID 0
+      , _tcReqName = "ZMT11004"
+      , _tcReqDescription = "MTL Insert TC"
+      , _tcReqSource = "TC-TAB"
+      , _tcReqReleaseTime = Nothing
+      , _tcReqVerifications =
+          Verification
+            { _verRelease = StRDisabled
+            , _verGroundReception = StGExpected
+            , _verGroundTransmission = StGExpected
+            , _verGroundOBR = StGDisabled
+            , _verTMAcceptance = StTmExpected
+            , _verTMStart = StTmExpected
+            , _verTMProgress = []
+            , _verTMComplete = StTmExpected
+            , _verStatus = VerifStatNominal
+            }
+      , _tcReqSCID = SCID 0
+      , _tcReqVCID = VCID 0
+      , _tcReqPayload =
+          TCCommand
+            { _tcReqMAPID = MAPID 0
+            , _tcReqTransMode = BD
+            , _tcDestination = DestNctrs (IfNctrs 1)
+            , _tcSSC = SSC 0
+            , _tcReqPacket =
+                TCPacket
+                  { _tcpAPID = APID 252
+                  , _tcpType = PUSType 11
+                  , _tcpSubType = PUSSubType 4
+                  , _tcpSourceID = SourceID 0
+                  , _tcpParams =
+                      List
+                        [ Parameter { _paramName = "PDW00111" , _paramValue = ValUInt8 0 }
+                        ]
+                        (Group
+                           Parameter { _paramName = "PDW00117" , _paramValue = ValUInt8 1 }
+                           (List
+                              [ Parameter
+                                  { _paramName = "PDW00114"
+                                  , _paramValue = ValCUCTime (CUCTime Cuc42 0 0 False)
+                                  }
+                              , Parameter
+                                  { _paramName = "PDW00115" , _paramValue = ValOctet 1e5cc00000051b1101009fb07652 }
+                              ]
+                              Empty))
+                  }
+            }
+      }
+]

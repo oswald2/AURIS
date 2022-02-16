@@ -3,6 +3,7 @@ module GUI.FrameRetrieveDialog
     , newFrameRetrieveDialog
     , frameRetrieveDiag
     , frameRetrieveDiagGetQuery
+    , frameRetrieveDiagSetQuery
     ) where
 
 import           RIO

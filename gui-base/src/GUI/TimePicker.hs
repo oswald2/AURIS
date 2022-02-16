@@ -16,7 +16,7 @@ import qualified Data.Text.IO                  as T
 import           GI.Gtk                        as Gtk
 
 import           General.Time
-import           Data.Time.Calendar.Julian
+import           Data.Time.Calendar.OrdinalDate
 import           Data.Time.Calendar
 
 
@@ -28,6 +28,7 @@ data TimePicker = TimePicker
     , tpMins    :: !SpinButton
     , tpSecs    :: !SpinButton
     , tpSubSecs :: !SpinButton
+    , tpButton  :: !Button
     }
 
 
@@ -92,6 +93,7 @@ timePickerNew time = do
                        , tpMins    = mins
                        , tpSecs    = secs
                        , tpSubSecs = subsec
+                       , tpButton  = button
                        }
 
     timePickerSetTime g time
@@ -140,15 +142,12 @@ timePickerSetSensitive g val = do
 
 timePickerSetDate :: TimePicker -> Word32 -> Word32 -> Word32 -> IO ()
 timePickerSetDate g y m d = do
-    -- T.putStrLn $ "TimePicker: month=" <> T.pack (show m) <> " day=" <> T.pack
-    --     (show d)
     spinButtonSetValue (tpYears g) (fromIntegral y)
-    let s@(_year, doy) = toJulianYearAndDay
+    let s@(_year, doy) = toOrdinalDate
             (fromGregorian (fromIntegral y)
                            (fromIntegral (m + 1))
                            (fromIntegral d)
             )
-    T.putStrLn $ "SetDate: " <> T.pack (show s)
     spinButtonSetValue (tpDays g) (fromIntegral doy)
 
 pickCalendar :: TimePicker -> IO ()
@@ -171,6 +170,5 @@ pickCalendar g = do
 
     when (res == fromIntegral (fromEnum ResponseTypeOk)) $ do
         s@(y, m, d) <- calendarGetDate cal
-        T.putStrLn $ "Calendar: " <> T.pack (show s)
         timePickerSetDate g y m d
 

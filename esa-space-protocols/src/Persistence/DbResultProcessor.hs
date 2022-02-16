@@ -18,4 +18,7 @@ dbResultFunc
 dbResultFunc (DBResultTMFrames frames)  = do
     logDebug $ "Query Result: " <> display (length frames) <> " rows."
     raiseEvent (EVDB (EVDBTMFrames frames))
+dbResultFunc DBResultTMFramesFinished = do 
+    logDebug $ "Query for TM Frames finished."
+    raiseEvent (EVDB EVDBTMFramesFinished)
 dbResultFunc _ = return ()

@@ -7,37 +7,40 @@ module GUI.TMFrameTab
     , createTMFTab
     , tmfTabAddRow
     , tmfTabSetFrames
+    , tmfTabAddFrames
+    , tmfTabFrameRetrievalFinished
     , GUI.TMFrameTab.setupCallbacks
     ) where
 
-import           RIO
-import qualified RIO.Text                      as T
 import           Control.Lens                   ( makeLenses )
 --import qualified Data.Text.IO                  as T
 import           GI.Gtk                        as Gtk
+import           RIO
+import qualified RIO.Text                      as T
 
 import           GUI.TMFrameTable
 
-import           GUI.Utils
-import           GUI.StatusEntry
-import           GUI.TextView
-import           GUI.LiveControls
 import           GUI.Definitions
 import           GUI.FrameRetrieveDialog
+import           GUI.LiveControls
+import           GUI.StatusEntry
+import           GUI.TextView
+import           GUI.Utils
 
-import           Data.PUS.ExtractedDU
-import           Data.PUS.TMFrame
 import           Data.PUS.CLCW
+import           Data.PUS.ExtractedDU
 import           Data.PUS.LiveState
+import           Data.PUS.TMFrame
 
+--import           General.Time
 import           General.Hexdump
 import           General.PUSTypes
---import           General.Time
 
 import           Interface.Interface
 
 import           Persistence.DBQuery
 
+import           Text.Builder
 
 
 data CLCWStatus = CLCWStatus
@@ -73,6 +76,7 @@ data TMFrameTab = TMFrameTab
     , _tmfLiveCtrl      :: !LiveControl
     , _tmfLiveState     :: TVar LiveStateState
     , _tmfRetrieveDiag  :: FrameRetrieveDialog
+    , _tmfRetrievalCnt  :: !Label
     }
 makeLenses ''TMFrameTab
 
@@ -93,6 +97,23 @@ tmfTabSetFrames tab frames = do
     case st of
         Live    -> return ()
         Stopped -> tmFrameTableSetRows (tab ^. tmfFrameTable) frames
+
+tmfTabAddFrames :: TMFrameTab -> [ExtractedDU TMFrame] -> IO ()
+tmfTabAddFrames tab frames = do
+    -- Only in stopped mode 
+    st <- readTVarIO (tab ^. tmfLiveState)
+    case st of
+        Live    -> return ()
+        Stopped -> tmFrameTableAddRows (tab ^. tmfFrameTable) frames
+
+tmfTabFrameRetrievalFinished :: TMFrameTab -> IO ()
+tmfTabFrameRetrievalFinished g = do
+    cnt <- tmFrameTableGetSize (g ^. tmfFrameTable)
+    labelSetLabel (g ^. tmfRetrievalCnt)
+        $  run
+        $  text "Retrieved: "
+        <> decimal cnt
+        <> text " entries."
 
 txtNoBitlock :: Text
 txtNoBitlock = "NO BITLOCK"
@@ -183,8 +204,11 @@ createTMFTab window builder = do
     gap      <- statusEntrySetupCSS gap'
     qual     <- statusEntrySetupCSS qual'
 
+    lbl      <- labelNew Nothing
+
     lc       <- createLiveControl
     boxPackStart liveCtrl (liveControlGetWidget lc) False False 0
+    boxPackStart liveCtrl lbl                       False False 10
 
     retrieveDiag <- newFrameRetrieveDialog window
 
@@ -210,6 +234,7 @@ createTMFTab window builder = do
                        , _tmfLiveCtrl      = lc
                        , _tmfLiveState     = liveState
                        , _tmfRetrieveDiag  = retrieveDiag
+                       , _tmfRetrievalCnt  = lbl
                        }
     tmFrameTableSetCallback (g ^. tmfFrameTable) (tmfTabDetailsSetValues g)
 
@@ -318,33 +343,39 @@ setupCallbacks g interface = do
 
 
 switchLive :: TMFrameTab -> IO ()
-switchLive g = do 
+switchLive g = do
     tmFrameTableSwitchLive (g ^. tmfFrameTable)
     tmFrameTableClearRows (g ^. tmfFrameTable)
     atomically $ writeTVar (g ^. tmfLiveState) Live
 
-switchStop :: TMFrameTab -> IO () 
+switchStop :: TMFrameTab -> IO ()
 switchStop g = do
     tmFrameTableSwitchOffline (g ^. tmfFrameTable)
     atomically $ writeTVar (g ^. tmfLiveState) Stopped
 
 
 tmfTabPlayCB :: TMFrameTab -> Bool -> IO ()
-tmfTabPlayCB g True = switchLive g
+tmfTabPlayCB g True = do
+    labelSetLabel (g ^. tmfRetrievalCnt) ""
+    switchLive g
 tmfTabPlayCB _ _ = return ()
 
 
 tmfTabStopCB :: TMFrameTab -> Bool -> IO ()
-tmfTabStopCB g True = switchStop g 
-tmfTabStopCB _ _ = return ()
+tmfTabStopCB g True = switchStop g
+tmfTabStopCB _ _    = return ()
 
 
 tmfTabRetrieveCB :: TMFrameTab -> Interface -> IO ()
 tmfTabRetrieveCB g interface = do
     res <- dialogRun (g ^. tmfRetrieveDiag . frameRetrieveDiag)
     widgetHide (g ^. tmfRetrieveDiag . frameRetrieveDiag)
-    when (res == fromIntegral (fromEnum ResponseTypeOk)) $ do 
+    when (res == fromIntegral (fromEnum ResponseTypeOk)) $ do
+        -- when we have an OK, first clear the table 
+        tmFrameTableClearRows (g ^. tmfFrameTable)
+        -- get the data from the Retrieval Dialog 
         q <- frameRetrieveDiagGetQuery (g ^. tmfRetrieveDiag)
+        -- issue the query to the database
         callInterface interface actionQueryDB (FrRange q)
 
 
@@ -352,17 +383,15 @@ tmfTabRetrieveCB g interface = do
 tmfTabRewindCB :: TMFrameTab -> Interface -> IO ()
 tmfTabRewindCB g interface = do
     ert <- tmFrameTableGetEarliestERT (g ^. tmfFrameTable)
-    callInterface
-        interface
-        actionQueryDB
-        (FrPrev (DbGetLastNFrames ert (fromIntegral defMaxRowTM)))
+    callInterface interface
+                  actionQueryDB
+                  (FrPrev (DbGetLastNFrames ert (fromIntegral defMaxRowTM)))
 
 
 tmfTabForwardCB :: TMFrameTab -> Interface -> IO ()
 tmfTabForwardCB g interface = do
     ert <- tmFrameTableGetLatestERT (g ^. tmfFrameTable)
-    callInterface
-        interface
-        actionQueryDB
-        (FrNext (DbGetNextNFrames ert (fromIntegral defMaxRowTM)))
-    
+    callInterface interface
+                  actionQueryDB
+                  (FrNext (DbGetNextNFrames ert (fromIntegral defMaxRowTM)))
+

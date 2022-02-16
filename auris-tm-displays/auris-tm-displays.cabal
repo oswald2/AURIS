@@ -79,7 +79,8 @@ library
     gi-cairo-connector,
     gi-cairo-render,
     gi-gdk,
-    haskell-gi-base
+    haskell-gi-base,
+    text-builder
 
 
   default-extensions:

@@ -15,6 +15,7 @@ module GUI.ScrollingTable
     , addRowScrollingTable
     , addRowSeqStoreAppend
     , setRowsSeqStore
+    , addRowsSeqStoreAppend
     , setTreeViewCallback
     , createScrollingTable
     , createScrollingTableSimple
@@ -67,11 +68,16 @@ addRowSeqStoreAppend model val = do
 
 -- | Set the model to the given list of values, ignoring maximum size. This is 
 -- intended for retrieval mode.
-setRowsSeqStore :: SeqStore a -> [a] -> IO ()
+setRowsSeqStore :: Traversable t => SeqStore a -> t a -> IO ()
 setRowsSeqStore model values = do
     seqStoreClear model
-    mapM_ (seqStorePrepend model) values
+    traverse_ (seqStorePrepend model) values
 
+-- | Add multiple rows to the model, ignorsing maximum size. This is intended
+-- for e.g. batched retrievals
+addRowsSeqStoreAppend :: Traversable t => SeqStore a -> t a -> IO () 
+addRowsSeqStoreAppend model values = do 
+    traverse_ (seqStoreAppend model) values
 
 -- | Setup a callback for the double-click on a table. 
 -- @setTreeViewCallback gui getTv getModel callback@: getTv and getModel are 

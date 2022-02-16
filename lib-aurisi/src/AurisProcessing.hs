@@ -45,10 +45,10 @@ import           Application.DataModel          ( loadDataModelDef
                                                     )
                                                 )
 import           Verification.Processor         ( processVerification )
--- import           Data.Mongo.Processing          ( newDbState
---                                                 , startDbQueryThreads
---                                                 , startDbStoreThreads
---                                                 )
+import           Data.Mongo.Processing          ( newDbState
+                                                , startDbQueryThreads
+                                                , startDbStoreThreads
+                                                )
 import           Persistence.Logging            ( logToDB )
 import           Persistence.DbResultProcessor  ( dbResultFunc )
 import           Persistence.DBQuery
@@ -79,16 +79,15 @@ runProcessing cfg missionSpecific mibPath interface mainWindow coreQueue queryQu
                     <> messageAreaLogFunc (mainWindow ^. mwMessageDisplay)
 
             T.putStrLn "Starting DB backend..."
-            let dbBackend = Nothing
-            -- dbBackend <- case aurisDbConfig cfg of
-            --     Just dbCfg -> do
-            --         dbState <- newDbState logf1
-            --         be      <- runRIO dbState $ startDbStoreThreads dbCfg
-            --         T.putStrLn "DB backend started..."
-            --         return (Just be)
-            --     Nothing -> do
-            --         T.putStrLn "No DB backend was configured."
-            --         return Nothing
+            dbBackend <- case aurisDbConfig cfg of
+                Just dbCfg -> do
+                    dbState <- newDbState logf1
+                    be      <- runRIO dbState $ startDbStoreThreads dbCfg
+                    T.putStrLn "DB backend started..."
+                    return (Just be)
+                Nothing -> do
+                    T.putStrLn "No DB backend was configured."
+                    return Nothing
 
             -- Add the logging function to the GUI
             let logf = logf1 <> maybe mempty (mkLogFunc . logToDB) dbBackend
@@ -103,18 +102,18 @@ runProcessing cfg missionSpecific mibPath interface mainWindow coreQueue queryQu
                                     queryQueue
 
             void $ runRIO state $ do
-                -- let startQueryThread = do 
-                --      backend <- dbBackend 
-                --      dbCfg <- aurisDbConfig cfg 
-                --      queue <- queryQueue
-                --      return $ do 
-                --         startDbQueryThreads dbCfg
-                --                             backend
-                --                             dbResultFunc
-                --                             queue
-                -- case startQueryThread of 
-                --     Nothing -> return () 
-                --     Just action -> action
+                let startQueryThread = do 
+                        backend <- dbBackend 
+                        dbCfg <- aurisDbConfig cfg 
+                        queue <- queryQueue
+                        return $ do 
+                            startDbQueryThreads dbCfg
+                                                backend
+                                                dbResultFunc
+                                                queue
+                case startQueryThread of 
+                    Nothing -> return () 
+                    Just action -> action
 
               -- first, try to load a data model or import a MIB
                 logInfo "Loading Data Model..."

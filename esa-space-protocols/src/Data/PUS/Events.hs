@@ -179,6 +179,7 @@ instance ToJSON EventCOP1 where
 
 data EventDB =
     EVDBTMFrames [ExtractedDU TMFrame]
+    | EVDBTMFramesFinished
     | EVDBEvents
     deriving(Show, Generic)
 

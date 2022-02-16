@@ -6,12 +6,14 @@ module GUI.TMFrameTable
     , createTMFrameTable
     , tmFrameTableAddRow
     , tmFrameTableSetRows
+    , tmFrameTableAddRows
     , tmFrameTableClearRows
     , tmFrameTableSetCallback
     , tmFrameTableGetLatestERT
     , tmFrameTableGetEarliestERT
     , tmFrameTableSwitchLive
     , tmFrameTableSwitchOffline
+    , tmFrameTableGetSize
     ) where
 
 import           RIO
@@ -63,10 +65,15 @@ tmFrameTableAddRow g = addRowScrollingTable (_tmfrTable g) (_tmfrModel g)
 tmFrameTableSetRows :: TMFrameTable -> [ExtractedDU TMFrame] -> IO ()
 tmFrameTableSetRows g = setRowsSeqStore (_tmfrModel g)
 
+tmFrameTableAddRows :: TMFrameTable -> [ExtractedDU TMFrame] -> IO ()
+tmFrameTableAddRows g = addRowsSeqStoreAppend (_tmfrModel g)
 
 tmFrameTableClearRows :: TMFrameTable -> IO ()
 tmFrameTableClearRows g = seqStoreClear (_tmfrModel g)
 
+
+tmFrameTableGetSize :: TMFrameTable -> IO Int32
+tmFrameTableGetSize g = seqStoreGetSize (_tmfrModel g)
 
 -- | Set the callback function to be called, when a row in the table is activated
 -- (which in GTK terms means double clicked). The callback must take the value as 
@@ -137,7 +144,7 @@ createTMFrameTable builder = do
           )
         , ("SRC", 60, \pkt -> [#text := textDisplay (pkt ^. epSource)])
         , ("Gap" , 60, \pkt -> gapAttrs (pkt ^. epGap))
-        , ("Qual", 40, \pkt -> qualityAttrs (pkt ^. epQuality))
+        , ("Qual", 50, \pkt -> qualityAttrs (pkt ^. epQuality))
         , ("SecHdr", 100, \pkt -> [#text := textDisplay (pkt ^. epDU . tmFrameSecHdr)])
         ]
     return $ TMFrameTable tv model

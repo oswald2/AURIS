@@ -419,8 +419,9 @@ extractPktFromTMFramesC missionSpecific = loop True B.empty
                                         $ EVTMRejectedSpillOverPkt
                                               (pusPkt ^. protContent)
             else do
-                raiseEvent $ EVTelemetry $ EVTMRejectSpillOver
-                    (B.unpack sp)
+                when (B.length sp > 0) $ do 
+                    raiseEvent $ EVTelemetry $ EVTMRejectSpillOver
+                        (B.unpack sp)
 
 
 
