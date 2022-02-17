@@ -53,3 +53,7 @@ AURISi_optimized_profile.prog
 lib-aurisi/data/ChartWidget.glade~
 chart_test.svg
 lib-aurisi/data/MainWindow.glade~
+test-data/GAIA_DetailedScheduleReport.tc
+test-data/GAIA_LoadTT_Test.tc
+test-data/GAIA_LoadTT_Test.tc
+test-data/GAIA_SummaryScheduleReport.tc
