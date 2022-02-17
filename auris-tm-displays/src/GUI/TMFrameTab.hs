@@ -383,6 +383,10 @@ tmfTabRetrieveCB g interface = do
 tmfTabRewindCB :: TMFrameTab -> Interface -> IO ()
 tmfTabRewindCB g interface = do
     ert <- tmFrameTableGetEarliestERT (g ^. tmfFrameTable)
+
+    traceM $ "tmfTabRewindCB: earliest ERT: " <> textDisplay ert
+
+    tmFrameTableClearRows (g ^. tmfFrameTable)
     callInterface interface
                   actionQueryDB
                   (FrPrev (DbGetLastNFrames ert (fromIntegral defMaxRowTM)))
@@ -391,6 +395,10 @@ tmfTabRewindCB g interface = do
 tmfTabForwardCB :: TMFrameTab -> Interface -> IO ()
 tmfTabForwardCB g interface = do
     ert <- tmFrameTableGetLatestERT (g ^. tmfFrameTable)
+
+    traceM $ "tmfTabRewindCB: earliest ERT: " <> textDisplay ert
+
+    tmFrameTableClearRows (g ^. tmfFrameTable)
     callInterface interface
                   actionQueryDB
                   (FrNext (DbGetNextNFrames ert (fromIntegral defMaxRowTM)))

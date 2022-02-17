@@ -435,14 +435,6 @@ frameFrom resultF pipe start = do
                     tmFrameCollName) { sort = ["ert" =: Int32 (-1)], batchSize = resultSize }
     collectQuery resultF pipe query DBResultTMFrames DBResultTMFramesFinished
 
-frameFromN
-    :: (MonadIO m) => (DBResult -> m ()) -> Pipe -> SunTime -> Word32 -> m ()
-frameFromN resultF pipe start n = do
-    let query = (select ["ert" =: ["$gte" =: timeToMicro start]] 
-                    tmFrameCollName) { sort = ["ert" =: Int32 (-1)], batchSize = n }
-    collectQuery resultF pipe query DBResultTMFrames DBResultTMFramesFinished
-
-
 frameTo
     :: (MonadIO m) => (DBResult -> m ()) -> Pipe -> SunTime -> m ()
 frameTo resultF pipe stop = do
@@ -450,12 +442,23 @@ frameTo resultF pipe stop = do
                     tmFrameCollName) { sort = ["ert" =: Int32 (-1)], batchSize = resultSize }
     collectQuery resultF pipe query DBResultTMFrames DBResultTMFramesFinished
 
+
+
+
 frameToN
     :: (MonadIO m) => (DBResult -> m ()) -> Pipe -> SunTime -> Word32 -> m ()
 frameToN resultF pipe stop n = do
     let query = (select ["ert" =: ["$lte" =: timeToMicro stop]]
-                    tmFrameCollName) { sort = ["ert" =: Int32 (-1)], batchSize = n }
+                    tmFrameCollName) { sort = ["ert" =: Int32 (-1)], limit = n }
     collectQuery resultF pipe query DBResultTMFrames DBResultTMFramesFinished
+
+frameFromN
+    :: (MonadIO m) => (DBResult -> m ()) -> Pipe -> SunTime -> Word32 -> m ()
+frameFromN resultF pipe start n = do
+    let query = (select ["ert" =: ["$gte" =: timeToMicro start]] 
+                    tmFrameCollName) { sort = ["ert" =: Int32 (-1)], limit = n }
+    collectQuery resultF pipe query DBResultTMFrames DBResultTMFramesFinished
+
 
 
 cleanFramesTable
