@@ -17,35 +17,37 @@ module GUI.TMFrameTable
     ) where
 
 import           RIO
---import qualified RIO.Text                      as T
+import qualified RIO.Text                      as T
 
-import           GI.Gtk                        as Gtk
 import           Data.GI.Gtk.ModelView.SeqStore
+import           GI.Gtk                        as Gtk
 
-import           Data.PUS.TMFrame
 import           Data.PUS.ExtractedDU
+import           Data.PUS.TMFrame
 import           General.PUSTypes
 
-import           GUI.Utils
 import           GUI.Colors
 import           GUI.ScrollingTable
+import           GUI.Utils
 
 import           General.Time
 
+import           Text.Builder
+
 
 data TMFrameTable = TMFrameTable
-    { _tmfrTable     :: TreeView
-    , _tmfrModel     :: SeqStore (ExtractedDU TMFrame)
+    { _tmfrTable :: !TreeView
+    , _tmfrModel :: !(SeqStore (ExtractedDU TMFrame))
     --, _tmfrSortModel :: TreeModelSort
     }
 
 
-tmFrameTableSwitchLive :: TMFrameTable -> IO () 
+tmFrameTableSwitchLive :: TMFrameTable -> IO ()
 tmFrameTableSwitchLive g = return ()
   --treeViewSetModel (_tmfrTable g) (Just (_tmfrModel g))
 
-tmFrameTableSwitchOffline :: TMFrameTable -> IO () 
-tmFrameTableSwitchOffline g = return () 
+tmFrameTableSwitchOffline :: TMFrameTable -> IO ()
+tmFrameTableSwitchOffline g = return ()
   --treeViewSetModel (_tmfrTable g) (Just (_tmfrSortModel g))
 
 
@@ -107,13 +109,10 @@ tmFrameTableGetLatestERT g = do
 -- | Create a 'TMFrameTable' from a 'Gtk.Builder'.
 createTMFrameTable :: Gtk.Builder -> IO TMFrameTable
 createTMFrameTable builder = do
-    tv                    <- getObject builder "treeviewTMFrames" TreeView
+    tv    <- getObject builder "treeviewTMFrames" TreeView
     model <- createScrollingTableSimple
         tv
-        [ ( "ERT"
-          , 190
-          , \pkt -> [#text := textDisplay (pkt ^. epERT)]
-          )
+        [ ("ERT", 190, \pkt -> [#text := textDisplay (pkt ^. epERT)])
         , ( "S/C ID"
           , 55
           , \pkt ->
@@ -142,17 +141,21 @@ createTMFrameTable builder = do
                     else "F"
               ]
           )
-        , ("SRC", 60, \pkt -> [#text := textDisplay (pkt ^. epSource)])
+        , ("SRC" , 60, \pkt -> [#text := textDisplay (pkt ^. epSource)])
         , ("Gap" , 60, \pkt -> gapAttrs (pkt ^. epGap))
         , ("Qual", 50, \pkt -> qualityAttrs (pkt ^. epQuality))
-        , ("SecHdr", 100, \pkt -> [#text := textDisplay (pkt ^. epDU . tmFrameSecHdr)])
+        , ( "SecHdr"
+          , 100
+          , \pkt -> [#text := textDisplay (pkt ^. epDU . tmFrameSecHdr)]
+          )
         ]
     return $ TMFrameTable tv model
 
   where
-    gapAttrs Nothing = [#backgroundSet := False, #foregroundSet := False]
-    gapAttrs (Just (low, _)) =
-        [ #text := textDisplay low
+    gapAttrs Nothing =
+        [#backgroundSet := False, #foregroundSet := False, #text := T.empty]
+    gapAttrs (Just (low, hi)) =
+        [ #text := run $ decimal low <> char ',' <> decimal hi
         , #backgroundSet := True
         , #backgroundRgba := paleYellow
         , #foregroundSet := True

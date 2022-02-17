@@ -50,7 +50,7 @@ data TCPacket = TCPacket {
     -- | PUS Source ID 
     , _tcpSourceID :: SourceID
     -- | The list of parameters of this command
-    , _tcpParams :: ParameterList
+    , _tcpParams :: ExpandedParameterList
     }
     deriving (Show, Read, Generic)
 makeLenses ''TCPacket

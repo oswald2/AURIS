@@ -42,9 +42,12 @@ module Data.PUS.Parameter
     , laterParam
     , encodeParameters
     , toSizedParamList
+    , toSizedParamListWithExpansion
     , setExtParameter
     , expandGroups
     , ParameterList(..)
+    , ExpandedParameterList(..)
+    , expandedParameterListToList
     , ExtParameterList(..)
     , SizedParameterList
     , splSize
@@ -58,30 +61,30 @@ module Data.PUS.Parameter
 
 
 import           RIO                     hiding ( (.~) )
-import qualified RIO.Text                      as T
 import           RIO.List.Partial               ( (!!) )
+import qualified RIO.Text                      as T
 
-import           Control.Lens                   ( makeLenses
-                                                , (.~)
+import           Control.Lens                   ( (.~)
+                                                , makeLenses
                                                 )
 import           Data.Aeson              hiding ( Value )
-import qualified Data.Vector.Storable          as VS
-import qualified Data.Vector.Storable.Mutable  as VS
-import           Data.Vector.Storable.ByteString
 import           Data.SortedList                ( SortedList )
 import qualified Data.SortedList               as SL
+import qualified Data.Vector.Storable          as VS
+import           Data.Vector.Storable.ByteString
+import qualified Data.Vector.Storable.Mutable  as VS
 
 import           Codec.Serialise
-import           Text.Read
 import qualified Text.Builder                  as TB
+import           Text.Read
 
 import           General.SizeOf
 
 import           Data.PUS.Value
 
+import           General.Padding
 import           General.SetBitField
 import           General.Types
-import           General.Padding
 
 
 -- | Represents a normal parameter without location specification. The parameter location is
@@ -106,17 +109,17 @@ nameColumnWidth :: Int
 nameColumnWidth = 12
 
 
-parameterBuilder :: Parameter -> TB.Builder 
-parameterBuilder Parameter {..} = 
+parameterBuilder :: Parameter -> TB.Builder
+parameterBuilder Parameter {..} =
     padFromRight nameColumnWidth ' ' (TB.text _paramName)
         <> valueBuilder _paramValue
 
 
-parameterHeaderBuilder :: TB.Builder 
-parameterHeaderBuilder = 
+parameterHeaderBuilder :: TB.Builder
+parameterHeaderBuilder =
     padFromRight nameColumnWidth ' ' (TB.text "Name")
-      <> valueHeaderLine
-      <> TB.char '\n'
+        <> valueHeaderLine
+        <> TB.char '\n'
 
 instance Display Parameter where
     textDisplay param = TB.run (parameterBuilder param)
@@ -178,17 +181,38 @@ instance FromJSON ParameterList
 instance ToJSON ParameterList where
     toEncoding = genericToEncoding defaultOptions
 
+newtype ExpandedParameterList = ExpandedParameterList ParameterList
+    deriving (Show, Read, Generic)
 
-parameterListBuilder :: ParameterList -> TB.Builder 
-parameterListBuilder Empty = mempty 
-parameterListBuilder (List lst cont) = 
-  TB.intercalate (TB.char '\n') (map parameterBuilder lst) <> parameterListBuilder cont 
-parameterListBuilder (Group p cont) = 
-  parameterBuilder p <> TB.char '\n' <> parameterListBuilder cont 
+instance NFData ExpandedParameterList
+instance Serialise ExpandedParameterList
+instance FromJSON ExpandedParameterList
+instance ToJSON ExpandedParameterList where
+    toEncoding = genericToEncoding defaultOptions
 
-instance Display ParameterList where 
-  textDisplay lst = TB.run $ 
-    parameterHeaderBuilder <> (parameterListBuilder lst)
+expandedParameterListToList :: ExpandedParameterList -> [Parameter]
+expandedParameterListToList (ExpandedParameterList lst) = worker lst
+  where
+    worker Empty              = []
+    worker (List  plist rest) = plist ++ worker rest
+    worker (Group par   rest) = par : worker rest
+
+
+
+parameterListBuilder :: ParameterList -> TB.Builder
+parameterListBuilder Empty = mempty
+parameterListBuilder (List lst cont) =
+    TB.intercalate (TB.char '\n') (map parameterBuilder lst)
+        <> parameterListBuilder cont
+parameterListBuilder (Group p cont) =
+    parameterBuilder p <> TB.char '\n' <> parameterListBuilder cont
+
+instance Display ParameterList where
+    textDisplay lst =
+        TB.run $ parameterHeaderBuilder <> (parameterListBuilder lst)
+
+instance Display ExpandedParameterList where
+    textDisplay (ExpandedParameterList lst) = textDisplay lst
 
 
 -- | A parameter list, that also tracks it's size in bits.
@@ -214,9 +238,17 @@ instance Read SizedParameterList where
 
 -- | Convert a 'ParameterList' into a 'SizedParaemterList'. Performs an expansion
 -- of group repeaters, calculates the size and forces the result via 'NFData'
-toSizedParamList :: ParameterList -> SizedParameterList
-toSizedParamList ps =
+toSizedParamListWithExpansion :: ParameterList -> SizedParameterList
+toSizedParamListWithExpansion ps =
     let expanded = expandGroups ps
+    in  force $ SizedParameterList (bitSize expanded) expanded
+
+
+-- | Convert a 'ParameterList' into a 'SizedParaemterList'. Performs an expansion
+-- of group repeaters, calculates the size and forces the result via 'NFData'
+toSizedParamList :: ExpandedParameterList -> SizedParameterList
+toSizedParamList ps =
+    let expanded = expandedParameterListToList ps
     in  force $ SizedParameterList (bitSize expanded) expanded
 
 
@@ -477,6 +509,9 @@ expandGroups' (List  p t) prevGroup = p ++ expandGroups' t prevGroup
 expandGroups' (Group n t) prevGroup = n
     : expandGroups' t (prependN ((getInt $ _paramValue n) - 1) prevGroup t)
 
+
+instance ExpandGroups ExpandedParameterList Parameter where 
+    expandGroups l = expandedParameterListToList l 
 
 -- instance ExpandGroups ExtParameterList ExtParameter where
 --   expandGroups l = expandExtGroups' l ExtEmpty

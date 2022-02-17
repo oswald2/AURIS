@@ -160,7 +160,7 @@ genParameters
     :: Epoch
     -> CorrelationCoefficients
     -> Vector TCParameterLocDef
-    -> ParameterList
+    -> ExpandedParameterList
 genParameters epoch coeff tcParamDefs =
     let
         step1 lst = span (\x -> x ^. tcplGroupSize <= 0) lst
@@ -173,7 +173,7 @@ genParameters epoch coeff tcParamDefs =
             let groupSize = fromIntegral $ p ^. tcplGroupSize
             in  Group (genParam epoch coeff p) (step2 (take groupSize ps))
     in
-        step2 (V.toList tcParamDefs)
+        ExpandedParameterList (step2 (V.toList tcParamDefs))
 
 
 

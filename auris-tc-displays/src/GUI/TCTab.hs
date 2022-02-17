@@ -46,9 +46,7 @@ import           GUI.Definitions
 
 import           Data.PUS.TCRequest
 import           Data.PUS.TCPacket              ( TCPacket(TCPacket) )
-import           Data.PUS.Parameter             ( Parameter(Parameter)
-                                                , ParameterList(Empty, List)
-                                                )
+import           Data.PUS.Parameter             
 import           Data.PUS.Value
 import           Data.PUS.TCCnc                 ( TCScoe(TCScoe) )
 import           Data.PUS.Verification
@@ -167,7 +165,9 @@ createTCTab cfg window builder = do
 
     --void $ Gtk.on tcv #dragBegin $ onDragBegin g
 
-    _ <- Gtk.on btClear #clicked $ setText g ""
+    _ <- Gtk.on btClear #clicked $ do 
+        setText g ""
+        writeIORef (_tcTabFileName g) Nothing
     _ <- Gtk.on btInsert #clicked $ do
         let rqst =
                 [ RepeatN
@@ -190,7 +190,7 @@ createTCTab cfg window builder = do
                                           (mkPUSType 2)
                                           (mkPUSSubType 10)
                                           (mkSourceID 10)
-                                          (List params Empty)
+                                          (ExpandedParameterList (List params Empty))
                                 )
                             )
                       ]
@@ -222,7 +222,7 @@ createTCTab cfg window builder = do
                                           (mkPUSType 2)
                                           (mkPUSSubType 10)
                                           (mkSourceID 10)
-                                          (List params Empty)
+                                          (ExpandedParameterList (List params Empty))
                                 )
                             )
                       ]
@@ -276,7 +276,7 @@ createTCTab cfg window builder = do
                                           (mkPUSType 2)
                                           (mkPUSSubType 10)
                                           (mkSourceID 10)
-                                          (List params Empty)
+                                          (ExpandedParameterList (List params Empty))
                                 )
                             )
                       ]
