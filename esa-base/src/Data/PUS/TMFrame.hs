@@ -96,10 +96,6 @@ import           General.PUSTypes
 import           General.Hexdump
 import           General.SizeOf
 
-import           Text.Builder                   ( hexadecimal
-                                                , run
-                                                )
-
 
 
 data TMFrameConfig = TMFrameConfig
@@ -184,7 +180,7 @@ tmSecHdrLen TMFrameGAIASecHeader{} = 4
 
 instance Display TMFrameSecHeader where
     display TMFrameEmptySecHeader    = mempty
-    display (TMFrameGAIASecHeader x) = "GAIA: vcfc_2=0x" <> display (run (hexadecimal x))
+    display (TMFrameGAIASecHeader x) = "GAIA: vcfc_2=" <> display x
 
 
 
@@ -490,6 +486,7 @@ tmFrameParser cfg = do
                     (fromIntegral b1 `shiftL` 24)
                         .|. (fromIntegral b2 `shiftL` 16)
                         .|. (fromIntegral b3 `shiftL` 8)
+                        .|. fromIntegral (_tmFrameVCFC hdr)
             return (TMFrameGAIASecHeader val)
         else return TMFrameEmptySecHeader
 
