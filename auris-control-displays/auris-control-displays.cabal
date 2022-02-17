@@ -104,6 +104,7 @@ library
     , text-short
     , text-builder
     , time
+    , hashtables-mo
 
   default-extensions:
         
