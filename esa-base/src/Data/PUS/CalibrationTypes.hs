@@ -22,18 +22,21 @@ This module provides some types used in calibrations
     , ExistentialQuantification
 #-}
 module Data.PUS.CalibrationTypes
-  ( Calibrate(..)
-  , TcCalibration(..)
-  , CalibInterpolation(..)
-  , toCalibInterpolation
-  )
-where
+    ( Calibrate(..)
+    , TcCalibration(..)
+    , CalibInterpolation(..)
+    , toCalibInterpolation
+    , calibInterpolationBuilder
+    ) where
 
-import           RIO
 import           Codec.Serialise
 import           Data.Aeson
+import           RIO
 
 import           Data.TM.Value
+
+import           Text.Builder                  as TB
+
 
 
 -- | Specifies what a calibration should do when the
@@ -50,7 +53,12 @@ instance NFData CalibInterpolation
 instance Serialise CalibInterpolation
 instance FromJSON CalibInterpolation
 instance ToJSON CalibInterpolation where
-  toEncoding = genericToEncoding defaultOptions
+    toEncoding = genericToEncoding defaultOptions
+
+calibInterpolationBuilder :: CalibInterpolation -> TB.Builder
+calibInterpolationBuilder CalibExtrapolate = "Extrapolate"
+calibInterpolationBuilder CalibFail        = "Fail"
+
 
 -- | Converts from a Charactor to the interpolation type.
 -- Specified in the SCOS-2000 MIB ICD 6.9
@@ -71,8 +79,8 @@ class Calibrate a where
 --
 -- Type 'a' is the calibration, 'b' is the from type and 'c' is the 
 -- to type. Calibrations muste be possible in both directions
-class TcCalibration a b c where 
-    tcCalibrate :: a -> b -> Maybe c 
+class TcCalibration a b c where
+    tcCalibrate :: a -> b -> Maybe c
     tcDeCalibrate :: a -> c -> Maybe b
 
 

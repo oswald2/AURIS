@@ -25,56 +25,59 @@ the information read out of a SCOS MIB, EGS-CC CDM etc.
     , TemplateHaskell
 #-}
 module Data.TM.TMParameterDef
-  ( DoubleType(..)
-  , TimeType(..)
-  , ParamType(..)
-  , ParamNatur(..)
-  , TMParameterDef(..)
-  , StatusConsistency(..)
-  , Correlate(..)
-  , ptcPfcToParamType
-  , charToStatusConsistency
-  , fpName
-  , fpDescription
-  , fpPID
-  , fpUnit
-  , fpType
-  , fpWidth
-  , fpValid
-  , fpRelated
-  , fpCalibs
-  , fpNatur
-  , fpInterpolation
-  , fpStatusConsistency
-  , fpDecim
-  , fpDefaultVal
-  , fpSubsys
-  , fpValidityValue
-  , fpOBTID
-  , fpEndian
-  , getWidth
-  , getPaddedWidth
-  , getPadding
-  , uintParamDef
-  , octetParamDef
-  )
-where
+    ( DoubleType(..)
+    , TimeType(..)
+    , ParamType(..)
+    , ParamNatur(..)
+    , TMParameterDef(..)
+    , StatusConsistency(..)
+    , Correlate(..)
+    , ptcPfcToParamType
+    , charToStatusConsistency
+    , fpName
+    , fpDescription
+    , fpPID
+    , fpUnit
+    , fpType
+    , fpWidth
+    , fpValid
+    , fpRelated
+    , fpCalibs
+    , fpNatur
+    , fpInterpolation
+    , fpStatusConsistency
+    , fpDecim
+    , fpDefaultVal
+    , fpSubsys
+    , fpValidityValue
+    , fpOBTID
+    , fpEndian
+    , getWidth
+    , getPaddedWidth
+    , getPadding
+    , uintParamDef
+    , octetParamDef
+    , compareTMParameterDefName
+    ) where
 
 
-import           RIO
-import           Control.Lens                   ( makeLenses )
-import           Data.Text.Short                ( ShortText )
 import           Codec.Serialise
+import           Control.Lens                   ( makeLenses )
 import           Data.Aeson
+import           Data.Text.Short                ( ShortText )
+import qualified Data.Text.Short               as ST
+import           RIO
 
-import           Data.TM.Value
-import           Data.TM.Calibration
 import           Data.PUS.CalibrationTypes
+import           Data.TM.Calibration
 import           Data.TM.Synthetic
+import           Data.TM.Value
 
-import           General.Types
 import           General.PUSTypes
 import           General.SizeOf
+import           General.Types
+
+import           Text.Builder                  as TB
 
 
 -- | If a value is a double, describes which double type
@@ -94,10 +97,11 @@ instance NFData DoubleType
 instance Serialise DoubleType
 instance FromJSON DoubleType
 instance ToJSON DoubleType where
-  toEncoding = genericToEncoding defaultOptions
+    toEncoding = genericToEncoding defaultOptions
 
 -- | Specifies the time format encoding. Currently, only a
--- subset of the valid time values are supported
+-- subset of the valid time values are supported. The boolean
+-- specifies, if the time is absolute (false) or relative (true)
 data TimeType =
     CDS6 Bool
     | CDS8 Bool
@@ -118,14 +122,51 @@ data TimeType =
     | CUC4_2 Bool
     | CUC4_3 Bool
     | UxTime
-
     deriving (Eq, Ord, Show, Generic)
 
 instance NFData TimeType
 instance Serialise TimeType
 instance FromJSON TimeType
 instance ToJSON TimeType where
-  toEncoding = genericToEncoding defaultOptions
+    toEncoding = genericToEncoding defaultOptions
+
+
+relBuilder :: Bool -> TB.Builder
+relBuilder True  = "Relative"
+relBuilder False = "Absolute"
+
+timeTypeBuilder :: TimeType -> TB.Builder
+timeTypeBuilder (CDS6 x) = "CDS 6 Bytes " <> relBuilder x
+timeTypeBuilder (CDS8 x) = "CDS 8 Bytes " <> relBuilder x
+timeTypeBuilder (CUC1 x) = "CUC 1 Byte Coarse Time " <> relBuilder x
+timeTypeBuilder (CUC1_1 x) =
+    "CUC 1 Byte Coarse Time, 1 Byte Fine Time " <> relBuilder x
+timeTypeBuilder (CUC1_2 x) =
+    "CUC 1 Byte Coarse Time, 1 Byte Fine Time " <> relBuilder x
+timeTypeBuilder (CUC1_3 x) =
+    "CUC 1 Byte Coarse Time, 3 Byte Fine Time " <> relBuilder x
+timeTypeBuilder (CUC2 x) = "CUC 2 Byte Coarse Time " <> relBuilder x
+timeTypeBuilder (CUC2_1 x) =
+    "CUC 2 Byte Coarse Time, 1 Byte Fine Time " <> relBuilder x
+timeTypeBuilder (CUC2_2 x) =
+    "CUC 2 Byte Coarse Time, 1 Byte Fine Time " <> relBuilder x
+timeTypeBuilder (CUC2_3 x) =
+    "CUC 2 Byte Coarse Time, 3 Byte Fine Time " <> relBuilder x
+timeTypeBuilder (CUC3 x) = "CUC 3 Byte Coarse Time " <> relBuilder x
+timeTypeBuilder (CUC3_1 x) =
+    "CUC 3 Byte Coarse Time, 1 Byte Fine Time " <> relBuilder x
+timeTypeBuilder (CUC3_2 x) =
+    "CUC 3 Byte Coarse Time, 1 Byte Fine Time " <> relBuilder x
+timeTypeBuilder (CUC3_3 x) =
+    "CUC 3 Byte Coarse Time, 3 Byte Fine Time " <> relBuilder x
+timeTypeBuilder (CUC4 x) = "CUC 4 Byte Coarse Time " <> relBuilder x
+timeTypeBuilder (CUC4_1 x) =
+    "CUC 4 Byte Coarse Time, 1 Byte Fine Time " <> relBuilder x
+timeTypeBuilder (CUC4_2 x) =
+    "CUC 4 Byte Coarse Time, 1 Byte Fine Time " <> relBuilder x
+timeTypeBuilder (CUC4_3 x) =
+    "CUC 4 Byte Coarse Time, 3 Byte Fine Time " <> relBuilder x
+timeTypeBuilder UxTime = "Unix Time, Absolute"
 
 
 
@@ -155,39 +196,59 @@ data ParamType =
     | ParamSavedSynthetic
     deriving (Show, Generic)
 
+paramTypeBuilder :: ParamType -> TB.Builder
+paramTypeBuilder (ParamInteger w) = text "INTEGER " <> decimal w <> " Bit"
+paramTypeBuilder (ParamUInteger w) =
+    text "UNSIGNED INTEGER " <> decimal w <> " Bit"
+paramTypeBuilder (ParamDouble DTDouble   ) = text "DOUBLE 64 Bit"
+paramTypeBuilder (ParamDouble DTFloat    ) = text "DOUBLE 32 Bit"
+paramTypeBuilder (ParamDouble DTMilSingle) = text "MIL-STD FLOAT 32 Bit"
+paramTypeBuilder (ParamDouble DTMilExtended) =
+    text "MIL-STD EXTENDED FLOAT 48 Bit"
+paramTypeBuilder (ParamTime timeType corr) =
+    text "TIME " <> timeTypeBuilder timeType <> ", " <> text (textDisplay corr)
+paramTypeBuilder (ParamString Nothing ) = text "STRING, Variable"
+paramTypeBuilder (ParamString (Just l)) = text "STRING " <> decimal l <> " Bytes"
+paramTypeBuilder (ParamOctet Nothing ) = text "OCTET STRING, Variable"
+paramTypeBuilder (ParamOctet (Just l)) = text "OCTET STRING " <> decimal l <> " Bytes"
+-- TODO
+paramTypeBuilder (ParamDeduced _) = text "DEDUCED PARAMETER"
+paramTypeBuilder ParamSavedSynthetic = text "SAVED SYNTHETIC"
+
+
 
 instance BitSizes ParamType where
-  bitSize (ParamInteger  x            ) = BitSize x
-  bitSize (ParamUInteger x            ) = BitSize x
-  bitSize (ParamDouble   DTDouble     ) = BitSize 64
-  bitSize (ParamDouble   DTFloat      ) = BitSize 32
-  bitSize (ParamDouble   DTMilSingle  ) = BitSize 32
-  bitSize (ParamDouble   DTMilExtended) = BitSize 48
-  bitSize (ParamString   (Just x)     ) = BitSize (x * 8)
-  bitSize (ParamString   Nothing      ) = BitSize 0
-  bitSize (ParamOctet    (Just x)     ) = BitSize (x * 8)
-  bitSize (ParamOctet    Nothing      ) = BitSize 0
-  bitSize (ParamTime (CDS6   _) _     ) = BitSize 48
-  bitSize (ParamTime (CDS8   _) _     ) = BitSize 64
-  bitSize (ParamTime (CUC1   _) _     ) = BitSize 8
-  bitSize (ParamTime (CUC1_1 _) _     ) = BitSize 16
-  bitSize (ParamTime (CUC1_2 _) _     ) = BitSize 24
-  bitSize (ParamTime (CUC1_3 _) _     ) = BitSize 32
-  bitSize (ParamTime (CUC2   _) _     ) = BitSize 16
-  bitSize (ParamTime (CUC2_1 _) _     ) = BitSize 24
-  bitSize (ParamTime (CUC2_2 _) _     ) = BitSize 32
-  bitSize (ParamTime (CUC2_3 _) _     ) = BitSize 40
-  bitSize (ParamTime (CUC3   _) _     ) = BitSize 24
-  bitSize (ParamTime (CUC3_1 _) _     ) = BitSize 32
-  bitSize (ParamTime (CUC3_2 _) _     ) = BitSize 40
-  bitSize (ParamTime (CUC3_3 _) _     ) = BitSize 48
-  bitSize (ParamTime (CUC4   _) _     ) = BitSize 32
-  bitSize (ParamTime (CUC4_1 _) _     ) = BitSize 40
-  bitSize (ParamTime (CUC4_2 _) _     ) = BitSize 48
-  bitSize (ParamTime (CUC4_3 _) _     ) = BitSize 56
-  bitSize (ParamTime UxTime     _     ) = BitSize 64
-  bitSize (ParamDeduced x             ) = BitSize (fromMaybe 0 x)
-  bitSize ParamSavedSynthetic           = BitSize 0
+    bitSize (ParamInteger  x            ) = BitSize x
+    bitSize (ParamUInteger x            ) = BitSize x
+    bitSize (ParamDouble   DTDouble     ) = BitSize 64
+    bitSize (ParamDouble   DTFloat      ) = BitSize 32
+    bitSize (ParamDouble   DTMilSingle  ) = BitSize 32
+    bitSize (ParamDouble   DTMilExtended) = BitSize 48
+    bitSize (ParamString   (Just x)     ) = BitSize (x * 8)
+    bitSize (ParamString   Nothing      ) = BitSize 0
+    bitSize (ParamOctet    (Just x)     ) = BitSize (x * 8)
+    bitSize (ParamOctet    Nothing      ) = BitSize 0
+    bitSize (ParamTime (CDS6   _) _     ) = BitSize 48
+    bitSize (ParamTime (CDS8   _) _     ) = BitSize 64
+    bitSize (ParamTime (CUC1   _) _     ) = BitSize 8
+    bitSize (ParamTime (CUC1_1 _) _     ) = BitSize 16
+    bitSize (ParamTime (CUC1_2 _) _     ) = BitSize 24
+    bitSize (ParamTime (CUC1_3 _) _     ) = BitSize 32
+    bitSize (ParamTime (CUC2   _) _     ) = BitSize 16
+    bitSize (ParamTime (CUC2_1 _) _     ) = BitSize 24
+    bitSize (ParamTime (CUC2_2 _) _     ) = BitSize 32
+    bitSize (ParamTime (CUC2_3 _) _     ) = BitSize 40
+    bitSize (ParamTime (CUC3   _) _     ) = BitSize 24
+    bitSize (ParamTime (CUC3_1 _) _     ) = BitSize 32
+    bitSize (ParamTime (CUC3_2 _) _     ) = BitSize 40
+    bitSize (ParamTime (CUC3_3 _) _     ) = BitSize 48
+    bitSize (ParamTime (CUC4   _) _     ) = BitSize 32
+    bitSize (ParamTime (CUC4_1 _) _     ) = BitSize 40
+    bitSize (ParamTime (CUC4_2 _) _     ) = BitSize 48
+    bitSize (ParamTime (CUC4_3 _) _     ) = BitSize 56
+    bitSize (ParamTime UxTime     _     ) = BitSize 64
+    bitSize (ParamDeduced x             ) = BitSize (fromMaybe 0 x)
+    bitSize ParamSavedSynthetic           = BitSize 0
 
 
 -- | Converts from a 'PTC' and a 'PFC' value (according to the SCOS-2000 MIB ICD 6.9)
@@ -244,89 +305,89 @@ ptcPfcToParamType (PTC 8) (PFC 0 ) _ = Right $ ParamString Nothing
 ptcPfcToParamType (PTC 8) (PFC x ) _ = Right $ ParamString (Just x)
 ptcPfcToParamType (PTC 9) (PFC 0 ) _ = Left "PTC=9 PFC=0 not supported"
 ptcPfcToParamType (PTC 9) (PFC 1) corr =
-  Right $ ParamTime (CDS6 False) (determineCorr corr)
+    Right $ ParamTime (CDS6 False) (determineCorr corr)
 ptcPfcToParamType (PTC 9) (PFC 2) corr =
-  Right $ ParamTime (CDS8 False) (determineCorr corr)
+    Right $ ParamTime (CDS8 False) (determineCorr corr)
 ptcPfcToParamType (PTC 9) (PFC 3) corr =
-  Right $ ParamTime (CUC1 False) (determineCorr corr)
+    Right $ ParamTime (CUC1 False) (determineCorr corr)
 ptcPfcToParamType (PTC 9) (PFC 4) corr =
-  Right $ ParamTime (CUC1_1 False) (determineCorr corr)
+    Right $ ParamTime (CUC1_1 False) (determineCorr corr)
 ptcPfcToParamType (PTC 9) (PFC 5) corr =
-  Right $ ParamTime (CUC1_2 False) (determineCorr corr)
+    Right $ ParamTime (CUC1_2 False) (determineCorr corr)
 ptcPfcToParamType (PTC 9) (PFC 6) corr =
-  Right $ ParamTime (CUC1_3 False) (determineCorr corr)
+    Right $ ParamTime (CUC1_3 False) (determineCorr corr)
 ptcPfcToParamType (PTC 9) (PFC 7) corr =
-  Right $ ParamTime (CUC2 False) (determineCorr corr)
+    Right $ ParamTime (CUC2 False) (determineCorr corr)
 ptcPfcToParamType (PTC 9) (PFC 8) corr =
-  Right $ ParamTime (CUC2_1 False) (determineCorr corr)
+    Right $ ParamTime (CUC2_1 False) (determineCorr corr)
 ptcPfcToParamType (PTC 9) (PFC 9) corr =
-  Right $ ParamTime (CUC2_2 False) (determineCorr corr)
+    Right $ ParamTime (CUC2_2 False) (determineCorr corr)
 ptcPfcToParamType (PTC 9) (PFC 10) corr =
-  Right $ ParamTime (CUC2_3 False) (determineCorr corr)
+    Right $ ParamTime (CUC2_3 False) (determineCorr corr)
 ptcPfcToParamType (PTC 9) (PFC 11) corr =
-  Right $ ParamTime (CUC3 False) (determineCorr corr)
+    Right $ ParamTime (CUC3 False) (determineCorr corr)
 ptcPfcToParamType (PTC 9) (PFC 12) corr =
-  Right $ ParamTime (CUC3_1 False) (determineCorr corr)
+    Right $ ParamTime (CUC3_1 False) (determineCorr corr)
 ptcPfcToParamType (PTC 9) (PFC 13) corr =
-  Right $ ParamTime (CUC3_2 False) (determineCorr corr)
+    Right $ ParamTime (CUC3_2 False) (determineCorr corr)
 ptcPfcToParamType (PTC 9) (PFC 14) corr =
-  Right $ ParamTime (CUC3_3 False) (determineCorr corr)
+    Right $ ParamTime (CUC3_3 False) (determineCorr corr)
 ptcPfcToParamType (PTC 9) (PFC 15) corr =
-  Right $ ParamTime (CUC4 False) (determineCorr corr)
+    Right $ ParamTime (CUC4 False) (determineCorr corr)
 ptcPfcToParamType (PTC 9) (PFC 16) corr =
-  Right $ ParamTime (CUC4_1 False) (determineCorr corr)
+    Right $ ParamTime (CUC4_1 False) (determineCorr corr)
 ptcPfcToParamType (PTC 9) (PFC 17) corr =
-  Right $ ParamTime (CUC4_2 False) (determineCorr corr)
+    Right $ ParamTime (CUC4_2 False) (determineCorr corr)
 ptcPfcToParamType (PTC 9) (PFC 18) corr =
-  Right $ ParamTime (CUC4_3 False) (determineCorr corr)
+    Right $ ParamTime (CUC4_3 False) (determineCorr corr)
 ptcPfcToParamType (PTC 9) (PFC 30) corr =
-  Right $ ParamTime UxTime (determineCorr corr)
+    Right $ ParamTime UxTime (determineCorr corr)
 
 ptcPfcToParamType (PTC 10) (PFC 3) corr =
-  Right $ ParamTime (CUC1 True) (determineCorr corr)
+    Right $ ParamTime (CUC1 True) (determineCorr corr)
 ptcPfcToParamType (PTC 10) (PFC 4) corr =
-  Right $ ParamTime (CUC1_1 True) (determineCorr corr)
+    Right $ ParamTime (CUC1_1 True) (determineCorr corr)
 ptcPfcToParamType (PTC 10) (PFC 5) corr =
-  Right $ ParamTime (CUC1_2 True) (determineCorr corr)
+    Right $ ParamTime (CUC1_2 True) (determineCorr corr)
 ptcPfcToParamType (PTC 10) (PFC 6) corr =
-  Right $ ParamTime (CUC1_3 True) (determineCorr corr)
+    Right $ ParamTime (CUC1_3 True) (determineCorr corr)
 ptcPfcToParamType (PTC 10) (PFC 7) corr =
-  Right $ ParamTime (CUC2 True) (determineCorr corr)
+    Right $ ParamTime (CUC2 True) (determineCorr corr)
 ptcPfcToParamType (PTC 10) (PFC 8) corr =
-  Right $ ParamTime (CUC2_1 True) (determineCorr corr)
+    Right $ ParamTime (CUC2_1 True) (determineCorr corr)
 ptcPfcToParamType (PTC 10) (PFC 9) corr =
-  Right $ ParamTime (CUC2_2 True) (determineCorr corr)
+    Right $ ParamTime (CUC2_2 True) (determineCorr corr)
 ptcPfcToParamType (PTC 10) (PFC 10) corr =
-  Right $ ParamTime (CUC2_3 True) (determineCorr corr)
+    Right $ ParamTime (CUC2_3 True) (determineCorr corr)
 ptcPfcToParamType (PTC 10) (PFC 11) corr =
-  Right $ ParamTime (CUC3 True) (determineCorr corr)
+    Right $ ParamTime (CUC3 True) (determineCorr corr)
 ptcPfcToParamType (PTC 10) (PFC 12) corr =
-  Right $ ParamTime (CUC3_1 True) (determineCorr corr)
+    Right $ ParamTime (CUC3_1 True) (determineCorr corr)
 ptcPfcToParamType (PTC 10) (PFC 13) corr =
-  Right $ ParamTime (CUC3_2 True) (determineCorr corr)
+    Right $ ParamTime (CUC3_2 True) (determineCorr corr)
 ptcPfcToParamType (PTC 10) (PFC 14) corr =
-  Right $ ParamTime (CUC3_3 True) (determineCorr corr)
+    Right $ ParamTime (CUC3_3 True) (determineCorr corr)
 ptcPfcToParamType (PTC 10) (PFC 15) corr =
-  Right $ ParamTime (CUC4 True) (determineCorr corr)
+    Right $ ParamTime (CUC4 True) (determineCorr corr)
 ptcPfcToParamType (PTC 10) (PFC 16) corr =
-  Right $ ParamTime (CUC4_1 True) (determineCorr corr)
+    Right $ ParamTime (CUC4_1 True) (determineCorr corr)
 ptcPfcToParamType (PTC 10) (PFC 17) corr =
-  Right $ ParamTime (CUC4_2 True) (determineCorr corr)
+    Right $ ParamTime (CUC4_2 True) (determineCorr corr)
 ptcPfcToParamType (PTC 10) (PFC 18) corr =
-  Right $ ParamTime (CUC4_3 True) (determineCorr corr)
+    Right $ ParamTime (CUC4_3 True) (determineCorr corr)
 
 ptcPfcToParamType (PTC 11) (PFC 0) _ = Right $ ParamDeduced Nothing
 ptcPfcToParamType (PTC 11) (PFC x) _ = Right $ ParamDeduced (Just x)
 ptcPfcToParamType (PTC 13) (PFC 0) _ = Right ParamSavedSynthetic
 ptcPfcToParamType ptc pfc _ =
-  Left $ "Unsupported: " <> textDisplay ptc <> " " <> textDisplay pfc
+    Left $ "Unsupported: " <> textDisplay ptc <> " " <> textDisplay pfc
 
 
 instance NFData ParamType
 instance Serialise ParamType
 instance FromJSON ParamType
 instance ToJSON ParamType where
-  toEncoding = genericToEncoding defaultOptions
+    toEncoding = genericToEncoding defaultOptions
 
 -- | The parameter nature.
 data ParamNatur =
@@ -342,7 +403,7 @@ instance NFData ParamNatur
 instance Serialise ParamNatur
 instance FromJSON ParamNatur
 instance ToJSON ParamNatur where
-  toEncoding = genericToEncoding defaultOptions
+    toEncoding = genericToEncoding defaultOptions
 
 -- | Defines if the parameter is status consistency checked
 data StatusConsistency = SCCOn | SCCOff
@@ -359,124 +420,146 @@ instance NFData StatusConsistency
 instance Serialise StatusConsistency
 instance FromJSON StatusConsistency
 instance ToJSON StatusConsistency where
-  toEncoding = genericToEncoding defaultOptions
+    toEncoding = genericToEncoding defaultOptions
 
 
 -- | The whole parameter definition
-data TMParameterDef = TMParameterDef {
+data TMParameterDef = TMParameterDef
+    {
     -- | The parameter name
-    _fpName :: !ShortText
+      _fpName              :: !ShortText
     -- | a description
-    , _fpDescription :: !ShortText
+    , _fpDescription       :: !ShortText
     -- | if a parameter has a PID (parameter identification) value. This is
     -- not to be confused with a PID in the sense of APID values.
-    , _fpPID :: Maybe Word32
+    , _fpPID               :: Maybe Word32
     -- | a unit for the parameter (eg "sec", "m", "kg")
-    , _fpUnit :: !ShortText
+    , _fpUnit              :: !ShortText
     -- | the param type
-    , _fpType :: !ParamType
+    , _fpType              :: !ParamType
     -- | the padding width. This is not the width of the parameter, which is
     -- given in the '_fpType' field, but if the parameter should have additional
     -- padding to the next one. Only used for variable packets
-    , _fpWidth :: Maybe BitSize
+    , _fpWidth             :: Maybe BitSize
     -- | Reference to the validity parameter. If the validity parameter has a value
     -- equal to '_fpValidityValue', the validity to set to true for this parameter
-    , _fpValid :: Maybe TMParameterDef
+    , _fpValid             :: Maybe TMParameterDef
     -- | Related. Currently not used
-    , _fpRelated :: Maybe TMParameterDef
+    , _fpRelated           :: Maybe TMParameterDef
     -- | the calibrations assigned to this parameter
-    , _fpCalibs :: CalibContainer
+    , _fpCalibs            :: CalibContainer
     -- | the nature of the parameter (see 'ParamNatur')
-    , _fpNatur :: !ParamNatur
+    , _fpNatur             :: !ParamNatur
     -- | specifies how out-of-range calibrations should be handled
-    , _fpInterpolation :: !CalibInterpolation
+    , _fpInterpolation     :: !CalibInterpolation
     -- | specifies if the parameter is status consistency checked
     , _fpStatusConsistency :: !StatusConsistency
     -- | the number of decimal digits to be used when displaying the parameter.
     -- Not used within AURIS
-    , _fpDecim :: !Int
+    , _fpDecim             :: !Int
     -- | default value. Only used when the parameter is a constant parameter
-    , _fpDefaultVal :: !TMValue
+    , _fpDefaultVal        :: !TMValue
     -- | the subsystem this parameter is assigned to
-    , _fpSubsys :: !ShortText
+    , _fpSubsys            :: !ShortText
     -- | the value the validity parameter from '_fpValid' will be checked against
-    , _fpValidityValue :: !TMValue
+    , _fpValidityValue     :: !TMValue
     -- | the on-board clock ID to be used for correlation
-    , _fpOBTID :: Maybe Int
+    , _fpOBTID             :: Maybe Int
     -- | the endianess of the parameter. Only applicable for whole-byte sized
     -- parameters
-    , _fpEndian :: Endian
+    , _fpEndian            :: Endian
     }
-    deriving(Show, Generic)
+    deriving (Show, Generic)
 makeLenses ''TMParameterDef
+
+
+compareTMParameterDefName :: TMParameterDef -> TMParameterDef -> Ordering
+compareTMParameterDefName p1 p2 = compare (_fpName p1) (_fpName p2)
+
+pad :: Int -> TB.Builder -> TB.Builder
+pad n b = padFromRight n ' ' b
+
+instance Display TMParameterDef where
+    textDisplay p =
+        run
+            $  pad 16 (text "Parameter Name: ")
+            <> text (ST.toText (_fpName p))
+            <> pad 17 (text "\nDescription: ")
+            <> text (ST.toText (_fpDescription p))
+            <> pad 17 (text "\nParameter ID: ")
+            <> (case _fpPID p of
+                   Nothing -> text "--"
+                   Just val ->
+                       decimal val <> text " (0x" <> hexadecimal val <> char ')'
+               )
+            <> pad 17 (text "\nType: ")
+            <> paramTypeBuilder (_fpType p)
+            <> pad 17 (text "\nUnit: ") <> text (ST.toText (_fpUnit p))
+            <> pad 17 (text "\nPadding: ") <> (case _fpWidth p of 
+                Nothing -> "--"
+                Just w -> text (textDisplay w))
+            <> text "\nCalibration:\n" <> calibContainerBuilder (_fpCalibs p) 4 
 
 getWidth :: TMParameterDef -> BitSize
 getWidth def = bitSize (def ^. fpType)
 
 getPaddedWidth :: TMParameterDef -> BitSize
 getPaddedWidth def =
-  let w = bitSize (def ^. fpType)
-  in  fromMaybe w (def ^. fpWidth)
+    let w = bitSize (def ^. fpType) in fromMaybe w (def ^. fpWidth)
 
-  
-getPadding :: TMParameterDef -> BitSize 
-getPadding def = 
-  case def ^. fpWidth of
-    Nothing -> BitSize 0 
-    Just b -> 
-      let w = b - getWidth def 
-      in if w < 0 then 0 else w 
+
+getPadding :: TMParameterDef -> BitSize
+getPadding def = case def ^. fpWidth of
+    Nothing -> BitSize 0
+    Just b  -> let w = b - getWidth def in if w < 0 then 0 else w
 
 
 instance NFData TMParameterDef
 instance Serialise TMParameterDef
 instance FromJSON TMParameterDef
 instance ToJSON TMParameterDef where
-  toEncoding = genericToEncoding defaultOptions
+    toEncoding = genericToEncoding defaultOptions
 
 
 uintParamDef :: ShortText -> ShortText -> Int -> TMParameterDef
-uintParamDef name descr bitWidth = 
-  TMParameterDef {
-              _fpName = name
-              , _fpDescription = descr
-              , _fpPID = Nothing
-              , _fpUnit = ""
-              , _fpType = ParamUInteger bitWidth
-              , _fpWidth = Nothing
-              , _fpValid = Nothing
-              , _fpRelated = Nothing
-              , _fpCalibs = CritNoCalib
-              , _fpNatur = NaturRaw
-              , _fpInterpolation = CalibFail
-              , _fpStatusConsistency = SCCOff
-              , _fpDecim = 0 
-              , _fpDefaultVal = nullValue
-              , _fpSubsys = ""
-              , _fpValidityValue = nullValue
-              , _fpOBTID = Nothing
-              , _fpEndian = BiE
-  }
+uintParamDef name descr bitWidth = TMParameterDef
+    { _fpName              = name
+    , _fpDescription       = descr
+    , _fpPID               = Nothing
+    , _fpUnit              = ""
+    , _fpType              = ParamUInteger bitWidth
+    , _fpWidth             = Nothing
+    , _fpValid             = Nothing
+    , _fpRelated           = Nothing
+    , _fpCalibs            = CritNoCalib
+    , _fpNatur             = NaturRaw
+    , _fpInterpolation     = CalibFail
+    , _fpStatusConsistency = SCCOff
+    , _fpDecim             = 0
+    , _fpDefaultVal        = nullValue
+    , _fpSubsys            = ""
+    , _fpValidityValue     = nullValue
+    , _fpOBTID             = Nothing
+    , _fpEndian            = BiE
+    }
 
 octetParamDef :: ShortText -> ShortText -> TMParameterDef
-octetParamDef name descr = 
-  TMParameterDef {
-              _fpName = name
-              , _fpDescription = descr
-              , _fpPID = Nothing
-              , _fpUnit = ""
-              , _fpType = ParamOctet Nothing
-              , _fpWidth = Nothing
-              , _fpValid = Nothing
-              , _fpRelated = Nothing
-              , _fpCalibs = CritNoCalib
-              , _fpNatur = NaturRaw
-              , _fpInterpolation = CalibFail
-              , _fpStatusConsistency = SCCOff
-              , _fpDecim = 0 
-              , _fpDefaultVal = nullValue
-              , _fpSubsys = ""
-              , _fpValidityValue = nullValue
-              , _fpOBTID = Nothing
-              , _fpEndian = BiE
-  }
+octetParamDef name descr = TMParameterDef { _fpName              = name
+                                          , _fpDescription       = descr
+                                          , _fpPID               = Nothing
+                                          , _fpUnit              = ""
+                                          , _fpType = ParamOctet Nothing
+                                          , _fpWidth             = Nothing
+                                          , _fpValid             = Nothing
+                                          , _fpRelated           = Nothing
+                                          , _fpCalibs            = CritNoCalib
+                                          , _fpNatur             = NaturRaw
+                                          , _fpInterpolation     = CalibFail
+                                          , _fpStatusConsistency = SCCOff
+                                          , _fpDecim             = 0
+                                          , _fpDefaultVal        = nullValue
+                                          , _fpSubsys            = ""
+                                          , _fpValidityValue     = nullValue
+                                          , _fpOBTID             = Nothing
+                                          , _fpEndian            = BiE
+                                          }

@@ -26,6 +26,7 @@ module Data.TC.TCDef
     , tcDefConnectionFlag
     , tcDefVerifStages
     , tcDefParams
+    , compareTCDefName
     ) where
 
 import           RIO
@@ -133,6 +134,10 @@ data TCDef = TCDef
     }
     deriving (Show, Generic)
 makeLenses ''TCDef
+
+compareTCDefName :: TCDef -> TCDef -> Ordering 
+compareTCDefName tc1 tc2 = compare (_tcDefName tc1) (_tcDefName tc2)
+
 
 instance Serialise TCDef
 instance FromJSON TCDef

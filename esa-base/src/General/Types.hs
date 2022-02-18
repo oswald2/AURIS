@@ -59,47 +59,47 @@ import           RIO
 import qualified RIO.ByteString                as B
 import qualified RIO.Text                      as T
 
-import           Data.Binary
-import           Data.Aeson                     ( withText
-                                                , defaultOptions
-                                                , genericToEncoding
-                                                , FromJSON(..)
+import           Codec.Serialise               as S
+import           Codec.Serialise.Decoding      as SE
+import           Codec.Serialise.Encoding      as SE
+import           Data.Aeson                     ( FromJSON(..)
                                                 , FromJSONKey(fromJSONKey)
                                                 , FromJSONKeyFunction
                                                     ( FromJSONKeyText
                                                     )
-                                                , Value(String)
-                                                , ToJSON(toJSON, toEncoding)
+                                                , ToJSON(toEncoding, toJSON)
                                                 , ToJSONKey(toJSONKey)
                                                 , ToJSONKeyFunction
                                                     ( ToJSONKeyText
                                                     )
+                                                , Value(String)
+                                                , defaultOptions
+                                                , genericToEncoding
+                                                , withText
                                                 )
 import qualified Data.Aeson.Encoding           as E
 import qualified Data.Aeson.Types              as E
-import           Data.Bits                      ( Bits
-                                                    ( (.|.)
-                                                    , (.&.)
-                                                    , shiftR
-                                                    , shiftL
-                                                    )
-                                                )
-import           Data.Bimap                    as BM
-import           Data.Text.Short                ( ShortText )
-import qualified Data.Text.Short               as ST
-import           Data.HashTable.ST.Basic        ( IHashTable )
-import qualified Data.HashTable.ST.Basic       as HT
 import           Data.Attoparsec.Text           ( Parser )
 import qualified Data.Attoparsec.Text          as A
+import           Data.Bimap                    as BM
+import           Data.Binary
+import           Data.Bits                      ( Bits
+                                                    ( (.&.)
+                                                    , (.|.)
+                                                    , shiftL
+                                                    , shiftR
+                                                    )
+                                                )
 import           Data.Char                      ( digitToInt
                                                 , isHexDigit
                                                 , isSpace
                                                 )
-import           Text.Read                      ( Read(..) )
+import           Data.HashTable.ST.Basic        ( IHashTable )
+import qualified Data.HashTable.ST.Basic       as HT
+import           Data.Text.Short                ( ShortText )
+import qualified Data.Text.Short               as ST
 import qualified Text.Builder                  as TB
-import           Codec.Serialise               as S
-import           Codec.Serialise.Encoding      as SE
-import           Codec.Serialise.Decoding      as SE
+import           Text.Read                      ( Read(..) )
 
 import           Control.Monad                  ( replicateM )
 
@@ -149,6 +149,11 @@ instance Serialise Correlate
 instance FromJSON Correlate
 instance ToJSON Correlate where
     toEncoding = genericToEncoding defaultOptions
+
+instance Display Correlate where
+    textDisplay CorrelationYes = "Correlation"
+    textDisplay CorrelationNo  = "No Correlation"
+
 
 {-# INLINABLE determineCorr #-}
 determineCorr :: Maybe Bool -> Correlate
@@ -317,7 +322,7 @@ instance ToJSON BitSize where
     toEncoding = genericToEncoding defaultOptions
 
 instance Display BitSize where
-    display (BitSize x) = display ("BitSize " :: Text) <> display x
+    display (BitSize x) = display x <> " Bit"
 
 -- | constructs a bit size
 mkBitSize :: Int -> BitSize
@@ -493,7 +498,7 @@ instance (Eq k, Hashable k, FromJSON k, FromJSON v) => FromJSON (IHashTable k v)
 newtype HexBytes = HexBytes { toBS :: ByteString }
   deriving(Eq, Ord, Generic)
 
-hexBytesEmpty :: HexBytes 
+hexBytesEmpty :: HexBytes
 hexBytesEmpty = HexBytes B.empty
 
 hexLength :: HexBytes -> Int
@@ -538,10 +543,10 @@ instance Show HexBytes where
 
 instance Read HexBytes where
     readsPrec _ str = case A.parse parseHexLine (T.pack str) of
-        A.Fail{}      -> []
-        A.Partial cont -> case cont T.empty of 
-            A.Fail {} -> []
-            A.Partial _ -> []
+        A.Fail{}       -> []
+        A.Partial cont -> case cont T.empty of
+            A.Fail{}      -> []
+            A.Partial _   -> []
             A.Done rest x -> [(x, T.unpack rest)]
         A.Done rest x -> [(x, T.unpack rest)]
 

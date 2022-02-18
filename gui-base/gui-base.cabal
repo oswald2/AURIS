@@ -165,23 +165,23 @@ library
                      -funbox-strict-fields -freverse-errors
 
 
-executable time-picker-test
-  -- Base language which the package is written in.
-  default-language:    Haskell2010
+-- executable time-picker-test
+--   -- Base language which the package is written in.
+--   default-language:    Haskell2010
 
-  -- The interface type and version of the test suite.
-  --type:                exitcode-stdio-1.0
+--   -- The interface type and version of the test suite.
+--   --type:                exitcode-stdio-1.0
 
-  -- The directory where the test specifications are found.
-  hs-source-dirs:      test
+--   -- The directory where the test specifications are found.
+--   hs-source-dirs:      test
 
-  -- The entrypoint to the test suite.
-  main-is:             TimePickerTest.hs
+--   -- The entrypoint to the test suite.
+--   main-is:             TimePickerTest.hs
 
-  -- Test dependencies.
-  build-depends:       
-    base 
-    , rio 
-    , gi-gtk 
-    , gui-base
-    , esa-base
+--   -- Test dependencies.
+--   build-depends:       
+--     base 
+--     , rio 
+--     , gi-gtk 
+--     , gui-base
+--     , esa-base

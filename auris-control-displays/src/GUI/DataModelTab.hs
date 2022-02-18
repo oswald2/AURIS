@@ -11,15 +11,17 @@ import qualified RIO.Text                      as T
 
 import           Control.Lens                   ( makeLenses )
 
+import           Data.List                      ( sortBy )
 import qualified Data.Text.Short               as ST
 import           Data.Tree
 
 import           Data.GI.Gtk.ModelView.CellLayout
 import           Data.GI.Gtk.ModelView.ForestStore
+import           Data.GI.Gtk.ModelView.Types
 import           GI.Gtk                        as Gtk
 
-
 import           GUI.Utils
+import           GUI.TextView
 
 import           Data.DataModel
 import           Data.PUS.DataModelInfo
@@ -61,6 +63,7 @@ createDataModelTab window builder = do
     issue    <- getObject builder "entryDMIssue" Entry
     treeView <- getObject builder "treeViewModel" TreeView
     textView <- getObject builder "textViewDataModel" TextView
+    textViewSetMonospace textView True
 
     ref      <- newIORef Data.DataModel.empty
     model    <- forestStoreNew [Node (NameNode "Model") []]
@@ -79,6 +82,13 @@ createDataModelTab window builder = do
                          , _dmtModel     = ref
                          }
 
+    void $ Gtk.on treeView #rowActivated $ \path _col -> do 
+        val <- forestStoreGetValue model path 
+        case val of 
+            NameNode txt -> textViewSetText textView txt
+            TMParamNode param -> textViewSetText textView (textDisplay param)
+            _ -> return () 
+
     return g
 
 
@@ -87,23 +97,35 @@ dataModelTabSetModel g model = do
     writeIORef (g ^. dmtModel) model
     dataModelTabSetInfo g (model ^. dmInfo)
 
-    let tmPkts   = convertTMPackets (model ^. dmTMPackets)
-        tcPkts   = convertTCs (model ^. dmTCs)
-        tmParams = convertTMParams (model ^. dmParameters)
+    let tmPkts    = convertTMPackets (model ^. dmTMPackets)
+        tcPkts    = convertTCs (model ^. dmTCs)
+        tmParams  = convertTMParams (model ^. dmParameters)
+        tmNodes   = NameNode "Telemetry"
+        tcNodes   = Node (NameNode "Telecommand") [tcPkts]
+        treeModel = g ^. dmtTreeModel
 
-        tmNodes  = Node (NameNode "Telemetry") [tmPkts, tmParams]
-        tcNodes  = Node (NameNode "Telecommand") [tcPkts]
+    -- unset the model in the treeview for performance reasons
+    treeViewSetModel (g ^. dmtTreeView)
+                     (Nothing :: Maybe (ForestStore DataNode))
 
-        forest   = [tmNodes, tcNodes]
-
-    tmPktPath <- treePathNewFromIndices [0, 0]
-    void $ forestStoreRemove (g ^. dmtTreeModel) tmPktPath
-    tcPktPath <- treePathNewFromIndices [0, 1]
-    void $ forestStoreRemove (g ^. dmtTreeModel) tcPktPath
+    -- update the model 
+    forestStoreClear treeModel
+    insertAtRoot treeModel 0 (NameNode "Telemetry")
+    insertAtRoot treeModel 1 (NameNode "Telecommand")
 
     path <- treePathNewFromIndices [0]
-    forestStoreInsertForest (g ^. dmtTreeModel) path (-1) forest
+    forestStoreInsertForest treeModel path 0 [tmPkts, tmParams]
+    tcPath <- treePathNewFromIndices [1]
+    forestStoreInsertForest treeModel tcPath 0 [tcPkts]
 
+    -- set the model again
+    treeViewSetModel (g ^. dmtTreeView) (Just treeModel)
+
+
+insertAtRoot :: ForestStore DataNode -> Int -> DataNode -> IO ()
+insertAtRoot model idx node = do
+    path <- treePathNewFromIndices' []
+    forestStoreInsert model path idx node
 
 
 
@@ -121,19 +143,26 @@ convertTMPackets :: IHashTable TMPacketKey TMPacketDef -> Tree DataNode
 convertTMPackets packets =
     let tree = Node (NameNode "TM Packets") pktList
         pktList =
-            map (\x -> Node (TMPacketNode (snd x)) []) $ HT.toList packets
+            map (\x -> Node (TMPacketNode (snd x)) []) 
+                $ sortBy (\p1 p2 -> compareTMPacketDefName (snd p1) (snd p2))
+                $ HT.toList packets
     in  tree
 
 convertTCs :: IHashTable ST.ShortText TCDef -> Tree DataNode
 convertTCs tcs =
     let tree   = Node (NameNode "TCs") tcList
-        tcList = map (\x -> Node (TCNode (snd x)) []) $ HT.toList tcs
+        tcList = map (\x -> Node (TCNode (snd x)) []) 
+            $ sortBy (\tc1 tc2 -> compareTCDefName (snd tc1) (snd tc2))
+            $ HT.toList tcs
     in  tree
 
 convertTMParams :: IHashTable ST.ShortText TMParameterDef -> Tree DataNode
 convertTMParams params =
-    let tree    = Node (NameNode "TM Parameters") pktList
-        pktList = map (\x -> Node (TMParamNode (snd x)) []) $ HT.toList params
+    let tree = Node (NameNode "TM Parameters") pktList
+        pktList =
+            map (\x -> Node (TMParamNode (snd x)) [])
+                $ sortBy (\p1 p2 -> compareTMParameterDefName (snd p1) (snd p2))
+                $ HT.toList params
     in  tree
 
 

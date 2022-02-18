@@ -164,138 +164,138 @@ library
                      -funbox-strict-fields
 
 
-executable mongodb-speed-test
-  -- Base language which the package is written in.
-  default-language:    Haskell2010
-  default-extensions:
-      BangPatterns
-      BinaryLiterals
-      ConstraintKinds
-      DataKinds
-      DefaultSignatures
-      DeriveDataTypeable
-      DeriveFoldable
-      DeriveFunctor
-      DeriveGeneric
-      DeriveTraversable
-      DoAndIfThenElse
-      EmptyDataDecls
-      ExistentialQuantification
-      FlexibleContexts
-      FlexibleInstances
-      FunctionalDependencies
-      GADTs
-      DeriveAnyClass
-      InstanceSigs
-      KindSignatures
-      LambdaCase
-      MultiParamTypeClasses
-      MultiWayIf
-      NamedFieldPuns
-      NoImplicitPrelude
-      OverloadedStrings
-      PartialTypeSignatures
-      PatternGuards
-      PolyKinds
-      RankNTypes
-      RecordWildCards
-      ScopedTypeVariables
-      StandaloneDeriving
-      TupleSections
-      TypeFamilies
-      TypeSynonymInstances
-      TypeApplications
-      ViewPatterns
-      NumericUnderscores
-  -- The interface type and version of the test suite.
-  --type:                exitcode-stdio-1.0
+-- executable mongodb-speed-test
+--   -- Base language which the package is written in.
+--   default-language:    Haskell2010
+--   default-extensions:
+--       BangPatterns
+--       BinaryLiterals
+--       ConstraintKinds
+--       DataKinds
+--       DefaultSignatures
+--       DeriveDataTypeable
+--       DeriveFoldable
+--       DeriveFunctor
+--       DeriveGeneric
+--       DeriveTraversable
+--       DoAndIfThenElse
+--       EmptyDataDecls
+--       ExistentialQuantification
+--       FlexibleContexts
+--       FlexibleInstances
+--       FunctionalDependencies
+--       GADTs
+--       DeriveAnyClass
+--       InstanceSigs
+--       KindSignatures
+--       LambdaCase
+--       MultiParamTypeClasses
+--       MultiWayIf
+--       NamedFieldPuns
+--       NoImplicitPrelude
+--       OverloadedStrings
+--       PartialTypeSignatures
+--       PatternGuards
+--       PolyKinds
+--       RankNTypes
+--       RecordWildCards
+--       ScopedTypeVariables
+--       StandaloneDeriving
+--       TupleSections
+--       TypeFamilies
+--       TypeSynonymInstances
+--       TypeApplications
+--       ViewPatterns
+--       NumericUnderscores
+--   -- The interface type and version of the test suite.
+--   --type:                exitcode-stdio-1.0
 
-  -- The directory where the test specifications are found.
-  hs-source-dirs:      test
+--   -- The directory where the test specifications are found.
+--   hs-source-dirs:      test
 
-  -- The entrypoint to the test suite.
-  main-is:             SpeedComparison.hs
+--   -- The entrypoint to the test suite.
+--   main-is:             SpeedComparison.hs
 
-  -- Test dependencies.
-  build-depends:       
-    base >=4.7 && <5
-    , rio
-    , bytestring
-    , time
-    , esa-base 
-    , unliftio
-    , text
-    , mongoDB
-    , bson
-    , esa-db-mongodb
-    , text-short
-    , pretty-show
+--   -- Test dependencies.
+--   build-depends:       
+--     base >=4.7 && <5
+--     , rio
+--     , bytestring
+--     , time
+--     , esa-base 
+--     , unliftio
+--     , text
+--     , mongoDB
+--     , bson
+--     , esa-db-mongodb
+--     , text-short
+--     , pretty-show
 
 
 
-executable mongodb-test
-  -- Base language which the package is written in.
-  default-language:    Haskell2010
-  default-extensions:
-      BangPatterns
-      BinaryLiterals
-      ConstraintKinds
-      DataKinds
-      DefaultSignatures
-      DeriveDataTypeable
-      DeriveFoldable
-      DeriveFunctor
-      DeriveGeneric
-      DeriveTraversable
-      DoAndIfThenElse
-      EmptyDataDecls
-      ExistentialQuantification
-      FlexibleContexts
-      FlexibleInstances
-      FunctionalDependencies
-      GADTs
-      DeriveAnyClass
-      InstanceSigs
-      KindSignatures
-      LambdaCase
-      MultiParamTypeClasses
-      MultiWayIf
-      NamedFieldPuns
-      NoImplicitPrelude
-      OverloadedStrings
-      PartialTypeSignatures
-      PatternGuards
-      PolyKinds
-      RankNTypes
-      RecordWildCards
-      ScopedTypeVariables
-      StandaloneDeriving
-      TupleSections
-      TypeFamilies
-      TypeSynonymInstances
-      TypeApplications
-      ViewPatterns
-      NumericUnderscores
-  -- The interface type and version of the test suite.
-  --type:                exitcode-stdio-1.0
+-- executable mongodb-test
+--   -- Base language which the package is written in.
+--   default-language:    Haskell2010
+--   default-extensions:
+--       BangPatterns
+--       BinaryLiterals
+--       ConstraintKinds
+--       DataKinds
+--       DefaultSignatures
+--       DeriveDataTypeable
+--       DeriveFoldable
+--       DeriveFunctor
+--       DeriveGeneric
+--       DeriveTraversable
+--       DoAndIfThenElse
+--       EmptyDataDecls
+--       ExistentialQuantification
+--       FlexibleContexts
+--       FlexibleInstances
+--       FunctionalDependencies
+--       GADTs
+--       DeriveAnyClass
+--       InstanceSigs
+--       KindSignatures
+--       LambdaCase
+--       MultiParamTypeClasses
+--       MultiWayIf
+--       NamedFieldPuns
+--       NoImplicitPrelude
+--       OverloadedStrings
+--       PartialTypeSignatures
+--       PatternGuards
+--       PolyKinds
+--       RankNTypes
+--       RecordWildCards
+--       ScopedTypeVariables
+--       StandaloneDeriving
+--       TupleSections
+--       TypeFamilies
+--       TypeSynonymInstances
+--       TypeApplications
+--       ViewPatterns
+--       NumericUnderscores
+--   -- The interface type and version of the test suite.
+--   --type:                exitcode-stdio-1.0
 
-  -- The directory where the test specifications are found.
-  hs-source-dirs:      test
+--   -- The directory where the test specifications are found.
+--   hs-source-dirs:      test
 
-  -- The entrypoint to the test suite.
-  main-is:             MongoDBTest.hs
+--   -- The entrypoint to the test suite.
+--   main-is:             MongoDBTest.hs
 
-  -- Test dependencies.
-  build-depends:       
-    base >=4.7 && <5
-    , rio
-    , bytestring
-    , time
-    , esa-base 
-    , unliftio
-    , text
-    , mongoDB
-    , bson
-    , esa-db-mongodb
-    , hspec
+--   -- Test dependencies.
+--   build-depends:       
+--     base >=4.7 && <5
+--     , rio
+--     , bytestring
+--     , time
+--     , esa-base 
+--     , unliftio
+--     , text
+--     , mongoDB
+--     , bson
+--     , esa-db-mongodb
+--     , hspec
 

@@ -86,6 +86,7 @@ module Data.TM.TMPacketDef
   , tcEchoDefCC
   , tmAckPktDef
   , tmAckFailPktDef
+  , compareTMPacketDefName
   )
 where
 
@@ -324,6 +325,10 @@ data TMPacketDef = TMPacketDef {
     , _tmpdParams :: TMPacketParams
     } deriving(Show, Generic)
 makeLenses ''TMPacketDef
+
+
+compareTMPacketDefName :: TMPacketDef -> TMPacketDef -> Ordering 
+compareTMPacketDefName pkt1 pkt2 = compare (_tmpdName pkt1) (_tmpdName pkt2) 
 
 
 instance Serialise TMPacketDef

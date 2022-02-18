@@ -86,6 +86,12 @@ instance FromJSON NumType
 instance ToJSON NumType where
     toEncoding = genericToEncoding defaultOptions
 
+instance Display NumType where 
+    textDisplay NumInteger = "INTEGER"
+    textDisplay NumUInteger = "UNSIGNED"
+    textDisplay NumDouble = "DOUBLE"
+
+
 type Parser = Parsec Void Text
 
 
