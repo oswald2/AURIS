@@ -60,7 +60,6 @@ import           Data.Display.Graphical
 
 import           General.Types
 
-import           GHC.Compact
 
 
 -- | The data model itself.
@@ -90,8 +89,8 @@ data DataModel = DataModel
 makeLenses ''DataModel
 
 
-instance Show (Compact DataModel) where
-    show x = show (getCompact x)
+-- instance Show (Compact DataModel) where
+--     show x = show (getCompact x)
 
 -- | returns an empty data model. 
 empty :: DataModel

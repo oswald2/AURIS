@@ -69,24 +69,20 @@ library
     esa-base,
     esa-db-mongodb,
     esa-space-protocols,
-    esa-mib,
     gui-base,
     auris-tm-displays,
     auris-tc-displays,
     auris-control-displays,
     mcs-interface,
-    optparse-generic,
     gitrev,
     aeson,
     aeson-pretty,
     conduit,
-    conduit-extra,
     directory,
     filepath,
     text-short,
     file-embed,
     hashtables-mo,
-    stm-conduit,
     gi-gtk,
     gi-gtk-hs,
     gi-gdk,
@@ -97,8 +93,7 @@ library
     gi-gtksource,
     tar,
     zlib,
-    stm,
-    ghc-compact
+    stm
 
   if flag(sle)
     Build-depends:

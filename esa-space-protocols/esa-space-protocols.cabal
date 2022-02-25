@@ -133,54 +133,33 @@ library
         , aeson
         , text
         , text-builder
-        , hw-prim
-        , hw-prim-bits
         , text-show
         , vector
-        , formatting
         , attoparsec
         , attoparsec-binary
-        , attoparsec-data
         , conduit
         , conduit-extra
-        , closed
         , rio
         , mtl
         , unliftio
-        , parallel
         , lens
         , binary
-        , binary-ieee754
         , stm-conduit
-        , stm-chans
         , thyme
-        , time
-        , vector-binary-instances
-        , bytestring-to-vector
         , timers-updatable
         , base64-bytestring-type
         , containers
-        , word8
         , serialise
         , esa-mib
-        , scientific
-        , sorted-list
-        , deepseq
         , esa-base
-        , esa-db-mongodb
-        , network
         , streaming-commons
         , text-short
-        , resourcet
         , hashtables-mo
         , vector-builder
-        , pretty-show
         , filepath
         , directory
         , timer-wheel
-        , refined
         , word24
-        , ghc-compact
 
     if flag(sle)
         cpp-options: -DHAS_SLE

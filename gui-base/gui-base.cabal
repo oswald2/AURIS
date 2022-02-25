@@ -86,17 +86,14 @@ library
   -- Other library packages from which modules are imported.
   build-depends:       base
     , rio
-    , containers
     , lens
     , text
     , vector
     , gi-gtk
     , gi-gtk-hs
-    , gi-gobject
     , gi-gdk
     , haskell-gi-base
     , esa-base
-    , esa-space-protocols
     , time
     , colour
 

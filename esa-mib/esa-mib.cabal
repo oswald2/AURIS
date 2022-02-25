@@ -155,9 +155,6 @@ library
         ViewPatterns
   -- Other library packages from which modules are imported.
   build-depends:       base ==4.*
-    , binary
-    , serialise
-    , aeson
     , rio
     , bytestring
     , text
@@ -176,8 +173,6 @@ library
     , mtl
     , hashtables-mo
     , colour
-    , ghc-compact
-    , megaparsec
     , bimap
     , multi-containers
     , refined
@@ -252,15 +247,12 @@ executable LoadMIBTest
         esa-base,
         esa-mib,
         base,
-        bytestring,
         rio,
         text,
         unliftio,
-        hspec,
         pretty-show,
         vector,
-        hashtables-mo,
-        ghc-compact
+        hashtables-mo
 
 
 test-suite esa-mib-test
@@ -276,9 +268,7 @@ test-suite esa-mib-test
   ghc-options: -Wall -Werror -O2 -funbox-strict-fields
   build-depends:
       base >=4.7 && <5,
-      bytestring,
       cassava,
-      hspec,
       vector,
       esa-base,
       esa-mib

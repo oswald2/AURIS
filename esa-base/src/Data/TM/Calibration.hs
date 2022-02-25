@@ -31,18 +31,21 @@ module Data.TM.Calibration
     , ccValPar
     , ccCalibration
     , calibBuilder
+    , critCalibBuilder
     , calibContainerBuilder
     ) where
 
 import           RIO
 import qualified RIO.Text                      as T
+import qualified RIO.Vector                    as V
 
 import           Codec.Serialise
 import           Control.Lens                   ( makeLenses
                                                 , makePrisms
                                                 )
 import           Data.Aeson
-import           Data.Text.Short
+import           Data.Text.Short                ( ShortText )
+import qualified Data.Text.Short               as ST
 
 import           Data.PUS.CalibrationTypes
 import           Data.TM.LogarithmicCalibration
@@ -104,6 +107,28 @@ instance FromJSON CritCalib
 instance ToJSON CritCalib where
     toEncoding = genericToEncoding defaultOptions
 
+critCalibBuilder :: CritCalib -> Int -> TB.Builder
+critCalibBuilder cr indent =
+    padBuilder indent
+        <> padFromRight 16 ' ' (text "Applicable Param: ")
+        <> text (ST.toText (_ccRLChk cr))
+        <> newLineBuilder indent
+        <> padFromRight 16 ' ' (text "Value:")
+        <> decimal (_ccValPar cr)
+        <> text " (0x"
+        <> hexadecimal (_ccValPar cr)
+        <> char ')'
+        <> newLineBuilder indent
+        <> "Calibration:\n"
+        <> calibBuilder (_ccCalibration cr) (indent + 4)
+
+padBuilder :: Int -> TB.Builder
+padBuilder n = text (T.replicate n " ")
+
+newLineBuilder :: Int -> TB.Builder
+newLineBuilder n = char '\n' <> padBuilder n
+
+
 -- | A parameter has several possibilities to be calibrated. This
 -- data type specifies which ones.
 data CalibContainer =
@@ -127,4 +152,10 @@ calibContainerBuilder :: CalibContainer -> Int -> TB.Builder
 calibContainerBuilder CritNoCalib indent =
     text (T.replicate indent " ") <> text "--"
 calibContainerBuilder (CritDirect calib) indent = calibBuilder calib indent
-calibContainerBuilder (Crit       vec  ) _      = mempty
+calibContainerBuilder (Crit vec) indent =
+    padBuilder indent <> text "Applicability Criteria:\n" <> vectorBuilder
+  where
+    vectorBuilder =
+        TB.intercalate (char '\n')
+            . map (\x -> critCalibBuilder x indent)
+            . V.toList $ vec

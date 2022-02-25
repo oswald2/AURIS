@@ -47,7 +47,6 @@ executable AURISi
     base == 4.*,
     text,
     directory,
-    filepath,
     rio,
     lib-aurisi,
     optparse-generic

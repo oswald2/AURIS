@@ -405,6 +405,12 @@ instance FromJSON ParamNatur
 instance ToJSON ParamNatur where
     toEncoding = genericToEncoding defaultOptions
 
+instance Display ParamNatur where 
+    textDisplay NaturRaw = "RAW"
+    textDisplay NaturConstant = "CONSTANT"
+    textDisplay (NaturSynthetic _) = "SYNTHETIC"
+
+
 -- | Defines if the parameter is status consistency checked
 data StatusConsistency = SCCOn | SCCOff
     deriving (Eq, Ord, Enum, Bounded, Show, Generic)
@@ -498,7 +504,18 @@ instance Display TMParameterDef where
             <> pad 17 (text "\nPadding: ") <> (case _fpWidth p of 
                 Nothing -> "--"
                 Just w -> text (textDisplay w))
+            <> pad 17 (text "\nValidity Param:") <> relParamName (_fpValid p)
+            <> pad 17 (text "\nValidity Value:") <> text (textDisplay (_fpValidityValue p))
+            <> pad 17 (text "\nRelated Param:") <> relParamName (_fpRelated p)
+            <> pad 17 (text "\nNature:") <> text (textDisplay (_fpNatur p))
+            <> pad 17 (text "\nDefault Value:") <> text (textDisplay (_fpDefaultVal p))
+            <> pad 17 (text "\nSubsystem:") <> text (ST.toText (_fpSubsys p))
             <> text "\nCalibration:\n" <> calibContainerBuilder (_fpCalibs p) 4 
+            <> pad 17 (text "\nOBT-ID:") <> maybe (text "--") decimal (_fpOBTID p)
+            <> pad 17 (text "\nEndianess:") <> text (textDisplay (_fpEndian p))
+        where 
+            relParamName Nothing = text "--"
+            relParamName (Just rel) = text (ST.toText (_fpName rel))
 
 getWidth :: TMParameterDef -> BitSize
 getWidth def = bitSize (def ^. fpType)

@@ -86,21 +86,17 @@ library
   -- Other library packages from which modules are imported.
   build-depends:
       base >=4.7 && <5
-    , conduit
     , rio
     , bytestring
     , stm
-    , time
     , esa-base 
     , unliftio
-    , resourcet
     , text
     , mongoDB
     , bson
     , attoparsec
     , aeson
     , text-short
-    , serialise
 
   -- Directories containing source files.
   hs-source-dirs:      src

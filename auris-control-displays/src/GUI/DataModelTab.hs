@@ -87,6 +87,7 @@ createDataModelTab window builder = do
         case val of 
             NameNode txt -> textViewSetText textView txt
             TMParamNode param -> textViewSetText textView (textDisplay param)
+            TMPacketNode pkt ->  textViewSetText textView (textDisplay pkt)
             _ -> return () 
 
     return g

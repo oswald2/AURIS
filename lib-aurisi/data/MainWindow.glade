@@ -3205,19 +3205,16 @@ Author: Michael Oswald
                           </packing>
                         </child>
                         <child>
-                          <object class="GtkStack" id="stackDM">
+                          <object class="GtkScrolledWindow">
                             <property name="visible">True</property>
-                            <property name="can-focus">False</property>
+                            <property name="can-focus">True</property>
+                            <property name="shadow-type">in</property>
                             <child>
                               <object class="GtkTextView" id="textViewDataModel">
                                 <property name="visible">True</property>
                                 <property name="can-focus">True</property>
                                 <property name="editable">False</property>
                               </object>
-                              <packing>
-                                <property name="name">page0</property>
-                                <property name="title" translatable="yes">page0</property>
-                              </packing>
                             </child>
                           </object>
                           <packing>

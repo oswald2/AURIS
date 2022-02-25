@@ -204,7 +204,6 @@ library
     , attoparsec
     , attoparsec-binary
     , base64-bytestring-type
-    , mtl
     , hashtables-mo
     , colour
     , directory
@@ -212,7 +211,6 @@ library
     , word24
     , closed
     , bytestring-to-vector
-    , ghc-compact
     , refined
     , sorted-list
     , bimap

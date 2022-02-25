@@ -84,7 +84,6 @@ library
     , esa-base
     , rio
     , aeson
-    , binary
     , bytestring
     , stm-chans
     , conduit

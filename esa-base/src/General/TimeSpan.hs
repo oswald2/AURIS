@@ -83,6 +83,18 @@ instance FromJSON a => FromJSON (TimeSpn a)
 instance ToJSON a => ToJSON (TimeSpn a) where
   toEncoding = genericToEncoding defaultOptions
 
+instance Display (TimeSpn MicroSeconds) where 
+  display (TimeSpn x) = display x <> "us"
+instance Display (TimeSpn MilliSeconds) where 
+  display (TimeSpn x) = display x <> "ms"
+instance Display (TimeSpn Seconds) where 
+  display (TimeSpn x) = display x <> "s"
+instance Display (TimeSpn Minutes) where 
+  display (TimeSpn x) = display x <> "m"
+instance Display (TimeSpn Hours) where 
+  display (TimeSpn x) = display x <> "h"
+
+
 mkTimeSpan :: ToMicro a => a -> Double -> TimeSpn a
 mkTimeSpan t val = TimeSpn (toMicro t val)
 

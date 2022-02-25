@@ -87,12 +87,17 @@ module Data.TM.TMPacketDef
   , tmAckPktDef
   , tmAckFailPktDef
   , compareTMPacketDefName
+  , tmParamLocationBuilder
+  , tmPacketDefBuilder
   )
 where
 
 import           RIO
 import qualified RIO.Vector                    as V
+import qualified RIO.Text as T 
+
 import           Data.Text.Short               as ST ( ShortText, pack )
+import qualified           Data.Text.Short               as ST 
 import           Data.HashTable.ST.Basic        ( IHashTable )
 import qualified Data.HashTable.ST.Basic       as HT
 import           Control.Lens                   ( makeLenses )
@@ -110,6 +115,17 @@ import           General.TimeSpan
 
 import           Data.TM.TMParameterDef
 import           Data.TM.PIVals
+
+import           Text.Builder as TB 
+
+
+
+padBuilder :: Int -> TB.Builder
+padBuilder n = text (T.replicate n " ")
+
+newLineBuilder :: Int -> TB.Builder -> TB.Builder 
+newLineBuilder n builder = char '\n' <> padBuilder n <> padFromRight 16 ' ' builder 
+
 
 
 -- | Specifies the super-commutated properties of a parameter.
@@ -130,6 +146,15 @@ instance Serialise SuperCommutated
 instance AE.FromJSON SuperCommutated
 instance AE.ToJSON SuperCommutated where 
   toEncoding = AE.genericToEncoding AE.defaultOptions
+
+superCommutatedBuilder :: Int -> SuperCommutated -> TB.Builder 
+superCommutatedBuilder indent sc = 
+    padBuilder indent <> padFromRight 16 ' ' (text "Number Occurences: ")
+    <> decimal (_scNbOcc sc)
+    <> newLineBuilder indent (text "Bit Offset: ")
+    <> text (textDisplay (_scLgOcc sc))
+    <> newLineBuilder indent (text "Time Offset: ")
+    <> text (textDisplay (_scTdOcc sc))
 
 
 -- | This data type specifies a parameter location and is therefore the
@@ -154,6 +179,20 @@ instance Serialise TMParamLocation
 instance AE.FromJSON TMParamLocation
 instance AE.ToJSON TMParamLocation where 
   toEncoding = AE.genericToEncoding AE.defaultOptions
+
+tmParamLocationBuilder :: Int -> TMParamLocation -> TB.Builder 
+tmParamLocationBuilder indent pl = 
+  let newIndent = indent + 4 in
+  padBuilder indent <> padFromRight 16 ' ' (text "Parameter Name: ")
+  <> text (ST.toText (_tmplName pl))
+  <> newLineBuilder newIndent (text "Offset: ")
+  <> text (textDisplay (_tmplOffset pl))
+  <> newLineBuilder newIndent (text "Time Offset: ")
+  <> text (textDisplay (_tmplTime pl))
+  <> newLineBuilder newIndent (text "Supercommutated: ")
+  <> maybe (text "--") (newLineBuilder newIndent . superCommutatedBuilder newIndent) (_tmplSuperComm pl)
+
+
 
 -- | returns if a param location is supercommutated
 isSuperCommutated :: TMParamLocation -> Bool
@@ -186,6 +225,11 @@ instance AE.FromJSON PIDEvent
 instance AE.ToJSON PIDEvent where
   toEncoding = AE.genericToEncoding AE.defaultOptions
 
+pidEventBuilder :: PIDEvent -> TB.Builder 
+pidEventBuilder PIDNo = text "No Event"
+pidEventBuilder (PIDInfo txt) = text "Info " <> text (ST.toText txt)
+pidEventBuilder (PIDWarning txt) = text "Warning " <> text (ST.toText txt)
+pidEventBuilder (PIDAlarm txt) = text "Alarm " <> text (ST.toText txt)
 
 
 data TMVarParamModifier =
@@ -204,6 +248,18 @@ instance AE.FromJSON TMVarParamModifier
 instance AE.ToJSON TMVarParamModifier where 
   toEncoding = AE.genericToEncoding AE.defaultOptions
 
+varParamModifiedBuilder :: TMVarParamModifier -> TB.Builder 
+varParamModifiedBuilder TMVarNothing = text "Normal"
+varParamModifiedBuilder (TMVarGroup size) = text "Group (size: " <> decimal size <> char ')'
+varParamModifiedBuilder (TMVarFixedRep rep size) = text "Fixed Repetitions (repetitions: " <> decimal rep 
+  <> text ", group size: " <> decimal size <> char ')'
+varParamModifiedBuilder TMVarChoice = text "Choice"
+varParamModifiedBuilder TMVarPidRef = text "PID Reference"
+
+
+
+
+
 
 data TMVarAlignment =
   TMVarLeft
@@ -216,6 +272,11 @@ instance AE.FromJSON TMVarAlignment
 instance AE.ToJSON TMVarAlignment where 
   toEncoding = AE.genericToEncoding AE.defaultOptions
 
+instance Display TMVarAlignment where 
+  textDisplay TMVarLeft = "Left"
+  textDisplay TMVarRight = "Right"
+  textDisplay TMVarCenter = "Center"
+
 
 data TMVarDisp =
   TMVarDispValue
@@ -227,6 +288,12 @@ instance Serialise TMVarDisp
 instance AE.FromJSON TMVarDisp
 instance AE.ToJSON TMVarDisp where 
   toEncoding = AE.genericToEncoding AE.defaultOptions
+
+instance Display TMVarDisp where 
+  textDisplay TMVarDispValue = "Value"
+  textDisplay TMVarDispNameVal = "Name + Value"
+  textDisplay TMVarDispNameValDesc = "Name + Value + Description"
+
 
 data TMVarRadix =
   TMVarBinary
@@ -241,6 +308,12 @@ instance AE.FromJSON TMVarRadix
 instance AE.ToJSON TMVarRadix where 
   toEncoding = AE.genericToEncoding AE.defaultOptions
 
+instance Display TMVarRadix where 
+  textDisplay TMVarBinary = "Binary"
+  textDisplay TMVarOctal = "Octal"
+  textDisplay TMVarDecimal = "Decimal"
+  textDisplay TMVarHex = "Hex"
+  textDisplay TMVarNormal = "Normal"
 
 
 data TMVarParamDef = TMVarParamDef {
@@ -261,6 +334,18 @@ instance Serialise TMVarParamDef
 instance AE.FromJSON TMVarParamDef
 instance AE.ToJSON TMVarParamDef where 
   toEncoding = AE.genericToEncoding AE.defaultOptions
+
+tmVarParamDefBuilder :: Int -> TMVarParamDef -> TB.Builder 
+tmVarParamDefBuilder indent par = 
+  padBuilder indent <> padFromRight 16 ' ' (text "Name:") <> text (ST.toText (_tmvpName par))
+  <> newLineBuilder indent (text "Description: ") <> text (ST.toText (_tmvpDisDesc par))
+  <> newLineBuilder indent (text "Nature: ") <> varParamModifiedBuilder (_tmvpNat par)
+  <> newLineBuilder indent (text "Display: ") <> string (show (_tmvpDisp par))
+  <> newLineBuilder indent (text "Justify: ") <> text (textDisplay (_tmvpJustify par))
+  <> newLineBuilder indent (text "Newline: ") <> string (show (_tmvpNewline par))
+  <> newLineBuilder indent (text "Columns: ") <> text (textDisplay (_tmvpDispCols par))
+  <> newLineBuilder indent (text "Radix: ") <> text (textDisplay (_tmvpRadix par))
+  <> newLineBuilder indent (text "Offset: ") <> text (textDisplay (_tmvpOffset par))
 
 
 data VarParams = 
@@ -285,6 +370,28 @@ instance AE.FromJSON VarParams
 instance AE.ToJSON VarParams where 
   toEncoding = AE.genericToEncoding AE.defaultOptions
 
+varParamBuilder :: Int -> VarParams -> TB.Builder 
+varParamBuilder _indent VarParamsEmpty = char '\n'
+varParamBuilder indent (VarNormal parDef pars) = 
+    char '\n' <> tmVarParamDefBuilder indent parDef <> char '\n' <> varParamBuilder indent pars
+varParamBuilder indent (VarGroup repeater group rest) = 
+    char '\n' <> tmVarParamDefBuilder indent repeater 
+    <> newLineBuilder indent (text "Group:")
+    <> char '\n'
+    <> varParamBuilder (indent + 4) group 
+    <> char '\n'
+    <> varParamBuilder indent rest 
+varParamBuilder indent (VarFixed reps group rest) = 
+    char '\n' <> padBuilder indent <> padFromRight 16 ' ' (text "Fixed Repetitions: ") <> decimal reps 
+    <> newLineBuilder (indent + 4) (text "Group: ")
+    <> char '\n'
+    <> varParamBuilder (indent + 4) group 
+    <> char '\n'
+    <> varParamBuilder indent rest 
+varParamBuilder indent (VarChoice parDef) = char '\n' <> padBuilder indent <> text "Choice:\n" <> tmVarParamDefBuilder indent parDef
+varParamBuilder indent (VarPidRef parDef pars) = 
+    char '\n' <> padBuilder indent <> text "PID Reference:\n"
+    <> tmVarParamDefBuilder indent parDef <> char '\n' <> varParamBuilder indent pars
 
 
 -- | Specifies the parameters contained in the packet. Fixed packets vary only
@@ -303,6 +410,14 @@ instance Serialise TMPacketParams
 instance AE.FromJSON TMPacketParams
 instance AE.ToJSON TMPacketParams where 
   toEncoding = AE.genericToEncoding AE.defaultOptions
+
+parameterBuilder :: Int -> TMPacketParams -> TB.Builder
+parameterBuilder indent (TMFixedParams vec) = padBuilder indent <> text "FIXED PACKET\n" <> 
+  ((intercalate (char '\n') . map (tmParamLocationBuilder indent) . V.toList) vec)
+parameterBuilder indent (TMVariableParams tpsd dfhsize pars) = padBuilder indent <> text "VARIABLE PACKET\n"
+  <> newLineBuilder indent (text "TPSD: ") <> decimal tpsd 
+  <> newLineBuilder indent (text "DFH Size: ") <> decimal dfhsize
+  <> newLineBuilder indent (text "Parameters:") <> varParamBuilder indent pars
 
 
 -- | The TM packet definition. All information to extract the contents of a
@@ -326,15 +441,36 @@ data TMPacketDef = TMPacketDef {
     } deriving(Show, Generic)
 makeLenses ''TMPacketDef
 
-
 compareTMPacketDefName :: TMPacketDef -> TMPacketDef -> Ordering 
 compareTMPacketDefName pkt1 pkt2 = compare (_tmpdName pkt1) (_tmpdName pkt2) 
-
 
 instance Serialise TMPacketDef
 instance AE.FromJSON TMPacketDef
 instance AE.ToJSON TMPacketDef where 
   toEncoding = AE.genericToEncoding AE.defaultOptions
+
+tmPacketDefBuilder :: TMPacketDef -> TB.Builder 
+tmPacketDefBuilder pd = 
+  pad (text "Name: ") <> text (ST.toText (_tmpdName pd))
+  <> char '\n' <> pad (text "Description: ") <> text (ST.toText (_tmpdDescr pd))
+  <> char '\n' <> pad (text "SPID: ") <> text (textDisplay (_tmpdSPID pd))
+  <> char '\n' <> pad (text "APID: ") <> text (textDisplay (_tmpdApid pd))
+  <> char '\n' <> pad (text "Type/Subtype: ") 
+  <> char '(' <> text (textDisplay (_tmpdType pd)) <> text ", " <> text (textDisplay (_tmpdSubType pd)) <> char ')'
+  <> char '\n' <> pad (text "PI1: ") <> decimal (_tmpdPI1Val pd)
+  <> char '\n' <> pad (text "PI2: ") <> decimal (_tmpdPI2Val pd)
+  <> char '\n' <> pad (text "Unit: ") <> text (ST.toText (_tmpdUnit pd))
+  <> char '\n' <> pad (text "Timefield: ") <> (if _tmpdTime pd then "present" else "not present")
+  <> char '\n' <> pad (text "Interval: ") <> maybe (text "--") (text . textDisplay) (_tmpdInter pd)
+  <> char '\n' <> pad (text "Valid: ") <> string (show (_tmpdValid pd))
+  <> char '\n' <> pad (text "Check: ") <> string (show (_tmpdCheck pd))
+  <> char '\n' <> pad (text "Event: ") <> pidEventBuilder (_tmpdEvent pd)
+  <> char '\n' <> pad (text "Parameters: ") <> parameterBuilder 4 (_tmpdParams pd)
+  where 
+    pad b = padFromRight 16 ' ' b
+
+instance Display TMPacketDef where 
+  textDisplay = run . tmPacketDefBuilder 
 
 
 fixedTMPacketDefs :: [TMPacketDef]
