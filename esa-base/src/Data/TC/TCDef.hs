@@ -30,15 +30,20 @@ module Data.TC.TCDef
     ) where
 
 import           RIO
-import           Data.Text.Short                ( ShortText )
+
 import           Control.Lens                   ( makeLenses )
+import           Data.Text.Short                ( ShortText )
+import qualified Data.Text.Short               as ST
 
 import           Codec.Serialise
 import           Data.Aeson
-import           General.PUSTypes
 import           General.APID
+import           General.PUSTypes
 
 import           Data.TC.TCParameterDef
+
+import           Text.Builder                  as TB
+
 
 data TCType =
   TCControlSegment
@@ -54,13 +59,13 @@ instance FromJSON TCType
 instance ToJSON TCType where
     toEncoding = genericToEncoding defaultOptions
 
-instance Display TCType where 
+instance Display TCType where
     textDisplay TCControlSegment = "CONTROL SEGMENT"
-    textDisplay TCControlFrame = "CONTROL FRAME"
-    textDisplay TCNoCRC = "NO CRC"
-    textDisplay TCSleThrowEvent = "SLE THROW"
-    textDisplay TCNisThrowEvent = "NIS THROW"
-    textDisplay TCNormal = "NORMAL"
+    textDisplay TCControlFrame   = "CONTROL FRAME"
+    textDisplay TCNoCRC          = "NO CRC"
+    textDisplay TCSleThrowEvent  = "SLE THROW"
+    textDisplay TCNisThrowEvent  = "NIS THROW"
+    textDisplay TCNormal         = "NORMAL"
 
 
 data InterlockScope =
@@ -76,13 +81,13 @@ instance FromJSON InterlockScope
 instance ToJSON InterlockScope where
     toEncoding = genericToEncoding defaultOptions
 
-instance Display InterlockScope where 
-    textDisplay ILGlobal = "GLOBAL"
-    textDisplay ILLocal = "LOCAL"
-    textDisplay ILSubSystem = "SUB-SYSTEM"
+instance Display InterlockScope where
+    textDisplay ILGlobal          = "GLOBAL"
+    textDisplay ILLocal           = "LOCAL"
+    textDisplay ILSubSystem       = "SUB-SYSTEM"
     textDisplay ILGlobalSubsystem = "GLOBAL SUB-SYSTEM"
-    textDisplay ILNone = "NONE"
-    
+    textDisplay ILNone            = "NONE"
+
 
 
 data InterlockStage =
@@ -98,12 +103,12 @@ instance FromJSON InterlockStage
 instance ToJSON InterlockStage where
     toEncoding = genericToEncoding defaultOptions
 
-instance Display InterlockStage where 
-    textDisplay ILRelease = "RELEASE"
-    textDisplay ILUplink = "UPLINK"
+instance Display InterlockStage where
+    textDisplay ILRelease          = "RELEASE"
+    textDisplay ILUplink           = "UPLINK"
     textDisplay ILOnboardReception = "ONBOARD RECEPTION"
-    textDisplay ILAcceptance = "ACCEPTANCE"
-    textDisplay ILCompletion = "COMPLETION"
+    textDisplay ILAcceptance       = "ACCEPTANCE"
+    textDisplay ILCompletion       = "COMPLETION"
 
 
 data ParamSet = ParamSet
@@ -114,7 +119,7 @@ instance FromJSON ParamSet
 instance ToJSON ParamSet where
     toEncoding = genericToEncoding defaultOptions
 
-instance Display ParamSet where 
+instance Display ParamSet where
     textDisplay ParamSet = ""
 
 
@@ -131,12 +136,12 @@ instance FromJSON VerificationDef
 instance ToJSON VerificationDef where
     toEncoding = genericToEncoding defaultOptions
 
-instance Display VerificationDef where 
-    textDisplay VerStageNone = "NONE"
-    textDisplay VerStageA = "ACCEPTANCE"
-    textDisplay VerStageS = "START"
+instance Display VerificationDef where
+    textDisplay VerStageNone  = "NONE"
+    textDisplay VerStageA     = "ACCEPTANCE"
+    textDisplay VerStageS     = "START"
     textDisplay (VerStageP x) = "STEP " <> textDisplay x
-    textDisplay VerStageC = "COMPLETION"
+    textDisplay VerStageC     = "COMPLETION"
 
 
 
@@ -165,7 +170,26 @@ data TCDef = TCDef
     deriving (Show, Generic)
 makeLenses ''TCDef
 
-compareTCDefName :: TCDef -> TCDef -> Ordering 
+instance Display TCDef where
+    textDisplay = run . tcDefBuilder
+
+
+tcDefBuilder :: TCDef -> TB.Builder
+tcDefBuilder def =
+    pad (text "<b>Name:</b> ")
+        <> text (ST.toText (_tcDefName def))
+        <> char '\n'
+        <> pad (text "<b>Description:</b> ")
+        <> text (ST.toText (_tcDefDescr def))
+        <> char '\n'
+        <> pad (text "<b>Description2:</b> ")
+        <> text (ST.toText (_tcDefDescr2 def))
+        <> char '\n'
+        <> pad (text "<b>APID:</b> ")
+        <> (maybe (text "--") (text . textDisplay) (_tcDefApid def))
+    where pad b = padFromRight 23 ' ' b
+
+compareTCDefName :: TCDef -> TCDef -> Ordering
 compareTCDefName tc1 tc2 = compare (_tcDefName tc1) (_tcDefName tc2)
 
 

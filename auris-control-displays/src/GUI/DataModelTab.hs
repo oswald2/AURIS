@@ -88,7 +88,7 @@ createDataModelTab window builder = do
             NameNode txt -> textViewSetTextMarkup textView txt
             TMParamNode param -> textViewSetTextMarkup textView (textDisplay param)
             TMPacketNode pkt ->  textViewSetTextMarkup textView (textDisplay pkt)
-            _ -> return () 
+            TCNode tc -> textViewSetTextMarkup textView (textDisplay tc)
 
     return g
 
