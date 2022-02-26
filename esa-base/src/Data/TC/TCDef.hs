@@ -185,9 +185,28 @@ tcDefBuilder def =
         <> pad (text "<b>Description2:</b> ")
         <> text (ST.toText (_tcDefDescr2 def))
         <> char '\n'
+        <> pad (text "<b>Type:</b> ")
+        <> text (textDisplay (_tcDefCType def))
+        <> char '\n'
+        <> pad (text "<b>Critical:</b> ")
+        <> (if _tcDefCritical def then text "YES" else text "NO")
+        <> char '\n'
         <> pad (text "<b>APID:</b> ")
         <> (maybe (text "--") (text . textDisplay) (_tcDefApid def))
-    where pad b = padFromRight 23 ' ' b
+        <> char '\n'
+        <> pad (text "<b>PUS Type:</b> ")
+        <> pusTypes
+
+  where
+    pad b = padFromRight 23 ' ' b
+    pusTypes = case (_tcDefType def, _tcDefSubType def) of
+        (Just t, Just st) ->
+            char '('
+                <> text (textDisplay t)
+                <> text ", "
+                <> text (textDisplay st)
+                <> char ')'
+        _ -> text "--"
 
 compareTCDefName :: TCDef -> TCDef -> Ordering
 compareTCDefName tc1 tc2 = compare (_tcDefName tc1) (_tcDefName tc2)
