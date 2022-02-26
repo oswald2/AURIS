@@ -81,12 +81,12 @@ instance ToJSON LogarithmicCalibration where
 logarithmicCalibrationBuilder :: LogarithmicCalibration -> Int -> TB.Builder
 logarithmicCalibrationBuilder calib indent =
     padBuilder indent
-        <> "Type:           Logarithmic"
+        <> "<b>Type:</b>           Logarithmic"
         <> newLineBuilder indent
-        <> padFromRight 16 ' ' (text "Name: ")
+        <> padFromRight 23 ' ' (text "<b>Name:</b> ")
         <> text (ST.toText (_calibLName calib))
         <> newLineBuilder indent
-        <> padFromRight 16 ' ' (text "Description: ")
+        <> padFromRight 23 ' ' (text "<b>Description:</b> ")
         <> text (ST.toText (_calibLDescr calib))
         <> newLineBuilder indent
         <> text "A0="

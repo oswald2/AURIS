@@ -94,14 +94,14 @@ newLineBuilder n = char '\n' <> padBuilder n
 
 numericalCalibrationBuilder :: NumericalCalibration -> Int -> TB.Builder
 numericalCalibrationBuilder calib indent =
-    padBuilder indent <> padFromRight 16 ' ' (text "Name: ")
+    padBuilder indent <> padFromRight 23 ' ' (text "<b>Name:</b> ")
         <> text (ST.toText (_calibNName calib))
-        <> newLineBuilder indent <> padFromRight 16 ' ' (text "Description: ")
+        <> newLineBuilder indent <> padFromRight 23 ' ' (text "<b>Description:</b> ")
         <> text (ST.toText (_calibNDescr calib))
-        <> newLineBuilder indent <> padFromRight 16 ' ' (text "Interpolation: ")
+        <> newLineBuilder indent <> padFromRight 23 ' ' (text "<b>Interpolation:</b> ")
         <> calibInterpolationBuilder (_calibNInterpolation calib)
-        <> newLineBuilder indent <> text "Points:"
-        <> newLineBuilder indent <> text "-------\n"
+        <> newLineBuilder indent <> text "<b>Points:</b>"
+        <> newLineBuilder indent <> text "<b>-------</b>\n"
         <> pointBuilder (_calibNPoints calib) (indent + 4)
 
 pointBuilder :: Vector CalibPoint -> Int -> TB.Builder

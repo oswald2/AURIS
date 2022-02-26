@@ -96,14 +96,14 @@ instance ToJSON TextualCalibration where
 
 textualCalibrationBuilder :: TextualCalibration -> Int -> TB.Builder
 textualCalibrationBuilder calib pad =
-    padBuilder pad <> text "Name: "
+    padBuilder pad <> text "<b>Name:</b> "
         <> text (ST.toText (_calibTName calib))
-        <> newLineBuilder pad <> padFromRight 16 ' ' (text "Description: ")
+        <> newLineBuilder pad <> padFromRight 23 ' ' (text "<b>Description:</b> ")
         <> text (ST.toText (_calibTDescr calib))
-        <> newLineBuilder pad <> padFromRight 16 ' ' (text "Raw Format: ")
+        <> newLineBuilder pad <> padFromRight 23 ' ' (text "<b>Raw Format:</b> ")
         <> text (textDisplay (_calibTRawFmt calib))
-        <> newLineBuilder pad <> text "Points:"
-        <> newLineBuilder pad <> text "-------\n"
+        <> newLineBuilder pad <> text "<b>Points:</b>"
+        <> newLineBuilder pad <> text "<b>-------</b>\n"
         <> pointBuilder (_calibTPoints calib) (pad + 4)
 
 

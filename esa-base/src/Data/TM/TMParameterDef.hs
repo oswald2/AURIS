@@ -488,31 +488,31 @@ pad n b = padFromRight n ' ' b
 instance Display TMParameterDef where
     textDisplay p =
         run
-            $  pad 16 (text "Parameter Name: ")
+            $  pad 23 (text "<b>Parameter Name:</b> ")
             <> text (ST.toText (_fpName p))
-            <> pad 17 (text "\nDescription: ")
+            <> pad 24 (text "\n<b>Description:</b> ")
             <> text (ST.toText (_fpDescription p))
-            <> pad 17 (text "\nParameter ID: ")
+            <> pad 24 (text "\n<b>Parameter ID:</b> ")
             <> (case _fpPID p of
                    Nothing -> text "--"
                    Just val ->
                        decimal val <> text " (0x" <> hexadecimal val <> char ')'
                )
-            <> pad 17 (text "\nType: ")
+            <> pad 24 (text "\n<b>Type:</b> ")
             <> paramTypeBuilder (_fpType p)
-            <> pad 17 (text "\nUnit: ") <> text (ST.toText (_fpUnit p))
-            <> pad 17 (text "\nPadding: ") <> (case _fpWidth p of 
+            <> pad 24 (text "\n<b>Unit:</b> ") <> text (ST.toText (_fpUnit p))
+            <> pad 24 (text "\n<b>Padding:</b> ") <> (case _fpWidth p of 
                 Nothing -> "--"
                 Just w -> text (textDisplay w))
-            <> pad 17 (text "\nValidity Param:") <> relParamName (_fpValid p)
-            <> pad 17 (text "\nValidity Value:") <> text (textDisplay (_fpValidityValue p))
-            <> pad 17 (text "\nRelated Param:") <> relParamName (_fpRelated p)
-            <> pad 17 (text "\nNature:") <> text (textDisplay (_fpNatur p))
-            <> pad 17 (text "\nDefault Value:") <> text (textDisplay (_fpDefaultVal p))
-            <> pad 17 (text "\nSubsystem:") <> text (ST.toText (_fpSubsys p))
-            <> text "\nCalibration:\n" <> calibContainerBuilder (_fpCalibs p) 4 
-            <> pad 17 (text "\nOBT-ID:") <> maybe (text "--") decimal (_fpOBTID p)
-            <> pad 17 (text "\nEndianess:") <> text (textDisplay (_fpEndian p))
+            <> pad 24 (text "\n<b>Validity Param:</b>") <> relParamName (_fpValid p)
+            <> pad 24 (text "\n<b>Validity Value:</b>") <> text (textDisplay (_fpValidityValue p))
+            <> pad 24 (text "\n<b>Related Param:</b>") <> relParamName (_fpRelated p)
+            <> pad 24 (text "\n<b>Nature:</b>") <> text (textDisplay (_fpNatur p))
+            <> pad 24 (text "\n<b>Default Value:</b>") <> text (textDisplay (_fpDefaultVal p))
+            <> pad 24 (text "\n<b>Subsystem:</b>") <> text (ST.toText (_fpSubsys p))
+            <> text "\n<b>Calibration:</b>\n" <> calibContainerBuilder (_fpCalibs p) 4 
+            <> pad 24 (text "\n<b>OBT-ID:</b>") <> maybe (text "--") decimal (_fpOBTID p)
+            <> pad 24 (text "\n<b>Endianess:</b>") <> text (textDisplay (_fpEndian p))
         where 
             relParamName Nothing = text "--"
             relParamName (Just rel) = text (ST.toText (_fpName rel))

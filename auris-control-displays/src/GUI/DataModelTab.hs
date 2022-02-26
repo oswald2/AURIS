@@ -85,9 +85,9 @@ createDataModelTab window builder = do
     void $ Gtk.on treeView #rowActivated $ \path _col -> do 
         val <- forestStoreGetValue model path 
         case val of 
-            NameNode txt -> textViewSetText textView txt
-            TMParamNode param -> textViewSetText textView (textDisplay param)
-            TMPacketNode pkt ->  textViewSetText textView (textDisplay pkt)
+            NameNode txt -> textViewSetTextMarkup textView txt
+            TMParamNode param -> textViewSetTextMarkup textView (textDisplay param)
+            TMPacketNode pkt ->  textViewSetTextMarkup textView (textDisplay pkt)
             _ -> return () 
 
     return g

@@ -110,16 +110,16 @@ instance ToJSON CritCalib where
 critCalibBuilder :: CritCalib -> Int -> TB.Builder
 critCalibBuilder cr indent =
     padBuilder indent
-        <> padFromRight 16 ' ' (text "Applicable Param: ")
+        <> padFromRight 23 ' ' (text "<b>Applicable Param:</b>")
         <> text (ST.toText (_ccRLChk cr))
         <> newLineBuilder indent
-        <> padFromRight 16 ' ' (text "Value:")
+        <> padFromRight 23 ' ' (text "<b>Value:</b>")
         <> decimal (_ccValPar cr)
         <> text " (0x"
         <> hexadecimal (_ccValPar cr)
         <> char ')'
         <> newLineBuilder indent
-        <> "Calibration:\n"
+        <> "<b>Calibration:</b>\n"
         <> calibBuilder (_ccCalibration cr) (indent + 4)
 
 padBuilder :: Int -> TB.Builder
@@ -153,7 +153,7 @@ calibContainerBuilder CritNoCalib indent =
     text (T.replicate indent " ") <> text "--"
 calibContainerBuilder (CritDirect calib) indent = calibBuilder calib indent
 calibContainerBuilder (Crit vec) indent =
-    padBuilder indent <> text "Applicability Criteria:\n" <> vectorBuilder
+    padBuilder indent <> text "<b>Applicability Criteria:</b>\n" <> vectorBuilder
   where
     vectorBuilder =
         TB.intercalate (char '\n')

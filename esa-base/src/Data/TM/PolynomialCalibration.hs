@@ -79,12 +79,12 @@ instance ToJSON PolynomialCalibration where
 polynomialCalibrationBuilder :: PolynomialCalibration -> Int -> TB.Builder
 polynomialCalibrationBuilder calib indent =
     padBuilder indent
-        <> "Type:           Polynomial"
+        <> "<b>Type:</b>           Polynomial"
         <> newLineBuilder indent
-        <> padFromRight 16 ' ' (text "Name: ")
+        <> padFromRight 23 ' ' (text "<b>Name:</b> ")
         <> text (ST.toText (_calibPName calib))
         <> newLineBuilder indent
-        <> padFromRight 16 ' ' (text "Description: ")
+        <> padFromRight 23 ' ' (text "<b>Description:</b> ")
         <> text (ST.toText (_calibPDescr calib))
         <> newLineBuilder indent
         <> text "A0="
