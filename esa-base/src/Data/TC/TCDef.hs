@@ -54,6 +54,14 @@ instance FromJSON TCType
 instance ToJSON TCType where
     toEncoding = genericToEncoding defaultOptions
 
+instance Display TCType where 
+    textDisplay TCControlSegment = "CONTROL SEGMENT"
+    textDisplay TCControlFrame = "CONTROL FRAME"
+    textDisplay TCNoCRC = "NO CRC"
+    textDisplay TCSleThrowEvent = "SLE THROW"
+    textDisplay TCNisThrowEvent = "NIS THROW"
+    textDisplay TCNormal = "NORMAL"
+
 
 data InterlockScope =
   ILGlobal
@@ -67,6 +75,14 @@ instance Serialise InterlockScope
 instance FromJSON InterlockScope
 instance ToJSON InterlockScope where
     toEncoding = genericToEncoding defaultOptions
+
+instance Display InterlockScope where 
+    textDisplay ILGlobal = "GLOBAL"
+    textDisplay ILLocal = "LOCAL"
+    textDisplay ILSubSystem = "SUB-SYSTEM"
+    textDisplay ILGlobalSubsystem = "GLOBAL SUB-SYSTEM"
+    textDisplay ILNone = "NONE"
+    
 
 
 data InterlockStage =
@@ -82,6 +98,12 @@ instance FromJSON InterlockStage
 instance ToJSON InterlockStage where
     toEncoding = genericToEncoding defaultOptions
 
+instance Display InterlockStage where 
+    textDisplay ILRelease = "RELEASE"
+    textDisplay ILUplink = "UPLINK"
+    textDisplay ILOnboardReception = "ONBOARD RECEPTION"
+    textDisplay ILAcceptance = "ACCEPTANCE"
+    textDisplay ILCompletion = "COMPLETION"
 
 
 data ParamSet = ParamSet
@@ -92,7 +114,8 @@ instance FromJSON ParamSet
 instance ToJSON ParamSet where
     toEncoding = genericToEncoding defaultOptions
 
-
+instance Display ParamSet where 
+    textDisplay ParamSet = ""
 
 
 data VerificationDef =
@@ -107,6 +130,13 @@ instance Serialise VerificationDef
 instance FromJSON VerificationDef
 instance ToJSON VerificationDef where
     toEncoding = genericToEncoding defaultOptions
+
+instance Display VerificationDef where 
+    textDisplay VerStageNone = "NONE"
+    textDisplay VerStageA = "ACCEPTANCE"
+    textDisplay VerStageS = "START"
+    textDisplay (VerStageP x) = "STEP " <> textDisplay x
+    textDisplay VerStageC = "COMPLETION"
 
 
 
