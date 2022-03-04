@@ -55,6 +55,8 @@ import           Data.TM.TextualCalibration
 
 import           Text.Builder                  as TB
 
+import           General.Types
+
 
 -- | A sum type over all calibration types. See the individual
 -- modules for details about the calibrations themselves
@@ -72,7 +74,7 @@ instance FromJSON Calibration
 instance ToJSON Calibration where
     toEncoding = genericToEncoding defaultOptions
 
-calibBuilder :: Calibration -> Int -> TB.Builder
+calibBuilder :: Calibration -> Word16 -> TB.Builder
 calibBuilder (CalibNum  calib) indent = numericalCalibrationBuilder calib indent
 calibBuilder (CalibText calib) indent = textualCalibrationBuilder calib indent
 calibBuilder (CalibPoly calib) indent =
@@ -107,26 +109,18 @@ instance FromJSON CritCalib
 instance ToJSON CritCalib where
     toEncoding = genericToEncoding defaultOptions
 
-critCalibBuilder :: CritCalib -> Int -> TB.Builder
+critCalibBuilder :: CritCalib -> Word16 -> TB.Builder
 critCalibBuilder cr indent =
-    padBuilder indent
+    indentBuilder indent
         <> padFromRight 23 ' ' (text "<b>Applicable Param:</b>")
         <> text (ST.toText (_ccRLChk cr))
-        <> newLineBuilder indent
-        <> padFromRight 23 ' ' (text "<b>Value:</b>")
+        <> newLineIndentBuilder indent (padRight 23 (text "<b>Value:</b>"))
         <> decimal (_ccValPar cr)
         <> text " (0x"
         <> hexadecimal (_ccValPar cr)
         <> char ')'
-        <> newLineBuilder indent
-        <> "<b>Calibration:</b>\n"
+        <> newLineIndentBuilder indent (text "<b>Calibration:</b>\n")
         <> calibBuilder (_ccCalibration cr) (indent + 4)
-
-padBuilder :: Int -> TB.Builder
-padBuilder n = text (T.replicate n " ")
-
-newLineBuilder :: Int -> TB.Builder
-newLineBuilder n = char '\n' <> padBuilder n
 
 
 -- | A parameter has several possibilities to be calibrated. This
@@ -148,14 +142,17 @@ instance ToJSON CalibContainer where
     toEncoding = genericToEncoding defaultOptions
 
 
-calibContainerBuilder :: CalibContainer -> Int -> TB.Builder
+calibContainerBuilder :: CalibContainer -> Word16 -> TB.Builder
 calibContainerBuilder CritNoCalib indent =
-    text (T.replicate indent " ") <> text "--"
+    indentBuilder indent <> text "--"
 calibContainerBuilder (CritDirect calib) indent = calibBuilder calib indent
 calibContainerBuilder (Crit vec) indent =
-    padBuilder indent <> text "<b>Applicability Criteria:</b>\n" <> vectorBuilder
+    indentBuilder indent
+        <> text "<b>Applicability Criteria:</b>\n"
+        <> vectorBuilder
   where
     vectorBuilder =
         TB.intercalate (char '\n')
             . map (\x -> critCalibBuilder x indent)
-            . V.toList $ vec
+            . V.toList
+            $ vec

@@ -54,6 +54,8 @@ import           Data.TM.Value
 
 import           Text.Builder                  as TB
 
+import           General.Types
+
 
 -- | The polynomial calibration. Provides 5 coefficients and
 -- calibrates an incoming value with the formula:
@@ -76,18 +78,15 @@ instance FromJSON PolynomialCalibration
 instance ToJSON PolynomialCalibration where
     toEncoding = genericToEncoding defaultOptions
 
-polynomialCalibrationBuilder :: PolynomialCalibration -> Int -> TB.Builder
+polynomialCalibrationBuilder :: PolynomialCalibration -> Word16 -> TB.Builder
 polynomialCalibrationBuilder calib indent =
-    padBuilder indent
-        <> "<b>Type:</b>           Polynomial"
-        <> newLineBuilder indent
-        <> padFromRight 23 ' ' (text "<b>Name:</b> ")
+    indentBuilder indent
+        <> text "<b>Type:</b>           Polynomial"
+        <> newLineIndentBuilder indent (padRight 23 (text "<b>Name:</b> "))
         <> text (ST.toText (_calibPName calib))
-        <> newLineBuilder indent
-        <> padFromRight 23 ' ' (text "<b>Description:</b> ")
+        <> newLineIndentBuilder indent (padRight 23 (text "<b>Description:</b> "))
         <> text (ST.toText (_calibPDescr calib))
-        <> newLineBuilder indent
-        <> text "A0="
+        <> newLineIndentBuilder indent (text "A0=")
         <> fixedDouble 16 (_pa0 calib)
         <> text " A1="
         <> fixedDouble 16 (_pa1 calib)
@@ -98,11 +97,6 @@ polynomialCalibrationBuilder calib indent =
         <> text " A4="
         <> fixedDouble 16 (_pa4 calib)
 
-padBuilder :: Int -> TB.Builder
-padBuilder n = text (T.replicate n " ")
-
-newLineBuilder :: Int -> TB.Builder
-newLineBuilder n = char '\n' <> padBuilder n
 
 instance Calibrate PolynomialCalibration where
     calibrate calib rawValue | isValid rawValue = if isNumeric rawValue

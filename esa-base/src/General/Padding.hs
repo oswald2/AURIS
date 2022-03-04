@@ -38,40 +38,40 @@ clip width content =
     if B.length content > width then B.take width content else content
 
 
--- | Left pads a 'ByteString'. @pad@ is the value to be used for padding ,
+-- | Left pads a 'ByteString'. @padRight@ is the value to be used for padding ,
 -- @width@ is the desired length of the 'ByteString'. If the 'ByteString' is 
 -- already longer than the desired length, it is clipped
 leftPadded :: Word8 -> Int -> ByteString -> ByteString
-leftPadded pad width content =
-    B.replicate (width - B.length content') pad <> content'
+leftPadded padRight width content =
+    B.replicate (width - B.length content') padRight <> content'
     where content' = clip width content
 
--- | Right pads a 'ByteString'. @pad@ is the value to be used for padding ,
+-- | Right pads a 'ByteString'. @padRight@ is the value to be used for padding ,
 -- @width@ is the desired length of the 'ByteString'. If the 'ByteString' is 
 -- already longer than the desired length, it is clipped
 rightPadded :: Word8 -> Int -> ByteString -> ByteString
-rightPadded pad width content =
-    content' <> B.replicate (width - B.length content') pad
+rightPadded padRight width content =
+    content' <> B.replicate (width - B.length content') padRight
     where content' = clip width content
 
--- | Left pads a 'ByteString'. @pad@ is the value to be used for padding (in this case a 'Char'),
+-- | Left pads a 'ByteString'. @padRight@ is the value to be used for padding (in this case a 'Char'),
 -- @width@ is the desired length of the 'ByteString'. If the 'ByteString' is 
 -- already longer than the desired length, it is clipped
 leftPaddedC :: Char -> Int -> ByteString -> ByteString
-leftPaddedC pad width content =
-    BC.replicate (width - B.length content') pad <> content'
+leftPaddedC padRight width content =
+    BC.replicate (width - B.length content') padRight <> content'
     where content' = clip width content
 
--- | Right pads a 'ByteString'. @pad@ is the value to be used for padding (in this case a 'Char'),
+-- | Right pads a 'ByteString'. @padRight@ is the value to be used for padding (in this case a 'Char'),
 -- @width@ is the desired length of the 'ByteString'. If the 'ByteString' is 
 -- already longer than the desired length, it is clipped
 rightPaddedC :: Char -> Int -> ByteString -> ByteString
-rightPaddedC pad width content =
-    content' <> BC.replicate (width - B.length content') pad
+rightPaddedC padRight width content =
+    content' <> BC.replicate (width - B.length content') padRight
     where content' = clip width content
 
 
--- | Helper function for 'Text.Builder' as there is only a left pad function
+-- | Helper function for 'Text.Builder' as there is only a left padRight function
 -- in the library
 padFromRight :: Int -> Char -> TB.Builder -> TB.Builder
 padFromRight padLen padChar builder =

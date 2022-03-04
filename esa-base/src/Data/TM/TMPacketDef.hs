@@ -120,13 +120,6 @@ import           Text.Builder as TB
 
 
 
-padBuilder :: Int -> TB.Builder
-padBuilder n = text (T.replicate n " ")
-
-newLineBuilder :: Int -> TB.Builder -> TB.Builder 
-newLineBuilder n builder = char '\n' <> padBuilder n <> padFromRight 23 ' ' builder 
-
-
 
 -- | Specifies the super-commutated properties of a parameter.
 data SuperCommutated = SuperCommutated {
@@ -147,13 +140,13 @@ instance AE.FromJSON SuperCommutated
 instance AE.ToJSON SuperCommutated where 
   toEncoding = AE.genericToEncoding AE.defaultOptions
 
-superCommutatedBuilder :: Int -> SuperCommutated -> TB.Builder 
+superCommutatedBuilder :: Word16 -> SuperCommutated -> TB.Builder 
 superCommutatedBuilder indent sc = 
-    padBuilder indent <> padFromRight 23 ' ' (text "<b>Number Occurences:</b>")
+    indentBuilder indent <> padFromRight 23 ' ' (text "<b>Number Occurences:</b>")
     <> decimal (_scNbOcc sc)
-    <> newLineBuilder indent (text "<b>Bit Offset:</b>")
+    <> newLineIndentBuilder indent (text "<b>Bit Offset:</b>")
     <> text (textDisplay (_scLgOcc sc))
-    <> newLineBuilder indent (text "<b>Time Offset:</b>")
+    <> newLineIndentBuilder indent (text "<b>Time Offset:</b>")
     <> text (textDisplay (_scTdOcc sc))
 
 
@@ -180,14 +173,14 @@ instance AE.FromJSON TMParamLocation
 instance AE.ToJSON TMParamLocation where 
   toEncoding = AE.genericToEncoding AE.defaultOptions
 
-tmParamLocationBuilder :: Int -> TMParamLocation -> TB.Builder 
+tmParamLocationBuilder :: Word16 -> TMParamLocation -> TB.Builder 
 tmParamLocationBuilder indent pl = 
   let newIndent = indent + 4 in
-  padBuilder indent <> padFromRight 23 ' ' (text "<b>Parameter Name:</b> ")
+  indentBuilder indent <> padFromRight 23 ' ' (text "<b>Parameter Name:</b> ")
   <> text (ST.toText (_tmplName pl))
-  <> newLineBuilder newIndent (text "<b>Offset:</b> ")
+  <> newLineIndentBuilder newIndent (text "<b>Offset:</b> ")
   <> text (textDisplay (_tmplOffset pl))
-  <> newLineBuilder newIndent (text "<b>Time Offset:</b> ")
+  <> newLineIndentBuilder newIndent (text "<b>Time Offset:</b> ")
   <> text (textDisplay (_tmplTime pl))
   <> supercomm newIndent
   where 
@@ -198,7 +191,7 @@ tmParamLocationBuilder indent pl =
           if _scNbOcc sc == 1 
             then mempty 
             else 
-              newLineBuilder newIndent (text "<b>Supercommutated:</b> ")
+              newLineIndentBuilder newIndent (text "<b>Supercommutated:</b> ")
               <> maybe (text "--") (superCommutatedBuilder newIndent) (_tmplSuperComm pl)
 
 
@@ -344,17 +337,17 @@ instance AE.FromJSON TMVarParamDef
 instance AE.ToJSON TMVarParamDef where 
   toEncoding = AE.genericToEncoding AE.defaultOptions
 
-tmVarParamDefBuilder :: Int -> TMVarParamDef -> TB.Builder 
+tmVarParamDefBuilder :: Word16 -> TMVarParamDef -> TB.Builder 
 tmVarParamDefBuilder indent par = 
-  padBuilder indent <> padFromRight 23 ' ' (text "<b>Name:</b>") <> text (ST.toText (_tmvpName par))
-  <> newLineBuilder indent (text "<b>Description:</b> ") <> text (ST.toText (_tmvpDisDesc par))
-  <> newLineBuilder indent (text "<b>Nature:</b> ") <> varParamModifiedBuilder (_tmvpNat par)
-  <> newLineBuilder indent (text "<b>Display:</b> ") <> string (show (_tmvpDisp par))
-  <> newLineBuilder indent (text "<b>Justify:</b> ") <> text (textDisplay (_tmvpJustify par))
-  <> newLineBuilder indent (text "<b>Newline:</b> ") <> string (show (_tmvpNewline par))
-  <> newLineBuilder indent (text "<b>Columns:</b> ") <> text (textDisplay (_tmvpDispCols par))
-  <> newLineBuilder indent (text "<b>Radix:</b> ") <> text (textDisplay (_tmvpRadix par))
-  <> newLineBuilder indent (text "<b>Offset:</b> ") <> text (textDisplay (_tmvpOffset par))
+  indentBuilder indent <> padFromRight 23 ' ' (text "<b>Name:</b>") <> text (ST.toText (_tmvpName par))
+  <> newLineIndentBuilder indent (text "<b>Description:</b> ") <> text (ST.toText (_tmvpDisDesc par))
+  <> newLineIndentBuilder indent (text "<b>Nature:</b> ") <> varParamModifiedBuilder (_tmvpNat par)
+  <> newLineIndentBuilder indent (text "<b>Display:</b> ") <> string (show (_tmvpDisp par))
+  <> newLineIndentBuilder indent (text "<b>Justify:</b> ") <> text (textDisplay (_tmvpJustify par))
+  <> newLineIndentBuilder indent (text "<b>Newline:</b> ") <> string (show (_tmvpNewline par))
+  <> newLineIndentBuilder indent (text "<b>Columns:</b> ") <> text (textDisplay (_tmvpDispCols par))
+  <> newLineIndentBuilder indent (text "<b>Radix:</b> ") <> text (textDisplay (_tmvpRadix par))
+  <> newLineIndentBuilder indent (text "<b>Offset:</b> ") <> text (textDisplay (_tmvpOffset par))
 
 
 data VarParams = 
@@ -379,27 +372,27 @@ instance AE.FromJSON VarParams
 instance AE.ToJSON VarParams where 
   toEncoding = AE.genericToEncoding AE.defaultOptions
 
-varParamBuilder :: Int -> VarParams -> TB.Builder 
+varParamBuilder :: Word16 -> VarParams -> TB.Builder 
 varParamBuilder _indent VarParamsEmpty = char '\n'
 varParamBuilder indent (VarNormal parDef pars) = 
     char '\n' <> tmVarParamDefBuilder indent parDef <> char '\n' <> varParamBuilder indent pars
 varParamBuilder indent (VarGroup repeater group rest) = 
     char '\n' <> tmVarParamDefBuilder indent repeater 
-    <> newLineBuilder indent (text "<b>Group:</b>")
+    <> newLineIndentBuilder indent (text "<b>Group:</b>")
     <> char '\n'
     <> varParamBuilder (indent + 4) group 
     <> char '\n'
     <> varParamBuilder indent rest 
 varParamBuilder indent (VarFixed reps group rest) = 
-    char '\n' <> padBuilder indent <> padFromRight 23 ' ' (text "<b>Fixed Repetitions:</b>") <> decimal reps 
-    <> newLineBuilder (indent + 4) (text "<b>Group:</b>")
+    char '\n' <> indentBuilder indent <> padFromRight 23 ' ' (text "<b>Fixed Repetitions:</b>") <> decimal reps 
+    <> newLineIndentBuilder (indent + 4) (text "<b>Group:</b>")
     <> char '\n'
     <> varParamBuilder (indent + 4) group 
     <> char '\n'
     <> varParamBuilder indent rest 
-varParamBuilder indent (VarChoice parDef) = char '\n' <> padBuilder indent <> text "<b>Choice:</b>\n" <> tmVarParamDefBuilder indent parDef
+varParamBuilder indent (VarChoice parDef) = char '\n' <> indentBuilder indent <> text "<b>Choice:</b>\n" <> tmVarParamDefBuilder indent parDef
 varParamBuilder indent (VarPidRef parDef pars) = 
-    char '\n' <> padBuilder indent <> text "<b>PID Reference:</b>\n"
+    char '\n' <> indentBuilder indent <> text "<b>PID Reference:</b>\n"
     <> tmVarParamDefBuilder indent parDef <> char '\n' <> varParamBuilder indent pars
 
 
@@ -420,13 +413,13 @@ instance AE.FromJSON TMPacketParams
 instance AE.ToJSON TMPacketParams where 
   toEncoding = AE.genericToEncoding AE.defaultOptions
 
-parameterBuilder :: Int -> TMPacketParams -> TB.Builder
-parameterBuilder indent (TMFixedParams vec) = padBuilder indent <> text "FIXED PACKET\n" <> 
+parameterBuilder :: Word16 -> TMPacketParams -> TB.Builder
+parameterBuilder indent (TMFixedParams vec) = indentBuilder indent <> text "FIXED PACKET\n" <> 
   ((intercalate (char '\n') . map (tmParamLocationBuilder indent) . V.toList) vec)
-parameterBuilder indent (TMVariableParams tpsd dfhsize pars) = padBuilder indent <> text "VARIABLE PACKET\n"
-  <> newLineBuilder indent (text "<b>TPSD:</b> ") <> decimal tpsd 
-  <> newLineBuilder indent (text "<b>DFH Size:</b> ") <> decimal dfhsize
-  <> newLineBuilder indent (text "<b>Parameters:</b>\n") <> varParamBuilder (indent + 4) pars
+parameterBuilder indent (TMVariableParams tpsd dfhsize pars) = indentBuilder indent <> text "VARIABLE PACKET\n"
+  <> newLineIndentBuilder indent (text "<b>TPSD:</b> ") <> decimal tpsd 
+  <> newLineIndentBuilder indent (text "<b>DFH Size:</b> ") <> decimal dfhsize
+  <> newLineIndentBuilder indent (text "<b>Parameters:</b>\n") <> varParamBuilder (indent + 4) pars
 
 
 -- | The TM packet definition. All information to extract the contents of a
@@ -460,23 +453,23 @@ instance AE.ToJSON TMPacketDef where
 
 tmPacketDefBuilder :: TMPacketDef -> TB.Builder 
 tmPacketDefBuilder pd = 
-  pad (text "<b>Name:</b> ") <> text (ST.toText (_tmpdName pd))
-  <> char '\n' <> pad (text "<b>Description:</b> ") <> text (ST.toText (_tmpdDescr pd))
-  <> char '\n' <> pad (text "<b>SPID:</b> ") <> text (textDisplay (_tmpdSPID pd))
-  <> char '\n' <> pad (text "<b>APID:</b> ") <> text (textDisplay (_tmpdApid pd))
-  <> char '\n' <> pad (text "<b>Type/Subtype:</b> ") 
+  padRight (text "<b>Name:</b> ") <> text (ST.toText (_tmpdName pd))
+  <> char '\n' <> padRight (text "<b>Description:</b> ") <> text (ST.toText (_tmpdDescr pd))
+  <> char '\n' <> padRight (text "<b>SPID:</b> ") <> text (textDisplay (_tmpdSPID pd))
+  <> char '\n' <> padRight (text "<b>APID:</b> ") <> text (textDisplay (_tmpdApid pd))
+  <> char '\n' <> padRight (text "<b>Type/Subtype:</b> ") 
   <> char '(' <> text (textDisplay (_tmpdType pd)) <> text ", " <> text (textDisplay (_tmpdSubType pd)) <> char ')'
-  <> char '\n' <> pad (text "<b>PI1:</b> ") <> decimal (_tmpdPI1Val pd)
-  <> char '\n' <> pad (text "<b>PI2:</b> ") <> decimal (_tmpdPI2Val pd)
-  <> char '\n' <> pad (text "<b>Unit:</b> ") <> text (ST.toText (_tmpdUnit pd))
-  <> char '\n' <> pad (text "<b>Timefield:</b> ") <> (if _tmpdTime pd then "present" else "not present")
-  <> char '\n' <> pad (text "<b>Interval:</b> ") <> maybe (text "--") (text . textDisplay) (_tmpdInter pd)
-  <> char '\n' <> pad (text "<b>Valid:</b> ") <> string (show (_tmpdValid pd))
-  <> char '\n' <> pad (text "<b>Check:</b> ") <> string (show (_tmpdCheck pd))
-  <> char '\n' <> pad (text "<b>Event:</b> ") <> pidEventBuilder (_tmpdEvent pd)
-  <> char '\n' <> pad (text "<b>Parameters:</b> ") <> parameterBuilder 4 (_tmpdParams pd)
+  <> char '\n' <> padRight (text "<b>PI1:</b> ") <> decimal (_tmpdPI1Val pd)
+  <> char '\n' <> padRight (text "<b>PI2:</b> ") <> decimal (_tmpdPI2Val pd)
+  <> char '\n' <> padRight (text "<b>Unit:</b> ") <> text (ST.toText (_tmpdUnit pd))
+  <> char '\n' <> padRight (text "<b>Timefield:</b> ") <> (if _tmpdTime pd then "present" else "not present")
+  <> char '\n' <> padRight (text "<b>Interval:</b> ") <> maybe (text "--") (text . textDisplay) (_tmpdInter pd)
+  <> char '\n' <> padRight (text "<b>Valid:</b> ") <> string (show (_tmpdValid pd))
+  <> char '\n' <> padRight (text "<b>Check:</b> ") <> string (show (_tmpdCheck pd))
+  <> char '\n' <> padRight (text "<b>Event:</b> ") <> pidEventBuilder (_tmpdEvent pd)
+  <> char '\n' <> padRight (text "<b>Parameters:</b> ") <> parameterBuilder 4 (_tmpdParams pd)
   where 
-    pad b = padFromRight 23 ' ' b
+    padRight b = padFromRight 23 ' ' b
 
 instance Display TMPacketDef where 
   textDisplay = run . tmPacketDefBuilder 

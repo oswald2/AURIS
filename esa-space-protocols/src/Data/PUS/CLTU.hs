@@ -90,7 +90,7 @@ data EncodedCLTU = EncodedCLTU {
 }
 
 -- | The PUS Standard explicitly states, that filling bytes (0x55) may be
--- inserted at the end of a code block to pad the length. It also states
+-- inserted at the end of a code block to padRight the length. It also states
 -- that these padding bytes shall be removed on the next higher layer
 --
 -- So this makes an own Eq instance necessary, which ignores the fill bytes
@@ -280,12 +280,12 @@ encodeCodeBlocks :: Config -> ByteString -> Builder
 encodeCodeBlocks cfg pl =
     let cbSize = fromIntegral $ cltuBlockSizeAsWord8 (cfgCltuBlockSize cfg) - 1
         blocks = chunkedByBS cbSize pl
-        pad bs =
+        padRight bs =
                 let len = BS.length bs
                 in  if len < cbSize
                         then BS.append bs (cltuTrailer (cbSize - len))
                         else bs
-    in  mconcat $ map (encodeCodeBlock . pad) blocks
+    in  mconcat $ map (encodeCodeBlock . padRight) blocks
 
 {-# INLINABLE encodeCodeBlocksRandomized #-}
 -- | Takes a ByteString as payload, splits it into CLTU code blocks according to
@@ -296,9 +296,9 @@ encodeCodeBlocksRandomized :: Config -> ByteString -> Builder
 encodeCodeBlocksRandomized cfg pl =
     let
         cbSize = fromIntegral $ cltuBlockSizeAsWord8 (cfgCltuBlockSize cfg) - 1
-        blocks = map pad $ chunkedByBS cbSize pl
+        blocks = map padRight $ chunkedByBS cbSize pl
         randomizer = initialize (cfgRandomizerStartValue cfg)
-        pad bs =
+        padRight bs =
             let len = BS.length bs
             in  if len < cbSize
                     then BS.append bs (cltuTrailer (cbSize - len))

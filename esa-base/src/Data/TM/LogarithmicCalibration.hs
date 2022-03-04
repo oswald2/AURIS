@@ -47,13 +47,13 @@ import qualified Data.Text.Short               as ST
 import           Codec.Serialise
 import           Data.Aeson
 
---import           General.Types                  ( ToDouble(..) )
-
 import           Data.PUS.CalibrationTypes
 import           Data.TM.Validity        hiding ( isValid )
 import           Data.TM.Value
 
 import           Text.Builder                  as TB
+
+import           General.Types
 
 
 -- | The logarithmic calibration. Provides 5 coefficients and
@@ -78,18 +78,15 @@ instance ToJSON LogarithmicCalibration where
     toEncoding = genericToEncoding defaultOptions
 
 
-logarithmicCalibrationBuilder :: LogarithmicCalibration -> Int -> TB.Builder
+logarithmicCalibrationBuilder :: LogarithmicCalibration -> Word16 -> TB.Builder
 logarithmicCalibrationBuilder calib indent =
-    padBuilder indent
-        <> "<b>Type:</b>           Logarithmic"
-        <> newLineBuilder indent
-        <> padFromRight 23 ' ' (text "<b>Name:</b> ")
+    indentBuilder indent
+        <> text "<b>Type:</b>           Logarithmic"
+        <> newLineIndentBuilder indent (padRight 23 (text "<b>Name:</b> "))
         <> text (ST.toText (_calibLName calib))
-        <> newLineBuilder indent
-        <> padFromRight 23 ' ' (text "<b>Description:</b> ")
+        <> newLineIndentBuilder indent (padRight 23 (text "<b>Description:</b> "))
         <> text (ST.toText (_calibLDescr calib))
-        <> newLineBuilder indent
-        <> text "A0="
+        <> newLineIndentBuilder indent (text "A0=")
         <> fixedDouble 16 (_la0 calib)
         <> text " A1="
         <> fixedDouble 16 (_la1 calib)
@@ -99,12 +96,6 @@ logarithmicCalibrationBuilder calib indent =
         <> fixedDouble 16 (_la3 calib)
         <> text " A4="
         <> fixedDouble 16 (_la4 calib)
-
-padBuilder :: Int -> TB.Builder
-padBuilder n = text (T.replicate n " ")
-
-newLineBuilder :: Int -> TB.Builder
-newLineBuilder n = char '\n' <> padBuilder n
 
 
 

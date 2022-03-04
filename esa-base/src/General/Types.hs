@@ -52,6 +52,9 @@ module General.Types
     , hexLength
     , hexBytesEmpty
     , parseHexLine
+    , indentBuilder
+    , newLineIndentBuilder
+    , padRight
     ) where
 
 
@@ -120,6 +123,12 @@ instance ToJSON Radix where
     toEncoding = genericToEncoding defaultOptions
 instance NFData Radix
 
+instance Display Radix where 
+    textDisplay Decimal = "DEC"
+    textDisplay Octal = "OCT"
+    textDisplay Hex = "HEX"
+
+
 -- | Converst from a Char to a 'Radix' according to the SCOS-2000 MIB ICD 6.9
 {-# INLINABLE charToRadix #-}
 charToRadix :: Char -> Radix
@@ -137,6 +146,10 @@ instance FromJSON ValInter
 instance ToJSON ValInter where
     toEncoding = genericToEncoding defaultOptions
 instance NFData ValInter
+
+instance Display ValInter where 
+    textDisplay InterRaw = "RAW"
+    textDisplay InterEng = "ENG"
 
 
 -- | Specifies, if the parameter is a time value, if
@@ -565,3 +578,15 @@ instance (Serialise a, Serialise b, Ord a, Ord b) => Serialise (Bimap a b) where
     encode = S.encode . BM.toList
     decode = BM.fromList <$> S.decode
 
+
+
+indentBuilder :: Word16 -> TB.Builder
+indentBuilder n = TB.text (T.replicate (fromIntegral n) " ")
+
+newLineIndentBuilder :: Word16 -> TB.Builder -> TB.Builder
+newLineIndentBuilder n builder =
+    TB.char '\n' <> indentBuilder n <> TB.padFromRight 23 ' ' builder
+
+
+padRight :: Word16 -> TB.Builder -> TB.Builder 
+padRight n b = TB.padFromRight (fromIntegral n) ' ' b

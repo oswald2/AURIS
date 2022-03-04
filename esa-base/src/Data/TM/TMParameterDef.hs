@@ -482,37 +482,36 @@ makeLenses ''TMParameterDef
 compareTMParameterDefName :: TMParameterDef -> TMParameterDef -> Ordering
 compareTMParameterDefName p1 p2 = compare (_fpName p1) (_fpName p2)
 
-pad :: Int -> TB.Builder -> TB.Builder
-pad n b = padFromRight n ' ' b
+
 
 instance Display TMParameterDef where
     textDisplay p =
         run
-            $  pad 23 (text "<b>Parameter Name:</b> ")
+            $  padRight 23 (text "<b>Parameter Name:</b> ")
             <> text (ST.toText (_fpName p))
-            <> pad 24 (text "\n<b>Description:</b> ")
+            <> padRight 24 (text "\n<b>Description:</b> ")
             <> text (ST.toText (_fpDescription p))
-            <> pad 24 (text "\n<b>Parameter ID:</b> ")
+            <> padRight 24 (text "\n<b>Parameter ID:</b> ")
             <> (case _fpPID p of
                    Nothing -> text "--"
                    Just val ->
                        decimal val <> text " (0x" <> hexadecimal val <> char ')'
                )
-            <> pad 24 (text "\n<b>Type:</b> ")
+            <> padRight 24 (text "\n<b>Type:</b> ")
             <> paramTypeBuilder (_fpType p)
-            <> pad 24 (text "\n<b>Unit:</b> ") <> text (ST.toText (_fpUnit p))
-            <> pad 24 (text "\n<b>Padding:</b> ") <> (case _fpWidth p of 
+            <> padRight 24 (text "\n<b>Unit:</b> ") <> text (ST.toText (_fpUnit p))
+            <> padRight 24 (text "\n<b>Padding:</b> ") <> (case _fpWidth p of 
                 Nothing -> "--"
                 Just w -> text (textDisplay w))
-            <> pad 24 (text "\n<b>Validity Param:</b>") <> relParamName (_fpValid p)
-            <> pad 24 (text "\n<b>Validity Value:</b>") <> text (textDisplay (_fpValidityValue p))
-            <> pad 24 (text "\n<b>Related Param:</b>") <> relParamName (_fpRelated p)
-            <> pad 24 (text "\n<b>Nature:</b>") <> text (textDisplay (_fpNatur p))
-            <> pad 24 (text "\n<b>Default Value:</b>") <> text (textDisplay (_fpDefaultVal p))
-            <> pad 24 (text "\n<b>Subsystem:</b>") <> text (ST.toText (_fpSubsys p))
+            <> padRight 24 (text "\n<b>Validity Param:</b>") <> relParamName (_fpValid p)
+            <> padRight 24 (text "\n<b>Validity Value:</b>") <> text (textDisplay (_fpValidityValue p))
+            <> padRight 24 (text "\n<b>Related Param:</b>") <> relParamName (_fpRelated p)
+            <> padRight 24 (text "\n<b>Nature:</b>") <> text (textDisplay (_fpNatur p))
+            <> padRight 24 (text "\n<b>Default Value:</b>") <> text (textDisplay (_fpDefaultVal p))
+            <> padRight 24 (text "\n<b>Subsystem:</b>") <> text (ST.toText (_fpSubsys p))
             <> text "\n<b>Calibration:</b>\n" <> calibContainerBuilder (_fpCalibs p) 4 
-            <> pad 24 (text "\n<b>OBT-ID:</b>") <> maybe (text "--") decimal (_fpOBTID p)
-            <> pad 24 (text "\n<b>Endianess:</b>") <> text (textDisplay (_fpEndian p))
+            <> padRight 24 (text "\n<b>OBT-ID:</b>") <> maybe (text "--") decimal (_fpOBTID p)
+            <> padRight 24 (text "\n<b>Endianess:</b>") <> text (textDisplay (_fpEndian p))
         where 
             relParamName Nothing = text "--"
             relParamName (Just rel) = text (ST.toText (_fpName rel))

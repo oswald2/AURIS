@@ -44,6 +44,8 @@ import           Data.TM.Value
 
 import           Text.Builder                  as TB
 
+import           General.Types
+
 
 -- | A data point to be used within the calibration
 data CalibPoint = CalibPoint
@@ -85,28 +87,23 @@ instance ToJSON NumericalCalibration where
     toEncoding = genericToEncoding defaultOptions
 
 
-padBuilder :: Int -> TB.Builder
-padBuilder n = text (T.replicate n " ")
 
-newLineBuilder :: Int -> TB.Builder 
-newLineBuilder n = char '\n' <> padBuilder n
-
-
-numericalCalibrationBuilder :: NumericalCalibration -> Int -> TB.Builder
+numericalCalibrationBuilder :: NumericalCalibration -> Word16 -> TB.Builder
 numericalCalibrationBuilder calib indent =
-    padBuilder indent <> padFromRight 23 ' ' (text "<b>Name:</b> ")
+    indentBuilder indent
+        <> padFromRight 23 ' ' (text "<b>Name:</b> ")
         <> text (ST.toText (_calibNName calib))
-        <> newLineBuilder indent <> padFromRight 23 ' ' (text "<b>Description:</b> ")
+        <> newLineIndentBuilder indent (padRight 23 (text "<b>Description:</b> "))
         <> text (ST.toText (_calibNDescr calib))
-        <> newLineBuilder indent <> padFromRight 23 ' ' (text "<b>Interpolation:</b> ")
+        <> newLineIndentBuilder indent (padRight 23 (text "<b>Interpolation:</b> "))
         <> calibInterpolationBuilder (_calibNInterpolation calib)
-        <> newLineBuilder indent <> text "<b>Points:</b>"
-        <> newLineBuilder indent <> text "<b>-------</b>\n"
+        <> newLineIndentBuilder indent (text "<b>Points:</b>")
+        <> newLineIndentBuilder indent (text "<b>-------</b>\n")
         <> pointBuilder (_calibNPoints calib) (indent + 4)
 
-pointBuilder :: Vector CalibPoint -> Int -> TB.Builder
-pointBuilder v indent = padBuilder indent <> TB.intercalate
-    (newLineBuilder indent)
+pointBuilder :: Vector CalibPoint -> Word16 -> TB.Builder
+pointBuilder v indent = indentBuilder indent <> TB.intercalate
+    (char '\n' <> indentBuilder indent)
     (RIO.map calibPointBuilder (V.toList v))
 
 -- | This type specifies, if the interpolation is done within an interval

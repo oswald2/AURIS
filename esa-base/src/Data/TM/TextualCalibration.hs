@@ -47,6 +47,11 @@ import qualified Data.Text.Short               as ST
 import           Data.PUS.CalibrationTypes
 import           Data.TM.Value
 
+import           General.Types                  ( indentBuilder
+                                                , newLineIndentBuilder
+                                                , padRight
+                                                )
+
 import           Text.Builder                  as TB
 
 -- | a calibration point for textual information. Textual
@@ -94,28 +99,25 @@ instance FromJSON TextualCalibration
 instance ToJSON TextualCalibration where
     toEncoding = genericToEncoding defaultOptions
 
-textualCalibrationBuilder :: TextualCalibration -> Int -> TB.Builder
-textualCalibrationBuilder calib pad =
-    padBuilder pad <> text "<b>Name:</b> "
+textualCalibrationBuilder :: TextualCalibration -> Word16 -> TB.Builder
+textualCalibrationBuilder calib indent =
+    indentBuilder indent
+        <> text "<b>Name:</b> "
         <> text (ST.toText (_calibTName calib))
-        <> newLineBuilder pad <> padFromRight 23 ' ' (text "<b>Description:</b> ")
+        <> newLineIndentBuilder indent
+                                (padRight 23 (text "<b>Description:</b> "))
         <> text (ST.toText (_calibTDescr calib))
-        <> newLineBuilder pad <> padFromRight 23 ' ' (text "<b>Raw Format:</b> ")
+        <> newLineIndentBuilder indent
+                                (padRight 23 (text "<b>Raw Format:</b> "))
         <> text (textDisplay (_calibTRawFmt calib))
-        <> newLineBuilder pad <> text "<b>Points:</b>"
-        <> newLineBuilder pad <> text "<b>-------</b>\n"
-        <> pointBuilder (_calibTPoints calib) (pad + 4)
+        <> newLineIndentBuilder indent (text "<b>Points:</b>")
+        <> newLineIndentBuilder indent (text "<b>-------</b>\n")
+        <> pointBuilder (_calibTPoints calib) (indent + 4)
 
 
-padBuilder :: Int -> TB.Builder
-padBuilder n = text (T.replicate n " ")
-
-newLineBuilder :: Int -> TB.Builder 
-newLineBuilder n = char '\n' <> padBuilder n
-
-pointBuilder :: Vector TextCalibPoint -> Int -> TB.Builder
-pointBuilder v pad = padBuilder pad <> TB.intercalate
-    (newLineBuilder pad)
+pointBuilder :: Vector TextCalibPoint -> Word16 -> TB.Builder
+pointBuilder v indent = indentBuilder indent <> TB.intercalate
+    (char '\n' <> indentBuilder indent)
     (RIO.map textCalibPointBuilder (V.toList v))
 
 
