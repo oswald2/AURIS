@@ -193,15 +193,10 @@ convertTCParams params =
 
 initializeTreeView :: TreeView -> ForestStore DataNode -> SearchEntry -> IO ()
 initializeTreeView tv model filterEntry = do
-
     -- filterModel <- Gtk.new TreeModelFilter [#childModel := model]
-    -- treeModelFilterSetVisibleFunc filterModel searchFunc
+    -- treeModelFilterSetVisibleFunc filterModel (searchFunc filterModel)
     -- treeViewSetModel tv (Just filterModel)
     treeViewSetModel tv (Just model)
-
-    -- void $ Gtk.on filterEntry
-    --               #searchChanged
-    --               (treeModelFilterRefilter filterModel)
 
     treeViewSetHeadersVisible tv True
 
@@ -236,6 +231,9 @@ initializeTreeView tv model filterEntry = do
     void $ treeViewAppendColumn tv colDescr
     void $ treeViewAppendColumn tv colDescr2
 
+    -- void $ Gtk.on filterEntry
+    --               #searchChanged
+    --               (treeModelFilterRefilter filterModel)
 
   where
     nameDisp (NameNode     name) = [#text := name]
@@ -263,20 +261,16 @@ initializeTreeView tv model filterEntry = do
     --         lsearch = T.toLower search
     --     in  (lsearch `T.isInfixOf` lname) || (lsearch `T.isInfixOf` ldescr)
 
-    -- searchFunc :: _ -> _ -> IO Bool
-    -- searchFunc m iter = do
-
-
-    --     path <- treeModelGetPath model iter
-    --     val  <- forestStoreGetValue model path
+    -- searchFunc fModel m iter = do
     --     text <- get filterEntry #text
-
     --     if T.null text
     --         then return True
     --         else do
+    --             iter2 <- treeModelFilterConvertIterToChildIter fModel iter 
+    --             path <- treeModelGetPath model iter2
+    --             val  <- forestStoreGetValue model path
     --             case val of
-    --                 NameNode x ->
-    --                     return (T.toLower text `T.isInfixOf` T.toLower x)
+    --                 NameNode _ -> return True 
     --                 TMPacketNode pkt -> return $ checkNameDescr
     --                     text
     --                     (_tmpdName pkt)
