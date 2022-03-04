@@ -36,7 +36,6 @@ module Data.TM.Calibration
     ) where
 
 import           RIO
-import qualified RIO.Text                      as T
 import qualified RIO.Vector                    as V
 
 import           Codec.Serialise

@@ -247,7 +247,7 @@ testLoadTCs mibPath = do
         Left err -> do
             T.putStrLn err
             exitFailure
-        Right (msgs, r) -> do
+        Right (msgs, r, _r2) -> do
             pPrint r
             T.putStrLn
                 $  "Messages:\n"

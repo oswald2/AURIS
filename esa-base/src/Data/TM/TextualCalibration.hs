@@ -32,7 +32,6 @@ module Data.TM.TextualCalibration
     ) where
 
 import           RIO                     hiding ( (.~) )
-import qualified RIO.Text                      as T
 import qualified RIO.Vector                    as V
 
 import           Codec.Serialise
@@ -79,9 +78,9 @@ textCalibPointBuilder :: TextCalibPoint -> TB.Builder
 textCalibPointBuilder pnt =
     text "Lower: "
         <> decimal (_txpLower pnt)
-        <> ", Upper: "
+        <> "    Upper: "
         <> decimal (_txpUpper pnt)
-        <> ", Text: "
+        <> "    Text: "
         <> text (ST.toText (_txpText pnt))
 
 

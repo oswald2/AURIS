@@ -28,33 +28,35 @@ module Data.DataModel
     , dmGRDs
     , dmInfo
     , dmTCs
+    , dmTCParameters
     , empty
     , writeDataModel
     , readDataModel
     ) where
 
+import           Control.Lens                   ( makeLenses )
 import           RIO
 import qualified RIO.HashMap                   as HM
 import qualified RIO.Map                       as M
 --import qualified RIO.ByteString.Lazy           as BL
 import qualified RIO.Text                      as T
-import           Control.Lens                   ( makeLenses )
 
-import           Data.Text.Short                ( ShortText )
-import           Data.Aeson                    as AE
 import           Codec.Serialise               as S
-import           Codec.Serialise.Encoding      as S
 import           Codec.Serialise.Decoding      as S
+import           Codec.Serialise.Encoding      as S
+import           Data.Aeson                    as AE
+import           Data.Text.Short                ( ShortText )
 
 import           Data.HashTable.ST.Basic       as HT
 
+import           Data.PUS.DataModelInfo
 import           Data.TM.Calibration
 import           Data.TM.Synthetic
-import           Data.TM.TMParameterDef
 import           Data.TM.TMPacketDef
-import           Data.PUS.DataModelInfo
+import           Data.TM.TMParameterDef
 
 import           Data.TC.TCDef
+import           Data.TC.TCParameterDef
 
 import           Data.Display.Graphical
 
@@ -84,6 +86,8 @@ data DataModel = DataModel
     , _dmVPDStructs      :: IHashTable Int VarParams
     -- | A hash table for the TC Commands available in the MIB
     , _dmTCs             :: IHashTable ShortText TCDef
+    -- | A hash map of all TC parameters available in the MIB
+    , _dmTCParameters    :: HashMap ShortText TCParameterDef
     }
     deriving (Show, Generic)
 makeLenses ''DataModel
@@ -108,6 +112,7 @@ empty =
                   , _dmVPDStructs      = HT.iempty
                   , _dmGRDs            = M.empty
                   , _dmTCs             = HT.iempty
+                  , _dmTCParameters    = HM.empty
                   }
 
 
@@ -122,7 +127,7 @@ instance ToJSON DataModel where
 
 
 encodedLen :: Word
-encodedLen = 9
+encodedLen = 10
 
 encodeDataModel :: DataModel -> S.Encoding
 encodeDataModel model =
@@ -136,6 +141,7 @@ encodeDataModel model =
         <> encodeHashTable (_dmTMPackets model)
         <> encodeHashTable (_dmVPDStructs model)
         <> encodeHashTable (_dmTCs model)
+        <> S.encode (_dmTCParameters model)
 
 decodeDataModel :: Decoder s DataModel
 decodeDataModel = do
@@ -146,15 +152,16 @@ decodeDataModel = do
         <> show len
         <> ", should be "
         <> show encodedLen
-    info    <- S.decode
-    calibs  <- S.decode
-    synths  <- S.decode
-    grds    <- S.decode
-    idx     <- S.decode
-    params  <- decodeHashTable
-    packets <- decodeHashTable
-    vpds    <- decodeHashTable
-    tcs     <- decodeHashTable
+    info     <- S.decode
+    calibs   <- S.decode
+    synths   <- S.decode
+    grds     <- S.decode
+    idx      <- S.decode
+    params   <- decodeHashTable
+    packets  <- decodeHashTable
+    vpds     <- decodeHashTable
+    tcs      <- decodeHashTable
+    tcParams <- S.decode
     return DataModel { _dmInfo            = info
                      , _dmCalibrations    = calibs
                      , _dmSyntheticParams = synths
@@ -164,6 +171,7 @@ decodeDataModel = do
                      , _dmTMPackets       = packets
                      , _dmVPDStructs      = vpds
                      , _dmTCs             = tcs
+                     , _dmTCParameters    = tcParams
                      }
 
 -- | Serializes the 'DataModel' and writes it to a file. Uses 

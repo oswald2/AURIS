@@ -8,7 +8,6 @@ module Data.TC.Calibration
     ) where
 
 import           RIO
-import qualified RIO.Text                      as T
 
 import           Data.Text.Short                ( ShortText )
 import qualified Data.Text.Short               as ST
@@ -73,7 +72,7 @@ tcNumericCalibrationBuilder indent cal =
             . RIO.map f
             . Data.Bimap.toList
             $ _tcncValues cal
-    f (v1, v2) = text (textDisplay v1) <> text (textDisplay v2)
+    f (v1, v2) = padFromLeft 16 ' ' (text (textDisplay v1)) <> text "    " <> text (textDisplay v2)
 
 
 
@@ -99,8 +98,7 @@ instance ToJSON TCTextCalibration where
 
 tcTextCalibrationBuilder :: Word16 -> TCTextCalibration -> TB.Builder
 tcTextCalibrationBuilder indent cal =
-    indentBuilder indent
-        <> padRight 23 (text "<b>Name:</b> ")
+    indentBuilder indent <> padRight 23 (text "<b>Name:</b> ")
         <> text (ST.toText (_tcvName cal))
         <> newLineIndentBuilder indent (padRight 23 (text "<b>Description:</b> "))
         <> text (ST.toText (_tcvDescr cal))
@@ -112,7 +110,7 @@ tcTextCalibrationBuilder indent cal =
             . RIO.map f
             . Data.Bimap.toList
             $ _tcvValues cal
-    f (v1, v2) = text (textDisplay v1) <> text (ST.toText v2)
+    f (v1, v2) = padFromLeft 16 ' ' (text (textDisplay v1)) <> text "    " <> text (ST.toText v2)
 
 
 

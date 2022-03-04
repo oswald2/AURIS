@@ -25,7 +25,6 @@ module Data.TM.NumericalCalibration
     ) where
 
 import           RIO                     hiding ( (.~) )
-import           RIO.Text                      as T
 import qualified RIO.Vector                    as V
 import           RIO.Vector.Partial             ( (!) )
 
@@ -63,7 +62,7 @@ instance ToJSON CalibPoint where
 
 calibPointBuilder :: CalibPoint -> TB.Builder
 calibPointBuilder (CalibPoint x y) =
-    text "x: " <> fixedDouble 16 x <> text ", y: " <> fixedDouble 16 y
+    text "x: " <> fixedDouble 16 x <> text "    y: " <> fixedDouble 16 y
 
 
 -- | The numerical calibration. Calibrates a value with a given

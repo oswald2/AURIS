@@ -9,56 +9,56 @@ module Data.Conversion.TCs
     , convertRange
     ) where
 
-import           RIO
-import qualified RIO.Vector                    as V
-import qualified RIO.Text                      as T
-import qualified RIO.HashMap                   as HM
-import           RIO.List                       ( sortOn
-                                                , sort
-                                                )
 import           Data.HashTable.ST.Basic        ( IHashTable )
 import qualified Data.HashTable.ST.Basic       as HT
+import           RIO
+import qualified RIO.HashMap                   as HM
+import           RIO.List                       ( sort
+                                                , sortOn
+                                                )
+import qualified RIO.Text                      as T
+import qualified RIO.Vector                    as V
 
 import qualified Data.Text.Short               as ST
 import           RIO.List                       ( intersperse )
 
-import           Data.Text.Short                ( ShortText )
 import           Control.Monad.Except
+import           Data.Text.Short                ( ShortText )
 import           Refined.Unsafe                 ( reallyUnsafeRefine )
 
 
-import           Data.PUS.Value
 import           Data.PUS.EncTime
+import           Data.PUS.Value
 
-import           General.Types
-import           General.Time                   ( mcsTimeToOBT
-                                                , CorrelationCoefficients
-                                                , Epoch
-                                                )
-import           General.PUSTypes
 import           General.APID
+import           General.PUSTypes
+import           General.Time                   ( CorrelationCoefficients
+                                                , Epoch
+                                                , mcsTimeToOBT
+                                                )
+import           General.Types
 
-import           Data.TC.TCParameterDef
+import           Data.TC.Calibration
 import           Data.TC.RangeSet               ( RangeSet(..)
                                                 , RangeValue(..)
                                                 )
-import           Data.TC.Calibration
 import           Data.TC.TCDef
+import           Data.TC.TCParameterDef
 import           Data.TC.ValueConversion
 
-import           Data.TM.Value
 import           Data.TM.Validity
+import           Data.TM.Value
 
-import           Data.MIB.Types
-import           Data.MIB.CPC
-import           Data.MIB.PRV
-import           Data.MIB.PRF
-import           Data.MIB.CDF
 import           Data.MIB.CCF
-import           Data.MIB.CVS
+import           Data.MIB.CDF
+import           Data.MIB.CPC
 import           Data.MIB.CVP
+import           Data.MIB.CVS
+import           Data.MIB.PRF
+import           Data.MIB.PRV
 import           Data.MIB.SCO
 import           Data.MIB.TCD
+import           Data.MIB.Types
 
 import           Data.Conversion.Types
 
@@ -71,12 +71,8 @@ convertTCDef
     :: Epoch
     -> CorrelationCoefficients
     -> ShortText
-    -> HashMap ShortText PRFentry
-    -> Multimap ShortText PRVentry
-    -> HashMap ShortText TCNumericCalibration
-    -> HashMap ShortText TCTextCalibration
+    -> HashMap ShortText TCParameterDef
     -> Multimap ShortText CDFentry
-    -> Vector CPCentry
     -> HashMap Int CVSentry
     -> Multimap ShortText CVPentry
     -> HashMap Word32 TCDentry
@@ -85,7 +81,7 @@ convertTCDef
     -> ( [Text]
        , IHashTable ShortText TCDef
        )
-convertTCDef epoch coeff defaultConnName prfMap prvs numCalibs textCalibs cdfs cpcs cvsMap cvpMap tcdMap scoMap vec
+convertTCDef epoch coeff defaultConnName paramMap cdfs cvsMap cvpMap tcdMap scoMap vec
     = let (errs, tcs) =
               partitionEithers
                   . V.toList
@@ -93,12 +89,8 @@ convertTCDef epoch coeff defaultConnName prfMap prvs numCalibs textCalibs cdfs c
                         (convertCCF epoch
                                     coeff
                                     defaultConnName
-                                    prfMap
-                                    prvs
-                                    numCalibs
-                                    textCalibs
+                                    paramMap
                                     cdfs
-                                    cpcs
                                     cvsMap
                                     cvpMap
                                     tcdMap
@@ -115,32 +107,24 @@ convertCCF
     :: Epoch
     -> CorrelationCoefficients
     -> ShortText
-    -> HashMap ShortText PRFentry
-    -> Multimap ShortText PRVentry
-    -> HashMap ShortText TCNumericCalibration
-    -> HashMap ShortText TCTextCalibration
+    -> HashMap ShortText TCParameterDef
     -> Multimap ShortText CDFentry
-    -> Vector CPCentry
     -> HashMap Int CVSentry
     -> Multimap ShortText CVPentry
     -> HashMap Word32 TCDentry
     -> HashMap ShortText SCOentry
     -> CCFentry
     -> Either Text TCDef
-convertCCF epoch coeff defaultConnName prfMap prvs numCalibs textCalibs cdfs cpcs cvsMap cvpMap tcdMap scoMap CCFentry {..}
-    = let locs   = sortOn (_cdfBit) $ M.lookup _ccfName cdfs
-          cpcMap = getCPCMap cpcs
+convertCCF epoch coeff defaultConnName paramMap cdfs cvsMap cvpMap tcdMap scoMap CCFentry {..}
+    = let locs = sortOn (_cdfBit) $ M.lookup _ccfName cdfs
+          -- cpcMap = getCPCMap cpcs
           conv cdf = if _cdfElemType cdf == 'A'
               then createFixedArea cdf
-              else case HM.lookup (_cdfPName cdf) cpcMap of
-                  Just cpc -> convertTCParamLocDef epoch
-                                                   coeff
-                                                   prfMap
-                                                   prvs
-                                                   numCalibs
-                                                   textCalibs
-                                                   cpc
-                                                   cdf
+              else case HM.lookup (_cdfPName cdf) paramMap of
+                  Just param -> convertTCParamLocDef epoch
+                                                     coeff
+                                                     param
+                                                     cdf
                   Nothing ->
                       Left
                           $  "TC Location specifies parameter '"
@@ -278,47 +262,29 @@ createFixedArea CDFentry {..} =
 convertTCParamLocDef
     :: Epoch
     -> CorrelationCoefficients
-    -> HashMap ShortText PRFentry
-    -> Multimap ShortText PRVentry
-    -> HashMap ShortText TCNumericCalibration
-    -> HashMap ShortText TCTextCalibration
-    -> CPCentry
+    -> TCParameterDef
     -> CDFentry
     -> Either Text TCParameterLocDef
-convertTCParamLocDef epoch coeff prfMap prvs numCalibs textCalibs cpc@CPCentry {..} CDFentry {..}
-    = let (ptc, pfc, _) = getPtcPfc _cpcCateg _cpcPTC _cpcPFC
-          def'          = determineDefaultValue
-              epoch
-              coeff
-              ptc
-              pfc
-              (getDefaultChar _cpcInter)
-              (getDefaultChar _cpcDispFmt)
-              (charToRadix (getDefaultChar _cpcRadix))
-              _cdfValue
-              cpc
-          def = either
+convertTCParamLocDef epoch coeff param CDFentry {..}
+    = let def' = determineDefaultValueFromParam epoch coeff param _cdfValue
+          def  = either
               (\err -> trace
                   ("convertTCParamLocDef Error: " <> T.pack (show err))
                   TCParamNothing
               )
               id
               def'
-
-          param' = convertCPC epoch coeff prfMap prvs numCalibs textCalibs cpc
-      in  case param' of
-              Left  err   -> Left err
-              Right param -> Right $ TCParameterLocDef
-                  { _tcplElemType     = determineElemType _cdfElemType
-                  , _tcplDescr        = _cdfDescr
-                  , _tcplLen          = BitSize _cdfElemLen
-                  , _tcplBit          = BitOffset _cdfBit
-                  , _tcplGroupSize    = fromIntegral (getDefaultInt _cdfGrpSize)
-                  , _tcplElemFlag     = determineElemFlag _cdfInter
-                  , _tcplDefaultValue = def
-                  , _tcplTMParam      = _cdfTmID
-                  , _tcplParam        = param
-                  }
+      in  Right $ TCParameterLocDef
+              { _tcplElemType     = determineElemType _cdfElemType
+              , _tcplDescr        = _cdfDescr
+              , _tcplLen          = BitSize _cdfElemLen
+              , _tcplBit          = BitOffset _cdfBit
+              , _tcplGroupSize    = fromIntegral (getDefaultInt _cdfGrpSize)
+              , _tcplElemFlag     = determineElemFlag _cdfInter
+              , _tcplDefaultValue = def
+              , _tcplTMParam      = _cdfTmID
+              , _tcplParam        = param
+              }
 
 determineElemType :: Char -> ElemType
 determineElemType 'A' = ElemFixedArea
@@ -444,53 +410,118 @@ determineDefaultValue epoch coeff ptc pfc inter dispFormat radix val cpc =
                     Right v -> Right $ TCParamEng v
             _ -> if ST.null val
                 then Right $ TCParamRaw (initialValue BiE ptc pfc)
-                else
-                    TCParamRaw
-                        <$> determineRawDefaultValue epoch coeff ptc pfc val cpc
+                else TCParamRaw <$> determineRawDefaultValue epoch coeff val cpc
 
-
-determineRawDefaultValue
+determineDefaultValueFromParam
     :: Epoch
     -> CorrelationCoefficients
-    -> PTC
-    -> PFC
+    -> TCParameterDef
     -> ShortText
-    -> CPCentry
+    -> Either Text TCParamDefaultValue
+determineDefaultValueFromParam epoch coeff param val =
+    case _tcpDefaultValue param of
+        TCParamNothing -> Right TCParamNothing
+        TCCmdID    _   -> Right $ TCCmdID val
+        TCParamID  _   -> Right $ TCParamID val
+        TCParamRaw _   -> if ST.null val
+            then
+                Right $ TCParamRaw
+                    (initialValue BiE (_tcpPTC param) (_tcpPFC param))
+            else
+                TCParamRaw
+                    <$> determineRawDefaultValueFromParam epoch coeff val param
+        TCParamEng v -> if ST.null val
+                then
+                    let value = initialValue BiE (_tcpPTC param) (_tcpPFC param)
+                        tmVal = valueToTMValue epoch clearValidity value
+                    in  Right $ TCParamEng (_tmvalValue tmVal)
+                else case getValFromTemplate v (_tcpRadix param) val of
+                    Left err ->
+                        Left
+                            $  "Could not get default engineering value from '"
+                            <> ST.toText val
+                            <> "': "
+                            <> err
+                    Right v2 -> Right $ TCParamEng v2
+
+determineRawDefaultValueFromParam
+    :: Epoch
+    -> CorrelationCoefficients
+    -> ShortText
+    -> TCParameterDef
     -> Either Text Value
-determineRawDefaultValue epoch coeff ptc pfc val cpc =
-    case parseShortTextToValueSimple ptc pfc val of
+determineRawDefaultValueFromParam epoch coeff val param =
+    case parseShortTextToValueSimple (_tcpPTC param) (_tcpPFC param) val of
         Left err ->
             Left
-                $  "could not determine raw default value: PTC="
-                <> textDisplay ptc
-                <> " PFC="
-                <> textDisplay pfc
-                <> ": "
+                $  "could not determine raw default value: "
                 <> err
-                <> "\nCPC Entry: "
-                <> T.pack (show cpc)
+                <> "\nTC Parameter: "
+                <> T.pack (show param)
         Right v ->
-            let rawVal = initialValue BiE ptc pfc
+            let rawVal = initialValue BiE (_tcpPTC param) (_tcpPFC param)
             in
                 Right $ case v of
                     TMValInt    x -> Data.PUS.Value.setInt rawVal x
                     TMValUInt   x -> Data.PUS.Value.setInt rawVal x
                     TMValDouble x -> setDouble rawVal x
-                    TMValTime   x -> case ptcPfcEncoding ptc pfc of
-                        Just enc -> ValCUCTime $ sunTimeToCUCTime
-                            epoch
-                            enc
-                            (mcsTimeToOBT x coeff)
-                        Nothing -> trace
-                            (  "Could not determine time value PTC="
-                            <> textDisplay ptc
-                            <> " PFC="
-                            <> textDisplay pfc
-                            )
-                            ValUndefined
+                    TMValTime x ->
+                        case ptcPfcEncoding (_tcpPTC param) (_tcpPFC param) of
+                            Just enc -> ValCUCTime $ sunTimeToCUCTime
+                                epoch
+                                enc
+                                (mcsTimeToOBT x coeff)
+                            Nothing -> trace
+                                (  "Could not determine time value PTC="
+                                <> textDisplay (_tcpPTC param)
+                                <> " PFC="
+                                <> textDisplay (_tcpPFC param)
+                                )
+                                ValUndefined
                     TMValString x -> setString rawVal (ST.toText x)
                     TMValOctet  x -> setOctet rawVal (toBS x)
                     TMValNothing  -> trace "Got TMValNothing" ValUndefined
+
+
+determineRawDefaultValue
+    :: Epoch
+    -> CorrelationCoefficients
+    -> ShortText
+    -> CPCentry
+    -> Either Text Value
+determineRawDefaultValue epoch coeff val cpc@CPCentry {..} =
+    case parseShortTextToValueSimple (PTC _cpcPTC) (PFC _cpcPFC) val of
+        Left err ->
+            Left
+                $  "could not determine raw default value: "
+                <> err
+                <> "\nTC Parameter: "
+                <> T.pack (show cpc)
+        Right v ->
+            let rawVal = initialValue BiE (PTC _cpcPTC) (PFC _cpcPFC)
+            in
+                Right $ case v of
+                    TMValInt    x -> Data.PUS.Value.setInt rawVal x
+                    TMValUInt   x -> Data.PUS.Value.setInt rawVal x
+                    TMValDouble x -> setDouble rawVal x
+                    TMValTime x ->
+                        case ptcPfcEncoding (PTC _cpcPTC) (PFC _cpcPFC) of
+                            Just enc -> ValCUCTime $ sunTimeToCUCTime
+                                epoch
+                                enc
+                                (mcsTimeToOBT x coeff)
+                            Nothing -> trace
+                                (  "Could not determine time value PTC="
+                                <> textDisplay (PTC _cpcPTC)
+                                <> " PFC="
+                                <> textDisplay (PFC _cpcPFC)
+                                )
+                                ValUndefined
+                    TMValString x -> setString rawVal (ST.toText x)
+                    TMValOctet  x -> setOctet rawVal (toBS x)
+                    TMValNothing  -> trace "Got TMValNothing" ValUndefined
+
+
 
 
 

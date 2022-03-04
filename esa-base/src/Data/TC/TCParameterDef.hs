@@ -6,6 +6,7 @@ module Data.TC.TCParameterDef
     , TCParameterLocDef(..)
     , ElemType(..)
     , ElemFlag(..)
+    , compareTCParameterDefName
     , tcpName
     , tcpDescr
     , tcpDefaultValue
@@ -117,6 +118,13 @@ instance FromJSON TCParameterDef
 instance ToJSON TCParameterDef where
     toEncoding = genericToEncoding defaultOptions
 
+compareTCParameterDefName :: TCParameterDef -> TCParameterDef -> Ordering
+compareTCParameterDefName p1 p2 = compare (_tcpName p1) (_tcpName p2)
+
+instance Display TCParameterDef where 
+    textDisplay x = run $ tcParameterDefBuilder 0 x
+
+
 tcParameterDefBuilder :: Word16 -> TCParameterDef -> TB.Builder
 tcParameterDefBuilder indent def =
     indentBuilder indent
@@ -140,8 +148,8 @@ tcParameterDefBuilder indent def =
         <> newLineIndentBuilder indent (padRight 23 (text "<b>Type:</b> "))
         <> tcParamTypeBuilder (def ^. tcpProcType)
         <> newLineIndentBuilder indent
-                                (padRight 23 (text "<b>Calibration:</b>\n"))
-        <> maybe (text "--") (tcCalibBuilder (indent + 4)) (def ^. tcpCalib)
+                                (padRight 23 (text "<b>Calibration:</b> "))
+        <> maybe (text "--") (\x -> char '\n' <> tcCalibBuilder (indent + 4) x) (def ^. tcpCalib)
         <> newLineIndentBuilder indent
                                 (padRight 23 (text "<b>Range Set:</b>\n"))
         <> newLineIndentBuilder indent (padRight 23 (text "<b>Correlate:</b> "))

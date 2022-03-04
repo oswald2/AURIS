@@ -94,7 +94,6 @@ where
 
 import           RIO
 import qualified RIO.Vector                    as V
-import qualified RIO.Text as T 
 
 import           Data.Text.Short               as ST ( ShortText, pack )
 import qualified           Data.Text.Short               as ST 
@@ -453,23 +452,23 @@ instance AE.ToJSON TMPacketDef where
 
 tmPacketDefBuilder :: TMPacketDef -> TB.Builder 
 tmPacketDefBuilder pd = 
-  padRight (text "<b>Name:</b> ") <> text (ST.toText (_tmpdName pd))
-  <> char '\n' <> padRight (text "<b>Description:</b> ") <> text (ST.toText (_tmpdDescr pd))
-  <> char '\n' <> padRight (text "<b>SPID:</b> ") <> text (textDisplay (_tmpdSPID pd))
-  <> char '\n' <> padRight (text "<b>APID:</b> ") <> text (textDisplay (_tmpdApid pd))
-  <> char '\n' <> padRight (text "<b>Type/Subtype:</b> ") 
+  padRight 23 (text "<b>Name:</b> ") <> text (ST.toText (_tmpdName pd))
+  <> char '\n' <> padRight 23 (text "<b>Description:</b> ") <> text (ST.toText (_tmpdDescr pd))
+  <> char '\n' <> padRight 23 (text "<b>SPID:</b> ") <> text (textDisplay (_tmpdSPID pd))
+  <> char '\n' <> padRight 23 (text "<b>APID:</b> ") <> text (textDisplay (_tmpdApid pd))
+  <> char '\n' <> padRight 23 (text "<b>Type/Subtype:</b> ") 
   <> char '(' <> text (textDisplay (_tmpdType pd)) <> text ", " <> text (textDisplay (_tmpdSubType pd)) <> char ')'
-  <> char '\n' <> padRight (text "<b>PI1:</b> ") <> decimal (_tmpdPI1Val pd)
-  <> char '\n' <> padRight (text "<b>PI2:</b> ") <> decimal (_tmpdPI2Val pd)
-  <> char '\n' <> padRight (text "<b>Unit:</b> ") <> text (ST.toText (_tmpdUnit pd))
-  <> char '\n' <> padRight (text "<b>Timefield:</b> ") <> (if _tmpdTime pd then "present" else "not present")
-  <> char '\n' <> padRight (text "<b>Interval:</b> ") <> maybe (text "--") (text . textDisplay) (_tmpdInter pd)
-  <> char '\n' <> padRight (text "<b>Valid:</b> ") <> string (show (_tmpdValid pd))
-  <> char '\n' <> padRight (text "<b>Check:</b> ") <> string (show (_tmpdCheck pd))
-  <> char '\n' <> padRight (text "<b>Event:</b> ") <> pidEventBuilder (_tmpdEvent pd)
-  <> char '\n' <> padRight (text "<b>Parameters:</b> ") <> parameterBuilder 4 (_tmpdParams pd)
-  where 
-    padRight b = padFromRight 23 ' ' b
+  <> char '\n' <> padRight 23 (text "<b>PI1:</b> ") <> decimal (_tmpdPI1Val pd)
+  <> char '\n' <> padRight 23 (text "<b>PI2:</b> ") <> decimal (_tmpdPI2Val pd)
+  <> char '\n' <> padRight 23 (text "<b>Unit:</b> ") <> text (ST.toText (_tmpdUnit pd))
+  <> char '\n' <> padRight 23 (text "<b>Timefield:</b> ") <> (if _tmpdTime pd then "present" else "not present")
+  <> char '\n' <> padRight 23 (text "<b>Interval:</b> ") <> maybe (text "--") (text . textDisplay) (_tmpdInter pd)
+  <> char '\n' <> padRight 23 (text "<b>Valid:</b> ") <> string (show (_tmpdValid pd))
+  <> char '\n' <> padRight 23 (text "<b>Check:</b> ") <> string (show (_tmpdCheck pd))
+  <> char '\n' <> padRight 23 (text "<b>Event:</b> ") <> pidEventBuilder (_tmpdEvent pd)
+  <> char '\n' <> padRight 23 (text "<b>Parameters:</b> ") <> parameterBuilder 4 (_tmpdParams pd)
+
+
 
 instance Display TMPacketDef where 
   textDisplay = run . tmPacketDefBuilder 

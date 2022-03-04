@@ -157,7 +157,7 @@ library
 
   if flag(sle)
         cpp-options: -DHAS_SLE
-        build-depends: esa-sle 
+        -- build-depends: esa-sle 
 
 
   if flag(llvm)

@@ -176,6 +176,7 @@ library
     , bimap
     , multi-containers
     , refined
+    , attoparsec
 
   -- Directories containing source files.
   hs-source-dirs:      src

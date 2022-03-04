@@ -127,7 +127,7 @@ loadMIB epoch coeff defaultConnName mibPath = do
                   >>= logWarnings
               grds <- loadGRDs mibPath >>= liftEither
 
-              cmds <-
+              (cmds, cmdPars) <-
                   loadTCs epoch coeff defaultConnName mibPath >>= liftEither >>= logTCMessages
 
               let model = DataModel { _dmInfo            = convertInfo info
@@ -139,6 +139,7 @@ loadMIB epoch coeff defaultConnName mibPath = do
                                     , _dmVPDStructs      = vpdLookup
                                     , _dmGRDs            = grds
                                     , _dmTCs             = cmds
+                                    , _dmTCParameters    = cmdPars
                                     }
               return model
 
@@ -151,9 +152,9 @@ loadMIB epoch coeff defaultConnName mibPath = do
             logWarn $ "On parameter import: " <> display w
             return res
 
-    logTCMessages (msgs, result) = do
+    logTCMessages (msgs, result1, result2) = do
         forM_ msgs (\m -> logWarn $ "On TC import: " <> display m)
-        return result
+        return (result1, result2)
 
 loadParameters
     :: (MonadIO m, MonadReader env m, HasLogFunc env)

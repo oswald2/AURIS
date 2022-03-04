@@ -7,6 +7,7 @@ module GUI.DataModelTab
     ) where
 
 import           RIO
+import qualified RIO.HashMap                   as HM
 import qualified RIO.Text                      as T
 
 import           Control.Lens                   ( makeLenses )
@@ -20,12 +21,15 @@ import           Data.GI.Gtk.ModelView.ForestStore
 import           Data.GI.Gtk.ModelView.Types
 import           GI.Gtk                        as Gtk
 
-import           GUI.Utils
 import           GUI.TextView
+import           GUI.Utils
 
 import           Data.DataModel
 import           Data.PUS.DataModelInfo
+
 import           Data.TC.TCDef
+import           Data.TC.TCParameterDef
+
 import           Data.TM.TMPacketDef
 import           Data.TM.TMParameterDef
 
@@ -38,6 +42,9 @@ data DataNode =
     | TMPacketNode !TMPacketDef
     | TMParamNode !TMParameterDef
     | TCNode !TCDef
+    | TCParamNode !TCParameterDef
+
+
 
 data DataModelTab = DataModelTab
     { _dmtWindow    :: !ApplicationWindow
@@ -50,6 +57,7 @@ data DataModelTab = DataModelTab
     , _dmtTreeModel :: !(ForestStore DataNode)
     , _dmtView      :: !TextView
     , _dmtModel     :: IORef DataModel
+    , _dmtEntry     :: !SearchEntry
     }
 makeLenses ''DataModelTab
 
@@ -64,11 +72,12 @@ createDataModelTab window builder = do
     treeView <- getObject builder "treeViewModel" TreeView
     textView <- getObject builder "textViewDataModel" TextView
     textViewSetMonospace textView True
+    searchEntry <- getObject builder "searchEntryDataModel" SearchEntry
 
-    ref      <- newIORef Data.DataModel.empty
-    model    <- forestStoreNew [Node (NameNode "Model") []]
+    ref         <- newIORef Data.DataModel.empty
+    model       <- forestStoreNew [Node (NameNode "Model") []]
 
-    initializeTreeView treeView model
+    initializeTreeView treeView model searchEntry
 
     let g = DataModelTab { _dmtWindow    = window
                          , _dmtName      = name
@@ -80,15 +89,20 @@ createDataModelTab window builder = do
                          , _dmtTreeModel = model
                          , _dmtView      = textView
                          , _dmtModel     = ref
+                         , _dmtEntry     = searchEntry
                          }
 
-    void $ Gtk.on treeView #rowActivated $ \path _col -> do 
-        val <- forestStoreGetValue model path 
-        case val of 
+    void $ Gtk.on treeView #rowActivated $ \path _col -> do
+        val <- forestStoreGetValue model path
+        case val of
             NameNode txt -> textViewSetTextMarkup textView txt
-            TMParamNode param -> textViewSetTextMarkup textView (textDisplay param)
-            TMPacketNode pkt ->  textViewSetTextMarkup textView (textDisplay pkt)
+            TMParamNode param ->
+                textViewSetTextMarkup textView (textDisplay param)
+            TMPacketNode pkt ->
+                textViewSetTextMarkup textView (textDisplay pkt)
             TCNode tc -> textViewSetTextMarkup textView (textDisplay tc)
+            TCParamNode param ->
+                textViewSetTextMarkup textView (textDisplay param)
 
     return g
 
@@ -101,8 +115,7 @@ dataModelTabSetModel g model = do
     let tmPkts    = convertTMPackets (model ^. dmTMPackets)
         tcPkts    = convertTCs (model ^. dmTCs)
         tmParams  = convertTMParams (model ^. dmParameters)
-        tmNodes   = NameNode "Telemetry"
-        tcNodes   = Node (NameNode "Telecommand") [tcPkts]
+        tcParams  = convertTCParams (model ^. dmTCParameters)
         treeModel = g ^. dmtTreeModel
 
     -- unset the model in the treeview for performance reasons
@@ -117,7 +130,7 @@ dataModelTabSetModel g model = do
     path <- treePathNewFromIndices [0]
     forestStoreInsertForest treeModel path 0 [tmPkts, tmParams]
     tcPath <- treePathNewFromIndices [1]
-    forestStoreInsertForest treeModel tcPath 0 [tcPkts]
+    forestStoreInsertForest treeModel tcPath 0 [tcPkts, tcParams]
 
     -- set the model again
     treeViewSetModel (g ^. dmtTreeView) (Just treeModel)
@@ -144,17 +157,18 @@ convertTMPackets :: IHashTable TMPacketKey TMPacketDef -> Tree DataNode
 convertTMPackets packets =
     let tree = Node (NameNode "TM Packets") pktList
         pktList =
-            map (\x -> Node (TMPacketNode (snd x)) []) 
+            map (\x -> Node (TMPacketNode (snd x)) [])
                 $ sortBy (\p1 p2 -> compareTMPacketDefName (snd p1) (snd p2))
                 $ HT.toList packets
     in  tree
 
 convertTCs :: IHashTable ST.ShortText TCDef -> Tree DataNode
 convertTCs tcs =
-    let tree   = Node (NameNode "TCs") tcList
-        tcList = map (\x -> Node (TCNode (snd x)) []) 
-            $ sortBy (\tc1 tc2 -> compareTCDefName (snd tc1) (snd tc2))
-            $ HT.toList tcs
+    let tree = Node (NameNode "TCs") tcList
+        tcList =
+            map (\x -> Node (TCNode (snd x)) [])
+                $ sortBy (\tc1 tc2 -> compareTCDefName (snd tc1) (snd tc2))
+                $ HT.toList tcs
     in  tree
 
 convertTMParams :: IHashTable ST.ShortText TMParameterDef -> Tree DataNode
@@ -166,42 +180,124 @@ convertTMParams params =
                 $ HT.toList params
     in  tree
 
+convertTCParams :: HashMap ST.ShortText TCParameterDef -> Tree DataNode
+convertTCParams params =
+    let tree = Node (NameNode "TC Parameters") pktList
+        pktList =
+            map (\x -> Node (TCParamNode (snd x)) [])
+                $ sortBy (\p1 p2 -> compareTCParameterDefName (snd p1) (snd p2))
+                $ HM.toList params
+    in  tree
 
-initializeTreeView :: TreeView -> ForestStore DataNode -> IO ()
-initializeTreeView tv model = do
+
+
+initializeTreeView :: TreeView -> ForestStore DataNode -> SearchEntry -> IO ()
+initializeTreeView tv model filterEntry = do
+
+    -- filterModel <- Gtk.new TreeModelFilter [#childModel := model]
+    -- treeModelFilterSetVisibleFunc filterModel searchFunc
+    -- treeViewSetModel tv (Just filterModel)
     treeViewSetModel tv (Just model)
+
+    -- void $ Gtk.on filterEntry
+    --               #searchChanged
+    --               (treeModelFilterRefilter filterModel)
+
     treeViewSetHeadersVisible tv True
 
-    colName  <- treeViewColumnNew
-    colDescr <- treeViewColumnNew
+    colName   <- treeViewColumnNew
+    colDescr  <- treeViewColumnNew
+    colDescr2 <- treeViewColumnNew
 
     treeViewColumnSetResizable colName True
     treeViewColumnSetReorderable colName True
     treeViewColumnSetResizable colDescr True
     treeViewColumnSetReorderable colDescr True
+    treeViewColumnSetResizable colDescr2 True
+    treeViewColumnSetReorderable colDescr2 True
 
-    treeViewColumnSetTitle colName  "Name"
-    treeViewColumnSetTitle colDescr "Description"
+    treeViewColumnSetTitle colName   "Name"
+    treeViewColumnSetTitle colDescr  "Description"
+    treeViewColumnSetTitle colDescr2 "Description 2"
 
-    rendererName  <- cellRendererTextNew
-    rendererDescr <- cellRendererTextNew
+    rendererName   <- cellRendererTextNew
+    rendererDescr  <- cellRendererTextNew
+    rendererDescr2 <- cellRendererTextNew
 
-    cellLayoutPackStart colName  rendererName  True
-    cellLayoutPackStart colDescr rendererDescr True
+    cellLayoutPackStart colName   rendererName   True
+    cellLayoutPackStart colDescr  rendererDescr  True
+    cellLayoutPackStart colDescr2 rendererDescr2 True
 
-    cellLayoutSetAttributes colName  rendererName  model nameDisp
-    cellLayoutSetAttributes colDescr rendererDescr model descrDisp
+    cellLayoutSetAttributes colName   rendererName   model nameDisp
+    cellLayoutSetAttributes colDescr  rendererDescr  model descrDisp
+    cellLayoutSetAttributes colDescr2 rendererDescr2 model descrDisp2
 
     void $ treeViewAppendColumn tv colName
     void $ treeViewAppendColumn tv colDescr
+    void $ treeViewAppendColumn tv colDescr2
+
 
   where
     nameDisp (NameNode     name) = [#text := name]
     nameDisp (TMPacketNode def ) = [#text := ST.toText (def ^. tmpdName)]
     nameDisp (TCNode       def ) = [#text := ST.toText (def ^. tcDefName)]
     nameDisp (TMParamNode  def ) = [#text := ST.toText (def ^. fpName)]
+    nameDisp (TCParamNode  def ) = [#text := ST.toText (def ^. tcpName)]
 
     descrDisp (NameNode     _  ) = [#text := ("" :: Text)]
     descrDisp (TMPacketNode def) = [#text := ST.toText (def ^. tmpdDescr)]
     descrDisp (TCNode       def) = [#text := ST.toText (def ^. tcDefDescr)]
     descrDisp (TMParamNode  def) = [#text := ST.toText (def ^. fpDescription)]
+    descrDisp (TCParamNode  def) = [#text := ST.toText (def ^. tcpDescr)]
+
+    descrDisp2 (NameNode     _  ) = [#text := ("" :: Text)]
+    descrDisp2 (TMPacketNode def) = [#text := ("" :: Text)]
+    descrDisp2 (TCNode       def) = [#text := ST.toText (def ^. tcDefDescr2)]
+    descrDisp2 (TMParamNode  def) = [#text := ("" :: Text)]
+    descrDisp2 (TCParamNode  def) = [#text := ("" :: Text)]
+
+
+    -- checkNameDescr search name descr =
+    --     let lname   = T.toLower (ST.toText name)
+    --         ldescr  = T.toLower (ST.toText descr)
+    --         lsearch = T.toLower search
+    --     in  (lsearch `T.isInfixOf` lname) || (lsearch `T.isInfixOf` ldescr)
+
+    -- searchFunc :: _ -> _ -> IO Bool
+    -- searchFunc m iter = do
+
+
+    --     path <- treeModelGetPath model iter
+    --     val  <- forestStoreGetValue model path
+    --     text <- get filterEntry #text
+
+    --     if T.null text
+    --         then return True
+    --         else do
+    --             case val of
+    --                 NameNode x ->
+    --                     return (T.toLower text `T.isInfixOf` T.toLower x)
+    --                 TMPacketNode pkt -> return $ checkNameDescr
+    --                     text
+    --                     (_tmpdName pkt)
+    --                     (_tmpdDescr pkt)
+    --                 TMParamNode param -> do
+    --                     return $ checkNameDescr text
+    --                                             (_fpName param)
+    --                                             (_fpDescription param)
+    --                 TCNode pkt -> do
+    --                     let lname   = T.toLower (ST.toText (_tcDefName pkt))
+    --                         ldescr  = T.toLower (ST.toText (_tcDefDescr pkt))
+    --                         ldescr2 = T.toLower (ST.toText (_tcDefDescr2 pkt))
+    --                         lsearch = T.toLower text
+    --                     return
+    --                         $  (lsearch `T.isInfixOf` lname)
+    --                         || (lsearch `T.isInfixOf` ldescr)
+    --                         || (lsearch `T.isInfixOf` ldescr2)
+
+
+    --                 TCParamNode param -> do
+    --                     return $ checkNameDescr text
+    --                                             (_tcpName param)
+    --                                             (_tcpDescr param)
+
