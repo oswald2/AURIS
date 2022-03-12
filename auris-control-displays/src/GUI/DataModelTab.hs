@@ -35,6 +35,7 @@ import           Data.TM.TMParameterDef
 
 import           Data.HashTable.ST.Basic       as HT
 
+import Data.GI.Base.GValue
 
 
 data DataNode =
@@ -43,6 +44,7 @@ data DataNode =
     | TMParamNode !TMParameterDef
     | TCNode !TCDef
     | TCParamNode !TCParameterDef
+    deriving Show
 
 
 
@@ -193,9 +195,6 @@ convertTCParams params =
 
 initializeTreeView :: TreeView -> ForestStore DataNode -> SearchEntry -> IO ()
 initializeTreeView tv model filterEntry = do
-    -- filterModel <- Gtk.new TreeModelFilter [#childModel := model]
-    -- treeModelFilterSetVisibleFunc filterModel (searchFunc filterModel)
-    -- treeViewSetModel tv (Just filterModel)
     treeViewSetModel tv (Just model)
 
     treeViewSetHeadersVisible tv True
@@ -235,6 +234,11 @@ initializeTreeView tv model filterEntry = do
     --               #searchChanged
     --               (treeModelFilterRefilter filterModel)
 
+    treeViewSetEnableSearch tv True
+    treeViewSetSearchColumn tv 0
+    treeViewSetSearchEntry tv (Just filterEntry)
+    treeViewSetSearchEqualFunc tv (searchFunc model)
+
   where
     nameDisp (NameNode     name) = [#text := name]
     nameDisp (TMPacketNode def ) = [#text := ST.toText (def ^. tmpdName)]
@@ -255,43 +259,48 @@ initializeTreeView tv model filterEntry = do
     descrDisp2 (TCParamNode  def) = [#text := ("" :: Text)]
 
 
-    -- checkNameDescr search name descr =
-    --     let lname   = T.toLower (ST.toText name)
-    --         ldescr  = T.toLower (ST.toText descr)
-    --         lsearch = T.toLower search
-    --     in  (lsearch `T.isInfixOf` lname) || (lsearch `T.isInfixOf` ldescr)
+    checkNameDescr search name descr =
+        let lname   = T.toLower (ST.toText name)
+            ldescr  = T.toLower (ST.toText descr)
+            lsearch = T.toLower search
+        in  (lsearch `T.isInfixOf` lname) || (lsearch `T.isInfixOf` ldescr)
 
-    -- searchFunc fModel m iter = do
-    --     text <- get filterEntry #text
-    --     if T.null text
-    --         then return True
-    --         else do
-    --             iter2 <- treeModelFilterConvertIterToChildIter fModel iter 
-    --             path <- treeModelGetPath model iter2
-    --             val  <- forestStoreGetValue model path
-    --             case val of
-    --                 NameNode _ -> return True 
-    --                 TMPacketNode pkt -> return $ checkNameDescr
-    --                     text
-    --                     (_tmpdName pkt)
-    --                     (_tmpdDescr pkt)
-    --                 TMParamNode param -> do
-    --                     return $ checkNameDescr text
-    --                                             (_fpName param)
-    --                                             (_fpDescription param)
-    --                 TCNode pkt -> do
-    --                     let lname   = T.toLower (ST.toText (_tcDefName pkt))
-    --                         ldescr  = T.toLower (ST.toText (_tcDefDescr pkt))
-    --                         ldescr2 = T.toLower (ST.toText (_tcDefDescr2 pkt))
-    --                         lsearch = T.toLower text
-    --                     return
-    --                         $  (lsearch `T.isInfixOf` lname)
-    --                         || (lsearch `T.isInfixOf` ldescr)
-    --                         || (lsearch `T.isInfixOf` ldescr2)
+    searchFunc fModel _ column text iter = do
+        --text <- get filterEntry #text
+        traceM $ "searchFunc: " <> text
+        if T.null text
+            then return False
+            else do
+                path <- treeModelGetPath model iter
+                val  <- forestStoreGetValue model path
+                traceM $ "got Value: " <> T.pack (show val)
+                case val of
+                    NameNode     _   -> 
+                        -- we always return "Not Found" which is True
+                        return True
+                    TMPacketNode pkt -> return $ not $ checkNameDescr
+                        text
+                        (_tmpdName pkt)
+                        (_tmpdDescr pkt)
+                    TMParamNode param -> do
+                        return $ not $ checkNameDescr text
+                                                      (_fpName param)
+                                                      (_fpDescription param)
+                    TCNode pkt -> do
+                        let lname   = T.toLower (ST.toText (_tcDefName pkt))
+                            ldescr  = T.toLower (ST.toText (_tcDefDescr pkt))
+                            ldescr2 = T.toLower (ST.toText (_tcDefDescr2 pkt))
+                            lsearch = T.toLower text
+                        return $ not
+                            (  (lsearch `T.isInfixOf` lname)
+                            || (lsearch `T.isInfixOf` ldescr)
+                            || (lsearch `T.isInfixOf` ldescr2)
+                            )
 
 
-    --                 TCParamNode param -> do
-    --                     return $ checkNameDescr text
-    --                                             (_tcpName param)
-    --                                             (_tcpDescr param)
+                    TCParamNode param -> do
+                        return $ not $ checkNameDescr text
+                                                      (_tcpName param)
+                                                      (_tcpDescr param)
+
 

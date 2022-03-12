@@ -3198,6 +3198,9 @@ Author: Michael Oswald
                                     <property name="reorderable">True</property>
                                     <property name="rules-hint">True</property>
                                     <property name="enable-tree-lines">True</property>
+                                    <child internal-child="selection">
+                                      <object class="GtkTreeSelection"/>
+                                    </child>
                                   </object>
                                 </child>
                               </object>
@@ -3217,7 +3220,7 @@ Author: Michael Oswald
                                     <property name="can-focus">False</property>
                                     <property name="margin-start">5</property>
                                     <property name="margin-end">5</property>
-                                    <property name="label" translatable="yes">Filter:</property>
+                                    <property name="label" translatable="yes">Search:</property>
                                   </object>
                                   <packing>
                                     <property name="expand">False</property>
