@@ -47,56 +47,41 @@ import qualified RIO.Text                      as T
 import           ByteString.StrictBuilder
 import           Control.Lens                   ( from )
 
-import           Data.Binary
 import           Data.Aeson
-import           Data.Bits                      ( Bits
-                                                    ( (.|.)
-                                                    , complement
-                                                    , shiftR
-                                                    , (.&.)
-                                                    , shiftL
-                                                    )
-                                                )
+import qualified Data.Attoparsec.Binary        as A
 import           Data.Attoparsec.ByteString     ( Parser )
 import qualified Data.Attoparsec.ByteString    as A
-import qualified Data.Attoparsec.Binary        as A
+import           Data.Binary
+import           Data.Bits                      ( Bits
+                                                    ( (.&.)
+                                                    , (.|.)
+                                                    , complement
+                                                    , shiftL
+                                                    , shiftR
+                                                    )
+                                                )
 import           Data.Word.Word24
 
 import           Codec.Serialise
 
 import           General.SizeOf
 
-import           General.Time
-import           General.SetBitField            ( SetValue(..) )
 import           General.GetBitField            ( GetValue(..) )
-import           General.Types                  ( ByteOffset
-                                                , Endian(..)
-                                                )
 import           General.PUSTypes               ( PFC(..)
                                                 , PTC(..)
                                                 )
+import           General.SetBitField            ( SetValue(..) )
+import           General.Time
+import           General.Types                  ( ByteOffset
+                                                , Endian(..)
+                                                )
 import qualified Text.Builder                  as TB
 
-import           Data.Thyme.Time.Core           ( YearMonthDay(ymdYear)
-                                                , LocalTime
-                                                    ( localTimeOfDay
-                                                    , localDay
-                                                    )
-                                                , TimeOfDay
-                                                    ( todSec
-                                                    , todHour
-                                                    , todMin
-                                                    )
-                                                , utc
-                                                , utcLocalTime
-                                                , gregorian
-                                                , TimeDiff(microseconds)
-                                                )
-import           Data.Thyme.Clock.POSIX         ( posixTime )
-import           Data.Thyme.Calendar.OrdinalDate
-                                                ( OrdinalDate(odDay)
-                                                , ordinalDate
-                                                )
+import           Data.Time.Calendar
+import           Data.Time.Calendar.OrdinalDate
+import           Data.Time.Clock
+import           Data.Time.Clock.POSIX
+import           Data.Time.LocalTime
 
 
 
@@ -179,47 +164,51 @@ instance SizeOf CDSTime where
     sizeof (CDSTime _ _ (Just _)) = 8
     sizeof (CDSTime _ _ Nothing ) = 6
 
-instance Display CUCTime where
-    textDisplay t'@(CUCTime _ _ _ False) =
-        let t = timeToMicro t'
-            t1 :: LocalTime
-            t1 = t ^. from microseconds . from posixTime . utcLocalTime utc
-            date          = localDay t1 ^. gregorian
-            time          = localTimeOfDay t1
-            dayOfYear     = odDay $ localDay t1 ^. ordinalDate
-            (secs, micro) = fromEnum (todSec time) `quotRem` 1_000_000
-        in  TB.run
-                $  TB.padFromLeft 4 '0' (TB.decimal (ymdYear date))
-                <> TB.char '.'
-                <> TB.padFromLeft 3 '0' (TB.decimal dayOfYear)
-                <> TB.char '.'
-                <> TB.padFromLeft 2 '0' (TB.decimal (todHour time))
-                <> TB.char '.'
-                <> TB.padFromLeft 2 '0' (TB.decimal (todMin time))
-                <> TB.char '.'
-                <> TB.padFromLeft 2 '0' (TB.decimal secs)
-                <> TB.char '.'
-                <> TB.padFromLeft 6 '0' (TB.decimal micro)
-    textDisplay (CUCTime _ sec mic True) =
-        let secs  = sec `rem` 60
-            mins  = sec `quot` 60 `rem` 60
-            hours = sec `quot` 3600 `rem` 24
-            days  = sec `quot` 86400 `rem` 365
-            years = sec `quot` (86400 * 365)
-            sign  = if sec < 0 then '-' else '+'
-        in  TB.run
-                $  TB.char sign
-                <> TB.padFromLeft 4 '0' (TB.decimal years)
-                <> TB.char '.'
-                <> TB.padFromLeft 3 '0' (TB.decimal days)
-                <> TB.char '.'
-                <> TB.padFromLeft 2 '0' (TB.decimal hours)
-                <> TB.char '.'
-                <> TB.padFromLeft 2 '0' (TB.decimal mins)
-                <> TB.char '.'
-                <> TB.padFromLeft 2 '0' (TB.decimal secs)
-                <> TB.char '.'
-                <> TB.padFromLeft 6 '0' (TB.decimal (abs mic))
+
+instance Display CUCTime where 
+    textDisplay x = T.pack (show x)
+
+-- instance Display CUCTime where
+--     textDisplay t'@(CUCTime _ _ _ False) =
+--         let t = timeToMicro t'
+--             t1 :: LocalTime
+--             t1 = t ^. from microseconds . from posixTime . utcLocalTime utc
+--             date          = localDay t1 ^. gregorian
+--             time          = localTimeOfDay t1
+--             dayOfYear     = odDay $ localDay t1 ^. ordinalDate
+--             (secs, micro) = fromEnum (todSec time) `quotRem` 1_000_000
+--         in  TB.run
+--                 $  TB.padFromLeft 4 '0' (TB.decimal (ymdYear date))
+--                 <> TB.char '.'
+--                 <> TB.padFromLeft 3 '0' (TB.decimal dayOfYear)
+--                 <> TB.char '.'
+--                 <> TB.padFromLeft 2 '0' (TB.decimal (todHour time))
+--                 <> TB.char '.'
+--                 <> TB.padFromLeft 2 '0' (TB.decimal (todMin time))
+--                 <> TB.char '.'
+--                 <> TB.padFromLeft 2 '0' (TB.decimal secs)
+--                 <> TB.char '.'
+--                 <> TB.padFromLeft 6 '0' (TB.decimal micro)
+--     textDisplay (CUCTime _ sec mic True) =
+--         let secs  = sec `rem` 60
+--             mins  = sec `quot` 60 `rem` 60
+--             hours = sec `quot` 3600 `rem` 24
+--             days  = sec `quot` 86400 `rem` 365
+--             years = sec `quot` (86400 * 365)
+--             sign  = if sec < 0 then '-' else '+'
+--         in  TB.run
+--                 $  TB.char sign
+--                 <> TB.padFromLeft 4 '0' (TB.decimal years)
+--                 <> TB.char '.'
+--                 <> TB.padFromLeft 3 '0' (TB.decimal days)
+--                 <> TB.char '.'
+--                 <> TB.padFromLeft 2 '0' (TB.decimal hours)
+--                 <> TB.char '.'
+--                 <> TB.padFromLeft 2 '0' (TB.decimal mins)
+--                 <> TB.char '.'
+--                 <> TB.padFromLeft 2 '0' (TB.decimal secs)
+--                 <> TB.char '.'
+--                 <> TB.padFromLeft 6 '0' (TB.decimal (abs mic))
 
 
 {-# INLINABLE mkCUCTime #-}
@@ -377,7 +366,7 @@ instance SetValue CUCTime where
         setValue vec (off + 4) endian m
     setValue vec off endian (CUCTime CucUnix sec mic _) = do
         let s = toEncodedSec sec
-        setValue vec off endian s
+        setValue vec off       endian s
         setValue vec (off + 4) endian mic
 
 {-# INLINABLE getValueCucTime #-}
@@ -460,11 +449,10 @@ cdsTimeParser = do
 
 
 {-# INLINABLE decodeCdsTime #-}
-decodeCdsTime :: ByteString -> Either Text CDSTime 
-decodeCdsTime dat = 
-    case A.parseOnly cdsTimeParser dat of 
-        Left err -> Left (T.pack err)
-        Right x -> Right x
+decodeCdsTime :: ByteString -> Either Text CDSTime
+decodeCdsTime dat = case A.parseOnly cdsTimeParser dat of
+    Left  err -> Left (T.pack err)
+    Right x   -> Right x
 
 
 {-# INLINABLE toEncodedSec #-}

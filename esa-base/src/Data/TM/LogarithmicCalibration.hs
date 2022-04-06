@@ -35,7 +35,7 @@ module Data.TM.LogarithmicCalibration
     ) where
 
 import           RIO                     hiding ( (.~) )
-import qualified RIO.Text                      as T
+--import qualified RIO.Text                      as T
 
 import           Control.Lens                   ( (.~)
                                                 , makeLenses

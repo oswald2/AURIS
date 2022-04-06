@@ -69,7 +69,6 @@ library
     colour,
     data-default-class,
     multiset,
-    thyme,
     time,
     pretty-show,
     gi-gtk,

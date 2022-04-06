@@ -95,7 +95,7 @@ import           Protocol.ProtocolSwitcher      ( InterfaceSwitcherMap
 
 import           Control.PUS.Classes
 
-import           Data.Thyme.Clock.POSIX
+import           Data.Time.Clock.POSIX
 
 import           Protocol.SLE
 

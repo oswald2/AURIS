@@ -69,7 +69,6 @@ library
     , esa-base 
     , unliftio
     , resourcet
-    , thyme
     , text
 
 

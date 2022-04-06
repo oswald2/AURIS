@@ -4,7 +4,6 @@ module Data.TC.ValueConversion
     ) where
 
 import           RIO
-import qualified RIO.Text                      as T
 import qualified Data.Text.Short               as ST
 
 import           General.Time

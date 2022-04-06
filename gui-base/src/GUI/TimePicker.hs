@@ -122,7 +122,7 @@ timePickerGetTime g = do
 
 timePickerSetTime :: TimePicker -> SunTime -> IO ()
 timePickerSetTime g time = do
-    let (y, d, h, m, s, micro) = timeToComponents time
+    let (y, d, _, _, h, m, s, micro) = timeToComponents time
 
     spinButtonSetValue (tpYears g)   (fromIntegral y)
     spinButtonSetValue (tpDays g)    (fromIntegral d)

@@ -36,7 +36,7 @@ module Data.TM.PolynomialCalibration
 
 
 import           RIO                     hiding ( (.~) )
-import qualified RIO.Text                      as T
+-- import qualified RIO.Text                      as T
 
 import           Codec.Serialise
 import           Control.Lens                   ( (.~)

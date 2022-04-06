@@ -17,7 +17,7 @@
 #
 # resolver: ./custom-snapshot.yaml
 # resolver: https://example.com/snapshots/2018-01-01.yaml
-resolver: lts-18.26
+resolver: lts-19.2
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -58,18 +58,10 @@ packages:
 allow-newer: true 
 
 extra-deps:
-- attoparsec-data-1.0.4.1
-- closed-0.2.0.1
-- attoparsec-time-1
-- bytestring-to-vector-0.3.0.1
-- hw-prim-bits-0.1.0.4
 - timers-updatable-0.2.0.2
-#- Chart-cairo-1.9.3@sha256:f484a7194ca08ed67f02aa626e2f8f4d1a9b50624e0d50e3ced62958f7481cca,925
-- refined-0.6.1@sha256:d5d713f0a2ad79d1c049d2d132fd8c2078b883b5ea3db876087eaec102843e57,2748
-- these-skinny-0.7.4@sha256:e29336a1a70a497e09d8266f8438efb30a807bafaa6b00f5a136f7493efb3160,1239
-- gi-gtksource-3.0.24
-- gi-cairo-connector-0.1.0@sha256:a79c34c4f22f81a938c5835f623de55fdf1f0f08435897bad68f58e01ffd1464,1213
-- gi-cairo-render-0.1.0@sha256:cb27b31b373c55c5b384a331e439d1ebc2fb3e02c8a58c9bfb83218d5467af2b,3553
+- git: https://github.com/winterland1989/word24
+  commit: 445f791e35ddc8098f05879dbcd07c41b115cb39
+- word-compat-0.0.2
 
 # Extra package databases containing global packages
 # extra-package-dbs: []
@@ -97,4 +89,3 @@ extra-deps:
 # stack build --profile --ghc-options="-fno-prof-auto"
 apply-ghc-options: everything
 rebuild-ghc-options: true
-ghc-options: -freverse-errors 

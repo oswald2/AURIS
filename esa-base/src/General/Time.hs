@@ -105,25 +105,18 @@ import           RIO
 import           RIO.Partial                    ( read )
 import qualified RIO.Text                      as T
 
-import           Control.Lens.Iso
 import           Codec.Serialise
 
-import           Data.Bits
-import           Data.Thyme.Clock
-import           Data.Thyme.Time.Core
-import           Data.Thyme.Clock.POSIX
-import           Data.Thyme.Calendar.OrdinalDate
-import qualified Data.Time.Clock               as TI
-import           Data.Time.Clock.System         ( systemEpochDay )
-import qualified Data.Time.Calendar            as TI
-
 import           Data.Aeson
+import           Data.Bits
+import           Data.Time
+import           Data.Time.Calendar.OrdinalDate
+import           Data.Time.Clock
+import           Data.Time.Clock.POSIX
 
 import qualified Text.Builder                  as TB
---import           Formatting
 
 import           Text.Megaparsec
---import           Text.Megaparsec.Char.Lexer
 import           Text.Megaparsec.Char
 
 import qualified Data.Attoparsec.ByteString    as A
@@ -131,8 +124,8 @@ import qualified Data.Attoparsec.ByteString.Char8
                                                as A
 
 
-import           General.Types                  ( ToDouble(..) )
 import           General.TimeSpan
+import           General.Types                  ( ToDouble(..) )
 
 type Parser = Parsec Void Text
 
@@ -319,8 +312,9 @@ microSecond = fromIntegral microSecInt
 {-# INLINABLE getCurrentTime #-}
 getCurrentTime :: IO SunTime
 getCurrentTime = do
-    t <- Data.Thyme.Clock.getCurrentTime
-    return (SunTime (t ^. posixTime . microseconds) False)
+    t <- Data.Time.Clock.getCurrentTime
+    let ts :: Double = realToFrac (utcTimeToPOSIXSeconds t) * 1_000_000
+    return (SunTime (round ts) False)
 
 
 -- | show the low level internal data of a time
@@ -330,85 +324,66 @@ displayRaw (SunTime mic delta) = utf8BuilderToText
     ("SunTime " <> displayShow mic <> " " <> displayShow delta)
 
 
-toUTCTime :: SunTime -> TI.UTCTime
+toUTCTime :: SunTime -> UTCTime
 toUTCTime (SunTime t _) =
-    let (seconds, micro      ) = t `quotRem` 1_000_000
-        (days   , timeSeconds) = seconds `quotRem` 86400
-        day :: TI.Day
-        day    = TI.addDays (fromIntegral days) systemEpochDay
-        micro' = timeSeconds * 1_000_000 + micro
-        pico   = micro' * 1_000_000
-        time :: TI.DiffTime
-        time = TI.picosecondsToDiffTime (fromIntegral pico)
-    in  TI.UTCTime day time
+    posixSecondsToUTCTime (realToFrac t / 1_000_000)
+
 
 -- | Display a 'SunTime' in ISO format
 {-# INLINABLE displayISO #-}
 displayISO :: SunTime -> Text
-displayISO (SunTime t False) =
-    let t1 :: LocalTime
-        t1 = t ^. from microseconds . from posixTime . utcLocalTime utc
-        date          = localDay t1 ^. gregorian
-        time          = localTimeOfDay t1
-        (secs, micro) = fromEnum (todSec time) `quotRem` 1_000_000
-    in  TB.run $
-            TB.padFromLeft 4 '0' (TB.decimal (ymdYear date))
+displayISO ts@(SunTime _ False) =
+    let (yr, _doy, mn, dom, hh, mm, ss, micro) = timeToComponents ts
+    in  TB.run
+            $  TB.padFromLeft 4 '0' (TB.decimal yr)
             <> TB.char '-'
-            <> TB.padFromLeft 2 '0' (TB.decimal (ymdMonth date))
+            <> TB.padFromLeft 2 '0' (TB.decimal mn)
             <> TB.char '-'
-            <> TB.padFromLeft 2 '0' (TB.decimal (ymdDay date))
+            <> TB.padFromLeft 2 '0' (TB.decimal dom)
             <> TB.char 'T'
-            <> TB.padFromLeft 2 '0' (TB.decimal (todHour time))
+            <> TB.padFromLeft 2 '0' (TB.decimal hh)
             <> TB.char '.'
-            <> TB.padFromLeft 2 '0' (TB.decimal (todMin time))
+            <> TB.padFromLeft 2 '0' (TB.decimal mm)
             <> TB.char '.'
-            <> TB.padFromLeft 2 '0' (TB.decimal secs)
+            <> TB.padFromLeft 2 '0' (TB.decimal ss)
             <> TB.char '.'
             <> TB.padFromLeft 6 '0' (TB.decimal micro)
-displayISO (SunTime t True) =
-    let t1 :: LocalTime
-        t1 = t ^. from microseconds . from posixTime . utcLocalTime utc
-        date          = localDay t1 ^. gregorian
-        time          = localTimeOfDay t1
-        (secs, micro) = fromEnum (todSec time) `quotRem` 1_000_000
+displayISO ts@(SunTime t True) =
+    let (yr, _doy, mn, dom, hh, mm, ss, micro) = timeToComponents ts
         sign          = if t < 0 then '-' else '+'
-    in  TB.run $ 
-            TB.char sign 
-            <> TB.padFromLeft 4 '0' (TB.decimal (ymdYear date))
+    in  TB.run
+            $  TB.char sign
+            <>  TB.padFromLeft 4 '0' (TB.decimal yr)
             <> TB.char '-'
-            <> TB.padFromLeft 2 '0' (TB.decimal (ymdMonth date))
+            <> TB.padFromLeft 2 '0' (TB.decimal mn)
             <> TB.char '-'
-            <> TB.padFromLeft 2 '0' (TB.decimal (ymdDay date))
+            <> TB.padFromLeft 2 '0' (TB.decimal dom)
             <> TB.char 'T'
-            <> TB.padFromLeft 2 '0' (TB.decimal (todHour time))
+            <> TB.padFromLeft 2 '0' (TB.decimal hh)
             <> TB.char '.'
-            <> TB.padFromLeft 2 '0' (TB.decimal (todMin time))
+            <> TB.padFromLeft 2 '0' (TB.decimal mm)
             <> TB.char '.'
-            <> TB.padFromLeft 2 '0' (TB.decimal secs)
+            <> TB.padFromLeft 2 '0' (TB.decimal ss)
             <> TB.char '.'
             <> TB.padFromLeft 6 '0' (TB.decimal micro)
+
 
 
 displayTimeMilli :: SunTime -> Text
-displayTimeMilli (SunTime t False) =
-    let t1 :: LocalTime
-        t1 = t ^. from microseconds . from posixTime . utcLocalTime utc
-        date          = localDay t1 ^. gregorian
-        time          = localTimeOfDay t1
-        dayOfYear     = odDay $ localDay t1 ^. ordinalDate
-        (secs, micro) = fromEnum (todSec time) `quotRem` 1_000_000
-    in  TB.run $ 
-            TB.padFromLeft 4 '0' (TB.decimal (ymdYear date))
+displayTimeMilli ts@(SunTime _t False) =
+    let (yr, doy, _mn, _dom, hh, mm, ss, micro) = timeToComponents ts
+    in  TB.run
+            $  TB.padFromLeft 4 '0' (TB.decimal yr)
             <> TB.char '.'
-            <> TB.padFromLeft 3 '0' (TB.decimal dayOfYear)
+            <> TB.padFromLeft 3 '0' (TB.decimal doy)
             <> TB.char '.'
-            <> TB.padFromLeft 2 '0' (TB.decimal (todHour time))
+            <> TB.padFromLeft 2 '0' (TB.decimal hh)
             <> TB.char '.'
-            <> TB.padFromLeft 2 '0' (TB.decimal (todMin time))
+            <> TB.padFromLeft 2 '0' (TB.decimal mm)
             <> TB.char '.'
-            <> TB.padFromLeft 2 '0' (TB.decimal secs)
+            <> TB.padFromLeft 2 '0' (TB.decimal ss)
             <> TB.char '.'
-            <> TB.padFromLeft 3 '0' (TB.decimal (micro `quot` 1000))
+            <> TB.padFromLeft 3 '0' (TB.decimal micro)
 displayTimeMilli tt =
     let secs  = sec `rem` 60
         mins  = sec `quot` 60 `rem` 60
@@ -418,8 +393,8 @@ displayTimeMilli tt =
         mic   = tdsMicro tt
         sec   = tdsSecs tt
         sign  = if sec < 0 then '-' else '+'
-    in TB.run $ 
-            TB.char sign 
+    in  TB.run
+            $  TB.char sign
             <> TB.padFromLeft 4 '0' (TB.decimal years)
             <> TB.char '.'
             <> TB.padFromLeft 3 '0' (TB.decimal days)
@@ -434,18 +409,19 @@ displayTimeMilli tt =
 
 
 
-timeToComponents :: SunTime -> (Year, DayOfYear, Hour, Minute, Int, Int)
+timeToComponents :: SunTime -> (Integer, Int, Int, Int, Int, Int, Int, Int)
 timeToComponents (SunTime t _) =
-    let t1 :: LocalTime
-        t1 = t ^. from microseconds . from posixTime . utcLocalTime utc
-        date          = localDay t1 ^. gregorian
-        time          = localTimeOfDay t1
-        dayOfYear     = odDay $ localDay t1 ^. ordinalDate
-        (secs, micro) = fromEnum (todSec time) `quotRem` 1_000_000
-    in  (ymdYear date, dayOfYear, todHour time, todMin time, secs, micro)
+    let (_secs, micro) = t `quotRem` 1_000_000
+        ts = realToFrac t / 1_000_000
+        LocalTime day (TimeOfDay hh mm ss)= utcToLocalTime utc (posixSecondsToUTCTime ts)
+        (yr, mn, dom) = toGregorian day 
+        (_, doy) = toOrdinalDate day 
+        sec = truncate ss
+    in  (yr, doy, mn, dom, hh, mm, sec, fromIntegral micro)
 
-timeFromComponents
-    :: Year -> DayOfYear -> Hour -> Minute -> Int -> Int -> SunTime
+-- timeFromComponents
+--     :: Year -> DayOfYear -> Hour -> Minute -> Int -> Int -> SunTime
+timeFromComponents :: Int -> Int -> Int -> Int -> Int -> Int -> SunTime
 timeFromComponents y d h m s micro =
     let sec = daySegmToSeconds y d h m s
     in  makeTime sec (fromIntegral micro) False
@@ -454,23 +430,18 @@ timeFromComponents y d h m s micro =
 
 instance Display SunTime where
     -- | display a 'SunTime' in SCOS format (with day of year)
-    textDisplay (SunTime t False) =
-        let t1 :: LocalTime
-            t1 = t ^. from microseconds . from posixTime . utcLocalTime utc
-            date          = localDay t1 ^. gregorian
-            time          = localTimeOfDay t1
-            dayOfYear     = odDay $ localDay t1 ^. ordinalDate
-            (secs, micro) = fromEnum (todSec time) `quotRem` 1_000_000
-        in  TB.run $ 
-                TB.padFromLeft 4 '0' (TB.decimal (ymdYear date))
+    textDisplay t1@(SunTime _t False) =
+        let (yr, doy, _mn, _dom, hh, mm, ss, micro) = timeToComponents t1
+        in  TB.run
+                $  TB.padFromLeft 4 '0' (TB.decimal yr)
                 <> TB.char '.'
-                <> TB.padFromLeft 3 '0' (TB.decimal dayOfYear)
+                <> TB.padFromLeft 3 '0' (TB.decimal doy)
                 <> TB.char '.'
-                <> TB.padFromLeft 2 '0' (TB.decimal (todHour time))
+                <> TB.padFromLeft 2 '0' (TB.decimal hh)
                 <> TB.char '.'
-                <> TB.padFromLeft 2 '0' (TB.decimal (todMin time))
+                <> TB.padFromLeft 2 '0' (TB.decimal mm)
                 <> TB.char '.'
-                <> TB.padFromLeft 2 '0' (TB.decimal secs)
+                <> TB.padFromLeft 2 '0' (TB.decimal ss)
                 <> TB.char '.'
                 <> TB.padFromLeft 6 '0' (TB.decimal micro)
     textDisplay tt =
@@ -482,8 +453,8 @@ instance Display SunTime where
             mic   = tdsMicro tt
             sec   = tdsSecs tt
             sign  = if sec < 0 then '-' else '+'
-        in  TB.run $ 
-                TB.char sign 
+        in  TB.run
+                $  TB.char sign
                 <> TB.padFromLeft 4 '0' (TB.decimal years)
                 <> TB.char '.'
                 <> TB.padFromLeft 3 '0' (TB.decimal days)
@@ -506,26 +477,21 @@ displayDouble t = utf8BuilderToText $ displayShow (toDouble t) <> " s"
 -- protocol
 {-# INLINABLE edenTime #-}
 edenTime :: SunTime -> ByteString
-edenTime (SunTime t _) =
-    let t1 :: LocalTime
-        t1 = t ^. from microseconds . from posixTime . utcLocalTime utc
-        date          = localDay t1 ^. gregorian
-        time          = localTimeOfDay t1
-        dayOfYear     = odDay $ localDay t1 ^. ordinalDate
-        (secs, micro) = fromEnum (todSec time) `quotRem` 1_000_000
+edenTime t =
+    let (yr, doy, _mn, _dom, hh, mm, ss, micro) = timeToComponents t
         str =
             TB.run
-                $  TB.padFromLeft 4 '0' (TB.decimal (ymdYear date))
+                $  TB.padFromLeft 4 '0' (TB.decimal yr)
                 <> TB.char ' '
-                <> TB.padFromLeft 3 '0' (TB.decimal dayOfYear)
+                <> TB.padFromLeft 3 '0' (TB.decimal doy)
                 <> TB.char ':'
-                <> TB.padFromLeft 2 '0' (TB.decimal (todHour time))
+                <> TB.padFromLeft 2 '0' (TB.decimal hh)
                 <> TB.char ':'
-                <> TB.padFromLeft 2 '0' (TB.decimal (todMin time))
+                <> TB.padFromLeft 2 '0' (TB.decimal mm)
                 <> TB.char ':'
-                <> TB.padFromLeft 2 '0' (TB.decimal secs)
+                <> TB.padFromLeft 2 '0' (TB.decimal ss)
                 <> TB.char '.'
-                <> TB.padFromLeft 3 '0' (TB.decimal (micro `quot` 1_000))
+                <> TB.padFromLeft 3 '0' (TB.decimal micro)
                 <> TB.char ' '
     in  encodeUtf8 str
 

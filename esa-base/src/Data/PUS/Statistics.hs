@@ -1,4 +1,4 @@
-{-# LANGUAGE  TemplateHaskell #-}
+{-# LANGUAGE  TemplateHaskell, DeriveAnyClass #-}
 module Data.PUS.Statistics
     ( Statistics(..)
     , statNewDU
@@ -26,17 +26,11 @@ import           Control.Lens
 
 import           Codec.Serialise
 import           Data.Aeson
-import qualified Data.Aeson.Encoding           as E
-import qualified Data.Aeson.Types              as E
 
-import           Data.AdditiveGroup
-import           Data.Scientific
-
-import           Data.Thyme.Clock
-import           Data.Thyme.Clock.POSIX
-import qualified Data.Time.Calendar            as DT
+import           Data.Time.Clock.POSIX
 import qualified Data.Time.Clock               as DT
-import           Data.Time.Clock.System         ( systemEpochDay )
+
+
 
 data Statistics = Statistics
     { _statN       :: !Int64
@@ -56,7 +50,7 @@ initialStatistics = Statistics { _statN       = 0
 
 statCurrentTime :: Statistics -> TimeStamp
 statCurrentTime st =
-    TimeStamp $ fromMaybe (fromSeconds @Int64 0) (_statCurrent st)
+    TimeStamp $ fromMaybe (0) (_statCurrent st)
 
 statNewDU :: POSIXTime -> Int64 -> Statistics -> Statistics
 statNewDU now size s =
@@ -71,60 +65,49 @@ statCalc !s1 !s2 =
         n     = s2 ^. statN - s1 ^. statN
     in  case (s1 ^. statCurrent, s2 ^. statCurrent) of
             (Just t1, Just t2) ->
-                let diff      = toSeconds (t2 ^-^ t1)
-                    !duRate   = fromIntegral n / diff
-                    !dataRate = fromIntegral bytes / diff
+                let diff      = t2 - t1
+                    !duRate   = fromIntegral n / realToFrac diff
+                    !dataRate = fromIntegral bytes / realToFrac diff
                 in  if diff == 0.0 then (0, 0) else (duRate, dataRate)
             _ -> (0.0, 0.0)
 
 statTotal :: Statistics -> (Double, Double)
 statTotal s = case (s ^. statFirst, s ^. statCurrent) of
     (Just start, Just end) ->
-        let diff         = toSeconds (end ^-^ start)
-            !duTotal     = fromIntegral (s ^. statN) / diff
-            !duTotalRate = fromIntegral (s ^. statBytes) / diff
+        let diff         = end - start
+            !duTotal     = fromIntegral (s ^. statN) / realToFrac diff
+            !duTotalRate = fromIntegral (s ^. statBytes) / realToFrac diff
         in  if diff == 0 then (0, 0) else (duTotal, duTotalRate)
     _ -> (0, 0)
 
 
 newtype TimeStamp = TimeStamp POSIXTime
-  deriving (Eq, Ord, Show, Generic)
+  deriving stock (Eq, Ord, Show, Generic)
+  deriving anyclass (FromJSON, ToJSON)
+
 
 
 toUTCTime :: TimeStamp -> DT.UTCTime
-toUTCTime (TimeStamp t) =
-    let
-        (secs, micro    ) = (t ^. microseconds) `quotRem` 1_000_000
-        (days, daysInSec) = secs `quotRem` 86400
-        day               = DT.addDays (fromIntegral days) systemEpochDay
-        pico =
-            fromIntegral daysInSec
-                * 1_000_000_000_000
-                + (fromIntegral micro * 1_000_000)
-        dtime = DT.picosecondsToDiffTime pico
-    in
-        DT.UTCTime day dtime
+toUTCTime (TimeStamp t) = posixSecondsToUTCTime t
 
 nullTimeStamp :: TimeStamp
-nullTimeStamp = TimeStamp (fromSeconds @Int64 0)
+nullTimeStamp = TimeStamp 0
 
 instance Serialise TimeStamp where
-    encode (TimeStamp t) = Codec.Serialise.encode (t ^. microseconds)
-    decode = do
-        v <- Codec.Serialise.decode
-        pure (TimeStamp (v ^. from microseconds))
+    encode (TimeStamp t) = Codec.Serialise.encode (posixSecondsToUTCTime t)
+    decode = TimeStamp . utcTimeToPOSIXSeconds <$> Codec.Serialise.decode
 
-instance FromJSON TimeStamp where
-    parseJSON (Number n) =
-        let v :: Int64
-            v = fromMaybe 0 (toBoundedInteger n)
-        in  pure $ TimeStamp (v ^. from microseconds)
-    parseJSON invalid = E.prependFailure "parsing TimeStamp failed, "
-                                         (E.typeMismatch "Number" invalid)
+-- instance FromJSON TimeStamp where
+--     parseJSON (Number n) =
+--         let v :: Int64
+--             v = fromMaybe 0 (toBoundedInteger n)
+--         in  pure $ TimeStamp (v ^. from microseconds)
+--     parseJSON invalid = E.prependFailure "parsing TimeStamp failed, "
+--                                          (E.typeMismatch "Number" invalid)
 
-instance ToJSON TimeStamp where
-    toJSON (TimeStamp t) = Number (fromIntegral (t ^. microseconds))
-    toEncoding (TimeStamp t) = E.int64 (t ^. microseconds)
+-- instance ToJSON TimeStamp where
+--     toJSON (TimeStamp t) = Number (fromIntegral (t ^. microseconds))
+--     toEncoding (TimeStamp t) = E.int64 (t ^. microseconds)
 
 data TMFrameStats = TMFrameStats
     { tmStatFrameTotal      :: !Double

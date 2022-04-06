@@ -1,5 +1,5 @@
 flags: {}
-resolver: lts-18.26
+resolver: lts-19.2
 extra-deps:
 - attoparsec-data-1.0.4.1
 - hw-prim-bits-0.1.0.4

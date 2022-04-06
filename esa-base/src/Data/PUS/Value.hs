@@ -28,7 +28,6 @@ module Data.PUS.Value
 import           RIO
 import qualified RIO.ByteString                as B
 import qualified RIO.Text                      as T
-import qualified RIO.HashMap                   as HM
 import qualified RIO.Vector                    as V
 import qualified RIO.Vector.Partial            as V
                                                 ( (!) )
@@ -38,62 +37,55 @@ import qualified Data.ByteString.Char8         as BC
 import           Data.Text.Short                ( ShortText )
 import qualified Data.Text.Short               as ST
 
-import           Data.Int.Int24                 ( Int24 )
-import           Data.Word.Word24               ( Word24 )
-import           Data.Bits                      ( Bits
-                                                    ( (.|.)
-                                                    , (.&.)
-                                                    , shiftR
-                                                    , shiftL
-                                                    )
-                                                )
-import           Data.Attoparsec.ByteString    as A
-                                                ( parseOnly )
-import           Data.Attoparsec.Binary        as A
-                                                ( anyWord64be )
-import           Data.Aeson                    as AE
-                                                ( FromJSON(parseJSON)
-                                                , ToJSON(toJSON, toEncoding)
-                                                , pairs
-                                                , (.:)
-                                                , object
-                                                , KeyValue((.=))
-                                                )
-import qualified Data.Aeson                    as AE
-                                                ( Value(String, Object) )
-import           Data.ByteString.Base64.Type    ( getByteString64
-                                                , makeByteString64
-                                                )
-import           Data.Attoparsec.ByteString.Char8
-                                               as A
-                                                ( decimal )
 import           ByteString.StrictBuilder       ( asciiIntegral
                                                 , builderBytes
                                                 , word64BE
                                                 )
+import           Data.Aeson                    as AE
+                                                ( (.:)
+                                                , FromJSON(parseJSON)
+                                                , KeyValue((.=))
+                                                , ToJSON(toEncoding, toJSON)
+                                                , object
+                                                , pairs
+                                                )
+import qualified Data.Aeson                    as AE
+                                                ( Value(Object, String) )
+import qualified Data.Aeson.KeyMap             as AE
+import           Data.Attoparsec.Binary        as A
+                                                ( anyWord64be )
+import           Data.Attoparsec.ByteString    as A
+                                                ( parseOnly )
+import           Data.Attoparsec.ByteString.Char8
+                                               as A
+                                                ( decimal )
+import           Data.Bits                      ( Bits
+                                                    ( (.&.)
+                                                    , (.|.)
+                                                    , shiftL
+                                                    , shiftR
+                                                    )
+                                                )
+import           Data.ByteString.Base64.Type    ( getByteString64
+                                                , makeByteString64
+                                                )
+import           Data.Int.Int24                 ( Int24 )
+import           Data.Word.Word24               ( Word24 )
 
 import           Codec.Serialise                ( Serialise(..) )
-import           Codec.Serialise.Encoding       ( encodeInt32
-                                                , encodeWord32
-                                                , encodeWord8
-                                                )
 import           Codec.Serialise.Decoding       ( decodeInt32
                                                 , decodeWord32
                                                 , decodeWord8
+                                                )
+import           Codec.Serialise.Encoding       ( encodeInt32
+                                                , encodeWord32
+                                                , encodeWord8
                                                 )
 
 import           Data.PUS.EncTime
 import           General.SizeOf                 ( BitSizes(..) )
 
-import           General.Hexdump                ( hexdumpLineBS )
-import           General.Types
-import           General.PUSTypes               ( PFC(..)
-                                                , PTC(..)
-                                                )
-import           General.Time
-import           General.SetBitField            ( SetValue(setValue)
-                                                , copyBS
-                                                )
+import           General.Chunks
 import           General.GetBitField            ( GetValue(getValue)
                                                 , getBitFieldDouble
                                                 , getBitFieldInt64
@@ -101,14 +93,22 @@ import           General.GetBitField            ( GetValue(getValue)
                                                 , getValueOctet
                                                 , getValueOctetLen
                                                 )
+import           General.Hexdump                ( hexdumpLineBS )
+import           General.PUSTypes               ( PFC(..)
+                                                , PTC(..)
+                                                )
 import           General.Padding                ( leftPaddedC
+                                                , padFromRight
                                                 , rightPadded
                                                 , rightPaddedC
-                                                , padFromRight
                                                 )
-import           General.Chunks
-import qualified Text.Builder                  as TB
+import           General.SetBitField            ( SetValue(setValue)
+                                                , copyBS
+                                                )
+import           General.Time
+import           General.Types
 import           Refined
+import qualified Text.Builder                  as TB
 
 -- | Refinement type for the bit width of the values. Allowed are numbers 1 to 7
 --   (for the bit widths of 1 to 7 bit)
@@ -308,7 +308,9 @@ instance AE.ToJSON Value where
         , "width" .= width
         ]
     toJSON (ValOctet x) = object
-        ["valType" .= ("ValOctet" :: Text), "value" .= makeByteString64 (toBS x)]
+        [ "valType" .= ("ValOctet" :: Text)
+        , "value" .= makeByteString64 (toBS x)
+        ]
     toJSON (ValFixedOctet width x) = object
         [ "valType" .= ("ValFixedOctet" :: Text)
         , "value" .= makeByteString64 (toBS x)
@@ -435,7 +437,9 @@ instance AE.ToJSON Value where
         .= width
         )
     toEncoding (ValOctet x) = pairs
-        ("valType" .= ("ValOctet" :: Text) <> "value" .= makeByteString64 (toBS x))
+        ("valType" .= ("ValOctet" :: Text) <> "value" .= makeByteString64
+            (toBS x)
+        )
     toEncoding (ValFixedOctet width x) = pairs
         (  "valType"
         .= ("ValFixedOctet" :: Text)
@@ -449,7 +453,7 @@ instance AE.ToJSON Value where
     toEncoding ValUndefined = pairs ("valType" .= ("ValUndefined" :: Text))
 
 instance FromJSON Value where
-    parseJSON (AE.Object o) = case HM.lookup "valType" o of
+    parseJSON (AE.Object o) = case AE.lookup "valType" o of
         Just (AE.String "ValInt8" ) -> ValInt8 <$> o .: "value"
         Just (AE.String "ValInt8X") -> do
             ValInt8X <$> o .: "width" <*> o .: "value"
@@ -790,9 +794,10 @@ instance SetInt Integer where
     setInt (ValInt8 _) x = ValInt8 (fromIntegral x)
     setInt (ValInt8X w _) x =
         ValInt8X w (fromIntegral x .&. table8 V.! fromIntegral (unB8 w))
-    setInt (ValInt16 b _) x = ValInt16 b (fromIntegral x)
-    setInt (ValInt16X w _) x =
-        ValInt16X w (fromIntegral (fromIntegral x .&. table16 V.! fromIntegral (unB16 w)))
+    setInt (ValInt16  b _) x = ValInt16 b (fromIntegral x)
+    setInt (ValInt16X w _) x = ValInt16X
+        w
+        (fromIntegral (fromIntegral x .&. table16 V.! fromIntegral (unB16 w)))
     setInt (ValInt24  b _) x = ValInt24 b (fromIntegral x)
     setInt (ValInt32  b _) x = ValInt32 b (fromIntegral x)
     setInt (ValInt32X w _) x = ValInt32X
@@ -855,9 +860,12 @@ instance SetInt Word64 where
         ' '
         (fromIntegral width)
         (builderBytes (asciiIntegral x))
-    setInt (ValOctet _           ) x = ValOctet (HexBytes (builderBytes (word64BE x)))
-    setInt (ValFixedOctet width _) x = ValFixedOctet width
-        (HexBytes (rightPadded 0 (fromIntegral width) (builderBytes (word64BE x))))
+    setInt (ValOctet _) x = ValOctet (HexBytes (builderBytes (word64BE x)))
+    setInt (ValFixedOctet width _) x = ValFixedOctet
+        width
+        (HexBytes
+            (rightPadded 0 (fromIntegral width) (builderBytes (word64BE x)))
+        )
     setInt (ValCUCTime _) x =
         ValCUCTime (microToCUC Cuc4 (fromIntegral x) False)
     setInt ValUndefined _ = ValUndefined
@@ -894,11 +902,16 @@ instance SetInt Int64 where
         ' '
         (fromIntegral width)
         (builderBytes (asciiIntegral x))
-    setInt (ValOctet _) x = ValOctet (HexBytes (builderBytes (word64BE (fromIntegral x))))
-    setInt (ValFixedOctet width _) x = ValFixedOctet width (HexBytes (rightPadded
-        0
-        (fromIntegral width)
-        (builderBytes (word64BE (fromIntegral x)))))
+    setInt (ValOctet _) x =
+        ValOctet (HexBytes (builderBytes (word64BE (fromIntegral x))))
+    setInt (ValFixedOctet width _) x = ValFixedOctet
+        width
+        (HexBytes
+            (rightPadded 0
+                         (fromIntegral width)
+                         (builderBytes (word64BE (fromIntegral x)))
+            )
+        )
     setInt (ValCUCTime _) x = ValCUCTime (microToCUC Cuc4 x False)
     setInt ValUndefined   _ = ValUndefined
 
@@ -927,11 +940,16 @@ setDouble (ValDouble  b _        ) x = ValDouble b x
 setDouble (ValString _           ) x = ValString (encodeUtf8 (textDisplay x))
 setDouble (ValFixedString width _) x = ValFixedString width
     $ rightPaddedC ' ' (fromIntegral width) (encodeUtf8 (textDisplay x))
-setDouble (ValOctet _) x = ValOctet (HexBytes (builderBytes (word64BE (truncate x))))
-setDouble (ValFixedOctet width _) x = ValFixedOctet width (HexBytes (rightPadded
-    0
-    (fromIntegral width)
-    (builderBytes (word64BE (truncate x)))))
+setDouble (ValOctet _) x =
+    ValOctet (HexBytes (builderBytes (word64BE (truncate x))))
+setDouble (ValFixedOctet width _) x = ValFixedOctet
+    width
+    (HexBytes
+        (rightPadded 0
+                     (fromIntegral width)
+                     (builderBytes (word64BE (truncate x)))
+        )
+    )
 setDouble (ValCUCTime _) x = ValCUCTime (microToCUC Cuc4 (truncate x) False)
 setDouble ValUndefined   _ = ValUndefined
 
@@ -1040,9 +1058,12 @@ getAlignedValue byts off (ValDouble b _) = ValDouble b <$> getValue byts off b
 getAlignedValue byts off (ValString _  ) = ValString <$> getValueOctet byts off
 getAlignedValue byts off (ValFixedString len _) =
     ValFixedString len <$> getValueOctetLen byts off (fromIntegral len)
-getAlignedValue byts off (ValOctet _) = ValOctet . HexBytes <$> getValueOctet byts off
+getAlignedValue byts off (ValOctet _) =
+    ValOctet . HexBytes <$> getValueOctet byts off
 getAlignedValue byts off (ValFixedOctet len _) =
-    ValFixedOctet len . HexBytes <$> getValueOctetLen byts off (fromIntegral len)
+    ValFixedOctet len . HexBytes <$> getValueOctetLen byts
+                                                      off
+                                                      (fromIntegral len)
 getAlignedValue byts off (ValCUCTime (CUCTime enc _ _ _)) =
     ValCUCTime <$> getValueCucTime byts off BiE enc
 getAlignedValue _ _ _ = Just ValUndefined
@@ -1202,7 +1223,7 @@ valueBuilder (ValUInt8 x    ) = builderUnsigned 8 x
 valueBuilder (ValUInt16X w x) = builderUnsigned (unB16 w) x
 valueBuilder (ValUInt32X w x) = builderUnsigned (unB32 w) x
 valueBuilder (ValInt8 x     ) = builderSigned 8 x
-valueBuilder (ValInt8X w x ) = builderSigned (unB8 w) x
+valueBuilder (ValInt8X  w x ) = builderSigned (unB8 w) x
 valueBuilder (ValInt16X w x ) = builderSigned (unB16 w) x
 valueBuilder (ValInt32X w x ) = builderSigned (unB32 w) x
 
@@ -1233,10 +1254,10 @@ valueBuilder (ValCUCTime x) =
         <> emptyEndian
         <> TB.text (textDisplay x)
   where
-    encToText Cuc4  = TB.text "CUC_4"
-    encToText Cuc41 = TB.text "CUC_4_1"
-    encToText Cuc42 = TB.text "CUC_4_2"
-    encToText Cuc43 = TB.text "CUC_4_3"
+    encToText Cuc4    = TB.text "CUC_4"
+    encToText Cuc41   = TB.text "CUC_4_1"
+    encToText Cuc42   = TB.text "CUC_4_2"
+    encToText Cuc43   = TB.text "CUC_4_3"
     encToText CucUnix = TB.text "CUC_Unix"
 valueBuilder ValUndefined = TB.text "UNDEFINED"
 

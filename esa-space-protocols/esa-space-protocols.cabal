@@ -145,7 +145,6 @@ library
         , lens
         , binary
         , stm-conduit
-        , thyme
         , timers-updatable
         , base64-bytestring-type
         , containers
@@ -160,6 +159,7 @@ library
         , directory
         , timer-wheel
         , word24
+        , time
 
     if flag(sle)
         cpp-options: -DHAS_SLE

@@ -65,21 +65,7 @@ import qualified RIO.Text                      as T
 import           Codec.Serialise               as S
 import           Codec.Serialise.Decoding      as SE
 import           Codec.Serialise.Encoding      as SE
-import           Data.Aeson                     ( FromJSON(..)
-                                                , FromJSONKey(fromJSONKey)
-                                                , FromJSONKeyFunction
-                                                    ( FromJSONKeyText
-                                                    )
-                                                , ToJSON(toEncoding, toJSON)
-                                                , ToJSONKey(toJSONKey)
-                                                , ToJSONKeyFunction
-                                                    ( ToJSONKeyText
-                                                    )
-                                                , Value(String)
-                                                , defaultOptions
-                                                , genericToEncoding
-                                                , withText
-                                                )
+import           Data.Aeson
 import qualified Data.Aeson.Encoding           as E
 import qualified Data.Aeson.Types              as E
 import           Data.Attoparsec.Text           ( Parser )
@@ -123,10 +109,10 @@ instance ToJSON Radix where
     toEncoding = genericToEncoding defaultOptions
 instance NFData Radix
 
-instance Display Radix where 
+instance Display Radix where
     textDisplay Decimal = "DEC"
-    textDisplay Octal = "OCT"
-    textDisplay Hex = "HEX"
+    textDisplay Octal   = "OCT"
+    textDisplay Hex     = "HEX"
 
 
 -- | Converst from a Char to a 'Radix' according to the SCOS-2000 MIB ICD 6.9
@@ -147,7 +133,7 @@ instance ToJSON ValInter where
     toEncoding = genericToEncoding defaultOptions
 instance NFData ValInter
 
-instance Display ValInter where 
+instance Display ValInter where
     textDisplay InterRaw = "RAW"
     textDisplay InterEng = "ENG"
 
@@ -459,22 +445,22 @@ instance Serialise ShortText where
                     $  "Could not convert data from ByteString to ShortText: "
                     <> show v
 
-instance FromJSON ShortText where
-    parseJSON = withText "ShortText" $ pure . ST.fromText
+-- instance FromJSON ShortText where
+--     parseJSON = withText "ShortText" $ pure . ST.fromText
 
-instance ToJSONKey ShortText where
-    toJSONKey = ToJSONKeyText ST.toText (E.text . ST.toText)
+-- instance ToJSONKey ShortText where
+--     toJSONKey = ToJSONKeyText ST.toText (E.text . ST.toText)
 
-instance FromJSONKey ShortText where
-    fromJSONKey = FromJSONKeyText ST.fromText
+-- instance FromJSONKey ShortText where
+--     fromJSONKey = FromJSONKeyText ST.fromText
 
 
-instance ToJSON ShortText where
-    toJSON x = String . ST.toText $ x
-    {-# INLINE toJSON #-}
+-- instance ToJSON ShortText where
+--     toJSON x = String . ST.toText $ x
+--     {-# INLINE toJSON #-}
 
-    toEncoding x = E.text . ST.toText $ x
-    {-# INLINE toEncoding #-}
+--     toEncoding x = E.text . ST.toText $ x
+--     {-# INLINE toEncoding #-}
 
 instance Display ShortText where
     display x = displayBytesUtf8 . ST.toByteString $ x
@@ -588,5 +574,5 @@ newLineIndentBuilder n builder =
     TB.char '\n' <> indentBuilder n <> TB.padFromRight 23 ' ' builder
 
 
-padRight :: Word16 -> TB.Builder -> TB.Builder 
+padRight :: Word16 -> TB.Builder -> TB.Builder
 padRight n b = TB.padFromRight (fromIntegral n) ' ' b

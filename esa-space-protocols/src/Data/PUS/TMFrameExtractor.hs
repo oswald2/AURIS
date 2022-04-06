@@ -55,7 +55,7 @@ import           Data.Conduit.TQueue
 
 import           Control.PUS.Classes
 
-import           Data.Thyme.Clock.POSIX        as Time
+import           Data.Time.Clock.POSIX        as Time
 
 import           Data.PUS.Config
 import           Data.PUS.EncTime
