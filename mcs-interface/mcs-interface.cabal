@@ -91,7 +91,6 @@ library
     , stm-conduit
     , word8
     , serialise
-    , unliftio
     , text-short
 
 

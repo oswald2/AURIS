@@ -137,7 +137,7 @@ startInstance sle peerID (SLEInstance { cfgSleInstanceNr = rafN, cfgSleInstanceC
             <> display err
     pure ()
 
-startInstance sle peerID (SLEInstance { cfgSleInstanceNr = rafN, cfgSleInstanceConfig = SLEInstFCLTU cltuCfg}) (_sii, queue) = do
+startInstance sle peerID (SLEInstance { cfgSleInstanceNr = _rafN, cfgSleInstanceConfig = SLEInstFCLTU cltuCfg}) (_sii, queue) = do
     let version = convVersion (cfgSleCltuVersion cltuCfg)
         sii     = SleSII (cfgSleCltuSII cltuCfg)
 
@@ -146,7 +146,7 @@ startInstance sle peerID (SLEInstance { cfgSleInstanceNr = rafN, cfgSleInstanceC
 
     logDebug $ "Starting FCLTU instance for " <> display (cfgSleCltuSII cltuCfg)
     res <- withSleFCLTUUser sle
-                            (cfgSleCltuSII cltuCfg)
+                            (SleSII (cfgSleCltuSII cltuCfg))
                             (convVersion (cfgSleCltuVersion cltuCfg))
                             (cfgSleCltuPeerID cltuCfg)
                             (cfgSleCltuPort cltuCfg)

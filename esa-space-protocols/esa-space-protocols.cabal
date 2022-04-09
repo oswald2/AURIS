@@ -151,7 +151,6 @@ library
         , serialise
         , esa-mib
         , esa-base
-        , streaming-commons
         , text-short
         , hashtables-mo
         , vector-builder

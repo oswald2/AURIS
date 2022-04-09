@@ -35,8 +35,9 @@ runFCLTU
     -> SleSII
     -> TBQueue SleCmd
     -> SLE
+    -> FCLTU
     -> m (Maybe Text)
-runFCLTU peerID cltuCfg sii queue sle = do
+runFCLTU peerID cltuCfg sii queue sle fcltu = do
     raiseEvent (EVSLE (EVSLEFcltuInitialised sii protIF))
 
     loop Init
@@ -56,13 +57,13 @@ runFCLTU peerID cltuCfg sii queue sle = do
     processCmd state Terminate = do
         case state of
             Active -> do
-                res <- liftIO $ fcltuStop sle
+                res <- liftIO $ fcltuStop sle fcltu
                 forM_ res $ \err -> logError $ "SLE FCLTU STOP: " <> display err
-                res1 <- liftIO $ fcltuUnbind sle SleUBREnd
+                res1 <- liftIO $ fcltuUnbind sle fcltu SleUBREnd
                 forM_ res1
                     $ \err -> logError $ "SLE FCLTU UNBIND: " <> display err
             Bound -> do
-                res <- liftIO $ fcltuUnbind sle SleUBREnd
+                res <- liftIO $ fcltuUnbind sle fcltu SleUBREnd
                 forM_ res
                     $ \err -> logError $ "SLE FCLTU UNBIND: " <> display err
             _ -> pure ()
@@ -72,6 +73,7 @@ runFCLTU peerID cltuCfg sii queue sle = do
         logInfo $ "Initiating FCLTU BIND for " <> display sii
         bindRes <- liftIO $ fcltuBind
             sle
+            fcltu 
             (cfgSleCltuPeerID cltuCfg)
             (cfgSleCltuPort cltuCfg)
             peerID
@@ -105,7 +107,7 @@ runFCLTU peerID cltuCfg sii queue sle = do
         pure Init
 
     processCmd Bound FcltuUnbind = do
-        res <- liftIO $ fcltuUnbind sle SleUBROtherReason
+        res <- liftIO $ fcltuUnbind sle fcltu SleUBROtherReason
         case res of
             Just err -> do
                 logError $ "SLE FCLTU UNBIND: " <> display err
@@ -115,7 +117,7 @@ runFCLTU peerID cltuCfg sii queue sle = do
                 pure Init
 
     processCmd Bound FcltuStart = do
-        res <- liftIO $ fcltuStart sle (CLTUID (-1))
+        res <- liftIO $ fcltuStart sle fcltu (CLTUID (-1))
         forM_ res $ \err -> logError $ "SLE FCLTU START: " <> display err
         pure Bound
 
@@ -133,7 +135,7 @@ runFCLTU peerID cltuCfg sii queue sle = do
         pure Bound
 
     processCmd Active FcltuStop = do
-        res <- liftIO $ fcltuStop sle
+        res <- liftIO $ fcltuStop sle fcltu 
         case res of
             Just err -> do
                 logError $ "SLE FCLTU STOP: " <> display err
@@ -154,14 +156,15 @@ runFCLTU peerID cltuCfg sii queue sle = do
 
 
 
-cltuSendC :: (MonadIO m) => SLE -> ResumeSignal -> ConduitT EncodedCLTU Void m ()
-cltuSendC sle signal = go (CLTUID 0)
+cltuSendC :: (MonadIO m) => SLE -> FCLTU -> ResumeSignal -> ConduitT EncodedCLTU Void m ()
+cltuSendC sle fcltu signal = go (CLTUID 0)
   where
     go :: (MonadIO m) => CLTUID -> ConduitT EncodedCLTU Void m ()
     go cltuID = do
         awaitForever $ \(EncodedCLTU cltu _rqst) -> do
             res <- liftIO
                 $   sendCLTU sle
+                             fcltu 
                              cltuID
                              Nothing  -- no earliest prod time 
                              Nothing  -- no latest prod time 
@@ -173,6 +176,7 @@ cltuSendC sle signal = go (CLTUID 0)
                 SleError -> do
                     void $ liftIO $ cltuPeerAbort
                         sle
+                        fcltu 
                         SlePADCommunicationsFailure
                 SleSuspend -> do
                     waitResume signal
