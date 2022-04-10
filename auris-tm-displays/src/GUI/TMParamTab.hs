@@ -257,7 +257,6 @@ parTabAddNewEmptyDisplay gui Display1 DispTypeGRD = do
         writeTVar (gui ^. tmParamDisplays) newDisps
 
 parTabAddNewEmptyDisplay gui Display1 DispTypeAND = do
-    traceM "Creating new AND Display"
     andWidget <- setupANDWidget (gui ^. tmParamMainWindow)
                                 (gui ^. tmParamSingleBox)
                                 "Display 1"

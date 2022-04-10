@@ -18,6 +18,7 @@ module Data.TM.Validity
   ( Validity(..)
   , isValid
   , clearValidity
+  , uninitializedValidity
   , isWrongType
   , validitySetWrongType
   , isOutOfCalibRange
@@ -63,6 +64,12 @@ validMask = 0x0FFFFFFF
 {-# INLINABLE clearValidity #-}
 clearValidity :: Validity
 clearValidity = Validity 0
+
+-- | a default uninitialized validity
+{-# INLINABLE uninitializedValidity #-}
+uninitializedValidity :: Validity
+uninitializedValidity = Validity uninitialized
+
 
 {-# INLINABLE wrongType #-}
 wrongType :: Word32

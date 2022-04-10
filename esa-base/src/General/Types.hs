@@ -583,5 +583,5 @@ padRight n b = TB.padFromRight (fromIntegral n) ' ' b
 class HasName a where
     getName :: a -> Text
 
-class HasNames a where 
+class HasNames a where
     getNames :: a -> [Text]

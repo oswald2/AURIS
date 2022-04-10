@@ -11,6 +11,7 @@ module GUI.ANDWidget
     ) where
 
 import           RIO                     hiding ( (^.) )
+import qualified RIO.Text                      as T
 import qualified RIO.Vector                    as V
 
 import           Control.Lens
@@ -18,6 +19,7 @@ import           Control.Lens
 import           Data.GI.Base.Attributes
 import           Data.GI.Gtk.ModelView.CellLayout
 import           GI.Gtk                        as Gtk
+import           GI.Pango.Enums
 
 import           Data.Text.Short               as ST
 
@@ -50,6 +52,7 @@ data ParamRow = ParamRow
     , _parUnit  :: !ShortText
     , _parDecim :: !Int
     }
+    deriving Show
 makeLenses ''ParamRow
 
 instance HasName ParamRow where
@@ -128,15 +131,26 @@ andWidgetAddParamFromSelector aw values = do
                     dataModel
                     ((ST.fromText (tableValue ^. tableValName)))
             of
-                Nothing  -> return ()
+                Nothing -> do
+                    -- traceM
+                    --     $  "andWidgetAddParamFromSelector: param "
+                    --     <> tableValue
+                    --     ^. tableValName
+                    --     <> " not found"
+                    return ()
                 Just def -> do
                     let val = defaultParamRow def
+                    -- traceM
+                    --     $  "andWidgetAddParamFromSelector add default value: "
+                    --     <> T.pack (show val)
                     void $ nameStoreAppendValue (andModel aw) val
 
 
 setupTreeView :: TreeView -> NameStore ParamRow -> IO ()
 setupTreeView tv model = do
     treeViewSetModel tv (Just model)
+    selection <- treeViewGetSelection tv
+    treeSelectionSetMode selection SelectionModeNone
 
     col1 <- treeViewColumnNew
     col2 <- treeViewColumnNew
@@ -144,17 +158,62 @@ setupTreeView tv model = do
     col4 <- treeViewColumnNew
     col5 <- treeViewColumnNew
 
-    treeViewColumnSetTitle col1 "Parameter"
-    treeViewColumnSetTitle col2 "Timestamp"
-    treeViewColumnSetTitle col3 "Value"
-    treeViewColumnSetTitle col4 "Unit"
-    treeViewColumnSetTitle col4 "Status"
+    Gtk.set
+        col1
+        [ #fixedWidth := 120
+        , #alignment := 0.5
+        , #resizable := True
+        , #reorderable := True
+        , #title := "Parameter"
+        ]
+    Gtk.set
+        col2
+        [ #fixedWidth := 200
+        , #alignment := 0.5
+        , #resizable := True
+        , #reorderable := True
+        , #title := "Timestamp"
+        ]
+    Gtk.set
+        col3
+        [ #fixedWidth := 200
+        , #alignment := 0.5
+        , #resizable := True
+        , #reorderable := True
+        , #title := "Value"
+        ]
+    Gtk.set
+        col4
+        [ #fixedWidth := 80
+        , #alignment := 0.5
+        , #resizable := True
+        , #reorderable := True
+        , #title := "Unit"
+        ]
+    Gtk.set
+        col5
+        [ #fixedWidth := 150
+        , #resizable := True
+        , #reorderable := True
+        , #title := "Status"
+        ]
 
     renderer1 <- cellRendererTextNew
     renderer2 <- cellRendererTextNew
     renderer3 <- cellRendererTextNew
     renderer4 <- cellRendererTextNew
     renderer5 <- cellRendererTextNew
+
+    Gtk.set renderer1 [#xalign := 1.0]
+    Gtk.set renderer2 [#xalign := 1.0]
+    Gtk.set
+        renderer3
+        [ #xalign := 1.0
+        , #ellipsizeSet := True
+        , #ellipsize := EllipsizeModeEnd
+        ]
+    Gtk.set renderer4 [#xalign := 1.0]
+    Gtk.set renderer5 [#alignment := AlignmentLeft]
 
     cellLayoutPackStart col1 renderer1 True
     cellLayoutPackStart col2 renderer2 True

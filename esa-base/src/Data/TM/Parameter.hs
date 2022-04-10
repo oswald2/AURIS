@@ -77,14 +77,14 @@ instance ToJSON TMParameter where
 
 
 defaultValue :: ParamType -> TMValue
-defaultValue (ParamInteger  _    ) = TMValue (TMValInt 0) clearValidity
-defaultValue (ParamUInteger _    ) = TMValue (TMValUInt 0) clearValidity
-defaultValue (ParamDouble   _    ) = TMValue (TMValDouble 0) clearValidity
-defaultValue (ParamTime _ _      ) = TMValue (TMValTime nullTime) clearValidity
-defaultValue (ParamString  _     ) = TMValue (TMValString "") clearValidity
-defaultValue (ParamOctet _) = TMValue (TMValOctet (HexBytes "")) clearValidity
-defaultValue (ParamDeduced _     ) = TMValue (TMValNothing) clearValidity
-defaultValue (ParamSavedSynthetic) = TMValue (TMValNothing) clearValidity
+defaultValue (ParamInteger  _    ) = TMValue (TMValInt 0) uninitializedValidity
+defaultValue (ParamUInteger _    ) = TMValue (TMValUInt 0) uninitializedValidity
+defaultValue (ParamDouble   _    ) = TMValue (TMValDouble 0) uninitializedValidity
+defaultValue (ParamTime _ _      ) = TMValue (TMValTime nullTime) uninitializedValidity
+defaultValue (ParamString  _     ) = TMValue (TMValString "") uninitializedValidity
+defaultValue (ParamOctet _) = TMValue (TMValOctet (HexBytes "")) uninitializedValidity
+defaultValue (ParamDeduced _     ) = TMValue (TMValNothing) uninitializedValidity
+defaultValue (ParamSavedSynthetic) = TMValue (TMValNothing) uninitializedValidity
 
 
 defaultParameterByDef :: TMParameterDef -> TMParameter

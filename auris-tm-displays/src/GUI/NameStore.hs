@@ -3,13 +3,17 @@ module GUI.NameStore
     , nameStoreIterToIndex
     , nameStoreNew
     , nameStoreGetValue
+    , nameStoreGetValueIdx
     , nameStoreWriteValue
     , nameStoreUpdateValue
     , nameStoreAppendValue
     ) where
 
-import           Data.GI.Base                   ( new
-                                                )
+
+import           RIO
+import qualified RIO.Text                      as T
+
+import           Data.GI.Base                   ( new )
 import           Data.GI.Base.BasicTypes        ( GObject
                                                 , ManagedPtr(..)
                                                 , TypedObject(..)
@@ -42,10 +46,11 @@ import           GI.Gtk.Structs.TreeIter        ( TreeIter(..)
                                                 , setTreeIterUserData2
                                                 , setTreeIterUserData3
                                                 )
-import           RIO
 import           Unsafe.Coerce                  ( unsafeCoerce )
 
 import           Data.HashTable.IO             as HT
+import           Data.Vector                   as V
+                                                ( freeze, toList)
 import           Data.Vector.Mutable           as V
 
 import           General.Types                  ( HasName(..) )
@@ -64,7 +69,7 @@ newStore ls maxSize = liftIO $ do
     ref <- newIORef 0
     -- create the new vector with the max size 
     vec <- V.new size
-    V.set vec Nothing 
+    V.set vec Nothing
     -- fill the vector 
     fill vec ls 0
 
@@ -74,7 +79,7 @@ newStore ls maxSize = liftIO $ do
             let name = getName val
             HT.insert ht name idx
             writeIORef ref (idx + 1)
-        update idx Nothing = return ()
+        update _idx Nothing = return ()
 
 
     iforM_ vec update
@@ -121,11 +126,13 @@ nameStoreNew ls maxSize = do
                 n   <- nameStoreIterToIndex iter
                 len <- readIORef (storeFill store)
                 if inRange (0, len) (fromIntegral n)
-                    then do 
+                    then do
                         val <- V.unsafeRead (storeVector store) (fromIntegral n)
-                        case val of 
-                            Just v -> return v 
-                            Nothing -> fail "NameStore.getRow: iter does not refer to a valid entry (Nothing)"
+                        case val of
+                            Just v -> return v
+                            Nothing ->
+                                fail
+                                    "NameStore.getRow: iter does not refer to a valid entry (Nothing)"
                     else
                         fail
                             "NameStore.getRow: iter does not refer to a valid entry"
@@ -183,22 +190,38 @@ nameStoreGetValue (NameStore st) name = liftIO $ do
         Just i  -> V.unsafeRead (storeVector store) i
         Nothing -> return Nothing
 
+nameStoreGetValueIdx :: MonadIO m => NameStore a -> Int -> m (Maybe a)
+nameStoreGetValueIdx (NameStore st) idx = liftIO $ do
+    let store = customStoreGetPrivate (CustomStore st)
+    if idx >= 0 && idx < V.length (storeVector store)
+        then V.unsafeRead (storeVector store) idx
+        else return Nothing
+
 nameStoreWriteValue :: MonadIO m => NameStore a -> Text -> a -> m ()
 nameStoreWriteValue (NameStore st) name val = liftIO $ do
     let store = customStoreGetPrivate (CustomStore st)
     idx <- HT.lookup (storeHashTable store) name
     case idx of
-        Just i  -> V.unsafeWrite (storeVector store) i (Just val)
+        Just i -> do
+            V.unsafeWrite (storeVector store) i (Just val)
+            rowChanged st i
         Nothing -> return ()
 
-nameStoreUpdateValue :: MonadIO m => NameStore a -> Text -> (Maybe a -> a -> Maybe a) -> a -> m ()
+nameStoreUpdateValue
+    :: MonadIO m
+    => NameStore a
+    -> Text
+    -> (Maybe a -> a -> Maybe a)
+    -> a
+    -> m ()
 nameStoreUpdateValue (NameStore st) name cmp val = liftIO $ do
     let store = customStoreGetPrivate (CustomStore st)
     idx <- HT.lookup (storeHashTable store) name
     case idx of
-        Just i  -> do 
-            oldVal <- V.unsafeRead (storeVector store) i 
+        Just i -> do
+            oldVal <- V.unsafeRead (storeVector store) i
             V.unsafeWrite (storeVector store) i (cmp oldVal val)
+            rowChanged st i
         Nothing -> return ()
 
 
@@ -206,10 +229,30 @@ nameStoreAppendValue :: (HasName a, MonadIO m) => NameStore a -> a -> m Bool
 nameStoreAppendValue (NameStore st) val = liftIO $ do
     let store = customStoreGetPrivate (CustomStore st)
     n <- readIORef (storeFill store)
-    let !newIdx = n + 1
+    let !newIdx  = n
+        !newSize = newIdx + 1
     if newIdx < V.length (storeVector store)
         then do
+            -- traceM $ "nameStoreAppendValue newIdx=" <> T.pack (show newIdx)
             V.unsafeWrite (storeVector store) newIdx (Just val)
             HT.insert (storeHashTable store) (getName val) newIdx
+            writeIORef (storeFill store) newSize
+            rowInserted st newIdx
             return True
         else return False
+
+rowChanged :: ManagedPtr (CustomStore private row) -> Int -> IO ()
+rowChanged st i = do
+    stamp <- customStoreGetStamp (CustomStore st)
+    -- traceM $ "rowChanged: stamp=" <> T.pack (show stamp)
+    path <- treePathNewFromIndices' [fromIntegral i]
+    iter <- nameStoreIterNew stamp (fromIntegral i)
+    treeModelRowChanged (CustomStore st) path iter
+
+rowInserted :: ManagedPtr (CustomStore private row) -> Int -> IO ()
+rowInserted st i = do
+    stamp <- customStoreGetStamp (CustomStore st)
+    -- traceM $ "rowInserted: stamp=" <> T.pack (show stamp)
+    path <- treePathNewFromIndices' [fromIntegral i]
+    iter <- nameStoreIterNew stamp (fromIntegral i)
+    treeModelRowInserted (CustomStore st) path iter
