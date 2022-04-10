@@ -55,6 +55,8 @@ module General.Types
     , indentBuilder
     , newLineIndentBuilder
     , padRight
+    , HasName(..)
+    , HasNames(..)
     ) where
 
 
@@ -576,3 +578,10 @@ newLineIndentBuilder n builder =
 
 padRight :: Word16 -> TB.Builder -> TB.Builder
 padRight n b = TB.padFromRight (fromIntegral n) ' ' b
+
+
+class HasName a where
+    getName :: a -> Text
+
+class HasNames a where 
+    getNames :: a -> [Text]

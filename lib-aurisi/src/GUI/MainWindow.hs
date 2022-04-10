@@ -236,13 +236,13 @@ createMainWindow cfg = do
     -- create the tabs in the notebook
     tmfTab        <- createTMFTab window builder
     tmpTab        <- createTMPTab window builder
-    paramTab      <- createTMParamTab builder
     connTab       <- createConnectionTab (aurisPusConfig cfg) builder
     sleTab        <- createSLETab (aurisPusConfig cfg) builder
     tcTab         <- createTCTab (aurisPusConfig cfg) window builder
     tcHistory     <- createTCHistory window builder
     dataModelTab  <- createDataModelTab window builder
     statisticsTab <- createStatisticsTab builder
+    paramTab      <- createTMParamTab builder (dataModelTabGetModelRef dataModelTab)
 
     setLogo logo 65 65
 

@@ -10,6 +10,8 @@ module GUI.NameDescrTable
     , getSelectedItemsVector
     , setTableFromModel
     , setPopupMenu
+    , tableValName
+    , tableValDescr
     ) where
 
 import           RIO

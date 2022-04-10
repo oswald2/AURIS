@@ -23,6 +23,8 @@ module Data.TM.Parameter
     , eqByName
     , byName
     , byValue
+    , defaultValue
+    , defaultParameterByDef
     ) where
 
 import           Codec.Serialise
@@ -31,10 +33,11 @@ import           Data.Aeson
 import           Data.Text.Short
 import           RIO
 
+import           Data.TM.TMParameterDef
+import           Data.TM.Validity
 import           Data.TM.Value
 import           General.Time
-
-
+import           General.Types                  ( HexBytes(..) )
 
 
 
@@ -65,9 +68,31 @@ byName p1 p2 = compare (p1 ^. pName) (p2 ^. pName)
 byValue :: TMParameter -> TMParameter -> Ordering
 byValue p1 p2 = compare (p1 ^. pValue) (p2 ^. pValue)
 
-
 instance NFData TMParameter
 instance Serialise TMParameter
 instance FromJSON TMParameter
 instance ToJSON TMParameter where
     toEncoding = genericToEncoding defaultOptions
+
+
+
+defaultValue :: ParamType -> TMValue
+defaultValue (ParamInteger  _    ) = TMValue (TMValInt 0) clearValidity
+defaultValue (ParamUInteger _    ) = TMValue (TMValUInt 0) clearValidity
+defaultValue (ParamDouble   _    ) = TMValue (TMValDouble 0) clearValidity
+defaultValue (ParamTime _ _      ) = TMValue (TMValTime nullTime) clearValidity
+defaultValue (ParamString  _     ) = TMValue (TMValString "") clearValidity
+defaultValue (ParamOctet _) = TMValue (TMValOctet (HexBytes "")) clearValidity
+defaultValue (ParamDeduced _     ) = TMValue (TMValNothing) clearValidity
+defaultValue (ParamSavedSynthetic) = TMValue (TMValNothing) clearValidity
+
+
+defaultParameterByDef :: TMParameterDef -> TMParameter
+defaultParameterByDef def = TMParameter
+    { _pName     = def ^. fpName
+    , _pTime     = nullTime
+    , _pValue    = defaultValue (def ^. fpType)
+    , _pEngValue = Nothing
+    }
+
+

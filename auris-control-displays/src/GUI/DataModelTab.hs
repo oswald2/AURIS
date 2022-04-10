@@ -3,6 +3,8 @@ module GUI.DataModelTab
     ( DataModelTab
     , createDataModelTab
     , dataModelTabSetModel
+    , dataModelTabGetModel
+    , dataModelTabGetModelRef
     , dataModelTabSetInfo
     ) where
 
@@ -137,6 +139,11 @@ dataModelTabSetModel g model = do
     -- set the model again
     treeViewSetModel (g ^. dmtTreeView) (Just treeModel)
 
+dataModelTabGetModel :: DataModelTab -> IO DataModel 
+dataModelTabGetModel g = readIORef (g ^. dmtModel)
+
+dataModelTabGetModelRef :: DataModelTab -> IORef DataModel
+dataModelTabGetModelRef g = g ^. dmtModel
 
 insertAtRoot :: ForestStore DataNode -> Int -> DataNode -> IO ()
 insertAtRoot model idx node = do

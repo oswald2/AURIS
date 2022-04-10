@@ -207,12 +207,14 @@ paramTypeBuilder (ParamDouble DTMilExtended) =
     text "MIL-STD EXTENDED FLOAT 48 Bit"
 paramTypeBuilder (ParamTime timeType corr) =
     text "TIME " <> timeTypeBuilder timeType <> ", " <> text (textDisplay corr)
-paramTypeBuilder (ParamString Nothing ) = text "STRING, Variable"
-paramTypeBuilder (ParamString (Just l)) = text "STRING " <> decimal l <> " Bytes"
-paramTypeBuilder (ParamOctet Nothing ) = text "OCTET STRING, Variable"
-paramTypeBuilder (ParamOctet (Just l)) = text "OCTET STRING " <> decimal l <> " Bytes"
+paramTypeBuilder (ParamString Nothing) = text "STRING, Variable"
+paramTypeBuilder (ParamString (Just l)) =
+    text "STRING " <> decimal l <> " Bytes"
+paramTypeBuilder (ParamOctet Nothing) = text "OCTET STRING, Variable"
+paramTypeBuilder (ParamOctet (Just l)) =
+    text "OCTET STRING " <> decimal l <> " Bytes"
 -- TODO
-paramTypeBuilder (ParamDeduced _) = text "DEDUCED PARAMETER"
+paramTypeBuilder (ParamDeduced _)    = text "DEDUCED PARAMETER"
 paramTypeBuilder ParamSavedSynthetic = text "SAVED SYNTHETIC"
 
 
@@ -405,9 +407,9 @@ instance FromJSON ParamNatur
 instance ToJSON ParamNatur where
     toEncoding = genericToEncoding defaultOptions
 
-instance Display ParamNatur where 
-    textDisplay NaturRaw = "RAW"
-    textDisplay NaturConstant = "CONSTANT"
+instance Display ParamNatur where
+    textDisplay NaturRaw           = "RAW"
+    textDisplay NaturConstant      = "CONSTANT"
     textDisplay (NaturSynthetic _) = "SYNTHETIC"
 
 
@@ -499,22 +501,34 @@ instance Display TMParameterDef where
                )
             <> padRight 24 (text "\n<b>Type:</b> ")
             <> paramTypeBuilder (_fpType p)
-            <> padRight 24 (text "\n<b>Unit:</b> ") <> text (ST.toText (_fpUnit p))
-            <> padRight 24 (text "\n<b>Padding:</b> ") <> (case _fpWidth p of 
-                Nothing -> "--"
-                Just w -> text (textDisplay w))
-            <> padRight 24 (text "\n<b>Validity Param:</b>") <> relParamName (_fpValid p)
-            <> padRight 24 (text "\n<b>Validity Value:</b>") <> text (textDisplay (_fpValidityValue p))
-            <> padRight 24 (text "\n<b>Related Param:</b>") <> relParamName (_fpRelated p)
-            <> padRight 24 (text "\n<b>Nature:</b>") <> text (textDisplay (_fpNatur p))
-            <> padRight 24 (text "\n<b>Default Value:</b>") <> text (textDisplay (_fpDefaultVal p))
-            <> padRight 24 (text "\n<b>Subsystem:</b>") <> text (ST.toText (_fpSubsys p))
-            <> text "\n<b>Calibration:</b>\n" <> calibContainerBuilder (_fpCalibs p) 4 
-            <> padRight 24 (text "\n<b>OBT-ID:</b>") <> maybe (text "--") decimal (_fpOBTID p)
-            <> padRight 24 (text "\n<b>Endianess:</b>") <> text (textDisplay (_fpEndian p))
-        where 
-            relParamName Nothing = text "--"
-            relParamName (Just rel) = text (ST.toText (_fpName rel))
+            <> padRight 24 (text "\n<b>Unit:</b> ")
+            <> text (ST.toText (_fpUnit p))
+            <> padRight 24 (text "\n<b>Padding:</b> ")
+            <> (case _fpWidth p of
+                   Nothing -> "--"
+                   Just w  -> text (textDisplay w)
+               )
+            <> padRight 24 (text "\n<b>Validity Param:</b>")
+            <> relParamName (_fpValid p)
+            <> padRight 24 (text "\n<b>Validity Value:</b>")
+            <> text (textDisplay (_fpValidityValue p))
+            <> padRight 24 (text "\n<b>Related Param:</b>")
+            <> relParamName (_fpRelated p)
+            <> padRight 24 (text "\n<b>Nature:</b>")
+            <> text (textDisplay (_fpNatur p))
+            <> padRight 24 (text "\n<b>Default Value:</b>")
+            <> text (textDisplay (_fpDefaultVal p))
+            <> padRight 24 (text "\n<b>Subsystem:</b>")
+            <> text (ST.toText (_fpSubsys p))
+            <> text "\n<b>Calibration:</b>\n"
+            <> calibContainerBuilder (_fpCalibs p) 4
+            <> padRight 24 (text "\n<b>OBT-ID:</b>")
+            <> maybe (text "--") decimal (_fpOBTID p)
+            <> padRight 24 (text "\n<b>Endianess:</b>")
+            <> text (textDisplay (_fpEndian p))
+      where
+        relParamName Nothing    = text "--"
+        relParamName (Just rel) = text (ST.toText (_fpName rel))
 
 getWidth :: TMParameterDef -> BitSize
 getWidth def = bitSize (def ^. fpType)

@@ -150,3 +150,9 @@ setUndefinedValue :: Validity -> Validity
 setUndefinedValue (Validity x) = Validity (x .|. undefinedValue)
 
 
+instance Display Validity where 
+  display x = 
+    if | isValid x -> ""
+       | isUninitialized x -> "UNINIT"
+       | isUndefinedValue x -> "UNDEFINED"
+       | otherwise -> "OTHER"

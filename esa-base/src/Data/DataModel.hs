@@ -32,6 +32,7 @@ module Data.DataModel
     , empty
     , writeDataModel
     , readDataModel
+    , dataModelFindParam
     ) where
 
 import           Control.Lens                   ( makeLenses )
@@ -92,6 +93,10 @@ data DataModel = DataModel
     deriving (Show, Generic)
 makeLenses ''DataModel
 
+
+
+dataModelFindParam :: DataModel -> ShortText -> Maybe TMParameterDef
+dataModelFindParam model paramName = HT.ilookup (_dmParameters model) paramName
 
 -- instance Show (Compact DataModel) where
 --     show x = show (getCompact x)
