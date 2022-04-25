@@ -1,0 +1,47 @@
+[ RepeatN
+    1
+    [ SendRqst
+        TCRequest
+          { _tcReqRequestID = RequestID 0
+          , _tcReqName = "CnC_BIN"
+          , _tcReqDescription = "C&C Binary TC"
+          , _tcReqSource = "TC-TAB"
+          , _tcReqReleaseTime = Nothing
+          , _tcReqVerifications =
+              Verification
+                { _verRelease = StRDisabled
+                , _verGroundReception = StGExpected
+                , _verGroundTransmission = StGExpected
+                , _verGroundOBR = StGDisabled
+                , _verTMAcceptance = StTmDisabled
+                , _verTMStart = StTmDisabled
+                , _verTMProgress = []
+                , _verTMComplete = StTmDisabled
+                , _verStatus = VerifStatNominal
+                }
+          , _tcReqSCID = SCID 533
+          , _tcReqVCID = VCID 1
+          , _tcReqPayload =
+              TCCommand
+                { _tcReqMAPID = MAPID 0
+                , _tcReqTransMode = BD
+                , _tcDestination = DestCnc (IfCnc 1)
+                , _tcSSC = SSC 0
+                , _tcReqPacket =
+                    TCPacket
+                      { _tcpAPID = APID 1540
+                      , _tcpType = PUSType 2
+                      , _tcpSubType = PUSSubType 10
+                      , _tcpSourceID = IsSrcIDA (SourceID 10)
+                      , _tcpParams =
+                          ExpandedParameterList
+                            (List
+                               [ Parameter
+                                   { _paramName = "X" , _paramValue = ValUInt32 BiE 0 }
+                               ]
+                               Empty)
+                      }
+                }
+          }
+    ]
+]
