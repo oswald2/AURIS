@@ -138,6 +138,13 @@ instance Val SourceID  where
     cast' _         = Nothing
 
 
+instance Val SourceIDC  where
+    val (SourceIDC x) = val x
+
+    cast' (Int32 x) = Just (SourceIDC (fromIntegral x))
+    cast' _         = Nothing
+
+
 
 instance Val ByteOffset  where
     val (ByteOffset x) = val x

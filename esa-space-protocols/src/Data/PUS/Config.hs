@@ -57,10 +57,10 @@ import           General.Time
 
 import           Protocol.ProtocolInterfaces
 
+import           Data.PUS.MissionSpecific.Missions
 import           Data.PUS.TMFrame               ( TMFrameConfig
                                                 , defaultTMFrameConfig
                                                 )
-
 
 data NctrsConfig = NctrsConfig
     { cfgNctrsID      :: !Word16
@@ -138,7 +138,8 @@ instance ToJSON SLEInstanceConfig where
 data SLEInstance = SLEInstance
     { cfgSleInstanceNr     :: !Word8
     , cfgSleInstanceConfig :: SLEInstanceConfig
-    } deriving (Eq, Generic)
+    }
+    deriving (Eq, Generic)
 
 instance FromJSON SLEInstance
 instance ToJSON SLEInstance where
@@ -264,8 +265,10 @@ defaultVerifConfig = VerificationConfig { cfgTimeoutGT = 20
 -- | The configuration of the PUS functionality
 data Config = Config
     {
+    -- | The mission to be used. Determines the feature set
+      cfgMission              :: !Mission
     -- | The block size that is used to encode/decode the CLTU
-      cfgCltuBlockSize        :: !CltuBlockSize
+    , cfgCltuBlockSize        :: !CltuBlockSize
     -- | If the socket interface is used, specifies Just portnumber, else Nothing
     , cfgInterfacePort        :: Maybe Word16
     -- | If the TC randomization is enabled by default
@@ -387,7 +390,8 @@ defaultSleConfig = SLEConfig
 
 -- | a default configuration with typical values.
 defaultConfig :: Config
-defaultConfig = Config { cfgCltuBlockSize        = CltuBS_8
+defaultConfig = Config { cfgMission              = MissionDefault
+                       , cfgCltuBlockSize        = CltuBS_8
                        , cfgInterfacePort        = Just 55555
                        , cfgRandomizerEnabled    = False
                        , cfgRandomizerStartValue = 0xFF

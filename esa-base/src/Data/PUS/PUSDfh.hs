@@ -56,6 +56,12 @@ module Data.PUS.PUSDfh
     , stdTmSubType
     , stdTmDestinationID
     , stdTmOBTime
+    , stdCTmVersion
+    , stdCTmTimeRef
+    , stdCTmType
+    , stdCTmSubType
+    , stdCTmDestinationID
+    , stdCTmOBTime
     , cncTcCrcFlags
     , cncTcAcceptance
     , cncTcStart
@@ -66,6 +72,8 @@ module Data.PUS.PUSDfh
     , cncTcSourceID
     , defaultTCHeader
     , defaultCnCTCHeader
+    , defaultPUSCTCHeader
+    , defaultPUSCTMHeader
     , pusSetTypes
     , pusGetTypes
     , dfhTypes
@@ -74,23 +82,23 @@ module Data.PUS.PUSDfh
     ) where
 
 
-import           RIO                     hiding ( Builder
-                                                , (.~)
+import           RIO                     hiding ( (.~)
+                                                , Builder
                                                 )
 
-import           Control.Lens                   ( makeLenses
-                                                , (.~)
+import           ByteString.StrictBuilder
+import           Control.Lens                   ( (.~)
+                                                , makeLenses
                                                 )
+import           Data.Aeson
 import           Data.Attoparsec.ByteString     ( Parser )
 import qualified Data.Attoparsec.ByteString    as A
 import           Data.Bits
-import           ByteString.StrictBuilder
-import           Data.Aeson
 
 import           Codec.Serialise
 
-import           General.PUSTypes
 import           Data.PUS.EncTime
+import           General.PUSTypes
 
 import           General.SizeOf
 
@@ -110,6 +118,15 @@ data DataFieldHeader =
         , _stdFlagProgressExec :: !Bool
         , _stdFlagExecComp :: !Bool
         }
+    | PUSTCStdHeaderC {
+        _stdCType :: PUSType
+        , _stdCSubType :: PUSSubType
+        , _stdCSrcID :: SourceIDC
+        , _stdCFlagAcceptance :: !Bool
+        , _stdCFlagStartExec :: !Bool
+        , _stdCFlagProgressExec :: !Bool
+        , _stdCFlagExecComp :: !Bool
+        }
     -- | A standard header for TM PUS Packets. Most missions will be fine with it.
     -- It may need replacement if different time encodings are used.
     | PUSTMStdHeader {
@@ -119,6 +136,14 @@ data DataFieldHeader =
         , _stdTmDestinationID :: !SourceID
         , _stdTmOBTime :: !CUCTime
         }
+    | PUSTMStdHeaderC {
+        _stdCTmVersion :: !Word8
+        , _stdCTmTimeRef :: !Word8
+        , _stdCTmType :: !PUSType
+        , _stdCTmSubType :: !PUSSubType
+        , _stdCTmDestinationID :: !SourceIDC
+        , _stdCTmOBTime :: !CUCTime
+    }
     -- | A standard header for the C&C protocol
     | PUSCnCTCHeader {
         _cncTcCrcFlags :: !Word8
@@ -148,45 +173,68 @@ defaultCnCTCHeader :: DataFieldHeader
 defaultCnCTCHeader =
     PUSCnCTCHeader 0 False False False False 0 0 (mkSourceID 0)
 
+-- | Default TC DFH for the PUS C Standard
+defaultPUSCTCHeader :: DataFieldHeader
+defaultPUSCTCHeader =
+    PUSTCStdHeaderC 0 0 (mkSourceIDC 0) False False False False
+
+
+-- | Default TM DFH for the PUS C Standard 
+defaultPUSCTMHeader :: DataFieldHeader
+defaultPUSCTMHeader =
+    PUSTMStdHeaderC 2 0 (PUSType 0) (PUSSubType 0) (mkSourceIDC 0) (nullCUCTime Cuc42)
+
 
 -- | returns the type of the header
 pusType :: DataFieldHeader -> PUSType
-pusType PUSEmptyHeader      = mkPUSType 0
-pusType PUSTCStdHeader {..} = _stdType
-pusType PUSTMStdHeader {..} = _stdTmType
-pusType PUSCnCTCHeader {..} = _cncTcType
+pusType PUSEmptyHeader       = mkPUSType 0
+pusType PUSTCStdHeader {..}  = _stdType
+pusType PUSTCStdHeaderC {..} = _stdCType
+pusType PUSTMStdHeader {..}  = _stdTmType
+pusType PUSTMStdHeaderC {..} = _stdCTmType
+pusType PUSCnCTCHeader {..}  = _cncTcType
 
 -- | returns the sub type of the header
 pusSubType :: DataFieldHeader -> PUSSubType
-pusSubType PUSEmptyHeader      = mkPUSSubType 0
-pusSubType PUSTCStdHeader {..} = _stdSubType
-pusSubType PUSTMStdHeader {..} = _stdTmSubType
-pusSubType PUSCnCTCHeader {..} = _cncTcSubType
+pusSubType PUSEmptyHeader       = mkPUSSubType 0
+pusSubType PUSTCStdHeader {..}  = _stdSubType
+pusSubType PUSTCStdHeaderC {..} = _stdCSubType
+pusSubType PUSTMStdHeader {..}  = _stdTmSubType
+pusSubType PUSTMStdHeaderC {..} = _stdCTmSubType
+pusSubType PUSCnCTCHeader {..}  = _cncTcSubType
 
 -- | returns the source ID of the header
-pusSrcID :: DataFieldHeader -> SourceID
-pusSrcID PUSEmptyHeader      = mkSourceID 0
-pusSrcID PUSTCStdHeader {..} = _stdSrcID
-pusSrcID PUSTMStdHeader {..} = _stdTmDestinationID
-pusSrcID PUSCnCTCHeader {..} = _cncTcSourceID
+pusSrcID :: DataFieldHeader -> SrcID
+pusSrcID PUSEmptyHeader       = IsSrcIDC (mkSourceIDC 0)
+pusSrcID PUSTCStdHeader {..}  = IsSrcIDA _stdSrcID
+pusSrcID PUSTCStdHeaderC {..} = IsSrcIDC _stdCSrcID
+pusSrcID PUSTMStdHeader {..}  = IsSrcIDA _stdTmDestinationID
+pusSrcID PUSTMStdHeaderC {..} = IsSrcIDC _stdCTmDestinationID
+pusSrcID PUSCnCTCHeader {..}  = IsSrcIDA _cncTcSourceID
 
-pusSetSrcID :: DataFieldHeader -> SourceID -> DataFieldHeader
-pusSetSrcID PUSEmptyHeader       _  = PUSEmptyHeader
-pusSetSrcID hdr@PUSTCStdHeader{} si = hdr & stdSrcID .~ si
-pusSetSrcID hdr@PUSTMStdHeader{} si = hdr & stdTmDestinationID .~ si
-pusSetSrcID hdr@PUSCnCTCHeader{} si = hdr & cncTcSourceID .~ si
+pusSetSrcID :: DataFieldHeader -> SrcID -> DataFieldHeader
+pusSetSrcID PUSEmptyHeader        _  = PUSEmptyHeader
+pusSetSrcID hdr@PUSTCStdHeader{}  si = hdr & stdSrcID .~ srcIDtoSourceID si
+pusSetSrcID hdr@PUSTCStdHeaderC{} si = hdr & stdCSrcID .~ srcIDtoSourceIDC si
+pusSetSrcID hdr@PUSTMStdHeader{} si =
+    hdr & stdTmDestinationID .~ srcIDtoSourceID si
+pusSetSrcID hdr@PUSTMStdHeaderC{} si =
+    hdr & stdCTmDestinationID .~ srcIDtoSourceIDC si
+pusSetSrcID hdr@PUSCnCTCHeader{} si = hdr & cncTcSourceID .~ srcIDtoSourceID si
 
 -- | Lens into the data field header for the 'SourceID'
-dfhSourceID :: Lens' DataFieldHeader SourceID
+dfhSourceID :: Lens' DataFieldHeader SrcID
 dfhSourceID = lens pusSrcID pusSetSrcID
 
 
 -- | returns the destination ID of the TM header
-pusDestID :: DataFieldHeader -> SourceID
-pusDestID PUSEmptyHeader      = mkSourceID 0
-pusDestID PUSTCStdHeader {..} = _stdSrcID
-pusDestID PUSTMStdHeader {..} = _stdTmDestinationID
-pusDestID PUSCnCTCHeader {..} = _cncTcSourceID
+pusDestID :: DataFieldHeader -> SrcID
+pusDestID PUSEmptyHeader       = IsSrcIDC (mkSourceIDC 0)
+pusDestID PUSTCStdHeader {..}  = IsSrcIDA _stdSrcID
+pusDestID PUSTCStdHeaderC {..} = IsSrcIDC _stdCSrcID
+pusDestID PUSTMStdHeader {..}  = IsSrcIDA _stdTmDestinationID
+pusDestID PUSTMStdHeaderC {..} = IsSrcIDC _stdCTmDestinationID
+pusDestID PUSCnCTCHeader {..}  = IsSrcIDA _cncTcSourceID
 
 
 -- | Lens into the data field header for the type and subtype
@@ -202,8 +250,12 @@ pusSetTypes :: DataFieldHeader -> (PUSType, PUSSubType) -> DataFieldHeader
 pusSetTypes PUSEmptyHeader _ = PUSEmptyHeader
 pusSetTypes hdr@PUSTCStdHeader{} (t, st) =
     hdr & stdType .~ t & stdSubType .~ st
+pusSetTypes hdr@PUSTCStdHeaderC{} (t, st) =
+    hdr & stdCType .~ t & stdCSubType .~ st
 pusSetTypes hdr@PUSTMStdHeader{} (t, st) =
     hdr & stdTmType .~ t & stdTmSubType .~ st
+pusSetTypes hdr@PUSTMStdHeaderC{} (t, st) =
+    hdr & stdCTmType .~ t & stdCTmSubType .~ st
 pusSetTypes hdr@PUSCnCTCHeader{} (t, st) =
     hdr & cncTcType .~ t & cncTcSubType .~ st
 
@@ -216,14 +268,22 @@ pusAckFlags PUSTCStdHeader {..} =
     , _stdFlagProgressExec
     , _stdFlagExecComp
     )
-pusAckFlags PUSTMStdHeader{} = (False, False, False, False)
-pusAckFlags PUSCnCTCHeader{} = (False, False, False, False)
+pusAckFlags PUSTCStdHeaderC {..} =
+    ( _stdCFlagAcceptance
+    , _stdCFlagStartExec
+    , _stdCFlagProgressExec
+    , _stdCFlagExecComp
+    )
+pusAckFlags PUSTMStdHeader{}  = (False, False, False, False)
+pusAckFlags PUSTMStdHeaderC{} = (False, False, False, False)
+pusAckFlags PUSCnCTCHeader{}  = (False, False, False, False)
 
 -- | Set the acknowledgement flags for the stages 
 pusSetAckFlags
     :: DataFieldHeader -> (Bool, Bool, Bool, Bool) -> DataFieldHeader
-pusSetAckFlags PUSEmptyHeader       _ = PUSEmptyHeader
-pusSetAckFlags hdr@PUSTMStdHeader{} _ = hdr
+pusSetAckFlags PUSEmptyHeader        _ = PUSEmptyHeader
+pusSetAckFlags hdr@PUSTMStdHeader{}  _ = hdr
+pusSetAckFlags hdr@PUSTMStdHeaderC{} _ = hdr
 pusSetAckFlags hdr@PUSTCStdHeader{} (ack, start, prog, exec) =
     hdr
         &  stdFlagAcceptance
@@ -234,7 +294,18 @@ pusSetAckFlags hdr@PUSTCStdHeader{} (ack, start, prog, exec) =
         .~ prog
         &  stdFlagExecComp
         .~ exec
-pusSetAckFlags hdr@PUSCnCTCHeader{} (ack, start, prog, exec) = 
+pusSetAckFlags hdr@PUSTCStdHeaderC{} (ack, start, prog, exec) =
+    hdr
+        &  stdCFlagAcceptance
+        .~ ack
+        &  stdCFlagStartExec
+        .~ start
+        &  stdCFlagProgressExec
+        .~ prog
+        &  stdCFlagExecComp
+        .~ exec
+
+pusSetAckFlags hdr@PUSCnCTCHeader{} (ack, start, prog, exec) =
     hdr
         &  cncTcAcceptance
         .~ ack
@@ -252,14 +323,17 @@ dfhAckFlags = lens pusAckFlags pusSetAckFlags
 
 pusPktTime :: DataFieldHeader -> Maybe CUCTime
 pusPktTime PUSTMStdHeader { _stdTmOBTime = t } = Just t
+pusPktTime PUSTMStdHeaderC { _stdCTmOBTime = t } = Just t
 pusPktTime _ = Nothing
 
 -- | returns the length of the data field header when encoded in bytes
 dfhLength :: DataFieldHeader -> Int
-dfhLength PUSEmptyHeader   = 0
-dfhLength PUSTCStdHeader{} = 4
-dfhLength PUSTMStdHeader{} = 10
-dfhLength PUSCnCTCHeader{} = 4
+dfhLength PUSEmptyHeader    = 0
+dfhLength PUSTCStdHeader{}  = 4
+dfhLength PUSTCStdHeaderC{} = 5
+dfhLength PUSTMStdHeader{}  = 10
+dfhLength PUSTMStdHeaderC{} = 13
+dfhLength PUSCnCTCHeader{}  = 4
 
 instance SizeOf DataFieldHeader where
     sizeof = dfhLength
@@ -280,12 +354,35 @@ dfhBuilder PUSTCStdHeader {..} =
             <> pusTypeBuilder _stdType
             <> pusSubTypeBuilder _stdSubType
             <> sourceIDBuilder _stdSrcID
+
+dfhBuilder PUSTCStdHeaderC {..} =
+    let b1 =
+            0x20
+                .|. (if _stdCFlagAcceptance then 0x01 else 0x00)
+                .|. (if _stdCFlagStartExec then 0x02 else 0x00)
+                .|. (if _stdCFlagProgressExec then 0x04 else 0x00)
+                .|. (if _stdCFlagExecComp then 0x08 else 0x00)
+    in  word8 b1
+            <> pusTypeBuilder _stdCType
+            <> pusSubTypeBuilder _stdCSubType
+            <> sourceIDCBuilder _stdCSrcID
+
+
 dfhBuilder x@PUSTMStdHeader{} =
     word8 ((_stdTmVersion x .&. 0x07) `shiftL` 4)
         <> pusTypeBuilder (_stdTmType x)
         <> pusSubTypeBuilder (_stdTmSubType x)
         <> sourceIDBuilder (_stdTmDestinationID x)
         <> cucTimeBuilder (_stdTmOBTime x)
+
+dfhBuilder PUSTMStdHeaderC {..} =
+    let v = 0x20 .|. (_stdCTmTimeRef .&. 0x0F)
+    in  word8 v
+            <> pusTypeBuilder _stdCTmType
+            <> pusSubTypeBuilder _stdCTmSubType
+            <> sourceIDCBuilder _stdCTmDestinationID
+            <> cucTimeBuilder _stdCTmOBTime
+
 dfhBuilder x@PUSCnCTCHeader{} =
     word8 (((_cncTcCrcFlags x .&. 0x07) `shiftL` 4) .|. ackFlags)
         <> pusTypeBuilder (_cncTcType x)
@@ -325,7 +422,30 @@ dfhParser PUSTCStdHeader{} = do
                              }
 
     pure hdr
-dfhParser PUSTMStdHeader{ _stdTmOBTime = t } = do
+
+dfhParser PUSTCStdHeaderC{} = do
+    b1 <- A.anyWord8
+    t  <- pusTypeParser
+    st <- pusSubTypeParser
+    si <- sourceIDCParser
+
+    let fa  = b1 .&. 0x01 /= 0
+        fs  = b1 .&. 0x02 /= 0
+        fp  = b1 .&. 0x04 /= 0
+        fe  = b1 .&. 0x08 /= 0
+        hdr = PUSTCStdHeaderC { _stdCType             = t
+                              , _stdCSubType          = st
+                              , _stdCSrcID            = si
+                              , _stdCFlagAcceptance   = fa
+                              , _stdCFlagStartExec    = fs
+                              , _stdCFlagProgressExec = fp
+                              , _stdCFlagExecComp     = fe
+                              }
+
+    pure hdr
+
+
+dfhParser PUSTMStdHeader { _stdTmOBTime = t } = do
     vers <- A.anyWord8
     tp   <- A.anyWord8
     st   <- A.anyWord8
@@ -333,6 +453,16 @@ dfhParser PUSTMStdHeader{ _stdTmOBTime = t } = do
     obt  <- cucTimeParser t
     let vers' = (vers .&. 0x70) `shiftR` 4
     return $! PUSTMStdHeader vers' (mkPUSType tp) (mkPUSSubType st) si obt
+
+dfhParser PUSTMStdHeaderC { _stdCTmOBTime = t } = do
+    vers <- A.anyWord8
+    tp   <- A.anyWord8
+    st   <- A.anyWord8
+    si   <- sourceIDCParser
+    obt  <- cucTimeParser t
+    let vers' = (vers .&. 0xF0) `shiftR` 4
+        tref  = (vers .&. 0x0F)
+    return $! PUSTMStdHeaderC vers' tref (mkPUSType tp) (mkPUSSubType st) si obt
 
 dfhParser PUSCnCTCHeader{} = do
     val <- A.anyWord8

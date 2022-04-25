@@ -67,6 +67,8 @@ library
         Data.PUS.NcduToTMFrame
         Data.PUS.Counter
         Data.PUS.MissionSpecific.Default
+        Data.PUS.MissionSpecific.MissionSpecific
+        Data.PUS.MissionSpecific.PUSC
         Data.PUS.EventHandler
         Data.PUS.TCGeneration
         Protocol.NCTRS

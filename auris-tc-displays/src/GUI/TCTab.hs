@@ -13,54 +13,47 @@ module GUI.TCTab
     ) where
 
 
-import           RIO
-import           RIO.Partial                    ( toEnum )
-import qualified RIO.Text                      as T
--- import qualified RIO.ByteString                as B
-import           RIO.ByteString.Lazy            ( toStrict
-                                                , fromStrict
-                                                )
+import           Codec.Serialise
+import qualified Data.Text.IO                  as T
 import           Data.Text.Short                ( ShortText )
 import qualified Data.Text.Short               as ST
-import qualified Data.Text.IO                  as T
-import           Codec.Serialise
+import           RIO
+-- import qualified RIO.ByteString                as B
+import           RIO.ByteString.Lazy            ( fromStrict
+                                                , toStrict
+                                                )
+import           RIO.Partial                    ( toEnum )
+import qualified RIO.Text                      as T
 
-import           GI.Gtk                        as Gtk
 import           GI.Gdk.Flags
 import           GI.Gdk.Objects.DragContext
 import           GI.Gdk.Structs.Atom
+import           GI.Gtk                        as Gtk
 
+import           Data.GI.Base.Attributes        ( AttrOpTag(AttrSet) )
 import           GI.GtkSource
-import qualified GI.GtkSource.Objects.Buffer   as BUF
 import           GI.GtkSource.Interfaces.StyleSchemeChooser
                                                 ( )
-import           Data.GI.Base.Attributes        ( AttrOpTag(AttrSet) )
+import qualified GI.GtkSource.Objects.Buffer   as BUF
 
+import           Interface.Interface
 import           Text.Show.Pretty               ( ppShow )
-import           Interface.Interface            
 
-import           GUI.Utils                      ( getObject )
-import           GUI.MessageDialogs             
-import           GUI.FileChooser
 import           GUI.Definitions
+import           GUI.FileChooser
+import           GUI.MessageDialogs
+import           GUI.Utils                      ( getObject )
 
-import           Data.PUS.TCRequest
-import           Data.PUS.TCPacket              ( TCPacket(TCPacket) )
-import           Data.PUS.Parameter             
-import           Data.PUS.Value
-import           Data.PUS.TCCnc                 ( TCScoe(TCScoe) )
-import           Data.PUS.Verification
 import           Data.PUS.Config
+import           Data.PUS.Parameter
+import           Data.PUS.TCCnc                 ( TCScoe(TCScoe) )
+import           Data.PUS.TCPacket              ( TCPacket(TCPacket) )
+import           Data.PUS.TCRequest
+import           Data.PUS.Value
+import           Data.PUS.Verification
 
-import           General.PUSTypes               ( mkPUSSubType
-                                                , mkPUSType
-                                                , mkSCID
-                                                , mkSourceID
-                                                , mkVCID
-                                                , mkSSC
-                                                , TransmissionMode(BD)
-                                                )
 import           General.APID                   ( APID(APID) )
+import           General.PUSTypes
 
 import           Protocol.ProtocolInterfaces
 
@@ -68,8 +61,8 @@ import           Protocol.ProtocolInterfaces
 import           Refined                        ( refineTH )
 import           System.FilePath
 
-import           Data.TC.TCDef
 import           Data.GI.Gtk.ModelView.SeqStore
+import           Data.TC.TCDef
 import           GUI.ScrollingTable
 
 
@@ -149,10 +142,7 @@ createTCTab cfg window builder = do
                   }
 
 
-    content <- targetEntryNew
-        "application/tc-def"
-        0
-        1
+    content <- targetEntryNew "application/tc-def" 0 1
     treeViewEnableModelDragSource tcv
                                   [ModifierTypeButton1Mask]
                                   [content]
@@ -165,7 +155,7 @@ createTCTab cfg window builder = do
 
     --void $ Gtk.on tcv #dragBegin $ onDragBegin g
 
-    _ <- Gtk.on btClear #clicked $ do 
+    _ <- Gtk.on btClear #clicked $ do
         setText g ""
         writeIORef (_tcTabFileName g) Nothing
     _ <- Gtk.on btInsert #clicked $ do
@@ -186,11 +176,12 @@ createTCTab cfg window builder = do
                                 BD
                                 (DestEden (IfEden 1) SCOE)
                                 (mkSSC 0)
-                                (TCPacket (APID 1540)
-                                          (mkPUSType 2)
-                                          (mkPUSSubType 10)
-                                          (mkSourceID 10)
-                                          (ExpandedParameterList (List params Empty))
+                                (TCPacket
+                                    (APID 1540)
+                                    (mkPUSType 2)
+                                    (mkPUSSubType 10)
+                                    (IsSrcIDA (mkSourceID 10))
+                                    (ExpandedParameterList (List params Empty))
                                 )
                             )
                       ]
@@ -218,11 +209,12 @@ createTCTab cfg window builder = do
                                 BD
                                 (DestCnc (IfCnc 1))
                                 (mkSSC 0)
-                                (TCPacket (APID 1540)
-                                          (mkPUSType 2)
-                                          (mkPUSSubType 10)
-                                          (mkSourceID 10)
-                                          (ExpandedParameterList (List params Empty))
+                                (TCPacket
+                                    (APID 1540)
+                                    (mkPUSType 2)
+                                    (mkPUSSubType 10)
+                                    (IsSrcIDA (mkSourceID 10))
+                                    (ExpandedParameterList (List params Empty))
                                 )
                             )
                       ]
@@ -272,11 +264,12 @@ createTCTab cfg window builder = do
                                 BD
                                 (DestNctrs (IfNctrs 1))
                                 (mkSSC 0)
-                                (TCPacket (APID 17)
-                                          (mkPUSType 2)
-                                          (mkPUSSubType 10)
-                                          (mkSourceID 10)
-                                          (ExpandedParameterList (List params Empty))
+                                (TCPacket
+                                    (APID 17)
+                                    (mkPUSType 2)
+                                    (mkPUSSubType 10)
+                                    (IsSrcIDA (mkSourceID 10))
+                                    (ExpandedParameterList (List params Empty))
                                 )
                             )
                       ]
@@ -295,7 +288,13 @@ createTCTab cfg window builder = do
 --     T.putStrLn "onDragBegin called"
 
 onDragDataGet
-    :: TCTab -> Interface -> DragContext -> SelectionData -> Word32 -> Word32 -> IO ()
+    :: TCTab
+    -> Interface
+    -> DragContext
+    -> SelectionData
+    -> Word32
+    -> Word32
+    -> IO ()
 onDragDataGet g _interface _ctxt selection info _time = do
     T.putStrLn $ "onDragDataGet called: " <> T.pack (show info)
 
@@ -315,10 +314,7 @@ onDragDataGet g _interface _ctxt selection info _time = do
                         Just val -> do
                             let bin = toStrict (serialise val)
                             atom <- atomIntern "AurisTC" True
-                            selectionDataSet selection
-                                             atom
-                                             8
-                                             bin
+                            selectionDataSet selection atom 8 bin
                         Nothing -> return ()
                 Nothing -> return ()
         else do
@@ -328,7 +324,7 @@ onDragDataGet g _interface _ctxt selection info _time = do
 
 onDragDataReceived
     :: TCTab
-    -> Interface 
+    -> Interface
     -> DragContext
     -> Int32
     -> Int32
@@ -344,7 +340,7 @@ onDragDataReceived g interface ctxt _x _y selection _info time = do
         Left _err -> do
             dragFinish ctxt False False time
         Right tcDef -> do
-            res <- tcTabAddNewTC g interface tcDef 
+            res <- tcTabAddNewTC g interface tcDef
             dragFinish ctxt res False time
 
 
@@ -384,8 +380,12 @@ setupCallbacks gui interface = do
     writeIORef (_tcTabLogFunc gui)
                (Just (callInterface interface actionLogMessage))
 
-    void $ Gtk.on (_tcTabTCBrowser gui) #dragDataGet $ onDragDataGet gui interface 
-    void $ Gtk.on (_tcTabTextView gui) #dragDataReceived $ onDragDataReceived gui interface 
+    void $ Gtk.on (_tcTabTCBrowser gui) #dragDataGet $ onDragDataGet
+        gui
+        interface
+    void $ Gtk.on (_tcTabTextView gui) #dragDataReceived $ onDragDataReceived
+        gui
+        interface
 
 
 
@@ -526,20 +526,21 @@ tcTabSetTCs g tcs = do
 
 
 tcTabAddNewTC :: TCTab -> Interface -> TCDef -> IO Bool
-tcTabAddNewTC g interface tcDef = do 
-    rqst <- callInterface interface actionGetTCSync tcDef "TC-TAB" BD 
+tcTabAddNewTC g interface tcDef = do
+    rqst <- callInterface interface actionGetTCSync tcDef "TC-TAB" BD
 
-    txt <- getText g 
-    if T.null txt 
-        then do 
+    txt  <- getText g
+    if T.null txt
+        then do
             setText g (T.pack (ppShow [SendRqst rqst]))
-            return True 
-        else do 
-            case readMaybe (T.unpack txt) of 
-                Just actions -> do 
+            return True
+        else do
+            case readMaybe (T.unpack txt) of
+                Just actions -> do
                     let newActions = actions ++ [SendRqst rqst]
                     setText g (T.pack (ppShow newActions))
-                    return True 
-                Nothing -> do 
-                    errorDialog "Could not parse already present TCs, cannot add TC"
-                    return False 
+                    return True
+                Nothing -> do
+                    errorDialog
+                        "Could not parse already present TCs, cannot add TC"
+                    return False

@@ -67,6 +67,16 @@ module General.PUSTypes
     , getSourceID
     , sourceIDBuilder
     , sourceIDParser
+    , SourceIDC(..)
+    , mkSourceIDC
+    , getSourceIDC
+    , sourceIDCBuilder
+    , sourceIDCParser
+
+    , SrcID(..)
+    , srcIDtoSourceID 
+    , srcIDtoSourceIDC 
+
     , TMSegmentLen(..)
     , tmSegmentLength
     , SPID(..)
@@ -584,6 +594,66 @@ sourceIDBuilder (SourceID x) = word8 x
 sourceIDParser :: Parser SourceID
 sourceIDParser = SourceID <$> A.anyWord8
 
+
+
+-- The Source/Destination ID for the PUS standard C
+newtype SourceIDC = SourceIDC Word16
+    deriving (Eq, Ord, Num, Show, Read, Generic)
+
+getSourceIDC :: SourceIDC -> Word16
+getSourceIDC (SourceIDC x) = x
+
+mkSourceIDC :: Word16 -> SourceIDC
+mkSourceIDC = SourceIDC
+
+instance Serialise SourceIDC
+instance FromJSON SourceIDC
+instance ToJSON SourceIDC where
+    toEncoding = genericToEncoding defaultOptions
+instance NFData SourceIDC
+
+instance Display SourceIDC where
+    display (SourceIDC x) = display x
+
+-- | A builder for the Source ID PUS C 
+sourceIDCBuilder :: SourceIDC -> Builder
+sourceIDCBuilder (SourceIDC x) = word16BE x
+
+-- | A parser for the Source ID PUS C 
+sourceIDCParser :: Parser SourceIDC
+sourceIDCParser = SourceIDC <$> A.anyWord16be
+
+
+sourceIDCtoSourceID :: SourceIDC -> SourceID
+sourceIDCtoSourceID (SourceIDC val) = SourceID (fromIntegral (val .&. 0xFF))
+
+sourceIDtoSourceIDC :: SourceID -> SourceIDC
+sourceIDtoSourceIDC (SourceID val) = SourceIDC (fromIntegral val)
+
+
+data SrcID = 
+    IsSrcIDA SourceID
+    | IsSrcIDC SourceIDC
+    deriving (Eq, Ord, Show, Read, Generic)
+
+instance Serialise SrcID
+instance FromJSON SrcID
+instance ToJSON SrcID where
+    toEncoding = genericToEncoding defaultOptions
+instance NFData SrcID
+
+instance Display SrcID where 
+    display (IsSrcIDA val) = display val 
+    display (IsSrcIDC val) = display val 
+
+
+srcIDtoSourceID :: SrcID -> SourceID 
+srcIDtoSourceID (IsSrcIDA val) = val 
+srcIDtoSourceID (IsSrcIDC val) = sourceIDCtoSourceID val 
+
+srcIDtoSourceIDC :: SrcID -> SourceIDC 
+srcIDtoSourceIDC (IsSrcIDA val) = sourceIDtoSourceIDC val 
+srcIDtoSourceIDC (IsSrcIDC val) = val 
 
 
 -- | Used for specifying the segment length for TM frames

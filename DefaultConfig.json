@@ -3,99 +3,100 @@
         "cfgMongoHost": "localhost",
         "cfgMongoPort": null
     },
+    "aurisLogLevel": {
+        "tag": "LogLevelInfo"
+    },
     "aurisMIB": null,
-    "aurisTheme": "ThemeLight",
     "aurisMission": "DEFAULT",
     "aurisPusConfig": {
+        "cfgCltuBlockSize": "CltuBS_8",
         "cfgCnC": [
             {
                 "cfgCncHasCRC": true,
-                "cfgCncPortTM": 10000,
                 "cfgCncHost": "localhost",
-                "cfgCncPortTC": 11000,
+                "cfgCncID": 1,
                 "cfgCncName": "SCOE 1",
-                "cfgCncID": 1
+                "cfgCncPortTC": 11000,
+                "cfgCncPortTM": 10000
             }
         ],
-        "cfgUnknownSPID": 5071,
-        "cfgStoreTMFrames": true,
-        "cfgRandomizerEnabled": false,
-        "cfgVerification": {
-            "cfgTimeoutC": 30,
-            "cfgTimeoutGT": 20,
-            "cfgTimeoutS": 30,
-            "cfgTimeoutA": 30,
-            "cfgTimeoutO": 20
-        },
+        "cfgEDEN": [
+            {
+                "cfgEdenHost": "localhost",
+                "cfgEdenID": 1,
+                "cfgEdenName": "EDEN 1",
+                "cfgEdenPort": 40300
+            }
+        ],
         "cfgEpoch": "UnixTime",
         "cfgInterfacePort": 55555,
+        "cfgLeapSeconds": {
+            "fromLeaps": 17
+        },
+        "cfgMission": "MissionDefault",
+        "cfgNCTRS": [
+            {
+                "cfgNctrsHost": "localhost",
+                "cfgNctrsID": 1,
+                "cfgNctrsName": "NCTRS A",
+                "cfgNctrsPortADM": 20010,
+                "cfgNctrsPortTC": 20009,
+                "cfgNctrsPortTM": 2502
+            }
+        ],
+        "cfgRandomizerEnabled": false,
         "cfgRandomizerStartValue": 255,
+        "cfgSCID": 0,
+        "cfgSLE": {
+            "cfgSleInstances": [
+                {
+                    "cfgSleInstanceConfig": {
+                        "contents": {
+                            "cfgSleRafPeerID": "PARAGONTT",
+                            "cfgSleRafPort": "PORT_TM1",
+                            "cfgSleRafSII": "sagr=3.spack=facility-PASS1.rsl-fg=1.raf=onlc1",
+                            "cfgSleRafVersion": "SLEVersion3"
+                        },
+                        "tag": "SLEInstRAF"
+                    },
+                    "cfgSleInstanceNr": 1
+                },
+                {
+                    "cfgSleInstanceConfig": {
+                        "contents": {
+                            "cfgSleCltuPeerID": "PARAGONTT",
+                            "cfgSleCltuPort": "PORT_TC1",
+                            "cfgSleCltuSII": "sagr=3.spack=facility-PASS1.rsl-fg=1.cltu=cltu1",
+                            "cfgSleCltuVersion": "SLEVersion3"
+                        },
+                        "tag": "SLEInstFCLTU"
+                    },
+                    "cfgSleInstanceNr": 1
+                }
+            ],
+            "cfgSlePeerID": "AURIS",
+            "cfgSleProxyConfig": "sle/PROXY_PROV_Config.txt",
+            "cfgSleSeConfig": "sle/SE_PROV_Config.txt"
+        },
+        "cfgStorePUSPackets": true,
+        "cfgStoreTMFrames": true,
+        "cfgTMFrame": {
+            "cfgMaxTMFrameLen": 1115,
+            "cfgTMFrameHasCRC": true,
+            "cfgTMSegLength": "TMSegment65536"
+        },
+        "cfgUnknownSPID": 5071,
         "cfgVCIDs": [
             0,
             1
         ],
-        "cfgLeapSeconds": {
-            "fromLeaps": 17
-        },
-        "cfgSCID": 0,
-        "cfgNCTRS": [
-            {
-                "cfgNctrsPortTC": 20009,
-                "cfgNctrsID": 1,
-                "cfgNctrsHost": "localhost",
-                "cfgNctrsName": "NCTRS A",
-                "cfgNctrsPortADM": 20010,
-                "cfgNctrsPortTM": 2502
-            }
-        ],
-        "cfgCltuBlockSize": "CltuBS_8",
-        "cfgStorePUSPackets": true,
-        "cfgEDEN": [
-            {
-                "cfgEdenName": "EDEN 1",
-                "cfgEdenID": 1,
-                "cfgEdenHost": "localhost",
-                "cfgEdenPort": 40300
-            }
-        ],
-        "cfgSLE": {
-            "cfgSleSeConfig": "sle/SE_PROV_Config.txt",
-            "cfgSlePeerID": "AURIS",
-            "cfgSleInstances": [
-                {
-                    "cfgSleInstanceNr": 1,
-                    "cfgSleInstanceConfig": {
-                        "tag": "SLEInstRAF",
-                        "contents": {
-                            "cfgSleRafPort": "PORT_TM1",
-                            "cfgSleRafPeerID": "PARAGONTT",
-                            "cfgSleRafVersion": "SLEVersion3",
-                            "cfgSleRafSII": "sagr=3.spack=facility-PASS1.rsl-fg=1.raf=onlc1"
-                        }
-                    }
-                },
-                {
-                    "cfgSleInstanceNr": 1,
-                    "cfgSleInstanceConfig": {
-                        "tag": "SLEInstFCLTU",
-                        "contents": {
-                            "cfgSleCltuVersion": "SLEVersion3",
-                            "cfgSleCltuPort": "PORT_TC1",
-                            "cfgSleCltuPeerID": "PARAGONTT",
-                            "cfgSleCltuSII": "sagr=3.spack=facility-PASS1.rsl-fg=1.cltu=cltu1"
-                        }
-                    }
-                }
-            ],
-            "cfgSleProxyConfig": "sle/PROXY_PROV_Config.txt"
-        },
-        "cfgTMFrame": {
-            "cfgMaxTMFrameLen": 1115,
-            "cfgTMSegLength": "TMSegment65536",
-            "cfgTMFrameHasCRC": true
+        "cfgVerification": {
+            "cfgTimeoutA": 30,
+            "cfgTimeoutC": 30,
+            "cfgTimeoutGT": 20,
+            "cfgTimeoutO": 20,
+            "cfgTimeoutS": 30
         }
     },
-    "aurisLogLevel": {
-        "tag": "LogLevelInfo"
-    }
+    "aurisTheme": "ThemeLight"
 }

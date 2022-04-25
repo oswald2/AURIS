@@ -6,7 +6,7 @@ module Data.TC.RangeSet
     ) where
 
 import           RIO
-import qualified RIO.Text                      as T
+--import qualified RIO.Text                      as T
 import qualified RIO.Vector                    as V
 
 import           Data.Text.Short                ( ShortText )

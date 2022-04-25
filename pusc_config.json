@@ -2,16 +2,19 @@
     "aurisMIB": null,
     "aurisMission": "S2K_TEST",
     "aurisTheme": "ThemeLight",
-    "aurisDbConfig": null,
+    "aurisDbConfig": {
+        "cfgMongoHost": "localhost",
+        "cfgMongoPort": null
+    },
     "aurisPusConfig": {
-        "cfgMission": "MissionDefault",
+        "cfgMission": "MissionPUSC",
         "cfgCnC": [
             {
                 "cfgCncHasCRC": true,
-                "cfgCncPortTM": 33333,
+                "cfgCncPortTM": 5001,
                 "cfgCncHost": "localhost",
-                "cfgCncPortTC": 22222,
-                "cfgCncName": "ParagonTT",
+                "cfgCncPortTC": 5000,
+                "cfgCncName": "ATC",
                 "cfgCncID": 1
             }
         ],
@@ -29,7 +32,8 @@
         },
         "cfgVCIDs": [
             0,
-            1
+            1,
+            2
         ],
         "cfgLeapSeconds": {
             "fromLeaps": 17
@@ -50,25 +54,9 @@
                 }
             }
         },
-        "cfgNCTRS": [
-            {
-                "cfgNctrsPortTC": 32111,
-                "cfgNctrsID": 1,
-                "cfgNctrsName": "ParagonTT",
-                "cfgNctrsHost": "localhost",
-                "cfgNctrsPortADM": 32110,
-                "cfgNctrsPortTM": 2502
-            }
-        ],
+        "cfgNCTRS": [],
         "cfgCltuBlockSize": "CltuBS_8",
-        "cfgEDEN": [
-            {
-                "cfgEdenID": 1,
-                "cfgEdenName": "ParagonTT",
-                "cfgEdenHost": "localhost",
-                "cfgEdenPort": 40300
-            }
-        ],
+        "cfgEDEN": [],
         "cfgStoreTMFrames": true,
         "cfgStorePUSPackets": true,
         "cfgTMFrame": {
@@ -78,6 +66,6 @@
         }
     },
     "aurisLogLevel": {
-        "tag": "LogLevelWarn"
+        "tag": "LogLevelDebug"
     }
 }

@@ -2,19 +2,19 @@
   NoImplicitPrelude
 #-}
 module AurisMissionSpecific
-  ( getMissionSpecific
-  )
-where
+    ( getMissionSpecific
+    ) where
 
-import           RIO 
+import           RIO
 
-import           Data.PUS.MissionSpecific.Default
+import           Data.PUS.MissionSpecific.Definitions
+import           Data.PUS.MissionSpecific.MissionSpecific
 
 import           AurisConfig
 
 
 getMissionSpecific :: AurisConfig -> IO PUSMissionSpecific
 getMissionSpecific cfg = do
-  pure (defaultMissionSpecific (aurisPusConfig cfg))
+    pure (determineMissionSpecific (aurisPusConfig cfg))
 
 

@@ -152,7 +152,7 @@ genPacket epoch coeff apid t st tcDef = TCPacket
     { _tcpAPID     = apid
     , _tcpType     = t
     , _tcpSubType  = st
-    , _tcpSourceID = SourceID 0
+    , _tcpSourceID = IsSrcIDC (SourceIDC 0)
     , _tcpParams   = genParameters epoch coeff (tcDef ^. tcDefParams)
     }
 

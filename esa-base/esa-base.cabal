@@ -112,6 +112,7 @@ library
     Data.PUS.ExtractedDU
     Data.PUS.LiveState
     Data.PUS.MissionSpecific.Definitions
+    Data.PUS.MissionSpecific.Missions
     Data.PUS.DataModelInfo
     Data.PUS.Value 
     Data.PUS.Parameter

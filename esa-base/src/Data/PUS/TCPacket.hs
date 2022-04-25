@@ -16,41 +16,41 @@ Represents a telecommand as a packet (header and parameters).
     , TemplateHaskell
 #-}
 module Data.PUS.TCPacket
-  ( TCPacket(..)
-  , tcpAPID
-  , tcpType
-  , tcpSubType
-  , tcpSourceID
-  , tcpParams
-  )
-where
+    ( TCPacket(..)
+    , tcpAPID
+    , tcpType
+    , tcpSubType
+    , tcpSourceID
+    , tcpParams
+    ) where
 
 
 import           RIO
 
 import           Control.Lens                   ( makeLenses )
 
+import           Codec.Serialise
 --import           Data.Binary
 import           Data.Aeson
-import           Codec.Serialise
 
-import           General.PUSTypes
-import           General.APID
 import           Data.PUS.Parameter
+import           General.APID
+import           General.PUSTypes
 
 
 -- | A TC packet.
-data TCPacket = TCPacket {
+data TCPacket = TCPacket
+    {
     -- | Application ID
-    _tcpAPID :: APID
+      _tcpAPID     :: APID
     -- | PUS Service Type of this TC
-    , _tcpType :: PUSType
+    , _tcpType     :: PUSType
     -- | PUS Service Sub-Type of this TC 
-    , _tcpSubType :: PUSSubType
+    , _tcpSubType  :: PUSSubType
     -- | PUS Source ID 
-    , _tcpSourceID :: SourceID
+    , _tcpSourceID :: SrcID
     -- | The list of parameters of this command
-    , _tcpParams :: ExpandedParameterList
+    , _tcpParams   :: ExpandedParameterList
     }
     deriving (Show, Read, Generic)
 makeLenses ''TCPacket
@@ -59,14 +59,19 @@ instance NFData TCPacket
 instance Serialise TCPacket
 instance FromJSON TCPacket
 instance ToJSON TCPacket where
-  toEncoding = genericToEncoding defaultOptions
+    toEncoding = genericToEncoding defaultOptions
 
 
-instance Display TCPacket where 
-  display TCPacket {..} = "TC Packet:\n" 
-    <> "APID: " <> display _tcpAPID 
-    <> "  Type: " <> display _tcpType
-    <> "  SubType: " <> display _tcpSubType 
-    <> "  Source ID: " <> display _tcpSourceID
-    <> "\nParameters:\n"
-    <> display _tcpParams
+instance Display TCPacket where
+    display TCPacket {..} =
+        "TC Packet:\n"
+            <> "APID: "
+            <> display _tcpAPID
+            <> "  Type: "
+            <> display _tcpType
+            <> "  SubType: "
+            <> display _tcpSubType
+            <> "  Source ID: "
+            <> display _tcpSourceID
+            <> "\nParameters:\n"
+            <> display _tcpParams

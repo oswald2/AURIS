@@ -6,8 +6,8 @@ import           RIO                     hiding ( lookup )
 
 import           Data.Bson
 
-import           General.Time
 import           Data.PUS.EncTime               ( )
+import           General.Time
 
 import           Data.PUS.PUSDfh
 
@@ -29,6 +29,18 @@ instance MongoDbConversion DataFieldHeader Document where
                  , "complete" =: _stdFlagExecComp
                  ]
         ]
+    toDB PUSTCStdHeaderC {..} =
+        [ "secHeader"
+              =: [ "hdrType" =: String "TC_STD_C"
+                 , "type" =: _stdCType
+                 , "subtype" =: _stdCSubType
+                 , "sourceID" =: _stdCSrcID
+                 , "acceptance" =: _stdCFlagAcceptance
+                 , "start" =: _stdCFlagStartExec
+                 , "progress" =: _stdCFlagProgressExec
+                 , "complete" =: _stdCFlagExecComp
+                 ]
+        ]
     toDB PUSTMStdHeader {..} =
         [ "secHeader"
               =: [ "hdrType" =: String "TM_STD"
@@ -37,6 +49,17 @@ instance MongoDbConversion DataFieldHeader Document where
                  , "subtype" =: _stdTmSubType
                  , "destinationID" =: _stdTmDestinationID
                  , "time" =: timeToMicro _stdTmOBTime
+                 ]
+        ]
+    toDB PUSTMStdHeaderC {..} =
+        [ "secHeader"
+              =: [ "hdrType" =: String "TM_STD_C"
+                 , "timeRef" =: _stdCTmTimeRef
+                 , "version" =: _stdCTmVersion
+                 , "type" =: _stdCTmType
+                 , "subtype" =: _stdCTmSubType
+                 , "destinationID" =: _stdCTmDestinationID
+                 , "time" =: timeToMicro _stdCTmOBTime
                  ]
         ]
     toDB PUSCnCTCHeader {..} =
@@ -69,6 +92,15 @@ instance MongoDbConversion DataFieldHeader Document where
                         pr  <- lookup "progress" doc2
                         ex  <- lookup "complete" doc2
                         return $ PUSTCStdHeader t st sid ac sta pr ex
+                    String "TC_STD_C" -> do
+                        t   <- lookup "type" doc2
+                        st  <- lookup "subtype" doc2
+                        sid <- lookup "sourceID" doc2
+                        ac  <- lookup "acceptance" doc2
+                        sta <- lookup "start" doc2
+                        pr  <- lookup "progress" doc2
+                        ex  <- lookup "complete" doc2
+                        return $ PUSTCStdHeaderC t st sid ac sta pr ex
                     String "TM_STD" -> do
                         t    <- lookup "type" doc2
                         st   <- lookup "subtype" doc2
@@ -80,6 +112,19 @@ instance MongoDbConversion DataFieldHeader Document where
                                                 st
                                                 sid
                                                 (microToTime time False)
+                    String "TM_STD_C" -> do
+                        t    <- lookup "type" doc2
+                        tr   <- lookup "timeRef" doc2
+                        st   <- lookup "subtype" doc2
+                        sid  <- lookup "destinationID" doc2
+                        v    <- lookup "version" doc2
+                        time <- lookup "time" doc2
+                        return $ PUSTMStdHeaderC v
+                                                 tr
+                                                 t
+                                                 st
+                                                 sid
+                                                 (microToTime time False)
                     String "CNC_TC" -> do
                         t   <- lookup "type" doc2
                         st  <- lookup "subtype" doc2

@@ -7,6 +7,7 @@
     "aurisTheme": "ThemeLight",
     "aurisMission": "DEFAULT",
     "aurisPusConfig": {
+        "cfgMission": "MissionDefault",
         "cfgCnC": [
             {
                 "cfgCncHasCRC": true,
