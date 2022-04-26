@@ -22,11 +22,12 @@ import           Control.PUS.Classes
 
 import           Data.Conduit
 
+import           Data.PUS.Counter
+import           Data.PUS.ISL
 import           Data.PUS.PUSPacket
 --import           Data.PUS.Segment
 import           Data.PUS.TCPacketEncoder
 import           Data.PUS.TCRequest
-import           Data.PUS.Counter
 
 import           General.PUSTypes
 
@@ -44,7 +45,12 @@ makeLenses ''EncodedPUSPacket
 pusPacketEncoderC
     :: Monad m => ConduitT (PUSPacket, TCRequest) EncodedPUSPacket m ()
 pusPacketEncoderC = awaitForever $ \(pkt, rqst) -> do
-    let enc = encodePUSPacket pkt
+    let enc'@(encPkt, pktID, seqFlags) = encodePUSPacket pkt
+        enc                            = case rqst ^. tcReqPayload of
+            TCCommand {..} -> case _tcWrapInISL of
+                Just islHdr -> (encodeISL islHdr encPkt, pktID, seqFlags)
+                Nothing     -> enc'
+            _ -> enc'
     yield (EncodedPUSPacket (Just enc) rqst)
 
 
@@ -63,16 +69,19 @@ tcPktToEncPUSC hm = do
                     -- first, update the SSC
                     (newHM, ssc) <- lift
                         $ getNextSSC hm (pkt ^. pusHdr . pusHdrAPID)
-                    let enc@(_, pktID, seqFlags) = encodePUSPacket newPkt
-                        !newPkt = pkt & pusHdr . pusHdrSSC .~ ssc
+                    let enc'@(encPkt, pktID, seqFlags) = encodePUSPacket newPkt
+                        enc = case request ^. tcReqPayload of
+                            TCCommand {..} -> case _tcWrapInISL of
+                                Just islHdr ->
+                                    (encodeISL islHdr encPkt, pktID, seqFlags)
+                                Nothing -> enc'
+                            _ -> enc'
+                        !newPkt  = pkt & pusHdr . pusHdrSSC .~ ssc
                         !newRqst = tcReqSetSSC request ssc
 
                     -- register this TC for Verification
                     env <- ask
-                    liftIO $ registerRequest env
-                                             newRqst
-                                             pktID
-                                             seqFlags
+                    liftIO $ registerRequest env newRqst pktID seqFlags
 
                     -- now pass the packet on to the next stage in encoding
                     yield (EncodedPUSPacket (Just enc) newRqst)

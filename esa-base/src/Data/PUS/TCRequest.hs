@@ -36,6 +36,7 @@ module Data.PUS.TCRequest
     , tcReqReleaseTime
     , tcReqMapID
     , tcReqSetSSC
+    , tcWrapInISL
     , _TCCommand
     , _TCDir
     ) where
@@ -48,15 +49,16 @@ import           Control.Lens                   ( makeLenses
 
 import           Data.Text.Short                ( ShortText )
 
-import           Data.Aeson
 import           Codec.Serialise
+import           Data.Aeson
 
 import           General.PUSTypes
 import           General.Time
 
+import           Data.PUS.ISL
+import           Data.PUS.TCCnc
 import           Data.PUS.TCDirective
 import           Data.PUS.TCPacket
-import           Data.PUS.TCCnc
 import           Data.PUS.Verification
 
 import           Protocol.ProtocolInterfaces
@@ -73,6 +75,7 @@ data TCRequestBody =
         _tcReqMAPID :: !MAPID
         , _tcReqTransMode :: !TransmissionMode
         , _tcDestination :: !Destination
+        , _tcWrapInISL :: !(Maybe ISLHeader)
         , _tcSSC :: !SSC
         , _tcReqPacket :: !TCPacket
         }

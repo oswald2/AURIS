@@ -122,6 +122,7 @@ library
     Data.PUS.TCCnc
     Data.PUS.Verification
     Data.PUS.Statistics
+    Data.PUS.ISL
     Protocol.ProtocolInterfaces
     Protocol.ProtocolSLE
     Conduit.PayloadParser

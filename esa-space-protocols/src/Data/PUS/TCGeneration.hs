@@ -117,6 +117,7 @@ genPayload epoch coeff connMap transMode tcDef =
             { _tcReqMAPID     = fromMaybe (mkMAPID 0) (tcDef ^. tcDefMapID)
             , _tcReqTransMode = transMode
             , _tcDestination  = genDestination (tcDef ^. tcDefConnection)
+            , _tcWrapInISL    = Nothing
             , _tcSSC          = mkSSC 0
             , _tcReqPacket    = genPacket epoch coeff apid t st tcDef
             }

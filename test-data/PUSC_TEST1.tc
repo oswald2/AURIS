@@ -10,8 +10,8 @@
           , _tcReqVerifications =
               Verification
                 { _verRelease = StRDisabled
-                , _verGroundReception = StGExpected
-                , _verGroundTransmission = StGExpected
+                , _verGroundReception = StGDisabled
+                , _verGroundTransmission = StGDisabled
                 , _verGroundOBR = StGDisabled
                 , _verTMAcceptance = StTmDisabled
                 , _verTMStart = StTmDisabled

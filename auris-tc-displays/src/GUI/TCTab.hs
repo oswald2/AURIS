@@ -175,6 +175,7 @@ createTCTab cfg window builder = do
                                 0
                                 BD
                                 (DestEden (IfEden 1) SCOE)
+                                Nothing 
                                 (mkSSC 0)
                                 (TCPacket
                                     (APID 1540)
@@ -208,6 +209,7 @@ createTCTab cfg window builder = do
                                 0
                                 BD
                                 (DestCnc (IfCnc 1))
+                                Nothing
                                 (mkSSC 0)
                                 (TCPacket
                                     (APID 1540)
@@ -263,6 +265,7 @@ createTCTab cfg window builder = do
                                 0
                                 BD
                                 (DestNctrs (IfNctrs 1))
+                                Nothing
                                 (mkSSC 0)
                                 (TCPacket
                                     (APID 17)
