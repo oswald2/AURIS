@@ -38,25 +38,7 @@
                           ExpandedParameterList
                             (List
                                [ Parameter
-                                   { _paramName = "X" , _paramValue = ValUInt8X (B8 (Refined 3)) 5 }
-                               , Parameter
-                                   { _paramName = "X" , _paramValue = ValUInt8X (B8 (Refined 3)) 5 }
-                               , Parameter
-                                   { _paramName = "X" , _paramValue = ValUInt8X (B8 (Refined 3)) 5 }
-                               , Parameter
-                                   { _paramName = "X" , _paramValue = ValUInt8X (B8 (Refined 3)) 5 }
-                               , Parameter
-                                   { _paramName = "X" , _paramValue = ValUInt8X (B8 (Refined 3)) 5 }
-                               , Parameter
-                                   { _paramName = "X" , _paramValue = ValUInt8X (B8 (Refined 3)) 5 }
-                               , Parameter
-                                   { _paramName = "X" , _paramValue = ValUInt8X (B8 (Refined 3)) 5 }
-                               , Parameter
-                                   { _paramName = "X" , _paramValue = ValUInt8X (B8 (Refined 3)) 5 }
-                               , Parameter
-                                   { _paramName = "X" , _paramValue = ValUInt8X (B8 (Refined 3)) 5 }
-                               , Parameter
-                                   { _paramName = "X" , _paramValue = ValUInt8X (B8 (Refined 3)) 5 }
+                                   { _paramName = "X" , _paramValue = ValOctet 112233445566778899aabb }
                                ]
                                Empty)
                       }

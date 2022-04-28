@@ -1,6 +1,10 @@
 {-# LANGUAGE DeriveAnyClass #-}
 module Data.PUS.ISL
-    ( ISLEncPktHdr(..)
+    ( ISL(..)
+    , islParser
+    , islBuilder
+    , ISLEncPktHdr(..)
+    , defaultIslEncPktHdr
     , encodeISL
     , isIslPktID
     , islEncHdrBuilder
@@ -12,7 +16,7 @@ module Data.PUS.ISL
     , ISLHeader(..)
     ) where
 
-import           RIO
+import           RIO                     hiding ( Builder )
 import qualified RIO.ByteString                as BS
 
 import           ByteString.StrictBuilder      as B
@@ -42,6 +46,8 @@ data ISLEncPktHdr = ISLEncPktHdr
     deriving stock (Read, Show, Generic)
     deriving anyclass (FromJSON, ToJSON, Serialise, NFData)
 
+defaultIslEncPktHdr :: ISLEncPktHdr
+defaultIslEncPktHdr = ISLEncPktHdr { islID = islPktID, islLength = 0 }
 
 islPktID :: Word16
 islPktID = 0b111_111_10_0000_0000
@@ -166,4 +172,32 @@ convertToILSHeader w b =
                   , islRouting = routing
                   , islIsDummy = dummy
                   }
+
+data ISL = ISL
+    { islEncHdr :: !ISLEncPktHdr
+    , islHdr    :: !ISLHeader
+    , islData   :: !ByteString
+    }
+    deriving (Read, Show)
+
+islParser :: Parser ISL
+islParser = do
+    eh  <- islEncHdrParser
+    hdr <- islHeaderParser
+    let len = fromIntegral (islLength eh) - fixedSizeOf @ISLHeader
+    dat <- A.take len
+    return ISL { islEncHdr = eh, islHdr = hdr, islData = dat }
+
+islBuilder :: ISL -> Builder
+islBuilder isl =
+    let
+        hdr    = islEncHdr isl
+        newHdr = hdr
+            { islLength = fromIntegral
+                              (BS.length (islData isl) + fixedSizeOf @ISLHeader)
+            }
+    in
+        islEncHdrBuilder newHdr <> islHeaderBuilder (islHdr isl) <> bytes
+            (islData isl)
+
 
