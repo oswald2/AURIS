@@ -3,6 +3,7 @@ module Data.PUS.ISL
     ( ISL(..)
     , islParser
     , islBuilder
+    , islPacketParser
     , ISLEncPktHdr(..)
     , defaultIslEncPktHdr
     , encodeISL
@@ -26,6 +27,11 @@ import           Data.Aeson
 import           Data.Attoparsec.Binary        as A
 import           Data.Attoparsec.ByteString    as A
 import           Data.Bits
+
+import           Data.PUS.MissionSpecific.Definitions
+import           Data.PUS.PUSPacket
+
+import           Protocol.ProtocolInterfaces
 
 import           General.PUSTypes
 import           General.SizeOf
@@ -201,3 +207,19 @@ islBuilder isl =
             (islData isl)
 
 
+
+islPacketParser
+    :: PUSMissionSpecific
+    -> ProtocolInterface
+    -> Parser (ProtocolPacket PUSPacket)
+islPacketParser missionSpecific interf = do
+    pktID <- A.anyWord16be
+    if pktID == islPktID
+        then do
+            void $ A.anyWord16be
+            -- skip ISL header
+            void $ A.take (fixedSizeOf @ISLHeader)
+            pusPktParser missionSpecific interf
+        else do
+            hdr <- pusPktHdrParserWithoutPktID pktID
+            pusPktParserPayload missionSpecific interf hdr

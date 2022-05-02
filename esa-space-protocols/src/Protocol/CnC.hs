@@ -33,6 +33,7 @@ import qualified Data.Vector                   as V
 import           Data.PUS.Events
 import           Data.PUS.ExtractedDU
 import           Data.PUS.ExtractedPUSPacket
+import           Data.PUS.ISL
 import           Data.PUS.MissionSpecific.Definitions
 import           Data.PUS.PUSDfh                ( pusSubType
                                                 , pusType
@@ -69,7 +70,7 @@ receiveCnCC
     -> ProtocolInterface
     -> ConduitT ByteString (ByteString, ProtocolPacket PUSPacket) m ()
 receiveCnCC missionSpecific interf = do
-    conduitParserEither (match (pusPktParser missionSpecific interf)) .| sink
+    conduitParserEither (match (islPacketParser missionSpecific interf)) .| sink
   where
     sink = do
         x <- await
@@ -78,8 +79,8 @@ receiveCnCC missionSpecific interf = do
             Just tc -> do
                 case tc of
                     Left err -> do
-                        let msg = "Error decoding CnC packet: "
-                                <> displayShow err
+                        let msg =
+                                "Error decoding CnC packet: " <> displayShow err
                         logError msg
                         raiseEvent
                             (EVAlarms (EVPacketAlarm (utf8BuilderToText msg)))

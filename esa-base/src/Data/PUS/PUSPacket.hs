@@ -31,6 +31,7 @@ module Data.PUS.PUSPacket
     , pusHdrTcLength
     , pusPktHdrBuilder
     , pusPktHdrParser
+    , pusPktHdrParserWithoutPktID
     , pusPktHdrLenOnlyParser
     , pusPktParser
     , pusPktParserPayload
@@ -355,6 +356,12 @@ pusPktHdrBuilder hdr =
 pusPktHdrParser :: Parser PUSHeader
 pusPktHdrParser = do
     pktId    <- A.anyWord16be
+    pusPktHdrParserWithoutPktID pktId
+
+
+{-# INLINABLE pusPktHdrParserWithoutPktID #-}
+pusPktHdrParserWithoutPktID :: Word16 -> Parser PUSHeader
+pusPktHdrParserWithoutPktID pktId = do
     seqFlags <- A.anyWord16be
     len      <- A.anyWord16be
 
