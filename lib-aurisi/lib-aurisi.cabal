@@ -93,7 +93,8 @@ library
     gi-gtksource,
     tar,
     zlib,
-    stm
+    stm,
+    text-builder
 
   if flag(sle)
     Build-depends:

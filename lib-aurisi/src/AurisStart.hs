@@ -21,16 +21,16 @@ import qualified GI.GLib.Functions             as GI
 import           GI.Gio                        as Gio
 import qualified GI.Gtk                        as Gtk
 
+import           Text.Builder                  as TB
 
 
 
-
-runApplication :: AurisConfig -> Maybe FilePath -> IO () 
+runApplication :: AurisConfig -> Maybe FilePath -> IO ()
 runApplication cfg mibPath = do
     Gtk.setCurrentThreadAsGUIThread
     app <- new
         Gtk.Application
-        [ #applicationId := "auris.integrated"
+        [ #applicationId := TB.run $ text "auris.integrated." <> decimal (aurisInstance cfg)
         , #flags := [Gio.ApplicationFlagsFlagsNone]
         ]
     void $ Gtk.on app #activate $ appActivateHandler cfg mibPath app
@@ -83,7 +83,7 @@ appActivateHandler cfg mibPath app = do
 
     -- Setup the callbacks. Since we need the interface there, we can 
     -- do this only here
-    setupCallbacks mainWindow interface
+    setupCallbacks mainWindow cfg interface
 
     -- determine the mission-specific functionality
     missionSpecific   <- getMissionSpecific cfg

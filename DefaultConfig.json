@@ -3,6 +3,7 @@
         "cfgMongoHost": "localhost",
         "cfgMongoPort": null
     },
+    "aurisInstance": 0,
     "aurisLogLevel": {
         "tag": "LogLevelInfo"
     },

@@ -5,25 +5,25 @@ module AurisProcessing
     ( runProcessing
     ) where
 
-import           RIO
-import qualified Data.Text.IO                  as T
-import           Data.PUS.GlobalState           ( newGlobalState
-                                                , GlobalState
+--import           Data.PUS.Config
+import           Control.PUS.Classes            ( setDataModel )
+import           Data.PUS.Events                ( EventFlag(..) )
+import           Data.PUS.GlobalState           ( GlobalState
                                                     ( glsVerifCommandQueue
                                                     )
+                                                , newGlobalState
                                                 )
 import           Data.PUS.MissionSpecific.Definitions
                                                 ( PUSMissionSpecific )
-import           Data.PUS.Events                ( EventFlag(..) )
---import           Data.PUS.Config
-import           Control.PUS.Classes            ( setDataModel )
+import qualified Data.Text.IO                  as T
+import           RIO
 
-import           Interface.Interface            ( Interface
-                                                , ifRaiseEvent
+import           Interface.CoreProcessor        ( InterfaceAction
+                                                , runCoreThread
                                                 )
 import           Interface.Events               ( IfEvent(EventPUS) )
-import           Interface.CoreProcessor        ( runCoreThread
-                                                , InterfaceAction
+import           Interface.Interface            ( Interface
+                                                , ifRaiseEvent
                                                 )
 
 import           AurisConfig
@@ -31,27 +31,27 @@ import           AurisConfig
 import           System.Directory               ( getHomeDirectory )
 import           System.FilePath                ( (</>) )
 
-import           GUI.MessageDisplay             ( messageAreaLogFunc )
-import           GUI.MainWindow                 ( MainWindow
-                                                , mwMessageDisplay
-                                                , mwInitialiseDataModel
+import           Application.Chains             ( runChains )
+import           Application.DataModel          ( LoadFrom
+                                                    ( LoadFromMIB
+                                                    , LoadFromSerialized
+                                                    )
+                                                , loadDataModelDef
                                                 )
 import           Data.GI.Gtk.Threading          ( postGUIASync )
-import           Application.Chains             ( runChains )
-import           Application.DataModel          ( loadDataModelDef
-                                                , LoadFrom
-                                                    ( LoadFromSerialized
-                                                    , LoadFromMIB
-                                                    )
-                                                )
-import           Verification.Processor         ( processVerification )
 import           Data.Mongo.Processing          ( newDbState
                                                 , startDbQueryThreads
                                                 , startDbStoreThreads
                                                 )
-import           Persistence.Logging            ( logToDB )
-import           Persistence.DbResultProcessor  ( dbResultFunc )
+import           GUI.MainWindow                 ( MainWindow
+                                                , mwInitialiseDataModel
+                                                , mwMessageDisplay
+                                                )
+import           GUI.MessageDisplay             ( messageAreaLogFunc )
 import           Persistence.DBQuery
+import           Persistence.DbResultProcessor  ( dbResultFunc )
+import           Persistence.Logging            ( logToDB )
+import           Verification.Processor         ( processVerification )
 
 -- import           Protocol.SLE
 
@@ -102,17 +102,14 @@ runProcessing cfg missionSpecific mibPath interface mainWindow coreQueue queryQu
                                     queryQueue
 
             void $ runRIO state $ do
-                let startQueryThread = do 
-                        backend <- dbBackend 
-                        dbCfg <- aurisDbConfig cfg 
-                        queue <- queryQueue
-                        return $ do 
-                            startDbQueryThreads dbCfg
-                                                backend
-                                                dbResultFunc
-                                                queue
-                case startQueryThread of 
-                    Nothing -> return () 
+                let startQueryThread = do
+                        backend <- dbBackend
+                        dbCfg   <- aurisDbConfig cfg
+                        queue   <- queryQueue
+                        return $ do
+                            startDbQueryThreads dbCfg backend dbResultFunc queue
+                case startQueryThread of
+                    Nothing     -> return ()
                     Just action -> action
 
               -- first, try to load a data model or import a MIB
@@ -121,7 +118,10 @@ runProcessing cfg missionSpecific mibPath interface mainWindow coreQueue queryQu
                 let path = case mibPath of
                         Just p  -> LoadFromMIB p serializedPath
                         Nothing -> LoadFromSerialized serializedPath
-                    serializedPath = home </> configPath </> defaultMIBFile
+                    serializedPath =
+                        home
+                            </> configPathInstance (aurisInstance cfg)
+                            </> defaultMIBFile
 
                 model <- loadDataModelDef path
                 env   <- ask

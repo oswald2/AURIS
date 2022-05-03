@@ -1,11 +1,23 @@
 {
     "aurisMIB": null,
-    "aurisInstance": 0,
-    "aurisMission": "DEFAULT",
-    "aurisDbConfig": null,
+    "aurisInstance": 1,
+    "aurisMission": "S2K_TEST",
     "aurisTheme": "ThemeLight",
+    "aurisDbConfig": {
+        "cfgMongoHost": "localhost",
+        "cfgMongoPort": null
+    },
     "aurisPusConfig": {
+        "cfgMission": "MissionPUSC",
         "cfgCnC": [
+            {
+                "cfgCncHasCRC": true,
+                "cfgCncPortTM": 6011,
+                "cfgCncHost": "localhost",
+                "cfgCncPortTC": 6010,
+                "cfgCncName": "FTM",
+                "cfgCncID": 1
+            }
         ],
         "cfgUnknownSPID": 5071,
         "cfgEpoch": "UnixTime",
@@ -21,46 +33,31 @@
         },
         "cfgVCIDs": [
             0,
-            1
+            1,
+            2
         ],
         "cfgLeapSeconds": {
             "fromLeaps": 17
         },
         "cfgSCID": 0,
-        "cfgNCTRS": [
-        ],
         "cfgDataBase": {
             "cfgStoreTMFrames": true,
             "cfgDbDebugLog": true,
             "cfgBackend": {
-                "tag": "NoDB"
+                "tag": "PGConfig",
+                "contents": {
+                    "pgDbName": "active_session",
+                    "pgPort": 5432,
+                    "pgHost": "localhost",
+                    "pgPassword": "auris",
+                    "pgNumberConns": 10,
+                    "pgUser": "auris"
+                }
             }
         },
-        "cfgMaxTMFrameLen": 1115,
+        "cfgNCTRS": [],
         "cfgCltuBlockSize": "CltuBS_8",
-        "cfgEDEN": [
-            {
-                "cfgEdenID": 1,
-                "cfgEdenName": "CCS EDEN",
-                "cfgEdenHost": "localhost",
-                "cfgEdenType": "SCOE",
-                "cfgEdenPort": 40300
-            },
-            {
-                "cfgEdenID": 2,
-                "cfgEdenName": "TSC EDEN",
-                "cfgEdenHost": "localhost",
-                "cfgEdenType": "SCOE",
-                "cfgEdenPort": 40301
-            },
-            {
-                "cfgEdenID": 3,
-                "cfgEdenName": "Simulator",
-                "cfgEdenHost": "localhost",
-                "cfgEdenType": "SCOE",
-                "cfgEdenPort": 40302
-            }
-        ],
+        "cfgEDEN": [],
         "cfgStoreTMFrames": true,
         "cfgStorePUSPackets": true,
         "cfgTMFrame": {

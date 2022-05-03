@@ -3,6 +3,7 @@
         "tag": "LogLevelDebug"
     },
     "aurisDatabase": "auris.db",
+    "aurisInstance": 0,
     "aurisMIB": null,
     "aurisMission": "DEFAULT",
     "aurisPusConfig": {

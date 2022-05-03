@@ -31,8 +31,8 @@ import           System.FilePath
 import           AurisConfig
 
 
-setupCallbacks :: MainWindow -> Interface -> IO ()
-setupCallbacks window interface = do
+setupCallbacks :: MainWindow -> AurisConfig -> Interface -> IO ()
+setupCallbacks window cfg interface = do
     void $ Gtk.on (window ^. mwMenuItemQuit) #activate $ do
         callInterface interface actionQuit
         threadDelay 1_000_000
@@ -48,14 +48,15 @@ setupCallbacks window interface = do
 
     void $ Gtk.on (window ^. mwMenuItemImportMIB) #activate $ importMIB
         window
+        cfg
         interface
 
 
 
 
 
-importMIB :: MainWindow -> Interface -> IO ()
-importMIB gui interface = do
+importMIB :: MainWindow -> AurisConfig -> Interface -> IO ()
+importMIB gui cfg interface = do
     fc <- Gtk.fileChooserNativeNew (Just "Import MIB, select directory...")
                                    (Just (gui ^. mwWindow))
                                    Gtk.FileChooserActionSelectFolder
@@ -68,7 +69,10 @@ importMIB gui interface = do
             fileName <- Gtk.fileChooserGetFilename fc
             forM_ fileName $ \fn -> do
                 home <- liftIO getHomeDirectory
-                let serializedPath = home </> configPath </> defaultMIBFile
+                let serializedPath =
+                        home
+                            </> configPathInstance (aurisInstance cfg)
+                            </> defaultMIBFile
                 callInterface interface actionImportMIB fn serializedPath
         _ -> return ()
 

@@ -13,6 +13,7 @@ module AurisConfig
     , defaultConfigFileName
     , convLogLevel
     , configPath
+    , configPathInstance
     , configPretty
     , defaultMIBFile
     ) where
@@ -31,6 +32,9 @@ import           Data.DbConfig.MongoDB
 
 configPath :: FilePath
 configPath = ".config/AURISi"
+
+configPathInstance :: Word32 -> FilePath 
+configPathInstance instanceNr = ".config/AURISi_" ++ show instanceNr
 
 
 defaultMIBFile :: FilePath
@@ -75,6 +79,7 @@ data AurisConfig = AurisConfig
     -- Set 'Nothing' to disable logging to database.
     , aurisDbConfig  :: Maybe DbConfigMongoDB
     , aurisTheme     :: AurisTheme 
+    , aurisInstance  :: !Word32
     }
     deriving (Eq, Generic)
 
@@ -86,6 +91,7 @@ defaultConfig = AurisConfig { aurisPusConfig = Data.PUS.Config.defaultConfig
                             , aurisMIB       = Nothing
                             , aurisDbConfig  = Just defaultMongoDBConfig
                             , aurisTheme     = ThemeLight
+                            , aurisInstance  = 0
                             }
 
 defaultConfigFileName :: FilePath

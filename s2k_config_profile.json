@@ -1,5 +1,6 @@
 {
     "aurisMIB": null,
+    "aurisInstance": 0,
     "aurisMission": "S2K_TEST",
     "aurisTheme": "ThemeLight",
     "aurisDbConfig": null,
