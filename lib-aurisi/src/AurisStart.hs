@@ -30,7 +30,7 @@ runApplication cfg mibPath = do
     Gtk.setCurrentThreadAsGUIThread
     app <- new
         Gtk.Application
-        [ #applicationId := TB.run $ text "auris.integrated." <> decimal (aurisInstance cfg)
+        [ #applicationId := TB.run $ text "auris.integrated.id" <> decimal (aurisInstance cfg)
         , #flags := [Gio.ApplicationFlagsFlagsNone]
         ]
     void $ Gtk.on app #activate $ appActivateHandler cfg mibPath app

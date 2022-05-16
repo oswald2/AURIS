@@ -12,11 +12,35 @@
         "cfgCnC": [
             {
                 "cfgCncHasCRC": true,
+                "cfgCncPortTM": 10000,
+                "cfgCncHost": "localhost",
+                "cfgCncPortTC": 11000,
+                "cfgCncName": "C&amp;C HKTM",
+                "cfgCncID": 1
+            },
+            {
+                "cfgCncHasCRC": true,
                 "cfgCncPortTM": 5001,
                 "cfgCncHost": "localhost",
                 "cfgCncPortTC": 5000,
                 "cfgCncName": "ATC",
-                "cfgCncID": 1
+                "cfgCncID": 2
+            },
+            {
+                "cfgCncHasCRC": true,
+                "cfgCncPortTM": 5002,
+                "cfgCncHost": "localhost",
+                "cfgCncPortTC": 5500,
+                "cfgCncName": "STC1",
+                "cfgCncID": 3
+            },
+            {
+                "cfgCncHasCRC": true,
+                "cfgCncPortTM": 5003,
+                "cfgCncHost": "localhost",
+                "cfgCncPortTC": 5501,
+                "cfgCncName": "STC2",
+                "cfgCncID": 4
             }
         ],
         "cfgUnknownSPID": 5071,
