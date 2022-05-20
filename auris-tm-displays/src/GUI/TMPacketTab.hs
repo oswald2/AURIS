@@ -7,44 +7,45 @@ module GUI.TMPacketTab
     , tmpTabDetailSetValues
     , createTMPTab
     , tmpTable
+    , GUI.TMPacketTab.setupCallbacks
     ) where
 
 
 
+import           Control.Lens                   ( makeLenses )
+import qualified Data.Text.Short               as ST
 import           RIO
 import qualified RIO.Text                      as T
-import qualified Data.Text.Short               as ST
-import           Control.Lens                   ( makeLenses )
 
 import           GI.Gtk                        as Gtk
-                                                ( Builder
-                                                , ApplicationWindow
-                                                , Entry(..)
-                                                , entrySetText
-                                                )
 
-import           GUI.TMPacketTable              ( tmPacketTableSetCallback
+import           GUI.Definitions
+import           GUI.LiveControls
+import           GUI.StatusEntry                ( EntryStatus(ESGreen, ESWarn)
+                                                , StatusEntry
+                                                , statusEntrySetState
+                                                , statusEntrySetupCSS
+                                                )
+import           GUI.TMPParamTable              ( TMPParamTable
+                                                , createTMPParamTable
+                                                , tmpParamTableSetValues
+                                                )
+import           GUI.TMPacketTable              ( TMPacketTable
                                                 , createTMPacketTable
                                                 , tmPacketTableAddRow
-                                                , TMPacketTable
-                                                )
-import           GUI.TMPParamTable              ( tmpParamTableSetValues
-                                                , createTMPParamTable
-                                                , TMPParamTable
+                                                , tmPacketTableSetCallback
                                                 )
 --import           GUI.Colors
 import           GUI.Utils                      ( getObject )
-import           GUI.StatusEntry                ( StatusEntry
-                                                , statusEntrySetState
-                                                , statusEntrySetupCSS
-                                                , EntryStatus(ESWarn, ESGreen)
-                                                )
 
-import           Data.PUS.TMPacket
-import           Data.PUS.ExtractedDU           ( epDU
+import           Data.PUS.ExtractedDU           ( ExtractedDU
+                                                , epDU
                                                 , epGap
-                                                , ExtractedDU
                                                 )
+import           Data.PUS.LiveState
+import           Data.PUS.TMPacket
+
+import           Interface.Interface
 
 
 data TMPacketTab = TMPacketTab
@@ -63,6 +64,9 @@ data TMPacketTab = TMPacketTab
     , _tmpLabelSSC        :: !Entry
     , _tmpLabelVC         :: !Entry
     , _tmpLabelGap        :: !StatusEntry
+    , _tmpLiveCtrlBox     :: !Box
+    , _tmpLiveCtrl        :: !LiveControl
+    , _tmpLiveState       :: TVar LiveStateState
     }
 makeLenses ''TMPacketTab
 
@@ -91,8 +95,17 @@ createTMPTab window builder = do
     vcid       <- getObject builder "entryTMPUSVCID" Entry
     timestamp  <- getObject builder "entryTMPUSTimestamp" Entry
     gap'       <- getObject builder "entryTMPUSGap" Entry
+    liveCtrl   <- getObject builder "boxTMPacketHeaderCtrl" Box
 
     gap        <- statusEntrySetupCSS gap'
+
+    lbl        <- labelNew Nothing
+
+    lc         <- createLiveControl
+    boxPackStart liveCtrl (liveControlGetWidget lc) False False 0
+    boxPackStart liveCtrl lbl                       False False 10
+
+    liveState <- newTVarIO Live
 
     let g = TMPacketTab { _tmpTable           = table
                         , _tmpParametersTable = paramTable
@@ -109,6 +122,9 @@ createTMPTab window builder = do
                         , _tmpLabelSSC        = ssc
                         , _tmpLabelVC         = vcid
                         , _tmpLabelGap        = gap
+                        , _tmpLiveCtrlBox     = liveCtrl
+                        , _tmpLiveCtrl        = lc
+                        , _tmpLiveState       = liveState
                         }
 
     -- set the double click callback for the main table to set the 
@@ -146,3 +162,72 @@ tmpTabDetailSetValues g pkt = do
         Nothing -> statusEntrySetState (g ^. tmpLabelGap) ESGreen ""
         Just gap ->
             statusEntrySetState (g ^. tmpLabelGap) ESWarn (T.pack (show gap))
+
+
+
+
+setupCallbacks :: TMPacketTab -> Interface -> IO ()
+setupCallbacks g interface = do
+    GUI.LiveControls.setupCallbacks
+        (g ^. tmpLiveCtrl)
+        (PlayCB (tmpTabPlayCB g))
+        (StopCB (tmpTabStopCB g))
+        (RetrieveCB (tmpTabRetrieveCB g interface))
+        (RewindCB (tmpTabRewindCB g interface))
+        (ForwardCB (tmpTabForwardCB g interface))
+
+switchLive :: TMPacketTab -> IO ()
+switchLive g = do
+    -- tmFrameTableSwitchLive (g ^. tmfFrameTable)
+    -- tmFrameTableClearRows (g ^. tmfFrameTable)
+    atomically $ writeTVar (g ^. tmpLiveState) Live
+
+switchStop :: TMPacketTab -> IO ()
+switchStop g = do
+    -- tmFrameTableSwitchOffline (g ^. tmfFrameTable)
+    atomically $ writeTVar (g ^. tmpLiveState) Stopped
+
+tmpTabPlayCB :: TMPacketTab -> Bool -> IO ()
+tmpTabPlayCB g True = do
+    -- labelSetLabel (g ^. tmpRetrievalCnt) ""
+    switchLive g
+tmpTabPlayCB _ _ = return ()
+
+
+tmpTabStopCB :: TMPacketTab -> Bool -> IO ()
+tmpTabStopCB g True = switchStop g
+tmpTabStopCB _ _    = return ()
+
+tmpTabRetrieveCB :: TMPacketTab -> Interface -> IO ()
+tmpTabRetrieveCB g interface = return ()
+    -- res <- dialogRun (g ^. tmfRetrieveDiag . frameRetrieveDiag)
+    -- widgetHide (g ^. tmfRetrieveDiag . frameRetrieveDiag)
+    -- when (res == fromIntegral (fromEnum ResponseTypeOk)) $ do
+    --     -- when we have an OK, first clear the table 
+    --     tmFrameTableClearRows (g ^. tmfFrameTable)
+    --     -- get the data from the Retrieval Dialog 
+    --     q <- frameRetrieveDiagGetQuery (g ^. tmfRetrieveDiag)
+    --     -- issue the query to the database
+    --     callInterface interface actionQueryDB (FrRange q)
+
+
+tmpTabRewindCB :: TMPacketTab -> Interface -> IO ()
+tmpTabRewindCB g interface = return ()
+    -- ert <- tmFrameTableGetEarliestERT (g ^. tmfFrameTable)
+
+    -- traceM $ "tmfTabRewindCB: earliest ERT: " <> textDisplay ert
+
+    -- tmFrameTableClearRows (g ^. tmfFrameTable)
+    -- callInterface interface
+    --               actionQueryDB
+    --               (FrPrev (DbGetLastNFrames ert (fromIntegral defMaxRowTM)))
+
+
+tmpTabForwardCB :: TMPacketTab -> Interface -> IO ()
+tmpTabForwardCB g interface = return ()
+    -- ert <- tmFrameTableGetLatestERT (g ^. tmfFrameTable)
+    -- tmFrameTableClearRows (g ^. tmfFrameTable)
+    -- callInterface interface
+    --               actionQueryDB
+    --               (FrNext (DbGetNextNFrames ert (fromIntegral defMaxRowTM)))
+
