@@ -25,7 +25,7 @@
               TCCommand
                 { _tcReqMAPID = MAPID 0
                 , _tcReqTransMode = BD
-                , _tcDestination = DestCnc (IfCnc 1)
+                , _tcDestination = DestCnc (IfCnc 3)
                 , _tcWrapInISL = Just (ISLHeader {islType = IslFTM, islSCID = SCID 533, islTTL = 127, islRouting = ISLSingleHop, islIsDummy = False})
                 , _tcSSC = SSC 0
                 , _tcReqPacket =

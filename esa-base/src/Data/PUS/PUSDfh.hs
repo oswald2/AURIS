@@ -176,7 +176,7 @@ defaultCnCTCHeader =
 -- | Default TC DFH for the PUS C Standard
 defaultPUSCTCHeader :: DataFieldHeader
 defaultPUSCTCHeader =
-    PUSTCStdHeaderC 0 0 (mkSourceIDC 0) False False False False
+    PUSTCStdHeaderC 2 0 (mkSourceIDC 0) False False False False
 
 
 -- | Default TM DFH for the PUS C Standard 
