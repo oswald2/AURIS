@@ -99,6 +99,9 @@ module General.Time
     , EpochTime(..)
     , displayTimeMilli
     , toUTCTime
+    , displayUTCTimeMilli
+    , utcTimeToComponents
+    , fromUTC
     ) where
 
 import           RIO
@@ -113,6 +116,7 @@ import           Data.Time
 import           Data.Time.Calendar.OrdinalDate
 import           Data.Time.Clock
 import           Data.Time.Clock.POSIX
+import           Data.Time.Clock.System
 
 import qualified Text.Builder                  as TB
 
@@ -200,6 +204,17 @@ instance Serialise SunTime
 instance FromJSON SunTime
 instance ToJSON SunTime where
     toEncoding = genericToEncoding defaultOptions
+
+
+fromUTC :: UTCTime -> SunTime
+fromUTC utcTime =
+    let t = utcToSystemTime utcTime
+        val =
+            systemSeconds t
+                *     1_000_000
+                +     fromIntegral (systemNanoseconds t)
+                `div` 1_000
+    in  SunTime val False
 
 
 -- | converts the time into a 'Double' represinting the seconds
@@ -325,8 +340,7 @@ displayRaw (SunTime mic delta) = utf8BuilderToText
 
 
 toUTCTime :: SunTime -> UTCTime
-toUTCTime (SunTime t _) =
-    posixSecondsToUTCTime (realToFrac t / 1_000_000)
+toUTCTime (SunTime t _) = posixSecondsToUTCTime (realToFrac t / 1_000_000)
 
 
 -- | Display a 'SunTime' in ISO format
@@ -350,10 +364,10 @@ displayISO ts@(SunTime _ False) =
             <> TB.padFromLeft 6 '0' (TB.decimal micro)
 displayISO ts@(SunTime t True) =
     let (yr, _doy, mn, dom, hh, mm, ss, micro) = timeToComponents ts
-        sign          = if t < 0 then '-' else '+'
+        sign = if t < 0 then '-' else '+'
     in  TB.run
             $  TB.char sign
-            <>  TB.padFromLeft 4 '0' (TB.decimal yr)
+            <> TB.padFromLeft 4 '0' (TB.decimal yr)
             <> TB.char '-'
             <> TB.padFromLeft 2 '0' (TB.decimal mn)
             <> TB.char '-'
@@ -412,12 +426,45 @@ displayTimeMilli tt =
 timeToComponents :: SunTime -> (Integer, Int, Int, Int, Int, Int, Int, Int)
 timeToComponents (SunTime t _) =
     let (_secs, micro) = t `quotRem` 1_000_000
-        ts = realToFrac t / 1_000_000
-        LocalTime day (TimeOfDay hh mm ss)= utcToLocalTime utc (posixSecondsToUTCTime ts)
-        (yr, mn, dom) = toGregorian day 
-        (_, doy) = toOrdinalDate day 
-        sec = truncate ss
+        ts             = realToFrac t / 1_000_000
+        LocalTime day (TimeOfDay hh mm ss) =
+            utcToLocalTime utc (posixSecondsToUTCTime ts)
+        (yr, mn, dom) = toGregorian day
+        (_, doy)      = toOrdinalDate day
+        sec           = truncate ss
     in  (yr, doy, mn, dom, hh, mm, sec, fromIntegral micro)
+
+
+utcTimeToComponents :: UTCTime -> (Integer, Int, Int, Int, Int, Int, Int, Int)
+utcTimeToComponents utcTime =
+    let
+        LocalTime day (TimeOfDay hh mm ss) = utcToLocalTime utc utcTime
+        (yr, mn, dom) = toGregorian day
+        (_, doy)      = toOrdinalDate day
+        sec           = truncate ss
+        pico =
+            diffTimeToPicoseconds (utctDayTime utcTime) `rem` 1_000_000_000_000
+        micro = pico `div` 1_000_000
+    in
+        (yr, doy, mn, dom, hh, mm, sec, fromIntegral micro)
+
+
+displayUTCTimeMilli :: UTCTime -> Text
+displayUTCTimeMilli utcTime =
+    let (yr, doy, _mn, _dom, hh, mm, ss, micro) = utcTimeToComponents utcTime
+    in  TB.run
+            $  TB.padFromLeft 4 '0' (TB.decimal yr)
+            <> TB.char '.'
+            <> TB.padFromLeft 3 '0' (TB.decimal doy)
+            <> TB.char '.'
+            <> TB.padFromLeft 2 '0' (TB.decimal hh)
+            <> TB.char '.'
+            <> TB.padFromLeft 2 '0' (TB.decimal mm)
+            <> TB.char '.'
+            <> TB.padFromLeft 2 '0' (TB.decimal ss)
+            <> TB.char '.'
+            <> TB.padFromLeft 3 '0' (TB.decimal micro)
+
 
 -- timeFromComponents
 --     :: Year -> DayOfYear -> Hour -> Minute -> Int -> Int -> SunTime

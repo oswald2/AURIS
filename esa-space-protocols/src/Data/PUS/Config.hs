@@ -28,6 +28,7 @@ module Data.PUS.Config
     , SLEDeliveryMode(..)
     , SLEVersion(..)
     , sleInstanceCfgSII
+    , NDIULiteConfig(..)
     , VerificationConfig(..)
     , cltuBlockSizeAsWord8
     , defaultConfig
@@ -231,6 +232,24 @@ instance ToJSON SLEConfig where
     toEncoding = genericToEncoding defaultOptions
 
 
+
+data NDIULiteConfig = NDIULiteConfig
+    { cfgNdiuHost              :: !Text
+    , cfgNdiuPort              :: !Word16
+    , cfgNdiuHeartbeatEnable   :: !Bool
+    , cfgNdiuHeartbeatSendTime :: !Word32
+    , cfgNdiuHeartbeatTimeout  :: !Word32
+    , cfgNdiuID                :: !Word16
+    , cfgNdiuName              :: !Text
+    }
+    deriving (Eq, Generic)
+
+instance FromJSON NDIULiteConfig
+instance ToJSON NDIULiteConfig where
+    toEncoding = genericToEncoding defaultOptions
+
+
+
 -- | Configuration data for the TC verifications. All timeouts 
 -- are specified in seconds
 data VerificationConfig = VerificationConfig
@@ -295,6 +314,8 @@ data Config = Config
     , cfgEDEN                 :: [EDENConfig]
     -- | Specifies the SLE interface configuration
     , cfgSLE                  :: Maybe SLEConfig
+    -- | Specifies the configurations for NDIU connections
+    , cfgNDIU                 :: [NDIULiteConfig]
     -- | Specifies default values for TC verifications
     , cfgVerification         :: VerificationConfig
     -- | Determines, whether incoming TM Frames are stored in the DB. This
@@ -388,6 +409,20 @@ defaultSleConfig = SLEConfig
         ]
     }
 
+
+-- | default configuration for NDIULite protocol
+defaultNdiuConfig :: NDIULiteConfig
+defaultNdiuConfig = NDIULiteConfig { cfgNdiuHost              = "localhost"
+                                   , cfgNdiuPort              = 5005
+                                   , cfgNdiuHeartbeatEnable   = True
+                                   , cfgNdiuHeartbeatSendTime = 5
+                                   , cfgNdiuHeartbeatTimeout  = 10
+                                   , cfgNdiuID                = 1
+                                   , cfgNdiuName              = "NDIU"
+                                   }
+
+
+
 -- | a default configuration with typical values.
 defaultConfig :: Config
 defaultConfig = Config { cfgMission              = MissionDefault
@@ -405,6 +440,7 @@ defaultConfig = Config { cfgMission              = MissionDefault
                        , cfgCnC                  = [defaultCncConfig]
                        , cfgEDEN                 = [defaultEdenConfig]
                        , cfgSLE                  = Just defaultSleConfig
+                       , cfgNDIU                 = [defaultNdiuConfig]
                        , cfgVerification         = defaultVerifConfig
                        , cfgStoreTMFrames        = True
                        , cfgStorePUSPackets      = True

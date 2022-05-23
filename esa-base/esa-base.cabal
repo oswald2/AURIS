@@ -128,6 +128,7 @@ library
     Conduit.PayloadParser
     Conduit.TimedBuffer
     Conduit.TimedConduit
+    Conduit.Extras
     Persistence.Conversion.Types
     Persistence.LogEvent
     Persistence.Logging
@@ -220,6 +221,7 @@ library
     , time
     , stm
     , array
+    , unliftio
 
 
   -- Directories containing source files.

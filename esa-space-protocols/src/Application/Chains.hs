@@ -36,6 +36,7 @@ import           Data.PUS.TCTransferFrameEncoder
                                                 , tcSegmentToTransferFrame
                                                 )
 import           Data.PUS.TMFrameExtractor
+import           Data.PUS.TMFrame 
 import           Data.PUS.TMPacketProcessing    ( packetProcessorC
                                                 , raiseTMPacketC
                                                 , raiseTMParameterC
@@ -66,6 +67,7 @@ import           Protocol.NCTRSProcessor        ( encodeTcNcduC
                                                 , receiveTcNcduC
                                                 , receiveTmNcduC
                                                 )
+import           Protocol.NDIULiteProcessor                                             
 import           Protocol.ProtocolInterfaces    ( ConnType
                                                     ( ConnAdmin
                                                     , ConnSingle
@@ -80,6 +82,7 @@ import           Protocol.ProtocolInterfaces    ( ConnType
                                                     ( IfCnc
                                                     , IfEden
                                                     , IfNctrs
+                                                    , IfNdiu
                                                     )
                                                 )
 import           Protocol.ProtocolSwitcher      ( InterfaceSwitcherMap
@@ -97,8 +100,9 @@ import           Control.PUS.Classes
 
 import           Data.Time.Clock.POSIX
 
+#ifdef HAS_SLE 
 import           Protocol.SLE
-
+#endif
 
 newtype NctrsID = NctrsID Word16
 newtype CncID = CncID Word16
@@ -438,6 +442,27 @@ runEdenChain cfg missionSpecific pktQueue edenQueue = do
         runConduitRes chain
 
 
+runNdiu
+    :: TMFrameConfig 
+    -> NDIULiteConfig
+    -> PUSMissionSpecific
+    -> SwitcherMap
+    -> ProtocolQueue
+    -> RIO GlobalState ()
+runNdiu tmFrameCfg cfg _missionSpecific vcMap ndiuQueue = do
+    logDebug "runNdiuChain entering"
+
+    queue <- newTBQueueIO 500
+
+    race_ (runNdiuChain tmFrameCfg cfg vcMap queue) (conversionThread queue)
+
+    logDebug "runNdiuChain leaving"
+    where 
+        conversionThread queue = do 
+            runConduitRes $ receiveQueueMsg ndiuQueue .| createNdiuC .| sinkTBQueue queue
+
+
+
 
 
 runTMChain
@@ -532,9 +557,15 @@ runChains missionSpecific = do
                                           (cfgNCTRS cfg)
 
     -- create the interface threads and switcher map for the C & C interfaces
-    (switcherMap, interfaceThreads) <- foldM (cncIf pktQueue)
+    (switcherMap3, cncThreads) <- foldM (cncIf pktQueue)
                                              (switcherMap2, nctrsThreads)
                                              (cfgCnC cfg)
+
+    -- create the interface threads and switcher map for the C & C interfaces
+    (switcherMap, interfaceThreads) <- foldM (ndiuIf cfg vcMap)
+                                             (switcherMap3, cncThreads)
+                                             (cfgNDIU cfg)
+
 #ifdef HAS_SLE 
     env <- ask
     sleThreads <- case cfgSLE cfg of
@@ -568,6 +599,11 @@ runChains missionSpecific = do
         (queue, newSm) <- createInterfaceChannel sm (IfCnc (cfgCncID x))
         return
             (newSm, ts <> conc (runTCCnCChain x missionSpecific queue pktQueue))
+    ndiuIf cfg vcMap (switcherMap, ts) x = do
+        (queue, newSm) <- createInterfaceChannel switcherMap
+                                                 (IfNdiu (cfgNdiuID x))
+        return
+            (newSm, ts <> conc (runNdiu (cfgTMFrame cfg) x missionSpecific vcMap queue))
 
 
 

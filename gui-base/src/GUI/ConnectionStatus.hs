@@ -75,6 +75,7 @@ newConnectionStatus interface connType host port = do
     interf (  IfNctrs x) t = t <> " (" <> textDisplay x <> ")"
     interf (  IfCnc   x) t = t <> " (" <> textDisplay x <> ")"
     interf (  IfEden  x) _ = "EDEN " <> textDisplay x
+    interf (  IfNdiu  x) _ = "NDIU " <> textDisplay x
     interf i@(IfSle   _) _ = textDisplay i
 
 setConnectionState :: ConnectionStatus -> ConnectionState -> IO ()

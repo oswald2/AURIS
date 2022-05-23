@@ -19,6 +19,7 @@ module Protocol.ProtocolInterfaces
     , isCnc
     , isEden
     , isSLE
+    , isNdiu
     ) where
 
 import           RIO
@@ -81,6 +82,7 @@ data ProtocolInterface =
     | IfCnc Word16
     | IfEden Word16
     | IfSle SleIf
+    | IfNdiu Word16
     deriving (Eq, Ord, Show, Read, Generic)
 
 
@@ -98,6 +100,7 @@ instance Display ProtocolInterface where
     display (IfCnc   x) = display @Text "C&C " <> display x
     display (IfEden  x) = display @Text "EDEN " <> display x
     display (IfSle   x) = display @Text "SLE " <> display x
+    display (IfNdiu  x) = display @Text "NDIU " <> display x
 
 isNctrs :: ProtocolInterface -> Bool
 isNctrs (IfNctrs _) = True
@@ -114,6 +117,11 @@ isEden _          = False
 isSLE :: ProtocolInterface -> Bool
 isSLE (IfSle _) = True
 isSLE _         = False
+
+isNdiu :: ProtocolInterface -> Bool
+isNdiu (IfNdiu _) = True
+isNdiu _          = False
+
 
 -- | This is a simple data type wrapper around another
 -- type. It just adds a field with a 'ProtocolInterface' value to specify

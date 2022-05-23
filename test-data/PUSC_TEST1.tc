@@ -25,14 +25,15 @@
               TCCommand
                 { _tcReqMAPID = MAPID 0
                 , _tcReqTransMode = BD
-                , _tcDestination = DestCnc (IfCnc 1)
+                , _tcDestination = DestNdiu (IfNdiu 1)
+                , _tcWrapInISL = Nothing
                 , _tcSSC = SSC 0
                 , _tcReqPacket =
                     TCPacket
                       { _tcpAPID = APID 1540
                       , _tcpType = PUSType 2
                       , _tcpSubType = PUSSubType 10
-                      , _tcpSourceID = IsSrcIDA (SourceID 10)
+                      , _tcpSourceID = IsSrcIDC (SourceIDC 10)
                       , _tcpParams =
                           ExpandedParameterList
                             (List

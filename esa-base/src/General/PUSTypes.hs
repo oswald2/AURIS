@@ -72,11 +72,9 @@ module General.PUSTypes
     , getSourceIDC
     , sourceIDCBuilder
     , sourceIDCParser
-
     , SrcID(..)
-    , srcIDtoSourceID 
-    , srcIDtoSourceIDC 
-
+    , srcIDtoSourceID
+    , srcIDtoSourceIDC
     , TMSegmentLen(..)
     , tmSegmentLength
     , SPID(..)
@@ -631,7 +629,7 @@ sourceIDtoSourceIDC :: SourceID -> SourceIDC
 sourceIDtoSourceIDC (SourceID val) = SourceIDC (fromIntegral val)
 
 
-data SrcID = 
+data SrcID =
     IsSrcIDA SourceID
     | IsSrcIDC SourceIDC
     deriving (Eq, Ord, Show, Read, Generic)
@@ -642,18 +640,18 @@ instance ToJSON SrcID where
     toEncoding = genericToEncoding defaultOptions
 instance NFData SrcID
 
-instance Display SrcID where 
-    display (IsSrcIDA val) = display val 
-    display (IsSrcIDC val) = display val 
+instance Display SrcID where
+    display (IsSrcIDA val) = display val
+    display (IsSrcIDC val) = display val
 
 
-srcIDtoSourceID :: SrcID -> SourceID 
-srcIDtoSourceID (IsSrcIDA val) = val 
-srcIDtoSourceID (IsSrcIDC val) = sourceIDCtoSourceID val 
+srcIDtoSourceID :: SrcID -> SourceID
+srcIDtoSourceID (IsSrcIDA val) = val
+srcIDtoSourceID (IsSrcIDC val) = sourceIDCtoSourceID val
 
-srcIDtoSourceIDC :: SrcID -> SourceIDC 
-srcIDtoSourceIDC (IsSrcIDA val) = sourceIDtoSourceIDC val 
-srcIDtoSourceIDC (IsSrcIDC val) = val 
+srcIDtoSourceIDC :: SrcID -> SourceIDC
+srcIDtoSourceIDC (IsSrcIDA val) = sourceIDtoSourceIDC val
+srcIDtoSourceIDC (IsSrcIDC val) = val
 
 
 -- | Used for specifying the segment length for TM frames
@@ -808,6 +806,7 @@ data Destination =
   | DestCnc ProtocolInterface
   | DestEden ProtocolInterface CommandType
   | DestSLE ProtocolInterface
+  | DestNdiu ProtocolInterface
   deriving (Eq, Show, Read, Generic)
 
 instance NFData Destination
@@ -820,7 +819,8 @@ instance Display Destination where
     display (DestNctrs i ) = display i
     display (DestCnc   i ) = display i
     display (DestEden i t) = display i <> " (" <> display t <> ")"
-    display (DestSLE i   ) = display i
+    display (DestSLE  i  ) = display i
+    display (DestNdiu i  ) = display i
 
 
 -- | The destination a 'TCDirective' can have. Since directives only make sense 
@@ -830,6 +830,7 @@ data DirectiveDestination =
   DirDestNctrs ProtocolInterface
   | DirDestSLE ProtocolInterface
   | DirDestEden ProtocolInterface DirectiveProtocolLevel
+  | DirDestNdiu ProtocolInterface
   deriving (Eq, Show, Read, Generic)
 
 instance NFData DirectiveDestination
@@ -842,7 +843,7 @@ instance Display DirectiveDestination where
     display (DirDestNctrs i ) = display i
     display (DirDestSLE   i ) = display i
     display (DirDestEden i l) = display i <> " (" <> display l <> ")"
-
+    display (DirDestNdiu i  ) = display i
 
 -- | Destination for SCOE commands. SCOE commands are special CCSDS packets which 
 -- don't have a binary content, but are more text oriented. These commands can only 
@@ -868,12 +869,14 @@ instance ProtocolDestination Destination where
     destination (DestNctrs x ) = x
     destination (DestCnc   x ) = x
     destination (DestEden x _) = x
-    destination (DestSLE x   ) = x
+    destination (DestSLE  x  ) = x
+    destination (DestNdiu x  ) = x
 
 instance ProtocolDestination DirectiveDestination where
     destination (DirDestNctrs x ) = x
     destination (DirDestSLE   x ) = x
     destination (DirDestEden x _) = x
+    destination (DirDestNdiu x  ) = x
 
 instance ProtocolDestination ScoeDestination where
     destination (ScoeDestCnc  x) = x

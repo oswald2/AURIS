@@ -45,6 +45,17 @@
                 "cfgNctrsPortTM": 2502
             }
         ],
+        "cfgNDIU": [
+            {
+                "cfgNdiuHeartbeatEnable": true,
+                "cfgNdiuHeartbeatSendTime": 5,
+                "cfgNdiuHeartbeatTimeout": 10,
+                "cfgNdiuHost": "localhost",
+                "cfgNdiuID": 1,
+                "cfgNdiuName": "NDIU",
+                "cfgNdiuPort": 5005
+            }
+        ],
         "cfgRandomizerEnabled": false,
         "cfgRandomizerStartValue": 255,
         "cfgSCID": 0,

@@ -101,6 +101,10 @@ switchProtocolPktC sm =  awaitForever $ \pkt -> do
     -- TC Frames and then CLTUs before sending to the EDEN interface 
     switchCommand pkt TCCommand { _tcDestination = DestEden _ (Space ProtLevelCltu) } = 
       yield pkt 
+    -- NDIU also supports Frames and also CLTU. Currently, only TC Frames are supported 
+    -- within AURIS 
+    switchCommand pkt TCCommand { _tcDestination = DestNdiu _ } = 
+      yield pkt 
     -- in all other cases, just forward the packet to the correct interface in packet
     -- format
     switchCommand pkt _ = genSwitchCommand pkt 
@@ -131,18 +135,28 @@ switchProtocolFrameC sm = awaitForever $ \frame -> do
     TCScoeCommand {} -> return () 
 
   where 
-    -- incase of EDEN protocol usage with TC Frames, forward to the EDEN interface
+    -- in case of EDEN protocol usage with TC Frames, forward to the EDEN interface
     switchCommand frame TCCommand { _tcDestination = DestEden dest (Space ProtLevelFrame) } = 
-      sendFrameToEDEN dest frame 
+      sendFrameToIF dest frame 
+
+    -- in case of NDIU Lite protocol usage with TC Frames, forward to the correct interface 
+    switchCommand frame TCCommand { _tcDestination = DestNdiu dest } = 
+      sendFrameToIF dest frame 
+
     -- in all other cases, forward to the CLTU processing
     switchCommand frame _ = yield frame 
 
-    -- incase of EDEN protocol usage with TC Frames, forward to the EDEN interface
+    -- in case of EDEN protocol usage with TC Frames, forward to the EDEN interface
     switchDirective frame TCDir { _tcDirDestination = DirDestEden dest DirProtLevelFrame } = do 
-      sendFrameToEDEN dest frame 
+      sendFrameToIF dest frame 
+    
+    -- in case of NDIU Lite protocol usage with TC Frames, forward to the NDIU interface
+    switchDirective frame TCDir { _tcDirDestination = DirDestNdiu dest } = do 
+      sendFrameToIF dest frame 
+        
     switchDirective frame _ = yield frame 
 
-    sendFrameToEDEN dest frame = 
+    sendFrameToIF dest frame = 
       case HM.lookup dest sm of
         Just entry -> atomically $ writeTBQueue entry (EQFrame frame)
         Nothing ->

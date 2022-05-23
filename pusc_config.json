@@ -51,6 +51,17 @@
                 "cfgCncID": 5
             }
         ],
+        "cfgNDIU": [
+            {
+                "cfgNdiuHeartbeatEnable": false,
+                "cfgNdiuHeartbeatSendTime": 5,
+                "cfgNdiuHeartbeatTimeout": 10,
+                "cfgNdiuHost": "localhost",
+                "cfgNdiuID": 1,
+                "cfgNdiuName": "NDIU",
+                "cfgNdiuPort": 5005
+            }
+        ],
         "cfgUnknownSPID": 5071,
         "cfgEpoch": "UnixTime",
         "cfgInterfacePort": 55555,

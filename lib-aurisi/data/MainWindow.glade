@@ -1191,6 +1191,9 @@ Author: Michael Oswald
                                 <property name="reorderable">True</property>
                                 <property name="rules-hint">True</property>
                                 <property name="show-expanders">False</property>
+                                <child internal-child="selection">
+                                  <object class="GtkTreeSelection"/>
+                                </child>
                               </object>
                             </child>
                           </object>
@@ -1629,6 +1632,9 @@ Author: Michael Oswald
                                             <property name="reorderable">True</property>
                                             <property name="rules-hint">True</property>
                                             <property name="show-expanders">False</property>
+                                            <child internal-child="selection">
+                                              <object class="GtkTreeSelection"/>
+                                            </child>
                                           </object>
                                         </child>
                                       </object>
@@ -2205,6 +2211,58 @@ Author: Michael Oswald
                         <property name="expand">True</property>
                         <property name="fill">True</property>
                         <property name="position">2</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkFrame">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label-xalign">0</property>
+                        <child>
+                          <object class="GtkAlignment">
+                            <property name="visible">True</property>
+                            <property name="can-focus">False</property>
+                            <property name="left-padding">12</property>
+                            <child>
+                              <object class="GtkScrolledWindow">
+                                <property name="visible">True</property>
+                                <property name="can-focus">True</property>
+                                <property name="shadow-type">in</property>
+                                <child>
+                                  <object class="GtkViewport">
+                                    <property name="visible">True</property>
+                                    <property name="can-focus">False</property>
+                                    <child>
+                                      <object class="GtkBox" id="ndiuConnBox">
+                                        <property name="visible">True</property>
+                                        <property name="can-focus">False</property>
+                                        <property name="orientation">vertical</property>
+                                        <child>
+                                          <placeholder/>
+                                        </child>
+                                      </object>
+                                    </child>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <child type="label">
+                          <object class="GtkLabel">
+                            <property name="visible">True</property>
+                            <property name="can-focus">False</property>
+                            <property name="label" translatable="yes">NDIU Lite Connections</property>
+                            <attributes>
+                              <attribute name="weight" value="heavy"/>
+                            </attributes>
+                          </object>
+                        </child>
+                      </object>
+                      <packing>
+                        <property name="expand">True</property>
+                        <property name="fill">True</property>
+                        <property name="position">3</property>
                       </packing>
                     </child>
                   </object>

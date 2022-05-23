@@ -79,6 +79,8 @@ library
         Protocol.CnC
         Protocol.ProtocolSwitcher
         Protocol.SLE
+        Protocol.NDIULite
+        Protocol.NDIULiteProcessor
         Application.Chains
         Application.DataModel
         Verification.Commands
