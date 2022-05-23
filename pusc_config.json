@@ -28,19 +28,27 @@
             },
             {
                 "cfgCncHasCRC": true,
-                "cfgCncPortTM": 5002,
+                "cfgCncPortTM": 6011,
                 "cfgCncHost": "localhost",
-                "cfgCncPortTC": 5500,
-                "cfgCncName": "STC1",
+                "cfgCncPortTC": 6010,
+                "cfgCncName": "FTM",
                 "cfgCncID": 3
             },
             {
                 "cfgCncHasCRC": true,
-                "cfgCncPortTM": 5003,
+                "cfgCncPortTM": 5502,
                 "cfgCncHost": "localhost",
-                "cfgCncPortTC": 5501,
-                "cfgCncName": "STC2",
+                "cfgCncPortTC": 5002,
+                "cfgCncName": "STC1",
                 "cfgCncID": 4
+            },
+            {
+                "cfgCncHasCRC": true,
+                "cfgCncPortTM": 5503,
+                "cfgCncHost": "localhost",
+                "cfgCncPortTC": 5003,
+                "cfgCncName": "STC2",
+                "cfgCncID": 5
             }
         ],
         "cfgUnknownSPID": 5071,
