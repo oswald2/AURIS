@@ -39,12 +39,13 @@ import           Data.Time.Clock.System
 
 
 ndiuSenderChainC
-    :: (MonadIO m)
+    :: (MonadIO m, MonadReader env m, HasLogFunc env)
     => NDIULiteConfig
     -> TBQueue NdiuCmd
     -> ConduitT () ByteString m ()
 ndiuSenderChainC cfg queue = do
-    let chain = if cfgNdiuHeartbeatEnable cfg then ndiuHeartbeatC else ndiuC
+    let chain = if cfgNdiuHeartbeatEnable cfg then ndiuHeartbeatC sendInterval else ndiuC
+        sendInterval = fromIntegral (cfgNdiuHeartbeatSendTime cfg) * 1_000_000
 
     chain .| ndiuEncodeC
   where
@@ -56,17 +57,17 @@ ndiuSenderChainC cfg queue = do
                 ndiuC
             NdiuQuit -> return ()
 
-    ndiuHeartbeatC = do
-        res <- readWithTimeout (fromIntegral (cfgNdiuHeartbeatSendTime cfg))
-                               queue
+    ndiuHeartbeatC sendInterval = do
+        res <- readWithTimeout sendInterval queue
         case res of
             Nothing -> do
                 heartbeat <- createNdiuHeartbeatMsg
                 yield heartbeat
-                ndiuHeartbeatC
+                logDebug "Sent NDIU Hearbeat"
+                ndiuHeartbeatC sendInterval 
             Just (NdiuMsg ndiu) -> do
                 yield ndiu
-                ndiuHeartbeatC
+                ndiuHeartbeatC sendInterval
             Just NdiuQuit -> return ()
 
 
@@ -171,13 +172,20 @@ startTimers
     -> TVar (Maybe (Updatable ()))
     -> m ()
 startTimers cfg queue var = do
-    when (cfgNdiuHeartbeatEnable cfg) $ do
-        let time = fromIntegral (cfgNdiuHeartbeatTimeout cfg) * 1_000_000
-        env     <- ask
-        hbTimer <- liftIO
-            $ replacer (runRIO env (heartBeatReceiveTimeOut queue)) time
+    when
+            (  cfgNdiuHeartbeatEnable cfg
+            && (  (cfgNdiuDirection cfg == DirectionIn)
+               || (cfgNdiuDirection cfg == DirectionIO)
+               )
+            )
+        $ do
+              let time = fromIntegral (cfgNdiuHeartbeatTimeout cfg) * 1_000_000
+              env     <- ask
+              hbTimer <- liftIO $ replacer
+                  (runRIO env (heartBeatReceiveTimeOut queue))
+                  time
 
-        atomically $ writeTVar (var) (Just hbTimer)
+              atomically $ writeTVar (var) (Just hbTimer)
 
 
 heartBeatReceiveTimeOut

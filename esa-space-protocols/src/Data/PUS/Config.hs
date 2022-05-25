@@ -29,6 +29,7 @@ module Data.PUS.Config
     , SLEVersion(..)
     , sleInstanceCfgSII
     , NDIULiteConfig(..)
+    , NdiuDirection(..)
     , VerificationConfig(..)
     , cltuBlockSizeAsWord8
     , defaultConfig
@@ -231,11 +232,18 @@ instance FromJSON SLEConfig
 instance ToJSON SLEConfig where
     toEncoding = genericToEncoding defaultOptions
 
+data NdiuDirection = DirectionIn | DirectionOut | DirectionIO
+    deriving (Eq, Ord, Enum, Generic)
+
+instance FromJSON NdiuDirection
+instance ToJSON NdiuDirection where
+    toEncoding = genericToEncoding defaultOptions
 
 
 data NDIULiteConfig = NDIULiteConfig
     { cfgNdiuHost              :: !Text
     , cfgNdiuPort              :: !Word16
+    , cfgNdiuDirection         :: !NdiuDirection
     , cfgNdiuHeartbeatEnable   :: !Bool
     , cfgNdiuHeartbeatSendTime :: !Word32
     , cfgNdiuHeartbeatTimeout  :: !Word32
@@ -414,6 +422,7 @@ defaultSleConfig = SLEConfig
 defaultNdiuConfig :: NDIULiteConfig
 defaultNdiuConfig = NDIULiteConfig { cfgNdiuHost              = "localhost"
                                    , cfgNdiuPort              = 5005
+                                   , cfgNdiuDirection         = DirectionOut
                                    , cfgNdiuHeartbeatEnable   = True
                                    , cfgNdiuHeartbeatSendTime = 5
                                    , cfgNdiuHeartbeatTimeout  = 10

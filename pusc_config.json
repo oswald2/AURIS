@@ -53,9 +53,10 @@
         ],
         "cfgNDIU": [
             {
-                "cfgNdiuHeartbeatEnable": false,
+                "cfgNdiuHeartbeatEnable": true,
                 "cfgNdiuHeartbeatSendTime": 5,
                 "cfgNdiuHeartbeatTimeout": 10,
+                "cfgNdiuDirection": "DirectionOut",
                 "cfgNdiuHost": "localhost",
                 "cfgNdiuID": 1,
                 "cfgNdiuName": "NDIU",

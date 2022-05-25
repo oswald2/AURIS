@@ -47,6 +47,7 @@
         ],
         "cfgNDIU": [
             {
+                "cfgNdiuDirection": "DirectionOut",
                 "cfgNdiuHeartbeatEnable": true,
                 "cfgNdiuHeartbeatSendTime": 5,
                 "cfgNdiuHeartbeatTimeout": 10,
