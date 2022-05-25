@@ -256,10 +256,9 @@ It may be, that a CDM library for EGS-CC based configurations will follow (maybe
    :END:
 
 The currently working protocols are NCTRS (TC and TM, no ADMIN currently and no AD mode),
-C&C and EDEN. Since NCTRS is not that common
-anymore, other protocols will also be supported.
+C&C, EDEN, Generic SIMSAT NDIU Lite Protocol and SLE via ESA's C++ SLE API. 
 
-Work has already begun on the implementation of an SLE library, to be
+Work has already begun on the implementation of an own native SLE library, to be
 able to connect to ground stations without relay/routing software as for
 NCTRS. The SLE implementation is in a very early state and currently not
 usable and can be found here:
