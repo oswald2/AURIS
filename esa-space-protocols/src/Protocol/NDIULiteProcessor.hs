@@ -57,6 +57,7 @@ ndiuSenderChainC cfg queue = do
         res <- atomically $ readTBQueue queue
         case res of
             NdiuMsg ndiu -> do
+                logDebug $ "Sending NDIU: " <> display ndiu
                 yield ndiu
                 ndiuC
             NdiuQuit -> return ()
@@ -70,6 +71,7 @@ ndiuSenderChainC cfg queue = do
                 logDebug "Sent NDIU Hearbeat"
                 ndiuHeartbeatC sendInterval
             Just (NdiuMsg ndiu) -> do
+                logDebug $ "Sending NDIU: " <> display ndiu
                 yield ndiu
                 ndiuHeartbeatC sendInterval
             Just NdiuQuit -> return ()
@@ -229,7 +231,7 @@ createNdiuC = do
 
 frameToNDIU :: (MonadIO m) => EncodedTCFrame -> m NDIU
 frameToNDIU encFrame = do
-    createNdiuMessage NdiuTmGood (encFrame ^. encTcFrameData)
+    createNdiuMessage NdiuTc (encFrame ^. encTcFrameData)
 
 
 ndiuToTMFrameC
