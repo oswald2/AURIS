@@ -138,6 +138,7 @@ genPayload epoch coeff connMap transMode tcDef =
         Just c@(IfEden  _) -> DestEden c (tcDef ^. tcDefConnectionFlag)
         Just c@(IfCnc   _) -> DestCnc c
         Just c@(IfSle   _) -> DestSLE c
+        Just c@(IfNdiu  _) -> DestNdiu c 
         Nothing            -> DestNctrs (IfNctrs 1)
 
 

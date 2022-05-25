@@ -233,7 +233,7 @@ instance ToJSON SLEConfig where
     toEncoding = genericToEncoding defaultOptions
 
 data NdiuDirection = DirectionIn | DirectionOut | DirectionIO
-    deriving (Eq, Ord, Enum, Generic)
+    deriving (Eq, Ord, Enum, Show, Read, Generic)
 
 instance FromJSON NdiuDirection
 instance ToJSON NdiuDirection where
@@ -250,7 +250,7 @@ data NDIULiteConfig = NDIULiteConfig
     , cfgNdiuID                :: !Word16
     , cfgNdiuName              :: !Text
     }
-    deriving (Eq, Generic)
+    deriving (Eq, Show, Read, Generic)
 
 instance FromJSON NDIULiteConfig
 instance ToJSON NDIULiteConfig where

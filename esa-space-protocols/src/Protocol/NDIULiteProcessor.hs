@@ -136,10 +136,10 @@ processNdiu tmFrameCfg cfg vcMap var =
         awaitForever $ \ndiu -> do
             lift $ restartTimer cfg var
             case ndiuType ndiu of
-                NdiuHeartBeat -> return ()
-                NdiuTmGood    -> return ()
-                NdiuTmBad     -> return ()
-                NdiuTc        -> return ()
+                NdiuHeartBeat -> return () 
+                NdiuTmGood    -> yield ndiu 
+                NdiuTmBad     -> yield ndiu 
+                NdiuTc        -> yield ndiu
                 NdiuUnknown t -> do
                     logWarn
                         $  "Unknown NDIU Lite message received (type "
