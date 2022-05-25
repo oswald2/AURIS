@@ -12,6 +12,7 @@ module Data.PUS.TCTransferFrame
     , tcFrameDecodeC
     , checkTCFrame
     , tcFrameParser
+    , tcFrameBuilder 
     ) where
 
 
