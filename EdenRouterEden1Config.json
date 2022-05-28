@@ -5,6 +5,7 @@
     "aurisDbConfig": null,
     "aurisTheme": "ThemeLight",
     "aurisPusConfig": {
+        "cfgNDIU": [],
         "cfgCnC": [
         ],
         "cfgUnknownSPID": 5071,

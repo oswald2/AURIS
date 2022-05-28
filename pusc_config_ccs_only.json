@@ -9,6 +9,7 @@
     },
     "aurisPusConfig": {
         "cfgMission": "MissionPUSC",
+        "cfgNDIU": [],
         "cfgCnC": [
             {
                 "cfgCncHasCRC": true,

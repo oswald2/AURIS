@@ -9,6 +9,7 @@
     "aurisMission": "DEFAULT",
     "aurisPusConfig": {
         "cfgMission": "MissionDefault",
+        "cfgNDIU": [],
         "cfgCnC": [
             {
                 "cfgCncHasCRC": true,
@@ -66,15 +67,18 @@
             "cfgSlePeerID": "EGSCC",
             "cfgSleInstances": [
                 {
-                    "tag": "SLEInstFCLTU",
-                    "contents": {
-                        "cfgSleCltuPort": "TCPORT",
-                        "cfgSleCltuPeerID": "PARAGONTT",
-                        "cfgSleCltuVersion": "SLEVersion3",
-                        "cfgSleCltuSII": "sagr=3.spack=facility-PASS1.fsl-fg=1.cltu=cltu1",
-                        "cfgSleCltuBufferSize": 100,
-                        "cfgSleCltuPlopInEffect": "SlePLOP2"
-                    }
+                    "cfgSleInstanceConfig": {
+                        "tag": "SLEInstFCLTU",
+                        "contents": {
+                            "cfgSleCltuPort": "TCPORT",
+                            "cfgSleCltuPeerID": "PARAGONTT",
+                            "cfgSleCltuVersion": "SLEVersion3",
+                            "cfgSleCltuSII": "sagr=3.spack=facility-PASS1.fsl-fg=1.cltu=cltu1",
+                            "cfgSleCltuBufferSize": 100,
+                            "cfgSleCltuPlopInEffect": "SlePLOP2"
+                        }
+                    },
+                    "cfgSleInstanceNr": 1
                 }
 
             ]
