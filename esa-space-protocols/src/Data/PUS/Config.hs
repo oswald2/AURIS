@@ -33,6 +33,7 @@ module Data.PUS.Config
     , VerificationConfig(..)
     , cltuBlockSizeAsWord8
     , defaultConfig
+    , defaultNdiuConfig
     -- , writeConfigString
     , writeConfigJSON
     -- , loadConfigString

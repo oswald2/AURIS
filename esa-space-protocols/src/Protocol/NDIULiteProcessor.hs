@@ -3,6 +3,7 @@ module Protocol.NDIULiteProcessor
     , runNdiuChain
     , createNdiuC
     , ndiuToTMFrameC
+    , ndiuToTCFrameC
     ) where
 
 import           RIO
@@ -23,6 +24,7 @@ import           Protocol.NDIULite
 import           Data.PUS.Config
 import           Data.PUS.Events
 import           Data.PUS.TCFrameTypes
+import           Data.PUS.TCTransferFrame
 import           Data.PUS.TMFrame
 import           Data.PUS.TMFrameExtractor
 import           Data.PUS.TMStoreFrame
@@ -44,7 +46,9 @@ ndiuSenderChainC
     -> TBQueue NdiuCmd
     -> ConduitT () ByteString m ()
 ndiuSenderChainC cfg queue = do
-    let chain = if cfgNdiuHeartbeatEnable cfg then ndiuHeartbeatC sendInterval else ndiuC
+    let chain = if cfgNdiuHeartbeatEnable cfg
+            then ndiuHeartbeatC sendInterval
+            else ndiuC
         sendInterval = fromIntegral (cfgNdiuHeartbeatSendTime cfg) * 1_000_000
 
     chain .| ndiuEncodeC
@@ -53,6 +57,7 @@ ndiuSenderChainC cfg queue = do
         res <- atomically $ readTBQueue queue
         case res of
             NdiuMsg ndiu -> do
+                logDebug $ "Sending NDIU: " <> display ndiu
                 yield ndiu
                 ndiuC
             NdiuQuit -> return ()
@@ -64,8 +69,9 @@ ndiuSenderChainC cfg queue = do
                 heartbeat <- createNdiuHeartbeatMsg
                 yield heartbeat
                 logDebug "Sent NDIU Hearbeat"
-                ndiuHeartbeatC sendInterval 
+                ndiuHeartbeatC sendInterval
             Just (NdiuMsg ndiu) -> do
+                logDebug $ "Sending NDIU: " <> display ndiu
                 yield ndiu
                 ndiuHeartbeatC sendInterval
             Just NdiuQuit -> return ()
@@ -136,9 +142,9 @@ processNdiu tmFrameCfg cfg vcMap var =
         awaitForever $ \ndiu -> do
             lift $ restartTimer cfg var
             case ndiuType ndiu of
-                NdiuHeartBeat -> return () 
-                NdiuTmGood    -> yield ndiu 
-                NdiuTmBad     -> yield ndiu 
+                NdiuHeartBeat -> return ()
+                NdiuTmGood    -> yield ndiu
+                NdiuTmBad     -> yield ndiu
                 NdiuTc        -> yield ndiu
                 NdiuUnknown t -> do
                     logWarn
@@ -225,11 +231,11 @@ createNdiuC = do
 
 frameToNDIU :: (MonadIO m) => EncodedTCFrame -> m NDIU
 frameToNDIU encFrame = do
-    createNdiuMessage NdiuTmGood (encFrame ^. encTcFrameData)
+    createNdiuMessage NdiuTc (encFrame ^. encTcFrameData)
 
 
 ndiuToTMFrameC
-    :: (MonadIO m, MonadReader env m, HasLogFunc env, HasRaiseEvent env)
+    :: (MonadIO m, MonadReader env m, HasLogFunc env)
     => TMFrameConfig
     -> NDIULiteConfig
     -> ConduitT NDIU TMStoreFrame m ()
@@ -237,13 +243,6 @@ ndiuToTMFrameC tmFrameCfg cfg = awaitForever $ \ndiu -> do
     case A.parseOnly (tmFrameParser tmFrameCfg) (toBS (ndiuData ndiu)) of
         Left err -> do
             let msg = T.pack err
-            lift
-                $ raiseEvent
-                      (EVAlarms
-                          (EVIllegalTMFrame
-                              ("Could not parse TM Frame: " <> msg)
-                          )
-                      )
             logWarn $ "Could not parse TM Frame: " <> display msg
             logDebug $ "TM Frame:\n" <> display (ndiuData ndiu)
         Right frame -> do
@@ -262,3 +261,26 @@ ndiuToTMFrameC tmFrameCfg cfg = awaitForever $ \ndiu -> do
                     }
 
             yield storeFrame
+
+
+
+ndiuToTCFrameC
+    :: (MonadIO m, MonadReader env m, HasLogFunc env)
+    => ConduitT NDIU (TCTransferFrame, SunTime) m ()
+ndiuToTCFrameC = awaitForever $ \ndiu -> do
+    case A.parseOnly (tcFrameParser) (toBS (ndiuData ndiu)) of
+        Left err -> do
+            let msg = T.pack err
+            logWarn $ "Could not parse TC Frame: " <> display msg
+            logDebug $ "TC Frame:\n" <> display (ndiuData ndiu)
+        Right frame -> do
+            logDebug
+                $  display ("Received TM Frame: " :: Text)
+                <> displayShow frame
+
+            let ert = fromUTC (systemToUTCTime t)
+                t = MkSystemTime (fromIntegral (ndiuSecs ndiu)) (ndiuNano ndiu)
+
+                result = (frame, ert) 
+
+            yield result 
