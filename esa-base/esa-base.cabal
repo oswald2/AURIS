@@ -211,17 +211,13 @@ library
     , directory
     , filepath
     , word24
-    , closed
     , bytestring-to-vector
     , refined
     , sorted-list
     , bimap
-    , vector-space
-    , scientific
     , time
     , stm
     , array
-    , unliftio
 
 
   -- Directories containing source files.

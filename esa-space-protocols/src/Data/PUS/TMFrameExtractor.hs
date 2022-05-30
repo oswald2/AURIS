@@ -777,7 +777,7 @@ frameStatC
 frameStatC = do
     env <- ask
     let !frameSize =
-            fromIntegral . cfgMaxTMFrameLen . cfgTMFrame $ env ^. getConfig
+            fromIntegral . cfgFrameMaxSize . cfgTMFrame $ env ^. getConfig
     awaitForever $ \meta -> do
         let frameStatVar = getFrameStats env
         now <- liftIO $ getPOSIXTime

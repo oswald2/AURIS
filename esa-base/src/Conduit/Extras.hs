@@ -6,12 +6,8 @@ module Conduit.Extras
 
 import           Conduit
 import           RIO
-import           UnliftIO.STM
 
-import           Control.Applicative
 import           Control.Concurrent.STM.TBQueue ( flushTBQueue )
-import           Control.Monad
-
 
 
 queueFlusher :: (MonadIO m) => TBQueue a -> ConduitT z [a] m ()
@@ -28,8 +24,8 @@ queuePusher queue = awaitForever $ \lst -> do
 
 
 readWithTimeout :: (MonadIO m) => Int -> TBQueue a -> m (Maybe a)
-readWithTimeout to queue = do
-    delay <- liftIO $ registerDelay to
+readWithTimeout tout queue = do
+    delay <- liftIO $ registerDelay tout
     atomically
         $   do
                 Just <$> readTBQueue queue

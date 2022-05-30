@@ -66,6 +66,7 @@ module Data.PUS.TMFrame
     , tmFrameFHType
     , tmFrameDefaultHeader
     , displayFHP
+    , cfgFrameMaxSize
     ) where
 
 
@@ -75,6 +76,8 @@ import qualified RIO.ByteString                as B
 import           Control.Lens                   ( makeLenses )
 
 import           Codec.Serialise
+import           Codec.Serialise.Encoding       ( encodeWord16 )
+import           Codec.Serialise.Decoding       ( decodeWord16 )
 import           Conduit.PayloadParser
 import           Data.Aeson
 import qualified Data.Attoparsec.Binary        as A
@@ -82,8 +85,6 @@ import           Data.Attoparsec.ByteString     ( Parser )
 import qualified Data.Attoparsec.ByteString    as A
 import           Data.Bits
 import           Data.ByteString.Base64.Type
-
-import           Closed
 
 import           ByteString.StrictBuilder
 
@@ -96,6 +97,20 @@ import           General.PUSTypes
 import           General.Hexdump
 import           General.SizeOf
 
+import           Refined
+
+
+newtype FrameSize = FrameSize (Refined (And (Not (LessThan 128)) (Not (GreaterThan 2040))) Word16)
+    deriving (Eq, Ord, Show, Read, ToJSON, FromJSON, NFData, Generic)
+
+unFrameSize :: FrameSize -> Word16
+unFrameSize (FrameSize x) = unrefine x
+
+instance Serialise FrameSize where
+    encode (FrameSize x) = encodeWord16 (unrefine x)
+    decode = do
+        x <- decodeWord16
+        FrameSize <$> refineFail x
 
 
 data TMFrameConfig = TMFrameConfig
@@ -103,20 +118,23 @@ data TMFrameConfig = TMFrameConfig
     -- | The maximum TM Frame length. This length is used in parsing
     -- the frame data, so it needs to be accurate. Default is by
     -- PUS Standard a value 1115 (1024 bytes data)
-      cfgMaxTMFrameLen :: Closed 128 2040
+      cfgMaxTMFrameLen :: FrameSize
     -- | Indicates, if a TM frame does contain a CRC value
     , cfgTMFrameHasCRC :: Bool
     -- | The configured segment length for TM Frames
     , cfgTMSegLength   :: !TMSegmentLen
     }
-    deriving (Eq, Generic)
+    deriving (Eq, Show, Read, Generic)
 
 
 defaultTMFrameConfig :: TMFrameConfig
-defaultTMFrameConfig = TMFrameConfig { cfgMaxTMFrameLen = 1115
+defaultTMFrameConfig = TMFrameConfig { cfgMaxTMFrameLen = FrameSize $$(refineTH 1115)
                                      , cfgTMFrameHasCRC = True
                                      , cfgTMSegLength   = TMSegment65536
                                      }
+
+cfgFrameMaxSize :: TMFrameConfig -> Word16 
+cfgFrameMaxSize cfg = unFrameSize (cfgMaxTMFrameLen cfg)
 
 
 instance FromJSON TMFrameConfig
@@ -348,7 +366,7 @@ tmFrameMaxDataLen cfg missionSpecific hdr =
 {-# INLINABLE tmFrameMaxDataLenFlag #-}
 tmFrameMaxDataLenFlag :: TMFrameConfig -> PUSMissionSpecific -> Bool -> Int
 tmFrameMaxDataLenFlag cfg missionSpecific useCLCW =
-    fromIntegral (cfgMaxTMFrameLen cfg)
+    fromIntegral (unFrameSize (cfgMaxTMFrameLen cfg))
         - fixedSizeOf @TMFrameHeader
         - dfhLen
         - opLen
@@ -363,7 +381,7 @@ tmFrameMaxDataLenFlag cfg missionSpecific useCLCW =
 {-# INLINABLE tmFrameMaxPayloadLen #-}
 tmFrameMaxPayloadLen :: TMFrameConfig -> TMFrameHeader -> Int
 tmFrameMaxPayloadLen conf _ =
-    fromIntegral (cfgMaxTMFrameLen conf) - fixedSizeOf @TMFrameHeader
+    fromIntegral (unFrameSize (cfgMaxTMFrameLen conf)) - fixedSizeOf @TMFrameHeader
 
 
 {-# INLINABLE tmFrameMinLen #-}
