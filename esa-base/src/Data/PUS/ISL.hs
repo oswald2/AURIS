@@ -41,9 +41,14 @@ import           General.SizeOf
 encodeISL :: ISLHeader -> ByteString -> ByteString
 encodeISL hdr payload =
     builderBytes
-        $ let len    = BS.length payload + fixedSizeOf @ISLHeader
+        $ let
+              len =
+                  BS.length payload
+                      + fixedSizeOf @ISLHeader
+                      + fixedSizeOf @ISLEncPktHdr
               encHdr = ISLEncPktHdr 0 (fromIntegral len)
-          in  islEncHdrBuilder encHdr <> islHeaderBuilder hdr <> bytes payload
+          in
+              islEncHdrBuilder encHdr <> islHeaderBuilder hdr <> bytes payload
 
 data ISLEncPktHdr = ISLEncPktHdr
     { islID     :: !Word16
@@ -190,20 +195,24 @@ islParser :: Parser ISL
 islParser = do
     eh  <- islEncHdrParser
     hdr <- islHeaderParser
-    let len = fromIntegral (islLength eh) - fixedSizeOf @ISLHeader
+    let len =
+            fromIntegral (islLength eh)
+                - fixedSizeOf @ISLHeader
+                - fixedSizeOf @ISLEncPktHdr
     dat <- A.take len
     return ISL { islEncHdr = eh, islHdr = hdr, islData = dat }
 
 islBuilder :: ISL -> Builder
 islBuilder isl =
-    let
-        hdr    = islEncHdr isl
+    let hdr    = islEncHdr isl
         newHdr = hdr
             { islLength = fromIntegral
-                              (BS.length (islData isl) + fixedSizeOf @ISLHeader)
+                              ( BS.length (islData isl)
+                              + fixedSizeOf @ISLHeader
+                              + fixedSizeOf @ISLEncPktHdr
+                              )
             }
-    in
-        islEncHdrBuilder newHdr <> islHeaderBuilder (islHdr isl) <> bytes
+    in  islEncHdrBuilder newHdr <> islHeaderBuilder (islHdr isl) <> bytes
             (islData isl)
 
 
