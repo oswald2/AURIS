@@ -20,6 +20,7 @@ import           Data.Conduit.TQueue            ( sinkTBQueue
                                                 )
 import           RIO
 import qualified RIO.HashMap                   as HM
+import qualified RIO.Set                       as S 
 
 import           Data.PUS.Config
 import           Data.PUS.Events
@@ -448,13 +449,14 @@ runNdiu
     -> PUSMissionSpecific
     -> SwitcherMap
     -> ProtocolQueue
+    -> Set Word16
     -> RIO GlobalState ()
-runNdiu tmFrameCfg cfg _missionSpecific vcMap ndiuQueue = do
+runNdiu tmFrameCfg cfg _missionSpecific vcMap ndiuQueue ndiuTypeSet = do
     logDebug "runNdiuChain entering"
 
     queue <- newTBQueueIO 500
 
-    race_ (runNdiuChain tmFrameCfg cfg vcMap queue) (conversionThread queue)
+    race_ (runNdiuChain tmFrameCfg cfg vcMap queue ndiuTypeSet) (conversionThread queue)
 
     logDebug "runNdiuChain leaving"
     where 
@@ -602,8 +604,10 @@ runChains missionSpecific = do
     ndiuIf cfg vcMap (switcherMap, ts) x = do
         (queue, newSm) <- createInterfaceChannel switcherMap
                                                  (IfNdiu (cfgNdiuID x))
+        let ndiuTypeSet = S.fromList [156,157,158]
+
         return
-            (newSm, ts <> conc (runNdiu (cfgTMFrame cfg) x missionSpecific vcMap queue))
+            (newSm, ts <> conc (runNdiu (cfgTMFrame cfg) x missionSpecific vcMap queue ndiuTypeSet))
 
 
 

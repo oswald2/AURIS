@@ -16,6 +16,7 @@ module Protocol.NDIULite
 import           RIO                     hiding ( (.~)
                                                 , Builder
                                                 )
+import qualified RIO.Set                       as S
 import qualified RIO.Text                      as T
 
 import           Conduit
@@ -38,15 +39,17 @@ data NdiuMessageType =
     | NdiuTmGood
     | NdiuTmBad
     | NdiuTc
+    | NdiuAuxillary !Word16
     | NdiuUnknown !Word16
   deriving(Show, Read)
 
 instance Display NdiuMessageType where
-    display NdiuHeartBeat   = "HeartBeat"
-    display NdiuTmGood      = "GOOD TM"
-    display NdiuTmBad       = "BAD TM"
-    display NdiuTc          = "TC"
-    display (NdiuUnknown x) = "TYPE=" <> display x
+    display NdiuHeartBeat     = "HeartBeat"
+    display NdiuTmGood        = "GOOD TM"
+    display NdiuTmBad         = "BAD TM"
+    display NdiuTc            = "TC"
+    display (NdiuAuxillary x) = "AUX=" <> display x
+    display (NdiuUnknown   x) = "TYPE=" <> display x
 
 
 data NDIU = NDIU
@@ -82,14 +85,18 @@ ndiuMessageTypeParser = do
         10 -> return NdiuTmGood
         11 -> return NdiuTmBad
         20 -> return NdiuTc
-        x  -> return (NdiuUnknown x)
+        x ->
+            return $ if (x >= 30) && (x <= 99)
+                then NdiuAuxillary x
+                else NdiuUnknown x
 
 ndiuMessageTypeBuilder :: NdiuMessageType -> Builder
-ndiuMessageTypeBuilder NdiuHeartBeat   = word16BE 1
-ndiuMessageTypeBuilder NdiuTmGood      = word16BE 10
-ndiuMessageTypeBuilder NdiuTmBad       = word16BE 11
-ndiuMessageTypeBuilder NdiuTc          = word16BE 20
-ndiuMessageTypeBuilder (NdiuUnknown x) = word16BE x
+ndiuMessageTypeBuilder NdiuHeartBeat     = word16BE 1
+ndiuMessageTypeBuilder NdiuTmGood        = word16BE 10
+ndiuMessageTypeBuilder NdiuTmBad         = word16BE 11
+ndiuMessageTypeBuilder NdiuTc            = word16BE 20
+ndiuMessageTypeBuilder (NdiuAuxillary x) = word16BE x
+ndiuMessageTypeBuilder (NdiuUnknown   x) = word16BE x
 
 
 ndiuMessageParser :: Parser NDIU

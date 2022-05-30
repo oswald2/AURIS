@@ -7,6 +7,7 @@ module Protocol.NDIULiteProcessor
     ) where
 
 import           RIO
+import qualified RIO.Set                       as S
 import qualified RIO.Text                      as T
 
 import           Conduit
@@ -84,15 +85,16 @@ runNdiuChain
     -> NDIULiteConfig
     -> SwitcherMap
     -> TBQueue NdiuCmd
+    -> Set Word16
     -> m ()
-runNdiuChain tmFrameCfg cfg vcMap queue = do
+runNdiuChain tmFrameCfg cfg vcMap queue ndiuTypeSet = do
     var <- newTVarIO Nothing
     runGeneralTCPReconnectClient
         (clientSettings (fromIntegral (cfgNdiuPort cfg))
                         (encodeUtf8 (cfgNdiuHost cfg))
         )
         200_000
-        (processConnect tmFrameCfg cfg vcMap queue var)
+        (processConnect tmFrameCfg cfg vcMap queue var ndiuTypeSet)
     onDisconnect cfg var
 
 
@@ -103,9 +105,10 @@ processConnect
     -> SwitcherMap
     -> TBQueue NdiuCmd
     -> TVar (Maybe (Updatable ()))
+    -> Set Word16
     -> AppData
     -> m ()
-processConnect tmFrameConfig cfg vcMap queue var appData = do
+processConnect tmFrameConfig cfg vcMap queue var ndiuTypeSet appData = do
     raiseEvent
         (EVAlarms (EVEConnection (IfNdiu (cfgNdiuID cfg)) ConnSingle Connected))
     logInfo $ "Connected on NDIU " <> display (cfgNdiuID cfg)
@@ -117,7 +120,7 @@ processConnect tmFrameConfig cfg vcMap queue var appData = do
         runConduitRes
             $  appSource appData
             .| ndiuDecodeC
-            .| processNdiu tmFrameConfig cfg vcMap var
+            .| processNdiu tmFrameConfig cfg vcMap var ndiuTypeSet
 
         logDebug "NDIU read thread leaves"
 
@@ -133,8 +136,9 @@ processNdiu
     -> NDIULiteConfig
     -> SwitcherMap
     -> TVar (Maybe (Updatable ()))
+    -> Set Word16
     -> ConduitT NDIU Void m ()
-processNdiu tmFrameCfg cfg vcMap var =
+processNdiu tmFrameCfg cfg vcMap var ndiuTypeSet =
     src .| ndiuToTMFrameC tmFrameCfg cfg .| tmFrameSwitchVC vcMap
 
   where
@@ -142,16 +146,20 @@ processNdiu tmFrameCfg cfg vcMap var =
         awaitForever $ \ndiu -> do
             lift $ restartTimer cfg var
             case ndiuType ndiu of
-                NdiuHeartBeat -> return ()
-                NdiuTmGood    -> yield ndiu
-                NdiuTmBad     -> yield ndiu
-                NdiuTc        -> yield ndiu
-                NdiuUnknown t -> do
-                    logWarn
-                        $  "Unknown NDIU Lite message received (type "
-                        <> display t
-                        <> "): "
-                        <> display ndiu
+                NdiuHeartBeat   -> return ()
+                NdiuTmGood      -> yield ndiu
+                NdiuTmBad       -> yield ndiu
+                NdiuTc          -> yield ndiu
+                NdiuAuxillary _ -> yield ndiu
+                NdiuUnknown   t -> do
+                    if t `S.member` ndiuTypeSet
+                        then yield ndiu
+                        else do
+                            logWarn
+                                $  "Unknown NDIU Lite message received (type "
+                                <> display t
+                                <> "): "
+                                <> display ndiu
 
 
 onDisconnect
@@ -281,6 +289,6 @@ ndiuToTCFrameC = awaitForever $ \ndiu -> do
             let ert = fromUTC (systemToUTCTime t)
                 t = MkSystemTime (fromIntegral (ndiuSecs ndiu)) (ndiuNano ndiu)
 
-                result = (frame, ert) 
+                result = (frame, ert)
 
-            yield result 
+            yield result
