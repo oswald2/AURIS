@@ -12,7 +12,7 @@ module Data.PUS.TCTransferFrame
     , tcFrameDecodeC
     , checkTCFrame
     , tcFrameParser
-    , tcFrameBuilder 
+    , tcFrameBuilder
     ) where
 
 
@@ -154,20 +154,18 @@ tcFrameParser = do
   where
     tcFrameParser' = do
         flags <- A.anyWord16be
-        vc    <- A.anyWord8
-        len   <- A.anyWord8
+        word2 <- A.anyWord16be
         seqf  <- A.anyWord8
 
         let (vers, fl, scid) = unpackFlags flags
-            vcid             = mkVCID (vc `shiftR` 2)
-            len1 :: Word16
-            !len1 = fromIntegral (vc .&. 0x03) `shiftL` 8
-            len2 :: Word16
-            !len2    = fromIntegral len
-            !length1 = len1 .|. len2
+            vcid             = mkVCID (fromIntegral (word2 `shiftR` 10))
+            !length1 = word2 .&. 0b0000_0011_1111_1111
             !length2 = length1 + 1
+            newLen = fromIntegral length2 - tcFrameHdrLen - crcLen
 
-        pl  <- A.take (fromIntegral length2 - crcLen)
+        when (newLen < 0) $ fail $ "Illegal Length in TC Frame Header: " ++ show length1
+
+        pl  <- A.take newLen 
         crc <- crcParser
 
         pure (TCTransferFrame vers fl scid vcid length1 seqf (HexBytes pl), crc)

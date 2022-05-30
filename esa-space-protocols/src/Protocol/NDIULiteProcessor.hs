@@ -68,7 +68,7 @@ ndiuSenderChainC cfg queue = do
             Nothing -> do
                 heartbeat <- createNdiuHeartbeatMsg
                 yield heartbeat
-                logDebug "Sent NDIU Hearbeat"
+                -- logDebug "Sent NDIU Hearbeat"
                 ndiuHeartbeatC sendInterval
             Just (NdiuMsg ndiu) -> do
                 logDebug $ "Sending NDIU: " <> display ndiu

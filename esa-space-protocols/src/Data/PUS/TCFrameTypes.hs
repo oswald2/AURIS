@@ -21,6 +21,7 @@ module Data.PUS.TCFrameTypes
     , EncodedTCFrame(..)
     -- | TC Frames will be transported together with a TC Request
     , TCFrameTransport(..)
+    , tcFrameHdrLen
     , tcFrameVersion
     , tcFrameFlag
     , tcFrameSCID
@@ -68,8 +69,11 @@ data TCTransferFrame = TCTransferFrame
     , _tcFrameData    :: HexBytes
     }
     deriving (Eq, Show, Read)
-
 makeLenses ''TCTransferFrame
+
+tcFrameHdrLen :: Int 
+tcFrameHdrLen = 5
+
 
 data TCFrameTransport = TCFrameTransport
     { _tcfTransFrame :: TCTransferFrame
