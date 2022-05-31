@@ -75,7 +75,7 @@ instance Display NDIU where
 
 
 data NdiuCmd = NdiuMsg NDIU | NdiuQuit
-
+    deriving(Read, Show, Generic)
 
 ndiuMessageTypeParser :: Parser NdiuMessageType
 ndiuMessageTypeParser = do
