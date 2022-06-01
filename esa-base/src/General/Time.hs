@@ -102,6 +102,7 @@ module General.Time
     , displayUTCTimeMilli
     , utcTimeToComponents
     , fromUTC
+    , fromSystemTime
     ) where
 
 import           RIO
@@ -207,15 +208,16 @@ instance ToJSON SunTime where
 
 
 fromUTC :: UTCTime -> SunTime
-fromUTC utcTime =
-    let t = utcToSystemTime utcTime
-        val =
+fromUTC utcTime = fromSystemTime (utcToSystemTime utcTime)
+
+fromSystemTime :: SystemTime -> SunTime
+fromSystemTime t =
+    let val =
             systemSeconds t
                 *     1_000_000
                 +     fromIntegral (systemNanoseconds t)
                 `div` 1_000
     in  SunTime val False
-
 
 -- | converts the time into a 'Double' represinting the seconds
 -- from the Unix epoch. The fractional part are the subseconds
