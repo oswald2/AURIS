@@ -16,21 +16,25 @@ instance Val ProtocolInterface where
     val (IfCnc   x) = Doc ["if" =: String "CnC", "nr" := val x]
     val (IfEden  x) = Doc ["if" =: String "EDEN", "nr" := val x]
     val (IfSle   x) = Doc ["if" := String "SLE", "type" := val x]
+    val (IfNdiu  x) = Doc ["if" := String "NDIU", "nr" := val x]
 
     cast' (Doc doc) = do
         v <- lookup "if" doc
         case v of
-            String "NCTRS" -> do 
+            String "NCTRS" -> do
                 n <- lookup "nr" doc
                 pure (IfNctrs n)
-            String "CnC"   -> do 
+            String "CnC" -> do
                 n <- lookup "nr" doc
                 pure (IfCnc n)
-            String "EDEN"  -> do 
+            String "EDEN" -> do
                 n <- lookup "nr" doc
                 pure (IfEden n)
-            String "SLE"   -> do 
+            String "SLE" -> do
                 t <- lookup "type" doc
                 pure (IfSle t)
-            _              -> Nothing
+            String "NDIU" -> do
+                n <- lookup "nr" doc
+                pure (IfNdiu n)
+            _ -> Nothing
     cast' _ = Nothing

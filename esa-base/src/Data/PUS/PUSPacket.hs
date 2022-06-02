@@ -46,75 +46,76 @@ module Data.PUS.PUSPacket
     ) where
 
 
-import           RIO                     hiding ( Builder
-                                                , (.~)
+import           Data.Vector.Storable.ByteString
+import           RIO                     hiding ( (.~)
+                                                , Builder
                                                 )
 import qualified RIO.ByteString                as B
+import qualified RIO.Text                      as T
 import qualified RIO.Vector.Storable           as V
 import qualified RIO.Vector.Storable.Unsafe    as V
                                                 ( unsafeFreeze )
-import           Data.Vector.Storable.ByteString
-import qualified RIO.Text                      as T
 
-import qualified Text.Builder                  as T
-import           Control.Lens                   ( makeLenses
-                                                , (.~)
-                                                )
-import           Data.Aeson
-import           Codec.Serialise
-import           Data.Attoparsec.ByteString     ( Parser )
-import qualified Data.Attoparsec.ByteString    as A
-import qualified Data.Attoparsec.Binary        as A
 import           ByteString.StrictBuilder       ( Builder
                                                 , builderBytes
                                                 , bytes
                                                 , word16BE
                                                 )
+import           Codec.Serialise
+import           Control.Lens                   ( (.~)
+                                                , makeLenses
+                                                )
+import           Data.Aeson
+import qualified Data.Attoparsec.Binary        as A
+import           Data.Attoparsec.ByteString     ( Parser )
+import qualified Data.Attoparsec.ByteString    as A
 import           Data.Bits                      ( Bits
                                                     ( (.&.)
+                                                    , (.|.)
                                                     , shiftL
                                                     , shiftR
-                                                    , (.|.)
                                                     )
                                                 )
+import qualified Text.Builder                  as T
 
-import           General.PUSTypes               ( SSC
-                                                , mkSSC
-                                                , getSSC
-                                                , PUSPacketType(..)
-                                                , PktID(..)
-                                                , SeqControl(..)
-                                                )
-import           General.APID                   ( APID(APID) )
-import           Data.PUS.SegmentationFlags     ( SegmentationFlags(..) )
-import           Data.PUS.PUSDfh
-import           Data.PUS.CRC                   ( crcCheck
+import           Data.PUS.CRC                   ( CRC
+                                                , crcCheck
                                                 , crcEncodeAndAppendBS
                                                 , crcLen
-                                                , CRC
                                                 )
 import           Data.PUS.MissionSpecific.Definitions
-                                                ( pmsTCDataFieldHeader
+                                                ( PUSMissionSpecific
+                                                , pmsTCDataFieldHeader
                                                 , pmsTMDataFieldHeader
-                                                , PUSMissionSpecific
+                                                )
+import           Data.PUS.PUSDfh
+import           Data.PUS.SegmentationFlags     ( SegmentationFlags(..) )
+import           General.APID                   ( APID(APID) )
+import           General.PUSTypes               ( PUSPacketType(..)
+                                                , PktID(..)
+                                                , SSC
+                                                , SeqControl(..)
+                                                , getSSC
+                                                , mkSSC
                                                 )
 
-import           Protocol.ProtocolInterfaces    ( isCnc
+import           Protocol.ProtocolInterfaces    ( ProtocolInterface(IfCnc)
+                                                , ProtocolPacket(ProtocolPacket)
+                                                , isCnc
                                                 , isEden
                                                 , isNctrs
+                                                , isNdiu
                                                 , isSLE
-                                                , ProtocolInterface(IfCnc)
-                                                , ProtocolPacket(ProtocolPacket)
                                                 )
 
+import           General.SetBitField            ( setBitFieldR )
 import           General.SizeOf                 ( FixedSize(..)
                                                 , SizeOf(sizeof)
                                                 )
-import           General.SetBitField            ( setBitFieldR )
-import           General.Types                  ( hexLength
-                                                , unBitSize
-                                                , BitOffsets(toBitOffset)
+import           General.Types                  ( BitOffsets(toBitOffset)
                                                 , HexBytes(..)
+                                                , hexLength
+                                                , unBitSize
                                                 )
 
 import           Data.TM.PIVals                 ( TMPIVal(..) )
@@ -355,7 +356,7 @@ pusPktHdrBuilder hdr =
 {-# INLINABLE pusPktHdrParser #-}
 pusPktHdrParser :: Parser PUSHeader
 pusPktHdrParser = do
-    pktId    <- A.anyWord16be
+    pktId <- A.anyWord16be
     pusPktHdrParserWithoutPktID pktId
 
 
@@ -504,6 +505,14 @@ pusPktParserPayload
 pusPktParserPayload missionSpecific comm hdr = do
     (dfh, hasCRC) <- if
         | isNctrs comm
+        -> if hdr ^. pusHdrDfhFlag
+            then case hdr ^. pusHdrType of
+                PUSTM -> (, True)
+                    <$> dfhParser (missionSpecific ^. pmsTMDataFieldHeader)
+                PUSTC -> (, True)
+                    <$> dfhParser (missionSpecific ^. pmsTCDataFieldHeader)
+            else return (PUSEmptyHeader, True)
+        | isNdiu comm
         -> if hdr ^. pusHdrDfhFlag
             then case hdr ^. pusHdrType of
                 PUSTM -> (, True)
