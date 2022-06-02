@@ -58,6 +58,7 @@ instance MongoDbConversion DataFieldHeader Document where
                  , "version" =: _stdCTmVersion
                  , "type" =: _stdCTmType
                  , "subtype" =: _stdCTmSubType
+                 , "messageCount" =: _stdCTmMessageCount
                  , "destinationID" =: _stdCTmDestinationID
                  , "time" =: timeToMicro _stdCTmOBTime
                  ]
@@ -116,6 +117,7 @@ instance MongoDbConversion DataFieldHeader Document where
                         t    <- lookup "type" doc2
                         tr   <- lookup "timeRef" doc2
                         st   <- lookup "subtype" doc2
+                        mc   <- lookup "messageCount" doc2
                         sid  <- lookup "destinationID" doc2
                         v    <- lookup "version" doc2
                         time <- lookup "time" doc2
@@ -123,6 +125,7 @@ instance MongoDbConversion DataFieldHeader Document where
                                                  tr
                                                  t
                                                  st
+                                                 mc
                                                  sid
                                                  (microToTime time False)
                     String "CNC_TC" -> do

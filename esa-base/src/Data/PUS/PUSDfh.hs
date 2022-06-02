@@ -62,6 +62,7 @@ module Data.PUS.PUSDfh
     , stdCTmSubType
     , stdCTmDestinationID
     , stdCTmOBTime
+    , stdCTmMessageCount
     , cncTcCrcFlags
     , cncTcAcceptance
     , cncTcStart
@@ -91,6 +92,7 @@ import           Control.Lens                   ( (.~)
                                                 , makeLenses
                                                 )
 import           Data.Aeson
+import qualified Data.Attoparsec.Binary        as A
 import           Data.Attoparsec.ByteString     ( Parser )
 import qualified Data.Attoparsec.ByteString    as A
 import           Data.Bits
@@ -141,6 +143,7 @@ data DataFieldHeader =
         , _stdCTmTimeRef :: !Word8
         , _stdCTmType :: !PUSType
         , _stdCTmSubType :: !PUSSubType
+        , _stdCTmMessageCount :: !Word16
         , _stdCTmDestinationID :: !SourceIDC
         , _stdCTmOBTime :: !CUCTime
     }
@@ -181,8 +184,13 @@ defaultPUSCTCHeader =
 
 -- | Default TM DFH for the PUS C Standard 
 defaultPUSCTMHeader :: DataFieldHeader
-defaultPUSCTMHeader =
-    PUSTMStdHeaderC 2 0 (PUSType 0) (PUSSubType 0) (mkSourceIDC 0) (nullCUCTime Cuc42)
+defaultPUSCTMHeader = PUSTMStdHeaderC 2
+                                      0
+                                      (PUSType 0)
+                                      (PUSSubType 0)
+                                      0
+                                      (mkSourceIDC 0)
+                                      (nullCUCTime Cuc42)
 
 
 -- | returns the type of the header
@@ -330,9 +338,9 @@ pusPktTime _ = Nothing
 dfhLength :: DataFieldHeader -> Int
 dfhLength PUSEmptyHeader    = 0
 dfhLength PUSTCStdHeader{}  = 4
-dfhLength PUSTCStdHeaderC{} = 5
+dfhLength PUSTCStdHeaderC{} = 6
 dfhLength PUSTMStdHeader{}  = 10
-dfhLength PUSTMStdHeaderC{} = 13
+dfhLength PUSTMStdHeaderC{} = 14
 dfhLength PUSCnCTCHeader{}  = 4
 
 instance SizeOf DataFieldHeader where
@@ -366,6 +374,7 @@ dfhBuilder PUSTCStdHeaderC {..} =
             <> pusTypeBuilder _stdCType
             <> pusSubTypeBuilder _stdCSubType
             <> sourceIDCBuilder _stdCSrcID
+            <> word8 0
 
 
 dfhBuilder x@PUSTMStdHeader{} =
@@ -380,8 +389,10 @@ dfhBuilder PUSTMStdHeaderC {..} =
     in  word8 v
             <> pusTypeBuilder _stdCTmType
             <> pusSubTypeBuilder _stdCTmSubType
+            <> word16BE _stdCTmMessageCount
             <> sourceIDCBuilder _stdCTmDestinationID
             <> cucTimeBuilder _stdCTmOBTime
+            <> word8 0
 
 dfhBuilder x@PUSCnCTCHeader{} =
     word8 (((_cncTcCrcFlags x .&. 0x07) `shiftL` 4) .|. ackFlags)
@@ -428,6 +439,7 @@ dfhParser PUSTCStdHeaderC{} = do
     t  <- pusTypeParser
     st <- pusSubTypeParser
     si <- sourceIDCParser
+    void $ A.anyWord8 -- skip the spare byte 
 
     let fa  = b1 .&. 0x01 /= 0
         fs  = b1 .&. 0x02 /= 0
@@ -458,11 +470,13 @@ dfhParser PUSTMStdHeaderC { _stdCTmOBTime = t } = do
     vers <- A.anyWord8
     tp   <- A.anyWord8
     st   <- A.anyWord8
+    mc   <- A.anyWord16be
     si   <- sourceIDCParser
     obt  <- cucTimeParser t
+    void $ A.anyWord8 -- skip the spare byte 
     let vers' = (vers .&. 0xF0) `shiftR` 4
         tref  = (vers .&. 0x0F)
-    return $! PUSTMStdHeaderC vers' tref (mkPUSType tp) (mkPUSSubType st) si obt
+    return $! PUSTMStdHeaderC vers' tref (mkPUSType tp) (mkPUSSubType st) mc si obt
 
 dfhParser PUSCnCTCHeader{} = do
     val <- A.anyWord8
