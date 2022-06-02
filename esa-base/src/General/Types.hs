@@ -243,7 +243,7 @@ instance ToJSON Offset where
 
 instance Display Offset where
     display (Offset b bi) =
-        display ("Offset " :: Text) <> display b <> " " <> display bi
+        display ("Bytes: " :: Text) <> display b <> " Bits: " <> display bi
 
 -- | constructs an 'Offset' from a 'ByteOffset' and a 'BitOffset'
 mkOffset :: ByteOffset -> BitOffset -> Offset
