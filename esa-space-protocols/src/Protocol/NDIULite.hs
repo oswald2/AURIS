@@ -2,6 +2,7 @@ module Protocol.NDIULite
     ( NDIU(..)
     , NdiuMessageType(..)
     , NdiuCmd(..)
+    , ndiuMessageType
     , ndiuMessageTypeParser
     , ndiuMessageTypeBuilder
     , ndiuMessageParser
@@ -16,7 +17,6 @@ module Protocol.NDIULite
 import           RIO                     hiding ( (.~)
                                                 , Builder
                                                 )
-import qualified RIO.Set                       as S
 import qualified RIO.Text                      as T
 
 import           Conduit
@@ -77,18 +77,20 @@ instance Display NDIU where
 data NdiuCmd = NdiuMsg NDIU | NdiuQuit
     deriving(Read, Show, Generic)
 
+
+ndiuMessageType :: Word16 -> NdiuMessageType
+ndiuMessageType 1  = NdiuHeartBeat
+ndiuMessageType 10 = NdiuTmGood
+ndiuMessageType 11 = NdiuTmBad
+ndiuMessageType 20 = NdiuTc
+ndiuMessageType x =
+    if (x >= 30) && (x <= 99) then NdiuAuxillary x else NdiuUnknown x
+
+
 ndiuMessageTypeParser :: Parser NdiuMessageType
 ndiuMessageTypeParser = do
     t <- A.anyWord16be
-    case t of
-        1  -> return NdiuHeartBeat
-        10 -> return NdiuTmGood
-        11 -> return NdiuTmBad
-        20 -> return NdiuTc
-        x ->
-            return $ if (x >= 30) && (x <= 99)
-                then NdiuAuxillary x
-                else NdiuUnknown x
+    return (ndiuMessageType t)
 
 ndiuMessageTypeBuilder :: NdiuMessageType -> Builder
 ndiuMessageTypeBuilder NdiuHeartBeat     = word16BE 1

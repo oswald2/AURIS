@@ -128,6 +128,9 @@ tcFrameEncode (TCFrameTransport frame rqst) frameCnt =
             (HexBytes (encFrame <> crcEncodeBS (crcCalc encFrame)))
             rqst
 
+
+
+
 {-# INLINABLE tcFrameBuilder #-}
 tcFrameBuilder :: TCTransferFrame -> Builder
 tcFrameBuilder frame =

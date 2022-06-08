@@ -49,6 +49,8 @@ module General.Types
     , encodeHashTable
     , decodeHashTable
     , HexBytes(..)
+    , hexToBS 
+    , bsToHex 
     , hexLength
     , hexBytesEmpty
     , parseHexLine
@@ -498,6 +500,12 @@ instance (Eq k, Hashable k, FromJSON k, FromJSON v) => FromJSON (IHashTable k v)
 -- into a hex-coded string value
 newtype HexBytes = HexBytes { toBS :: ByteString }
   deriving(Eq, Ord, Generic)
+
+bsToHex :: ByteString -> HexBytes
+bsToHex = HexBytes
+
+hexToBS :: HexBytes -> ByteString
+hexToBS = toBS
 
 hexBytesEmpty :: HexBytes
 hexBytesEmpty = HexBytes B.empty
