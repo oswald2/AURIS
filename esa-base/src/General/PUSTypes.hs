@@ -448,6 +448,7 @@ instance ToJSON PUSSubType where
 
 data PUSPacketType = PUSTM | PUSTC deriving (Ord, Eq, Enum, Show, Read, Generic)
 
+instance NFData PUSPacketType
 instance Serialise PUSPacketType
 instance FromJSON PUSPacketType
 instance ToJSON PUSPacketType where

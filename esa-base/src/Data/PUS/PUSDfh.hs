@@ -162,6 +162,7 @@ data DataFieldHeader =
 makeLenses ''DataFieldHeader
 
 instance Serialise DataFieldHeader
+instance NFData DataFieldHeader
 instance FromJSON DataFieldHeader
 instance ToJSON DataFieldHeader where
     toEncoding = genericToEncoding defaultOptions

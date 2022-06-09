@@ -24,6 +24,7 @@ data SegmentationFlags = SegmentFirst
     deriving (Ord, Eq, Enum, Show, Read, Generic)
 
 instance Binary SegmentationFlags
+instance NFData SegmentationFlags
 instance Serialise SegmentationFlags
 instance FromJSON SegmentationFlags
 instance ToJSON SegmentationFlags where
