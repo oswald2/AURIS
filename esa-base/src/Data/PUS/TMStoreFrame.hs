@@ -47,4 +47,4 @@ instance ToJSON TMStoreFrame where
 
 
 instance GetPayload TMStoreFrame where
-    getPayload frame = frame ^. tmstFrame . tmFrameData
+    getPayload frame = hexToBS $ frame ^. tmstFrame . tmFrameData

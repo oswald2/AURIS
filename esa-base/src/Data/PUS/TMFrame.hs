@@ -48,6 +48,7 @@ module Data.PUS.TMFrame
     , tmFrameHdr
     , tmFrameSecHdr
     , tmFrameData
+    , tmFrameBinData
     , tmFrameOCF
     , tmFrameFECW
     , tmFrameBuilder
@@ -77,15 +78,14 @@ import qualified RIO.ByteString                as B
 import           Control.Lens                   ( makeLenses )
 
 import           Codec.Serialise
-import           Codec.Serialise.Encoding       ( encodeWord16 )
 import           Codec.Serialise.Decoding       ( decodeWord16 )
+import           Codec.Serialise.Encoding       ( encodeWord16 )
 import           Conduit.PayloadParser
 import           Data.Aeson
 import qualified Data.Attoparsec.Binary        as A
 import           Data.Attoparsec.ByteString     ( Parser )
 import qualified Data.Attoparsec.ByteString    as A
 import           Data.Bits
-import           Data.ByteString.Base64.Type
 
 import           ByteString.StrictBuilder
 
@@ -97,6 +97,7 @@ import           General.PUSTypes
 
 import           General.Hexdump
 import           General.SizeOf
+import           General.Types
 
 import           Refined
 
@@ -129,12 +130,13 @@ data TMFrameConfig = TMFrameConfig
 
 
 defaultTMFrameConfig :: TMFrameConfig
-defaultTMFrameConfig = TMFrameConfig { cfgMaxTMFrameLen = FrameSize $$(refineTH 1115)
-                                     , cfgTMFrameHasCRC = True
-                                     , cfgTMSegLength   = TMSegment65536
-                                     }
+defaultTMFrameConfig = TMFrameConfig
+    { cfgMaxTMFrameLen = FrameSize $$(refineTH 1115)
+    , cfgTMFrameHasCRC = True
+    , cfgTMSegLength   = TMSegment65536
+    }
 
-cfgFrameMaxSize :: TMFrameConfig -> Word16 
+cfgFrameMaxSize :: TMFrameConfig -> Word16
 cfgFrameMaxSize cfg = unFrameSize (cfgMaxTMFrameLen cfg)
 
 
@@ -211,8 +213,8 @@ tmFrameDefaultHeader = TMFrameHeader { _tmFrameVersion        = 0
                                      , _tmFrameMCFC           = 0
                                      , _tmFrameVCFC           = 0
                                      , _tmFrameDfh            = False
-                                     , _tmFrameSync           = True
-                                     , _tmFrameOrder          = True
+                                     , _tmFrameSync           = False
+                                     , _tmFrameOrder          = False
                                      , _tmFrameSegID          = TMSegment65536
                                      , _tmFrameFirstHeaderPtr = 0
                                      }
@@ -239,21 +241,26 @@ tmFrameNoFirstHeader = 0x7FF
 data TMFrame = TMFrame
     { _tmFrameHdr    :: !TMFrameHeader
     , _tmFrameSecHdr :: !TMFrameSecHeader
-    , _tmFrameData   :: !ByteString
+    , _tmFrameData   :: !HexBytes
     , _tmFrameOCF    :: !(Maybe Word32)
     , _tmFrameFECW   :: !(Maybe CRC)
     }
     deriving (Eq, Show, Read, Generic)
 makeLenses ''TMFrame
 
+tmFrameBinData :: Lens' TMFrame ByteString
+tmFrameBinData =
+    lens (hexToBS . _tmFrameData) (\fr bs -> fr { _tmFrameData = bsToHex bs })
+
+
 instance GetPayload TMFrame where
-    getPayload = _tmFrameData
+    getPayload = hexToBS . _tmFrameData
 
 instance Display TMFrame where
     display TMFrame {..} =
         displayShow _tmFrameHdr
             <> display ("\nData:\n" :: Text)
-            <> display (hexdumpBS _tmFrameData)
+            <> display (hexdumpBS (hexToBS _tmFrameData))
             <> display ("\n" :: Text)
             <> displayShow _tmFrameOCF
             <> displayShow _tmFrameFECW
@@ -261,40 +268,40 @@ instance Display TMFrame where
 
 instance NFData TMFrame
 instance Serialise TMFrame
-instance FromJSON TMFrame where
-    parseJSON = withObject "TMFrame" $ \v ->
-        TMFrame
-            <$> v
-            .:  "tmFrameHdr"
-            <*> v
-            .:  "tmFrameSecHdr"
-            <*> (getByteString64 <$> v .: "tmFrameData")
-            <*> v
-            .:  "tmFrameOCF"
-            <*> v
-            .:  "tmFrameFECW"
+instance FromJSON TMFrame
+    -- parseJSON = withObject "TMFrame" $ \v ->
+    --     TMFrame
+    --         <$> v
+    --         .:  "tmFrameHdr"
+    --         <*> v
+    --         .:  "tmFrameSecHdr"
+    --         <*> (getByteString64 <$> v .: "tmFrameData")
+    --         <*> v
+    --         .:  "tmFrameOCF"
+    --         <*> v
+    --         .:  "tmFrameFECW"
 
 
-instance ToJSON TMFrame where
-    toJSON r = object
-        [ "tmFrameHdr" .= _tmFrameHdr r
-        , "tmFrameSecHdr" .= _tmFrameSecHdr r
-        , "tmFrameData" .= makeByteString64 (_tmFrameData r)
-        , "tmFrameOCF" .= _tmFrameOCF r
-        , "tmFrameFECW" .= _tmFrameFECW r
-        ]
-    toEncoding r = pairs
-        (  "tmFrameHdr"
-        .= _tmFrameHdr r
-        <> "tmFrameSecHdr"
-        .= _tmFrameSecHdr r
-        <> "tmFrameData"
-        .= makeByteString64 (_tmFrameData r)
-        <> "tmFrameOCF"
-        .= _tmFrameOCF r
-        <> "tmFrameFECW"
-        .= _tmFrameFECW r
-        )
+instance ToJSON TMFrame
+    -- toJSON r = object
+    --     [ "tmFrameHdr" .= _tmFrameHdr r
+    --     , "tmFrameSecHdr" .= _tmFrameSecHdr r
+    --     , "tmFrameData" .= makeByteString64 (_tmFrameData r)
+    --     , "tmFrameOCF" .= _tmFrameOCF r
+    --     , "tmFrameFECW" .= _tmFrameFECW r
+    --     ]
+    -- toEncoding r = pairs
+    --     (  "tmFrameHdr"
+    --     .= _tmFrameHdr r
+    --     <> "tmFrameSecHdr"
+    --     .= _tmFrameSecHdr r
+    --     <> "tmFrameData"
+    --     .= makeByteString64 (_tmFrameData r)
+    --     <> "tmFrameOCF"
+    --     .= _tmFrameOCF r
+    --     <> "tmFrameFECW"
+    --     .= _tmFrameFECW r
+    --     )
 
 
 
@@ -340,10 +347,9 @@ isIdleTmFrame frame =
 {-# INLINABLE tmFrameBuilder #-}
 tmFrameBuilder :: TMFrame -> Builder
 tmFrameBuilder f =
-    tmFrameHeaderBuilder (_tmFrameHdr f) <> bytes (_tmFrameData f) <> maybe
-        mempty
-        word32BE
-        (_tmFrameOCF f)
+    tmFrameHeaderBuilder (_tmFrameHdr f)
+        <> bytes (hexToBS (_tmFrameData f))
+        <> maybe mempty word32BE (_tmFrameOCF f)
 
 
 
@@ -354,7 +360,7 @@ makeTMFrame
     -> TMFrameSecHeader
     -> ByteString
     -> TMFrame
-makeTMFrame clcw hdr secHdr pl = TMFrame hdr secHdr pl clcw Nothing
+makeTMFrame clcw hdr secHdr pl = TMFrame hdr secHdr (bsToHex pl) clcw Nothing
 
 
 {-# INLINABLE tmFrameMaxDataLen #-}
@@ -382,7 +388,8 @@ tmFrameMaxDataLenFlag cfg missionSpecific useCLCW =
 {-# INLINABLE tmFrameMaxPayloadLen #-}
 tmFrameMaxPayloadLen :: TMFrameConfig -> TMFrameHeader -> Int
 tmFrameMaxPayloadLen conf _ =
-    fromIntegral (unFrameSize (cfgMaxTMFrameLen conf)) - fixedSizeOf @TMFrameHeader
+    fromIntegral (unFrameSize (cfgMaxTMFrameLen conf))
+        - fixedSizeOf @TMFrameHeader
 
 
 {-# INLINABLE tmFrameMinLen #-}
@@ -524,14 +531,14 @@ tmFrameParser cfg = do
 
     crc <- if cfgTMFrameHasCRC cfg then Just <$> crcParser else return Nothing
 
-    return $! TMFrame hdr secHdr payload clcw crc
+    return $! TMFrame hdr secHdr (bsToHex payload) clcw crc
 
 
 {-# INLINABLE tmFrameGetPrevAndRest #-}
 tmFrameGetPrevAndRest :: TMFrame -> (ByteString, ByteString)
 tmFrameGetPrevAndRest frame =
     let hdrPtr = frame ^. tmFrameHdr . tmFrameFirstHeaderPtr
-        dat    = frame ^. tmFrameData
+        dat    = hexToBS $ frame ^. tmFrameData
         prev   = if
             | hdrPtr == tmFrameNoFirstHeader -> dat
             | hdrPtr == tmFrameIdlePtr       -> B.empty

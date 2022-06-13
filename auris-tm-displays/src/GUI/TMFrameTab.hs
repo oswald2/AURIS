@@ -282,7 +282,7 @@ tmfTabDetailsSetValues g frame = do
                                  ESWarn
                                  (textDisplay (frame ^. epQuality))
 
-    textViewSetText (g ^. tmfDump) (hexdumpBS (frame ^. epDU . tmFrameData))
+    textViewSetText (g ^. tmfDump) (hexdumpBS (frame ^. epDU . tmFrameBinData))
 
     -- also set the CLCW values
     case frame ^. epDU . tmFrameOCF of

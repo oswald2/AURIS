@@ -7,6 +7,7 @@ import           Data.Bson
 
 import           Data.PUS.TMFrame
 import           General.PUSTypes
+import           General.Types
 
 import           Data.Mongo.Conversion.Class    ( MongoDbConversion(..) )
 import           Data.Mongo.Conversion.Types    ( )
@@ -17,34 +18,34 @@ instance MongoDbConversion TMFrame Document where
     toDB TMFrame {..} =
         [ "header" =: toDB _tmFrameHdr
         , "sec_header" =: val _tmFrameSecHdr
-        , "data" =: Binary _tmFrameData
+        , "data" =: Binary (hexToBS _tmFrameData)
         , "OCF" =: valMaybe ((fromIntegral <$> _tmFrameOCF) :: Maybe Int32)
         ]
     fromDB doc = do
-        hdr'    <- lookup "header" doc
-        hdr     <- fromDB hdr'
+        hdr' <- lookup "header" doc
+        hdr  <- fromDB hdr'
         let secHdr = fromMaybe TMFrameEmptySecHeader (lookup "sec_header" doc)
-        d       <- lookup "data" doc
-        ocf     <- lookup "OCF" doc
-        return $ TMFrame hdr secHdr d ocf Nothing
+        d   <- lookup "data" doc
+        ocf <- lookup "OCF" doc
+        return $ TMFrame hdr secHdr (bsToHex d) ocf Nothing
 
 
 instance Val TMFrameSecHeader where
-    val TMFrameEmptySecHeader   = Null
-    val (TMFrameGAIASecHeader x) = Doc ["sec_id" =: String "GAIA", "vcfc_2" =: Int64 (fromIntegral x)]
+    val TMFrameEmptySecHeader = Null
+    val (TMFrameGAIASecHeader x) =
+        Doc ["sec_id" =: String "GAIA", "vcfc_2" =: Int64 (fromIntegral x)]
 
-    cast' (Doc doc) = 
-        let s = lookup "sec_id" doc 
-        in
-        case s of 
-            Just (String "GAIA") -> 
-                let vc = lookup "vcfc_2" doc 
-                in 
-                case vc of 
-                    Just (Int64 x) -> Just $ TMFrameGAIASecHeader (fromIntegral x)
-                    _ -> Nothing
-            _ -> Just TMFrameEmptySecHeader 
-    cast' _             = Just TMFrameEmptySecHeader 
+    cast' (Doc doc) =
+        let s = lookup "sec_id" doc
+        in  case s of
+                Just (String "GAIA") ->
+                    let vc = lookup "vcfc_2" doc
+                    in  case vc of
+                            Just (Int64 x) ->
+                                Just $ TMFrameGAIASecHeader (fromIntegral x)
+                            _ -> Nothing
+                _ -> Just TMFrameEmptySecHeader
+    cast' _ = Just TMFrameEmptySecHeader
 
 
 -- instance MongoDbConversion TMFrameSecHeader Document where
@@ -62,7 +63,7 @@ instance Val TMFrameSecHeader where
 --                     Just (Int64 x) -> Just $ TMFrameGAIASecHeader (fromIntegral x)
 --                     _ -> Nothing
 --             _ -> Just TMFrameEmptySecHeader 
-                    
+
 
 
 instance MongoDbConversion TMFrameHeader Document where
