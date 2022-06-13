@@ -358,7 +358,7 @@ instance NFData TCAction
 
 setText :: TCTab -> Text -> IO ()
 setText gui txt = do
-    textBufferSetText (_tcTabTextBuffer gui) txt (fromIntegral (T.length txt))
+    textBufferSetText (_tcTabTextBuffer gui) txt (-1)
 
 
 getText :: TCTab -> IO Text

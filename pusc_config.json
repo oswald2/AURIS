@@ -59,8 +59,18 @@
                 "cfgNdiuDirection": "DirectionOut",
                 "cfgNdiuHost": "localhost",
                 "cfgNdiuID": 1,
-                "cfgNdiuName": "NDIU",
+                "cfgNdiuName": "NDIU TC",
                 "cfgNdiuPort": 5005
+            },
+            {
+                "cfgNdiuHeartbeatEnable": false,
+                "cfgNdiuHeartbeatSendTime": 5,
+                "cfgNdiuHeartbeatTimeout": 10,
+                "cfgNdiuDirection": "DirectionIn",
+                "cfgNdiuHost": "localhost",
+                "cfgNdiuID": 2,
+                "cfgNdiuName": "NDIU TM",
+                "cfgNdiuPort": 5006
             }
         ],
         "cfgUnknownSPID": 5071,

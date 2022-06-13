@@ -30,6 +30,7 @@ module Data.PUS.TMFrame
     , TMFrameSecHeader(..)
     , TMFrame(..)
     , FirstHeaderPtrVal(..)
+    , FrameSize(..)
     , tmFrameVersion
     , tmFrameScID
     , tmFrameVcID
