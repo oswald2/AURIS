@@ -250,6 +250,7 @@ data NDIULiteConfig = NDIULiteConfig
     , cfgNdiuHeartbeatTimeout  :: !Word32
     , cfgNdiuID                :: !Word16
     , cfgNdiuName              :: !Text
+    , cfgNdiuTMConfig          :: !TMFrameConfig
     }
     deriving (Eq, Show, Read, Generic)
 
@@ -429,6 +430,7 @@ defaultNdiuConfig = NDIULiteConfig { cfgNdiuHost              = "localhost"
                                    , cfgNdiuHeartbeatTimeout  = 10
                                    , cfgNdiuID                = 1
                                    , cfgNdiuName              = "NDIU"
+                                   , cfgNdiuTMConfig = defaultTMFrameConfig
                                    }
 
 
