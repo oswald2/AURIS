@@ -53,8 +53,9 @@ data TMPIVal = TMPIVal {
 makeLenses ''TMPIVal
 
 instance Serialise TMPIVal
-instance FromJSON TMPIVal
-instance ToJSON TMPIVal where
+instance NFData    TMPIVal
+instance FromJSON  TMPIVal
+instance ToJSON    TMPIVal where
   toEncoding = genericToEncoding defaultOptions
 
 data TMPIDef = TMPIDef {
