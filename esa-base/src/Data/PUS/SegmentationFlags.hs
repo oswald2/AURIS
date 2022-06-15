@@ -26,7 +26,6 @@ data SegmentationFlags = SegmentFirst
 instance Binary SegmentationFlags
 instance NFData SegmentationFlags
 instance Serialise SegmentationFlags
-instance NFData SegmentationFlags
 instance FromJSON SegmentationFlags
 instance ToJSON SegmentationFlags where
     toEncoding = genericToEncoding defaultOptions
