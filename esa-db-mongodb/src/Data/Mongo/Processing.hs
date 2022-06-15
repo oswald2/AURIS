@@ -273,7 +273,6 @@ eventStoreThread cfg queue = do
                 es <- flushTBQueue queue
                 return (e : es)
             liftIO $ writeDB pipe "log_events" (map toDB logs)
-            logDebug $ "Stored " <> display (length logs) <> " Log Events."
 
 
 pusPacketThread

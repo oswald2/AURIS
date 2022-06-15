@@ -353,7 +353,7 @@ extractPktFromTMFramesC missionSpecific = loop True B.empty
                                             .  tmFrameFirstHeaderPtr
                                             == 0
                                         then
-                                            frame' ^. tmFrameData
+                                            frame' ^. tmFrameBinData
                                         else
                                             let (_prev, rest) =
                                                     tmFrameGetPrevAndRest frame'
@@ -371,7 +371,7 @@ extractPktFromTMFramesC missionSpecific = loop True B.empty
                                 loop False spill
                             else do
                                 let dat =
-                                        spillOverData <> frame' ^. tmFrameData
+                                        spillOverData <> frame' ^. tmFrameBinData
                                     (pkts, spill) = chunkPackets dat
                                 logDebug
                                     $  displayShow (length pkts)

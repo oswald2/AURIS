@@ -37,7 +37,6 @@ import           Data.PUS.TCTransferFrameEncoder
                                                 , tcSegmentToTransferFrame
                                                 )
 import           Data.PUS.TMFrameExtractor
-import           Data.PUS.TMFrame 
 import           Data.PUS.TMPacketProcessing    ( packetProcessorC
                                                 , raiseTMPacketC
                                                 , raiseTMParameterC
@@ -444,19 +443,18 @@ runEdenChain cfg missionSpecific pktQueue edenQueue = do
 
 
 runNdiu
-    :: TMFrameConfig 
-    -> NDIULiteConfig
+    :: NDIULiteConfig
     -> PUSMissionSpecific
     -> SwitcherMap
     -> ProtocolQueue
     -> Set Word16
     -> RIO GlobalState ()
-runNdiu tmFrameCfg cfg _missionSpecific vcMap ndiuQueue ndiuTypeSet = do
+runNdiu cfg _missionSpecific vcMap ndiuQueue ndiuTypeSet = do
     logDebug "runNdiuChain entering"
 
     queue <- newTBQueueIO 500
 
-    race_ (runNdiuChain tmFrameCfg cfg vcMap queue ndiuTypeSet) (conversionThread queue)
+    race_ (runNdiuChain cfg vcMap queue ndiuTypeSet) (conversionThread queue)
 
     logDebug "runNdiuChain leaving"
     where 
@@ -564,7 +562,7 @@ runChains missionSpecific = do
                                              (cfgCnC cfg)
 
     -- create the interface threads and switcher map for the C & C interfaces
-    (switcherMap, interfaceThreads) <- foldM (ndiuIf cfg vcMap)
+    (switcherMap, interfaceThreads) <- foldM (ndiuIf vcMap)
                                              (switcherMap3, cncThreads)
                                              (cfgNDIU cfg)
 
@@ -601,13 +599,13 @@ runChains missionSpecific = do
         (queue, newSm) <- createInterfaceChannel sm (IfCnc (cfgCncID x))
         return
             (newSm, ts <> conc (runTCCnCChain x missionSpecific queue pktQueue))
-    ndiuIf cfg vcMap (switcherMap, ts) x = do
+    ndiuIf vcMap (switcherMap, ts) x = do
         (queue, newSm) <- createInterfaceChannel switcherMap
                                                  (IfNdiu (cfgNdiuID x))
         let ndiuTypeSet = S.fromList [156,157,158]
 
         return
-            (newSm, ts <> conc (runNdiu (cfgTMFrame cfg) x missionSpecific vcMap queue ndiuTypeSet))
+            (newSm, ts <> conc (runNdiu x missionSpecific vcMap queue ndiuTypeSet))
 
 
 

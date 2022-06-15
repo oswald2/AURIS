@@ -77,7 +77,7 @@
                 "cfgNdiuName": "NDIU TM",
                 "cfgNdiuPort": 5006,
                 "cfgNdiuTMConfig": {
-                    "cfgMaxTMFrameLen": 1115,
+                    "cfgMaxTMFrameLen": 1090,
                     "cfgTMFrameHasCRC": false,
                     "cfgTMSegLength": "TMSegment65536"
                 }
@@ -125,7 +125,7 @@
         "cfgStoreTMFrames": true,
         "cfgStorePUSPackets": true,
         "cfgTMFrame": {
-            "cfgMaxTMFrameLen": 1115,
+            "cfgMaxTMFrameLen": 1090,
             "cfgTMSegLength": "TMSegment65536",
             "cfgTMFrameHasCRC": false
         }

@@ -81,34 +81,32 @@ ndiuSenderChainC cfg queue = do
 
 runNdiuChain
     :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env, HasRaiseEvent env)
-    => TMFrameConfig
-    -> NDIULiteConfig
+    => NDIULiteConfig
     -> SwitcherMap
     -> TBQueue NdiuCmd
     -> Set Word16
     -> m ()
-runNdiuChain tmFrameCfg cfg vcMap queue ndiuTypeSet = do
+runNdiuChain cfg vcMap queue ndiuTypeSet = do
     var <- newTVarIO Nothing
     runGeneralTCPReconnectClient
         (clientSettings (fromIntegral (cfgNdiuPort cfg))
                         (encodeUtf8 (cfgNdiuHost cfg))
         )
         200_000
-        (processConnect tmFrameCfg cfg vcMap queue var ndiuTypeSet)
+        (processConnect cfg vcMap queue var ndiuTypeSet)
     onDisconnect cfg var
 
 
 processConnect
     :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env, HasRaiseEvent env)
-    => TMFrameConfig
-    -> NDIULiteConfig
+    => NDIULiteConfig
     -> SwitcherMap
     -> TBQueue NdiuCmd
     -> TVar (Maybe (Updatable ()))
     -> Set Word16
     -> AppData
     -> m ()
-processConnect tmFrameConfig cfg vcMap queue var ndiuTypeSet appData = do
+processConnect cfg vcMap queue var ndiuTypeSet appData = do
     raiseEvent
         (EVAlarms (EVEConnection (IfNdiu (cfgNdiuID cfg)) ConnSingle Connected))
     logInfo $ "Connected on NDIU " <> display (cfgNdiuID cfg)
@@ -120,7 +118,7 @@ processConnect tmFrameConfig cfg vcMap queue var ndiuTypeSet appData = do
         runConduitRes
             $  appSource appData
             .| ndiuDecodeC
-            .| processNdiu tmFrameConfig cfg vcMap var ndiuTypeSet
+            .| processNdiu (cfgNdiuTMConfig cfg) cfg vcMap var ndiuTypeSet
 
         logDebug "NDIU read thread leaves"
 

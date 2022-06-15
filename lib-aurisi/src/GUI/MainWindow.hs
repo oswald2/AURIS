@@ -292,7 +292,7 @@ createMainWindow cfg = do
     lang <- languageManagerGetLanguage lm "json"
     bufferSetLanguage configTextBuffer lang
 
-    textBufferSetText configTextBuffer t (fromIntegral (T.length t))
+    textBufferSetText configTextBuffer t (-1)
     textViewSetBuffer configTextView (Just configTextBuffer)
 
     void $ Gtk.on btApply #clicked $ do

@@ -15,14 +15,16 @@ import           GI.Gtk                        as Gtk
 textViewSetText :: TextView -> Text -> IO ()
 textViewSetText tv txt = do
   buf <- textViewGetBuffer tv
-  textBufferSetText buf txt (fromIntegral (T.length txt))
+  --textBufferSetText buf txt (fromIntegral (T.length txt))
+  textBufferSetText buf txt (-1)
 
 textViewSetTextMarkup :: TextView -> Text -> IO () 
 textViewSetTextMarkup tv txt = do 
   buf <- textViewGetBuffer tv 
   (start, end) <- textBufferGetBounds buf
   textBufferDelete buf start end 
-  textBufferInsertMarkup buf start txt (fromIntegral (T.length txt))
+  --textBufferInsertMarkup buf start txt (fromIntegral (T.length txt))
+  textBufferInsertMarkup buf start txt (-1)
 
 
 

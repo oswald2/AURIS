@@ -54,7 +54,12 @@
                 "cfgNdiuHost": "localhost",
                 "cfgNdiuID": 1,
                 "cfgNdiuName": "NDIU",
-                "cfgNdiuPort": 5005
+                "cfgNdiuPort": 5005,
+                "cfgNdiuTMConfig": {
+                    "cfgMaxTMFrameLen": 1115,
+                    "cfgTMFrameHasCRC": false,
+                    "cfgTMSegLength": "TMSegment65536"
+                }
             }
         ],
         "cfgRandomizerEnabled": false,
