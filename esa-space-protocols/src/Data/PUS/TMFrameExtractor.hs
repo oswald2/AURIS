@@ -55,7 +55,7 @@ import           Data.Conduit.TQueue
 
 import           Control.PUS.Classes
 
-import           Data.Time.Clock.POSIX        as Time
+import           Data.Time.Clock.POSIX         as Time
 
 import           Data.PUS.Config
 import           Data.PUS.EncTime
@@ -113,12 +113,21 @@ tmFrameDecodeC = do
     env <- ask
     let cfg = env ^. getConfig
     awaitForever $ \(ert, interf, x) -> do
-        logDebug $ "Frame Length: " <> display (B.length x) 
-            <> "\nFrame Data:\n" <> display (hexdumpBS x)
+        logDebug
+            $  "Frame Length: "
+            <> display (B.length x)
+            <> "\nFrame Data:\n"
+            <> display (hexdumpBS x)
         case A.parseOnly (A.match (tmFrameParser (cfgTMFrame cfg))) x of
             Left err -> do
                 let msg = T.pack err
-                lift $ raiseEvent (EVAlarms (EVIllegalTMFrame ("Could not parse TM Frame: " <> msg)))
+                lift
+                    $ raiseEvent
+                          (EVAlarms
+                              (EVIllegalTMFrame
+                                  ("Could not parse TM Frame: " <> msg)
+                              )
+                          )
                 logWarn $ "Could not parse TM Frame: " <> display msg
                 logDebug $ "TM Frame:\n" <> display (hexdumpBS x)
             Right (bs, frame) -> do
@@ -128,8 +137,8 @@ tmFrameDecodeC = do
                     <> displayShow frame
 
                 case tmFrameCheckCRC (cfgTMFrame cfg) bs of
-                    Left err -> lift
-                        $ raiseEvent (EVTelemetry (EVTMFailedCRC err))
+                    Left err ->
+                        lift $ raiseEvent (EVTelemetry (EVTMFailedCRC err))
                     Right () -> do
                         let f = TMStoreFrame time interf frame (HexBytes bs)
                             time =
@@ -311,7 +320,7 @@ checkFrameCountC = go Nothing
 
 
 extractPktFromTMFramesC
-    :: (MonadIO m, MonadReader env m, HasGlobalState env)
+    :: (MonadIO m, MonadReader env m, HasGlobalState env, HasConfig env)
     => PUSMissionSpecific
     -> ConduitT (ExtractedDU TMFrame) ExtDuTMFrame m ()
 extractPktFromTMFramesC missionSpecific = loop True B.empty
@@ -371,7 +380,9 @@ extractPktFromTMFramesC missionSpecific = loop True B.empty
                                 loop False spill
                             else do
                                 let dat =
-                                        spillOverData <> frame' ^. tmFrameBinData
+                                        spillOverData
+                                            <> frame'
+                                            ^. tmFrameBinData
                                     (pkts, spill) = chunkPackets dat
                                 logDebug
                                     $  displayShow (length pkts)
@@ -384,7 +395,7 @@ extractPktFromTMFramesC missionSpecific = loop True B.empty
                                 loop False spill
 
     rejectSpillOver
-        :: (MonadIO m, MonadReader env m, HasGlobalState env)
+        :: (MonadIO m, MonadReader env m, HasGlobalState env, HasConfig env)
         => ByteString
         -> ProtocolInterface
         -> ConduitT (ExtractedDU TMFrame) ExtDuTMFrame m ()
@@ -393,10 +404,8 @@ extractPktFromTMFramesC missionSpecific = loop True B.empty
             then do
                 case A.parseOnly pusPktHdrLenOnlyParser sp of
                     Left _err ->
-                        lift
-                            $ raiseEvent
-                            $ EVTelemetry
-                            $ EVTMGarbledSpillOver (B.unpack sp)
+                        lift $ raiseEvent $ EVTelemetry $ EVTMGarbledSpillOver
+                            (B.unpack sp)
                     Right pktLen -> do
                         let len =
                                 fromIntegral (pktLen + 1)
@@ -404,7 +413,11 @@ extractPktFromTMFramesC missionSpecific = loop True B.empty
                             newSp = sp <> B.replicate len 0
                         case
                                 A.parseOnly
-                                    (pusPktParser missionSpecific pIf)
+                                    (pusPktParser missionSpecific
+                                                  Cuc42
+                                                  HasCRC
+                                                  pIf
+                                    )
                                     newSp
                             of
                                 Left _err ->
@@ -419,9 +432,8 @@ extractPktFromTMFramesC missionSpecific = loop True B.empty
                                         $ EVTMRejectedSpillOverPkt
                                               (pusPkt ^. protContent)
             else do
-                when (B.length sp > 0) $ do 
-                    raiseEvent $ EVTelemetry $ EVTMRejectSpillOver
-                        (B.unpack sp)
+                when (B.length sp > 0) $ do
+                    raiseEvent $ EVTelemetry $ EVTMRejectSpillOver (B.unpack sp)
 
 
 
@@ -541,22 +553,27 @@ processFinishedPacket
     -> ByteString
     -> ConduitT w ExtractedPacket m ()
 processFinishedPacket missionSpecific pIf ert hdr hdrBin vcid body = do
-    case A.parseOnly (pusPktParserPayload missionSpecific pIf hdr) body of
-        Left err -> do
-            logWarn $ display ("Error parsing TM packet: " :: Text) <> display
-                (T.pack err)
-        Right pusPkt -> do
-            let ep = ExtractedDU { _epQuality = toFlag Good True
-                                 , _epERT     = ert
-                                 , _epGap     = Nothing
-                                 , _epSource  = pIf
-                                 , _epVCID    = vcid
-                                 , _epDU      = extrPkt
-                                 }
-                extrPkt = pusPkt ^. protContent
-            -- only pass on the packet if it is not an Idle Pkt
-            unless (pusPktIsIdle extrPkt)
-                $ yield (ExtractedPacket (hdrBin <> body) ep)
+    case
+            A.parseOnly
+                (pusPktParserPayload missionSpecific Cuc42 HasCRC pIf hdr)
+                body
+        of
+            Left err -> do
+                logWarn
+                    $  display ("Error parsing TM packet: " :: Text)
+                    <> display (T.pack err)
+            Right pusPkt -> do
+                let ep = ExtractedDU { _epQuality = toFlag Good True
+                                     , _epERT     = ert
+                                     , _epGap     = Nothing
+                                     , _epSource  = pIf
+                                     , _epVCID    = vcid
+                                     , _epDU      = extrPkt
+                                     }
+                    extrPkt = pusPkt ^. protContent
+                -- only pass on the packet if it is not an Idle Pkt
+                unless (pusPktIsIdle extrPkt)
+                    $ yield (ExtractedPacket (hdrBin <> body) ep)
 
 processFirstSegment :: PUSHeader -> PacketPart -> PktStore -> PktStore
 processFirstSegment hdr part pktStore =

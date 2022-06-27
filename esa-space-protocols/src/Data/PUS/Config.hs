@@ -60,7 +60,9 @@ import           General.Time
 
 import           Protocol.ProtocolInterfaces
 
+import           Data.PUS.EncTime               ( CucEncoding(..) )
 import           Data.PUS.MissionSpecific.Missions
+import           Data.PUS.PUSPacket             ( HasCRC(..) )
 import           Data.PUS.TMFrame               ( TMFrameConfig
                                                 , defaultTMFrameConfig
                                                 )
@@ -83,18 +85,20 @@ instance ToJSON NctrsConfig where
 data CncConfig = CncConfig
     {
   -- | A numerical ID, which needs to be unique for this C&C connection
-      cfgCncID     :: !Word16
+      cfgCncID      :: !Word16
   -- | A name for the connection to be displayed in the GUI
-    , cfgCncName   :: !Text
+    , cfgCncName    :: !Text
   -- | The host where to connect to 
-    , cfgCncHost   :: !Text
+    , cfgCncHost    :: !Text
   -- | The TM port to connect to 
-    , cfgCncPortTM :: !Word16
+    , cfgCncPortTM  :: !Word16
   -- | The TC port to connect to 
-    , cfgCncPortTC :: !Word16
+    , cfgCncPortTC  :: !Word16
     -- | Configures, if packets on the C&C protocol link should 
     -- be CRC checked or not 
-    , cfgCncHasCRC :: !Bool
+    , cfgCncHasCRC  :: !HasCRC
+    -- | Configures the format of the time for this C&C link
+    , cfgCncCucTime :: !(Maybe CucEncoding)
     }
     deriving (Eq, Generic)
 
@@ -381,12 +385,13 @@ defaultNctrsConfig = NctrsConfig { cfgNctrsID      = 1
                                  }
 
 defaultCncConfig :: CncConfig
-defaultCncConfig = CncConfig { cfgCncID     = 1
-                             , cfgCncName   = "SCOE 1"
-                             , cfgCncHost   = "localhost"
-                             , cfgCncPortTM = 10000
-                             , cfgCncPortTC = 11000
-                             , cfgCncHasCRC = True
+defaultCncConfig = CncConfig { cfgCncID      = 1
+                             , cfgCncName    = "SCOE 1"
+                             , cfgCncHost    = "localhost"
+                             , cfgCncPortTM  = 10000
+                             , cfgCncPortTC  = 11000
+                             , cfgCncHasCRC  = HasCRC
+                             , cfgCncCucTime = Nothing
                              }
 
 

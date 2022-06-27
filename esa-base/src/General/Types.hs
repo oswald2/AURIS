@@ -49,8 +49,8 @@ module General.Types
     , encodeHashTable
     , decodeHashTable
     , HexBytes(..)
-    , hexToBS 
-    , bsToHex 
+    , hexToBS
+    , bsToHex
     , hexLength
     , hexBytesEmpty
     , parseHexLine
@@ -59,6 +59,8 @@ module General.Types
     , padRight
     , HasName(..)
     , HasNames(..)
+    , HasCRC(..)
+    , hasCRC
     ) where
 
 
@@ -593,3 +595,18 @@ class HasName a where
 
 class HasNames a where
     getNames :: a -> [Text]
+
+
+data HasCRC = HasCRC | NoCRC
+    deriving (Eq, Ord, Enum, Show, Read, Generic)
+
+instance Serialise HasCRC
+instance FromJSON HasCRC
+instance ToJSON HasCRC where
+    toEncoding = genericToEncoding defaultOptions
+
+hasCRC :: HasCRC -> Bool
+hasCRC HasCRC = True
+hasCRC NoCRC  = False
+
+

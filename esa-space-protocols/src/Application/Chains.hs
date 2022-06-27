@@ -265,7 +265,7 @@ runTMCnCChain cfg missionSpecific pktQueue = do
     logDebug "runTMCnCChain entering"
 
     let chain =
-            receiveCnCC missionSpecific (IfCnc (cfgCncID cfg))
+            receiveCnCC missionSpecific cfg (IfCnc (cfgCncID cfg))
                 .| cncToTMPacket (IfCnc (cfgCncID cfg))
                 .| packetStatC
                 .| sinkTBQueue pktQueue
@@ -314,7 +314,7 @@ runTCCnCChain cfg missionSpecific duQueue pktQueue = do
 
     let chain = receivePktChannelC duQueue .| sendTCCncC
         ackChain =
-            receiveCnCC missionSpecific ifID .| cncProcessAcks ifID pktQueue
+            receiveCnCC missionSpecific cfg ifID .| cncProcessAcks ifID pktQueue
         ifID = IfCnc (cfgCncID cfg)
 
     logDebug

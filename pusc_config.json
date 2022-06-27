@@ -11,7 +11,8 @@
         "cfgMission": "MissionPUSC",
         "cfgCnC": [
             {
-                "cfgCncHasCRC": true,
+                "cfgCncCucTime": "Cuc43",
+                "cfgCncHasCRC": "HasCRC",
                 "cfgCncPortTM": 11000,
                 "cfgCncHost": "localhost",
                 "cfgCncPortTC": 10000,
@@ -19,7 +20,8 @@
                 "cfgCncID": 1
             },
             {
-                "cfgCncHasCRC": true,
+                "cfgCncCucTime": "Cuc43",
+                "cfgCncHasCRC": "HasCRC",
                 "cfgCncPortTM": 5001,
                 "cfgCncHost": "localhost",
                 "cfgCncPortTC": 5000,
@@ -27,7 +29,8 @@
                 "cfgCncID": 2
             },
             {
-                "cfgCncHasCRC": true,
+                "cfgCncCucTime": "Cuc43",
+                "cfgCncHasCRC": "HasCRC",
                 "cfgCncPortTM": 6011,
                 "cfgCncHost": "localhost",
                 "cfgCncPortTC": 6010,
@@ -35,7 +38,8 @@
                 "cfgCncID": 3
             },
             {
-                "cfgCncHasCRC": true,
+                "cfgCncCucTime": "Cuc43",
+                "cfgCncHasCRC": "HasCRC",
                 "cfgCncPortTM": 5502,
                 "cfgCncHost": "localhost",
                 "cfgCncPortTC": 5002,
@@ -43,7 +47,8 @@
                 "cfgCncID": 4
             },
             {
-                "cfgCncHasCRC": true,
+                "cfgCncCucTime": "Cuc43",
+                "cfgCncHasCRC": "HasCRC",
                 "cfgCncPortTM": 5503,
                 "cfgCncHost": "localhost",
                 "cfgCncPortTC": 5003,

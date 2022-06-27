@@ -8,7 +8,8 @@
         "cfgNDIU": [],
         "cfgCnC": [
             {
-                "cfgCncHasCRC": true,
+                "cfgCncCucTime": null,
+                "cfgCncHasCRC": "HasCRC",
                 "cfgCncPortTM": 11971,
                 "cfgCncHost": "localhost",
                 "cfgCncPortTC": 11970,
@@ -16,7 +17,8 @@
                 "cfgCncName": "CCS C&amp;C"
             },
             {
-                "cfgCncHasCRC": true,
+                "cfgCncCucTime": null,
+                "cfgCncHasCRC": "HasCRC",
                 "cfgCncPortTM": 11973,
                 "cfgCncHost": "localhost",
                 "cfgCncPortTC": 11972,

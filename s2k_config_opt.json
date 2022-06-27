@@ -12,7 +12,8 @@
         "cfgNDIU": [],
         "cfgCnC": [
             {
-                "cfgCncHasCRC": false,
+                "cfgCncCucTime": "Cuc43",
+                "cfgCncHasCRC": "HasCRC",
                 "cfgCncPortTM": 33333,
                 "cfgCncHost": "localhost",
                 "cfgCncPortTC": 22222,

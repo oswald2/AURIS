@@ -12,12 +12,13 @@
         "cfgNDIU": [],
         "cfgCnC": [
             {
-                "cfgCncHasCRC": true,
                 "cfgCncPortTM": 11000,
                 "cfgCncHost": "localhost",
                 "cfgCncPortTC": 10000,
                 "cfgCncName": "C&amp;C HKTM",
-                "cfgCncID": 1
+                "cfgCncID": 1,
+                "cfgCncCucTime": "Cuc43",
+                "cfgCncHasCRC": "HasCRC"
             }
         ],
         "cfgUnknownSPID": 5071,

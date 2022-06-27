@@ -13,7 +13,8 @@
         "cfgCltuBlockSize": "CltuBS_8",
         "cfgCnC": [
             {
-                "cfgCncHasCRC": true,
+                "cfgCncCucTime": null,
+                "cfgCncHasCRC": "HasCRC",
                 "cfgCncHost": "localhost",
                 "cfgCncID": 1,
                 "cfgCncName": "SCOE 1",
@@ -57,7 +58,7 @@
                 "cfgNdiuPort": 5005,
                 "cfgNdiuTMConfig": {
                     "cfgMaxTMFrameLen": 1115,
-                    "cfgTMFrameHasCRC": false,
+                    "cfgTMFrameHasCRC": true,
                     "cfgTMSegLength": "TMSegment65536"
                 }
             }

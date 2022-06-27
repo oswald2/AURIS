@@ -76,6 +76,16 @@ instance MongoDbConversion DataFieldHeader Document where
                  , "crcFlags" =: _cncTcCrcFlags
                  ]
         ]
+    toDB PUSCnCTMHeader {..} =
+        [ "secHeader"
+              =: [ "hdrType" =: String "CNC_TM"
+                 , "type" =: _cncTmType
+                 , "subtype" =: _cncTmSubType
+                 , "sourceID" =: _cncTmSourceID
+                 , "time" =: timeToMicro _cncTime
+                 ]
+        ]
+
 
     fromDB doc = do
         secHdr <- lookup "secHeader" doc
@@ -146,5 +156,16 @@ instance MongoDbConversion DataFieldHeader Document where
                                                 , _cncTcSubType    = st
                                                 , _cncTcSourceID   = sid
                                                 }
+                    String "CNC_TM" -> do
+                        t    <- lookup "type" doc2
+                        st   <- lookup "subtype" doc2
+                        sid  <- lookup "sourceID" doc2
+                        time <- lookup "time" doc2
+                        return $ PUSCnCTMHeader
+                            { _cncTmType     = t
+                            , _cncTmSubType  = st
+                            , _cncTmSourceID = sid
+                            , _cncTime       = (microToTime time False)
+                            }
                     _ -> Nothing
             _ -> Nothing

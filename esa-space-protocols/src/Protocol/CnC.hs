@@ -30,6 +30,8 @@ import           Data.Char
 import           Data.Conduit.Attoparsec
 import qualified Data.Vector                   as V
 
+import           Data.PUS.Config
+import           Data.PUS.EncTime               ( CucEncoding(..) )
 import           Data.PUS.Events
 import           Data.PUS.ExtractedDU
 import           Data.PUS.ExtractedPUSPacket
@@ -67,10 +69,19 @@ isASCIICc _ = False
 receiveCnCC
     :: (MonadIO m, MonadReader env m, HasLogFunc env, HasRaiseEvent env)
     => PUSMissionSpecific
+    -> CncConfig
     -> ProtocolInterface
-    -> ConduitT ByteString (ByteString, ProtocolPacket PUSPacket) m ()
-receiveCnCC missionSpecific interf = do
-    conduitParserEither (match (islPacketParser missionSpecific interf)) .| sink
+    -> ConduitT
+           ByteString
+           (ByteString, ProtocolPacket PUSPacket)
+           m
+           ()
+receiveCnCC missionSpecific cfg interf = do
+    let timeEncoding = fromMaybe Cuc43 (cfgCncCucTime cfg)
+
+    conduitParserEither
+            (match (islPacketParser missionSpecific timeEncoding (cfgCncHasCRC cfg) interf))
+        .| sink
   where
     sink = do
         x <- await

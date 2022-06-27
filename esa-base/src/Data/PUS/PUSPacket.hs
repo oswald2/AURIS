@@ -13,6 +13,7 @@ module Data.PUS.PUSPacket
     , PUSHeader(..)
     , PUSPacketType(..)
     , TMPIVal(..)
+    , HasCRC(..)
     , encodePUSPacket
     , encodePUSPktChoice
     , decodePktMissionSpecific
@@ -35,6 +36,7 @@ module Data.PUS.PUSPacket
     , pusPktHdrLenOnlyParser
     , pusPktParser
     , pusPktParserPayload
+    , cncPusPktParserPayload
     , pusPktIdleAPID
     , pusPktTimePktAPID
     , pusPktIsIdle
@@ -83,6 +85,7 @@ import           Data.PUS.CRC                   ( CRC
                                                 , crcEncodeAndAppendBS
                                                 , crcLen
                                                 )
+import           Data.PUS.EncTime               ( CucEncoding(..) )
 import           Data.PUS.MissionSpecific.Definitions
                                                 ( PUSMissionSpecific
                                                 , pmsTCDataFieldHeader
@@ -90,6 +93,7 @@ import           Data.PUS.MissionSpecific.Definitions
                                                 )
 import           Data.PUS.PUSDfh
 import           Data.PUS.SegmentationFlags     ( SegmentationFlags(..) )
+
 import           General.APID                   ( APID(APID) )
 import           General.PUSTypes               ( PUSPacketType(..)
                                                 , PktID(..)
@@ -97,6 +101,17 @@ import           General.PUSTypes               ( PUSPacketType(..)
                                                 , SeqControl(..)
                                                 , getSSC
                                                 , mkSSC
+                                                )
+import           General.SetBitField            ( setBitFieldR )
+import           General.SizeOf                 ( FixedSize(..)
+                                                , SizeOf(sizeof)
+                                                )
+import           General.Types                  ( BitOffsets(toBitOffset)
+                                                , HasCRC(..)
+                                                , HexBytes(..)
+                                                , hasCRC
+                                                , hexLength
+                                                , unBitSize
                                                 )
 
 import           Protocol.ProtocolInterfaces    ( ProtocolInterface(IfCnc)
@@ -106,16 +121,6 @@ import           Protocol.ProtocolInterfaces    ( ProtocolInterface(IfCnc)
                                                 , isNctrs
                                                 , isNdiu
                                                 , isSLE
-                                                )
-
-import           General.SetBitField            ( setBitFieldR )
-import           General.SizeOf                 ( FixedSize(..)
-                                                , SizeOf(sizeof)
-                                                )
-import           General.Types                  ( BitOffsets(toBitOffset)
-                                                , HexBytes(..)
-                                                , hexLength
-                                                , unBitSize
                                                 )
 
 import           Data.TM.PIVals                 ( TMPIVal(..) )
@@ -456,27 +461,36 @@ unpackSeqFlags seg = (fl, mkSSC (seg .&. 0x3FFF))
         _      -> SegmentStandalone
 
 
-
+-- | decode a packet. The CucEncoding and the HasCRC is only used for C&C Packets
 {-# INLINABLE decodePktMissionSpecific #-}
 decodePktMissionSpecific
     :: ByteString
     -> PUSMissionSpecific
+    -> CucEncoding
+    -> HasCRC
     -> ProtocolInterface
     -> Either Text (ProtocolPacket PUSPacket)
-decodePktMissionSpecific pkt missionSpecific commIF
+decodePktMissionSpecific pkt missionSpecific timeEncoding crcFlag commIF
     | B.length pkt < fixedSizeOf @PUSHeader + fixedSizeOf @CRC = Left
         "PUS Packet is too short"
     | otherwise = case crcCheck pkt of
         Left  err -> Left err
         Right (result, _pl, extractedCRC, calcdCRC) -> if result
-            then case A.parse (pusPktParser missionSpecific commIF) pkt of
-                A.Fail _ _ err -> Left (T.pack err)
-                A.Partial f    -> case f B.empty of
+            then
+                case
+                    A.parse
+                        (pusPktParser missionSpecific timeEncoding crcFlag commIF
+                        )
+                        pkt
+                of
                     A.Fail _ _ err -> Left (T.pack err)
-                    A.Partial _ ->
-                        Left "PUS Packet: not enough input to parse PUS Packet"
+                    A.Partial f    -> case f B.empty of
+                        A.Fail _ _ err -> Left (T.pack err)
+                        A.Partial _ ->
+                            Left
+                                "PUS Packet: not enough input to parse PUS Packet"
+                        A.Done _ p -> Right p
                     A.Done _ p -> Right p
-                A.Done _ p -> Right p
             else
                 Left
                 $  T.run
@@ -486,24 +500,41 @@ decodePktMissionSpecific pkt missionSpecific commIF
                 <> T.string (show calcdCRC)
 
 
-
+-- | Parse a PUS packet. The CucEncoding and the HasCRC is only used for C&C Packets
 pusPktParser
     :: PUSMissionSpecific
+    -> CucEncoding
+    -> HasCRC
     -> ProtocolInterface
     -> Parser (ProtocolPacket PUSPacket)
-pusPktParser missionSpecific comm = do
+pusPktParser missionSpecific timeEncoding crcFlag comm = do
     hdr <- pusPktHdrParser
     --traceM $ "pusPktParser: pusHdr = " <> T.pack (show hdr)
-    pusPktParserPayload missionSpecific comm hdr
+    pusPktParserPayload missionSpecific timeEncoding crcFlag comm hdr
 
 
 pusPktParserPayload
     :: PUSMissionSpecific
+    -> CucEncoding
+    -> HasCRC
     -> ProtocolInterface
     -> PUSHeader
     -> Parser (ProtocolPacket PUSPacket)
-pusPktParserPayload missionSpecific comm hdr = do
-    (dfh, hasCRC) <- if
+pusPktParserPayload missionSpecific timeEncoding crcFlag comm@(IfCnc _) hdr = do
+    case _pusHdrTcVersion hdr of
+        3 -> cncPusPktParserPayload timeEncoding crcFlag comm hdr
+        _ -> pusPktParserPayloadSrc missionSpecific comm hdr
+pusPktParserPayload missionSpecific _timeEncoding _crcFlag comm hdr = do
+    pusPktParserPayloadSrc missionSpecific comm hdr
+
+
+pusPktParserPayloadSrc
+    :: PUSMissionSpecific
+    -> ProtocolInterface
+    -> PUSHeader
+    -> Parser (ProtocolPacket PUSPacket)
+pusPktParserPayloadSrc missionSpecific comm hdr = do
+    (dfh, crcFlag) <- if
         | isNctrs comm
         -> if hdr ^. pusHdrDfhFlag
             then case hdr ^. pusHdrType of
@@ -531,10 +562,11 @@ pusPktParserPayload missionSpecific comm hdr = do
         | isCnc comm
         -> if hdr ^. pusHdrDfhFlag
             then case hdr ^. pusHdrType of
--- FIXME CRC handling maybe needs to be configured via MIB
+-- FIXME CRC handling maybe needs to be configured via MIB or config
                 PUSTM -> (, False)
                     <$> dfhParser (missionSpecific ^. pmsTMDataFieldHeader)
-                PUSTC -> (, False) <$> dfhParser defaultCnCTCHeader
+                PUSTC -> (, False)
+                    <$> dfhParser (missionSpecific ^. pmsTCDataFieldHeader)
             else if hdr ^. pusHdrTcVersion == 3
                 then return (PUSEmptyHeader, False)
                 else return (PUSEmptyHeader, True)
@@ -570,4 +602,40 @@ pusPktParserPayload missionSpecific comm hdr = do
     --traceM (hexdumpBS pl)
 
     return
-        (ProtocolPacket comm (PUSPacket hdr dfh Nothing (HexBytes pl) hasCRC))
+        (ProtocolPacket comm (PUSPacket hdr dfh Nothing (HexBytes pl) crcFlag))
+
+
+cncPusPktParserPayload
+    :: CucEncoding
+    -> HasCRC
+    -> ProtocolInterface
+    -> PUSHeader
+    -> Parser (ProtocolPacket PUSPacket)
+cncPusPktParserPayload timeEncoding cncCRC comm hdr = do
+    let dfhTemplate = cncTMHeader timeEncoding
+
+    (dfh, crcFlag) <- if hdr ^. pusHdrDfhFlag
+        then case hdr ^. pusHdrType of
+            PUSTM -> (, hasCRC cncCRC) <$> dfhParser dfhTemplate
+            PUSTC -> (, hasCRC cncCRC) <$> dfhParser defaultCnCTCHeader
+        else if hdr ^. pusHdrTcVersion == 3
+            then return (PUSEmptyHeader, False)
+            else return (PUSEmptyHeader, True)
+
+    dat <- A.take (fromIntegral (hdr ^. pusHdrTcLength + 1) - dfhLength dfh)
+
+    let
+        pl = case comm of
+            IfCnc _ -> case dfh of
+                PUSCnCTCHeader { _cncTcCrcFlags = val } ->
+                    if (val == 1) || crcFlag      -- the packet contains a CRC
+                        then B.take (B.length dat - crcLen) dat
+                        else dat
+                PUSCnCTMHeader{} -> if crcFlag
+                    then B.take (B.length dat - crcLen) dat
+                    else dat
+                _ -> dat
+            _ -> B.take (B.length dat - crcLen) dat
+
+    return
+        (ProtocolPacket comm (PUSPacket hdr dfh Nothing (HexBytes pl) crcFlag))

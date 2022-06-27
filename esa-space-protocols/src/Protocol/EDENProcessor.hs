@@ -2,43 +2,51 @@ module Protocol.EDENProcessor
     ( edenMessageProcessorC
     ) where
 
-import           RIO
-import qualified RIO.Text                      as T
-import qualified RIO.HashMap                   as HM
 import           Conduit
-import           Data.Attoparsec.ByteString    as A
 import           Control.PUS.Classes
+import           Data.Attoparsec.ByteString    as A
+import           RIO
+import qualified RIO.HashMap                   as HM
+import qualified RIO.Text                      as T
 
+import           Data.PUS.EncTime               ( CucEncoding(..) )
+import           Data.PUS.Events                ( Event(EVAlarms)
+                                                , EventAlarm(EVPacketAlarm)
+                                                )
+import           Data.PUS.ExtractedDU
 import           Data.PUS.ExtractedPUSPacket
 import           Data.PUS.MissionSpecific.Definitions
                                                 ( PUSMissionSpecific )
 import           Data.PUS.PUSPacket             ( pusPktParser )
-import           Data.PUS.ExtractedDU
-import           Data.PUS.Events                ( Event(EVAlarms)
-                                                , EventAlarm(EVPacketAlarm)
-                                                )
 import           Data.PUS.Verification
 
 import           Protocol.EDEN
-import           Protocol.ProtocolInterfaces    ( protContent
-                                                , ProtocolInterface
+import           Protocol.ProtocolInterfaces    ( ProtocolInterface
+                                                , protContent
                                                 )
 
-import           General.PUSTypes               ( VCID(VCID)
-                                                , toFlag
-                                                , Good(Good)
-                                                , mkRqstID
-                                                )
 import           General.Hexdump                ( hexdumpBS )
-import           General.Types                  ( HexBytes(toBS) )
+import           General.PUSTypes               ( Good(Good)
+                                                , VCID(VCID)
+                                                , mkRqstID
+                                                , toFlag
+                                                )
 import           General.Time                   ( edenTimeParser
                                                 , nullTime
+                                                )
+import           General.Types                  ( HasCRC(..)
+                                                , HexBytes(toBS)
                                                 )
 
 
 
 edenMessageProcessorC
-    :: (MonadIO m, MonadReader env m, HasRaiseEvent env, HasLogFunc env, HasVerif env)
+    :: ( MonadIO m
+       , MonadReader env m
+       , HasRaiseEvent env
+       , HasLogFunc env
+       , HasVerif env
+       )
     => PUSMissionSpecific
     -> ProtocolInterface
     -> ConduitT EdenMessage ExtractedPacket m ()
@@ -62,7 +70,12 @@ edenMessageProcessorC missionSpecific interf = worker HM.empty
 
 
 handleEdenMessage
-    :: (MonadIO m, MonadReader env m, HasRaiseEvent env, HasLogFunc env, HasVerif env)
+    :: ( MonadIO m
+       , MonadReader env m
+       , HasRaiseEvent env
+       , HasLogFunc env
+       , HasVerif env
+       )
     => PUSMissionSpecific
     -> ProtocolInterface
     -> HashMap VCID Word8
@@ -83,7 +96,7 @@ handleEdenMessage _missionSpecific _interf counters eden@EdenMessage { _edenType
                    then display (" OK" :: Text)
                    else display (" Error: " :: Text) <> display status
         -- Verify the request. Ie send the verification fo the G and T stages to the Verification thread
-        env <- ask 
+        env <- ask
         liftIO $ requestVerifyGT
             env
             (mkRqstID tcID)
@@ -91,14 +104,17 @@ handleEdenMessage _missionSpecific _interf counters eden@EdenMessage { _edenType
         -- and we're done 
         return (Right counters)
 
-handleEdenMessage missionSpecific interf counters eden
-    = do
-        case getEdenPacketData (eden ^. edenDataField) of
-          -- handle TM via EDEN
-            Just dat -> do
-                logDebug $ "Received Data: " <> display
-                    (hexdumpBS (toBS dat))
-                case handleEdenPacket missionSpecific interf (eden ^. edenDataField) counters of
+handleEdenMessage missionSpecific interf counters eden = do
+    case getEdenPacketData (eden ^. edenDataField) of
+      -- handle TM via EDEN
+        Just dat -> do
+            logDebug $ "Received Data: " <> display (hexdumpBS (toBS dat))
+            case
+                    handleEdenPacket missionSpecific
+                                     interf
+                                     (eden ^. edenDataField)
+                                     counters
+                of
                     Left err -> do
                         let
                             msg =
@@ -115,11 +131,16 @@ handleEdenMessage missionSpecific interf counters eden
                     Right (pkt, newCounters) -> do
                         yield pkt
                         return (Right newCounters)
-            Nothing -> do
-                logDebug $ "Received EDEN packet with no known structure:\n"  
-                    <> displayShow eden 
-                    <> "\n" <> display (hexdumpBS (toBS (getEdenRawData (eden ^. edenDataField))))
-                return (Right counters)
+        Nothing -> do
+            logDebug
+                $  "Received EDEN packet with no known structure:\n"
+                <> displayShow eden
+                <> "\n"
+                <> display
+                       (hexdumpBS
+                           (toBS (getEdenRawData (eden ^. edenDataField)))
+                       )
+            return (Right counters)
 
 
 handleEdenPacket
@@ -130,8 +151,9 @@ handleEdenPacket
     -> Either Text (ExtractedPacket, HashMap VCID Word8)
 handleEdenPacket missionSpecific interf EdenTM {..} counters = do
     case
-            parseOnly (match (pusPktParser missionSpecific interf))
-                      (toBS _edenTmData)
+            parseOnly
+                (match (pusPktParser missionSpecific Cuc42 HasCRC interf))
+                (toBS _edenTmData)
         of
             Left err -> Left (T.pack err)
             Right (oct, packet) ->
@@ -164,8 +186,9 @@ handleEdenPacket missionSpecific interf EdenTM {..} counters = do
                     Right (extracted, newMap)
 handleEdenPacket missionSpecific interf EdenSCOETM {..} counters = do
     case
-            parseOnly (match (pusPktParser missionSpecific interf))
-                      (toBS _edenTmScoeData)
+            parseOnly
+                (match (pusPktParser missionSpecific Cuc42 HasCRC interf))
+                (toBS _edenTmScoeData)
         of
             Left err -> Left (T.pack err)
             Right (oct, packet) ->
@@ -190,13 +213,13 @@ handleEdenPacket missionSpecific interf EdenSCOETM {..} counters = do
                 in  Right (extracted, counters)
 handleEdenPacket missionSpecific interf EdenSpaceTC {..} counters = do
     case
-            parseOnly (match (pusPktParser missionSpecific interf))
-                      (toBS _edenSpaceData)
+            parseOnly
+                (match (pusPktParser missionSpecific Cuc42 HasCRC interf))
+                (toBS _edenSpaceData)
         of
             Left err -> Left (T.pack err)
             Right (oct, packet) ->
-                let
-                    epu = ExtractedDU { _epQuality = toFlag Good True
+                let epu = ExtractedDU { _epQuality = toFlag Good True
                                       , _epERT     = time
                                       , _epGap     = Nothing
                                       , _epSource  = interf
@@ -213,18 +236,17 @@ handleEdenPacket missionSpecific interf EdenSpaceTC {..} counters = do
                                 Right t -> t
                     extracted = ExtractedPacket oct epu
                     vcid      = VCID (_edenSpaceSecHeader ^. edenSecChannel)
-                in
-                    Right (extracted, counters)
+                in  Right (extracted, counters)
 
 handleEdenPacket missionSpecific interf EdenSCOETC {..} counters = do
     case
-            parseOnly (match (pusPktParser missionSpecific interf))
-                      (toBS _edenScoeData)
+            parseOnly
+                (match (pusPktParser missionSpecific Cuc42 HasCRC interf))
+                (toBS _edenScoeData)
         of
             Left err -> Left (T.pack err)
             Right (oct, packet) ->
-                let
-                    epu = ExtractedDU { _epQuality = toFlag Good True
+                let epu = ExtractedDU { _epQuality = toFlag Good True
                                       , _epERT     = time
                                       , _epGap     = Nothing
                                       , _epSource  = interf
@@ -241,8 +263,7 @@ handleEdenPacket missionSpecific interf EdenSCOETC {..} counters = do
                                 Right t -> t
                     extracted = ExtractedPacket oct epu
                     vcid      = IsSCOE
-                in
-                    Right (extracted, counters)
+                in  Right (extracted, counters)
 
 handleEdenPacket _missionSpecific _ _ _counters = undefined
 

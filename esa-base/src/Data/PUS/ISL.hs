@@ -28,6 +28,7 @@ import           Data.Attoparsec.Binary        as A
 import           Data.Attoparsec.ByteString    as A
 import           Data.Bits
 
+import           Data.PUS.EncTime               ( CucEncoding(..) )
 import           Data.PUS.MissionSpecific.Definitions
 import           Data.PUS.PUSPacket
 
@@ -219,16 +220,18 @@ islBuilder isl =
 
 islPacketParser
     :: PUSMissionSpecific
+    -> CucEncoding
+    -> HasCRC
     -> ProtocolInterface
     -> Parser (ProtocolPacket PUSPacket)
-islPacketParser missionSpecific interf = do
+islPacketParser missionSpecific timeEncoding hasCRC interf = do
     pktID <- A.anyWord16be
     if pktID == islPktID
         then do
             void $ A.anyWord16be
             -- skip ISL header
             void $ A.take (fixedSizeOf @ISLHeader)
-            pusPktParser missionSpecific interf
+            pusPktParser missionSpecific timeEncoding hasCRC interf
         else do
             hdr <- pusPktHdrParserWithoutPktID pktID
-            pusPktParserPayload missionSpecific interf hdr
+            pusPktParserPayload missionSpecific timeEncoding hasCRC interf hdr
