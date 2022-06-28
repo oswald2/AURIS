@@ -94,6 +94,7 @@ where
 
 import           RIO
 import qualified RIO.Vector                    as V
+import qualified Data.Text                      as T 
 
 import           Data.Text.Short               as ST ( ShortText, pack )
 import qualified           Data.Text.Short               as ST 
@@ -176,13 +177,21 @@ tmParamLocationBuilder :: Word16 -> TMParamLocation -> TB.Builder
 tmParamLocationBuilder indent pl = 
   let newIndent = indent + 4 in
   indentBuilder indent <> padFromRight 23 ' ' (text "<b>Parameter Name:</b> ")
-  <> text (ST.toText (_tmplName pl))
+  <> text (ST.toText (_tmplName pl)) 
+  <> newLineIndentBuilder newIndent "<b>Description:</b>: " 
+  <> text (T.replace "&" "&amp;" (ST.toText (_fpDescription (_tmplParam pl))))
   <> newLineIndentBuilder newIndent (text "<b>Offset:</b> ")
   <> text (textDisplay (_tmplOffset pl))
-  <> newLineIndentBuilder newIndent (text "<b>Time Offset:</b> ")
-  <> text (textDisplay (_tmplTime pl))
+  <> newLineIndentBuilder newIndent (text "<b>Type:</b> ")
+  <> paramTypeBuilder (_fpType (_tmplParam pl))
+  <> timeOffset newIndent
   <> supercomm newIndent
   where 
+    timeOffset newIndent = 
+      if _tmplTime pl == nullRelTime
+        then mempty 
+        else newLineIndentBuilder newIndent (text "<b>Time Offset:</b> ") <> text (textDisplay (_tmplTime pl))
+    
     supercomm newIndent = 
       case _tmplSuperComm pl of 
         Nothing -> mempty 

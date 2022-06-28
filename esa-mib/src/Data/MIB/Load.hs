@@ -62,12 +62,16 @@ loadFromFileGen mibPath fileName = do
     then do
       logInfo $ "Reading file " <> display (T.pack fileName)
       content <- B.readFile file
-      logInfo "File read. Parsing..."
+      logInfo $"File " <> display (T.pack fileName) <> " read. Parsing..."
       let !r = decodeWith myOptions NoHeader (BC.filter isAscii content)
       logInfo "Parsing Done."
       case r of
-        Left  err -> pure $ Left (T.pack err)
-        Right x   -> pure (Right x)
+        Left  err -> do 
+          logInfo $ "Got parse error: " <> display (T.pack err)
+          pure $ Left (T.pack err)
+        Right x   -> do
+          logInfo "Parsing Done."
+          pure (Right x)
     else do
       return $! Left $ "File " <> T.pack file <> " does not exist."
 
@@ -84,11 +88,14 @@ loadFromFileGenOptional mibPath fileName = do
     then do
       logInfo $ "Reading file " <> display (T.pack fileName)
       content <- B.readFile file
-      logInfo "File read. Parsing..."
+      logInfo $ "File " <> display (T.pack fileName) <> " read. Parsing..."
       let !r = decodeWith myOptions NoHeader (BC.filter isAscii content)
-      logInfo "Parsing Done."
       case r of
-        Left  err -> pure $ Left (T.pack err)
-        Right x   -> pure (Right x)
+        Left  err -> do 
+          logInfo $ "Got parse error: " <> display (T.pack err)
+          pure $ Left (T.pack err)
+        Right x   -> do
+          logInfo "Parsing Done."
+          pure (Right x)
     else do
       return $! Right V.empty

@@ -58,15 +58,19 @@ module Data.TM.TMParameterDef
     , uintParamDef
     , octetParamDef
     , compareTMParameterDefName
+    , paramTypeBuilder
     ) where
 
 
+import           RIO
+
 import           Codec.Serialise
 import           Control.Lens                   ( makeLenses )
+
 import           Data.Aeson
+import qualified Data.Text                     as T
 import           Data.Text.Short                ( ShortText )
 import qualified Data.Text.Short               as ST
-import           RIO
 
 import           Data.PUS.CalibrationTypes
 import           Data.TM.Calibration
@@ -492,7 +496,7 @@ instance Display TMParameterDef where
             $  padRight 23 (text "<b>Parameter Name:</b> ")
             <> text (ST.toText (_fpName p))
             <> padRight 24 (text "\n<b>Description:</b> ")
-            <> text (ST.toText (_fpDescription p))
+            <> text (T.replace "&" "&amp;" (ST.toText (_fpDescription p)))
             <> padRight 24 (text "\n<b>Parameter ID:</b> ")
             <> (case _fpPID p of
                    Nothing -> text "--"

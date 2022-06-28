@@ -7,19 +7,20 @@ module Data.MIB.SCO
 
 import           RIO
 
-import qualified RIO.Vector                    as V
+import           Data.Csv                       ( FromRecord(..) )
+import           Data.Text.Short                ( ShortText )
 import qualified RIO.HashMap                   as HM
 import qualified RIO.Set                       as S
-import           Data.Text.Short                ( ShortText )
-import           Data.Csv                       ( FromRecord(..) )
+import qualified RIO.Vector                    as V
 
 import           Data.MIB.Load
 
 data SCOentry = SCOentry
-    { _scoLink :: !ShortText
-    , _scoSCOE :: !ShortText
-    , _scoPort :: !Word16
-    , _scoFlag :: Maybe Int
+    { _scoLink  :: !ShortText
+    , _scoSCOE  :: !ShortText
+    , _scoPort  :: !Word16
+    , _scoIndex :: !(Maybe Int)
+    , _scoVCID  :: !(Maybe Word8)
     }
     deriving Show
 
@@ -34,7 +35,7 @@ instance Ord SCOentry where
 
 
 instance FromRecord SCOentry where
-    parseRecord = genericParse (== 4) SCOentry
+    parseRecord = genericParse (== 5) SCOentry
 
 
 fileName :: FilePath
