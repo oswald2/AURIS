@@ -54,6 +54,7 @@ import           General.PUSTypes
 import           General.Time
 import           General.Types
 
+import           Text.Show.Pretty
 
 
 isUnknownPacket :: Config -> TMPacket -> Bool
@@ -92,9 +93,8 @@ packetProcessorC
     => ConduitT ExtractedPacket (ExtractedDU TMPacket) m ()
 packetProcessorC = awaitForever $ \pkt@(ExtractedPacket _oct pusPkt) -> do
 
-    logDebug
-        $  display ("packetProcessorC: got packet: " :: Text)
-        <> displayShow pkt
+    logDebug $ display ("packetProcessorC: got packet: " :: Text) <> display
+        (T.pack (ppShow pkt))
 
     env   <- ask
     model <- getDataModel env
@@ -106,8 +106,8 @@ packetProcessorC = awaitForever $ \pkt@(ExtractedPacket _oct pusPkt) -> do
 
     -- if we received a TC Echo just log it 
     when (pusPkt ^. epDU . pusHdr . pusHdrType == PUSTC) $ do
-        logDebug $ "Received TC Echo from SCOE: " <> displayShow
-            (pusPkt ^. epDU)
+        logDebug $ "Received TC Echo from SCOE: " <> display
+            (T.pack (ppShow (pusPkt ^. epDU)))
 
     let def' = getPackeDefinition model pkt
     case def' of

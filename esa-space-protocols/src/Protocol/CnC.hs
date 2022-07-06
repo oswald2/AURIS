@@ -56,6 +56,8 @@ import           General.PUSTypes
 import           General.Time
 import           General.Types
 
+import           Text.Show.Pretty
+
 
 -- if we have a SCOE packet, and it has a secondary header, it is a binary
 -- TC, else an ASCII one.
@@ -80,7 +82,13 @@ receiveCnCC missionSpecific cfg interf = do
     let timeEncoding = fromMaybe Cuc43 (cfgCncCucTime cfg)
 
     conduitParserEither
-            (match (islPacketParser missionSpecific timeEncoding (cfgCncHasCRC cfg) interf))
+            (match
+                (islPacketParser missionSpecific
+                                 timeEncoding
+                                 (cfgCncHasCRC cfg)
+                                 interf
+                )
+            )
         .| sink
   where
     sink = do
@@ -185,6 +193,15 @@ processAsciiAck protPkt = do
         nak   = BS8.pack "NAK"
         dat   = BS.take 3 (toBS (protPkt ^. protContent . pusData))
 
+    logDebug
+        $  "C&C ASCII ACK: "
+        <> display (T.pack (ppShow protPkt))
+        <> "\nData: "
+        <> display
+               (decodeUtf8With (\_ _ -> Just '.')
+                               (toBS (protPkt ^. protContent . pusData))
+               )
+
     env <- ask
     if
         | dat == ack
@@ -216,7 +233,8 @@ cncToTMPacket interf = do
         Nothing  -> return ()
         Just res -> do
             newPkt <- convertCncToTMPacket res interf
-            logDebug $ "CnC TM: received packet: " <> displayShow newPkt
+            logDebug $ "CnC TM: received packet: " <> display
+                (T.pack (ppShow newPkt))
             yield newPkt
             cncToTMPacket interf
 

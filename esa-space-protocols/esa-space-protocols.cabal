@@ -163,6 +163,7 @@ library
         , timer-wheel
         , word24
         , time
+        , pretty-show
 
     if flag(sle)
         cpp-options: -DHAS_SLE
