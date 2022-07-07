@@ -210,6 +210,10 @@ processAsciiAck protPkt = do
         | dat == nak
         -> do
             liftIO $ requestVerifyGTCnC env (pktID, seqC) StGFail
+            logError $ "Received NAK: " <> display
+                (decodeUtf8With (\_ _ -> Just '.')
+                                (toBS (protPkt ^. protContent . pusData))
+                )
         | otherwise
         -> logWarn $ "Could not parse C&C ACK data from pkt: " <> displayShow
             (protPkt ^. protContent)

@@ -22,36 +22,36 @@
             {
                 "cfgCncCucTime": "Cuc43",
                 "cfgCncHasCRC": "HasCRC",
-                "cfgCncPortTM": 5001,
+                "cfgCncPortTM": 15001,
                 "cfgCncHost": "localhost",
-                "cfgCncPortTC": 5000,
+                "cfgCncPortTC": 15000,
                 "cfgCncName": "ATC",
                 "cfgCncID": 2
             },
             {
                 "cfgCncCucTime": "Cuc43",
                 "cfgCncHasCRC": "HasCRC",
-                "cfgCncPortTM": 6011,
+                "cfgCncPortTM": 61011,
                 "cfgCncHost": "localhost",
-                "cfgCncPortTC": 6010,
+                "cfgCncPortTC": 16010,
                 "cfgCncName": "FTM",
                 "cfgCncID": 3
             },
             {
                 "cfgCncCucTime": "Cuc43",
                 "cfgCncHasCRC": "HasCRC",
-                "cfgCncPortTM": 5502,
+                "cfgCncPortTM": 15502,
                 "cfgCncHost": "localhost",
-                "cfgCncPortTC": 5002,
+                "cfgCncPortTC": 15002,
                 "cfgCncName": "STC1",
                 "cfgCncID": 4
             },
             {
                 "cfgCncCucTime": "Cuc43",
                 "cfgCncHasCRC": "HasCRC",
-                "cfgCncPortTM": 5503,
+                "cfgCncPortTM": 15503,
                 "cfgCncHost": "localhost",
-                "cfgCncPortTC": 5003,
+                "cfgCncPortTC": 15003,
                 "cfgCncName": "STC2",
                 "cfgCncID": 5
             }
@@ -65,7 +65,7 @@
                 "cfgNdiuHost": "localhost",
                 "cfgNdiuID": 1,
                 "cfgNdiuName": "NDIU TC",
-                "cfgNdiuPort": 5005,
+                "cfgNdiuPort": 15005,
                 "cfgNdiuTMConfig": {
                     "cfgMaxTMFrameLen": 1115,
                     "cfgTMFrameHasCRC": false,
@@ -80,7 +80,7 @@
                 "cfgNdiuHost": "localhost",
                 "cfgNdiuID": 2,
                 "cfgNdiuName": "NDIU TM",
-                "cfgNdiuPort": 5006,
+                "cfgNdiuPort": 15006,
                 "cfgNdiuTMConfig": {
                     "cfgMaxTMFrameLen": 1090,
                     "cfgTMFrameHasCRC": false,

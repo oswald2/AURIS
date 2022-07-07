@@ -92,9 +92,10 @@ runNdiuChain cfg vcMap queue ndiuTypeSet = do
         (clientSettings (fromIntegral (cfgNdiuPort cfg))
                         (encodeUtf8 (cfgNdiuHost cfg))
         )
-        200_000
-        (processConnect cfg vcMap queue var ndiuTypeSet)
-    onDisconnect cfg var
+        500_000 $ \appData -> do 
+            processConnect cfg vcMap queue var ndiuTypeSet appData 
+            onDisconnect cfg var
+            threadDelay 500_000
 
 
 processConnect
