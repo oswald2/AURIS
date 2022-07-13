@@ -16,6 +16,7 @@ module Data.PUS.PUSPacket
     , HasCRC(..)
     , encodePUSPacket
     , encodePUSPktChoice
+    , encodePktWithoutCRC
     , decodePktMissionSpecific
     , pusHdr
     , pusDfh
@@ -167,6 +168,7 @@ instance Eq PUSHeader where
 
 
 instance Serialise PUSHeader
+instance NFData PUSHeader
 instance FromJSON PUSHeader
 instance ToJSON PUSHeader where
     toEncoding = genericToEncoding defaultOptions
@@ -182,10 +184,11 @@ data PUSPacket = PUSPacket
     , _pusData      :: !HexBytes
     , _pusEncodeCRC :: !Bool
     }
-    deriving (Eq, Show, Generic)
+    deriving (Eq, Show, Read, Generic)
 makeLenses ''PUSPacket
 
 instance Serialise PUSPacket
+instance NFData PUSPacket
 
 instance FromJSON PUSPacket where
     parseJSON = withObject "PUSPacket" $ \v ->

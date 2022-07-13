@@ -103,6 +103,7 @@ module General.Time
     , utcTimeToComponents
     , fromUTC
     , fromSystemTime
+    , toDouble
     ) where
 
 import           RIO
