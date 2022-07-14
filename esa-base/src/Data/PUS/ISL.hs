@@ -6,12 +6,14 @@ module Data.PUS.ISL
     , islPacketParser
     , ISLEncPktHdr(..)
     , defaultIslEncPktHdr
+    , islEncPktHdr
     , encodeISL
     , isIslPktID
     , islEncHdrBuilder
     , islEncHdrParser
     , islHeaderBuilder
     , islHeaderParser
+    , islHeaderSize
     , ISLType(..)
     , ISLRouting(..)
     , ISLHeader(..)
@@ -60,6 +62,9 @@ data ISLEncPktHdr = ISLEncPktHdr
 
 defaultIslEncPktHdr :: ISLEncPktHdr
 defaultIslEncPktHdr = ISLEncPktHdr { islID = islPktID, islLength = 0 }
+
+islEncPktHdr :: Word16 -> ISLEncPktHdr
+islEncPktHdr length = ISLEncPktHdr { islID = islPktID, islLength = length }
 
 islPktID :: Word16
 islPktID = 0b111_111_10_0000_0000
@@ -192,6 +197,10 @@ data ISL = ISL
     }
     deriving (Read, Show)
 
+{-# INLINABLE islHeaderSize #-}
+islHeaderSize :: Int
+islHeaderSize = fixedSizeOf @ISLEncPktHdr + fixedSizeOf @ISLHeader
+
 islParser :: Parser ISL
 islParser = do
     eh  <- islEncHdrParser
@@ -223,7 +232,7 @@ islPacketParser
     -> CucEncoding
     -> HasCRC
     -> ProtocolInterface
-    -> Parser (ProtocolPacket PUSPacket)
+    -> Parser (ProtocolPacket PUSPacket, Bool)
 islPacketParser missionSpecific timeEncoding hasCRC interf = do
     pktID <- A.anyWord16be
     if pktID == islPktID
@@ -231,7 +240,13 @@ islPacketParser missionSpecific timeEncoding hasCRC interf = do
             void $ A.anyWord16be
             -- skip ISL header
             void $ A.take (fixedSizeOf @ISLHeader)
-            pusPktParser missionSpecific timeEncoding hasCRC interf
+            pkt <- pusPktParser missionSpecific timeEncoding hasCRC interf
+            return (pkt, True)
         else do
             hdr <- pusPktHdrParserWithoutPktID pktID
-            pusPktParserPayload missionSpecific timeEncoding hasCRC interf hdr
+            pkt <- pusPktParserPayload missionSpecific
+                                       timeEncoding
+                                       hasCRC
+                                       interf
+                                       hdr
+            return (pkt, False)
