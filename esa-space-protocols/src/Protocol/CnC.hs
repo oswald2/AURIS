@@ -104,8 +104,8 @@ receiveCnCC missionSpecific cfg interf = do
                         raiseEvent
                             (EVAlarms (EVPacketAlarm (utf8BuilderToText msg)))
                         return ()
-                    Right (_, res) -> do
-                        yield res
+                    Right (_, (encPkt, (pkt, _isISL))) -> do
+                        yield (encPkt, pkt)
                         sink
 
 

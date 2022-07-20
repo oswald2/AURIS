@@ -189,42 +189,44 @@ makeLenses ''PUSPacket
 
 instance Serialise PUSPacket
 instance NFData PUSPacket
+instance FromJSON PUSPacket
+instance ToJSON PUSPacket 
 
-instance FromJSON PUSPacket where
-    parseJSON = withObject "PUSPacket" $ \v ->
-        PUSPacket
-            <$> v
-            .:  "pusHdr"
-            <*> v
-            .:  "pusDfh"
-            <*> v
-            .:  "pusPIs"
-            <*> v
-            .:  "pusData"
-            <*> v
-            .:  "pusEncodeCRC"
+-- instance FromJSON PUSPacket where
+--     parseJSON = withObject "PUSPacket" $ \v ->
+--         PUSPacket
+--             <$> v
+--             .:  "pusHdr"
+--             <*> v
+--             .:  "pusDfh"
+--             <*> v
+--             .:  "pusPIs"
+--             <*> v
+--             .:  "pusData"
+--             <*> v
+--             .:  "pusEncodeCRC"
 
 
-instance ToJSON PUSPacket where
-    toJSON r = object
-        [ "pusHdr" .= _pusHdr r
-        , "pusDfh" .= _pusDfh r
-        , "pusPIs" .= _pusPIs r
-        , "pusData" .= _pusData r
-        , "pusEncodeCRC" .= _pusEncodeCRC r
-        ]
-    toEncoding r = pairs
-        (  "pusHdr"
-        .= _pusHdr r
-        <> "pusDfh"
-        .= _pusDfh r
-        <> "pusPIs"
-        .= _pusPIs r
-        <> "pusData"
-        .= _pusData r
-        <> "pusEncodeCRC"
-        .= _pusEncodeCRC r
-        )
+-- instance ToJSON PUSPacket where
+--     toJSON r = object
+--         [ "pusHdr" .= _pusHdr r
+--         , "pusDfh" .= _pusDfh r
+--         , "pusPIs" .= _pusPIs r
+--         , "pusData" .= _pusData r
+--         , "pusEncodeCRC" .= _pusEncodeCRC r
+--         ]
+--     toEncoding r = pairs
+--         (  "pusHdr"
+--         .= _pusHdr r
+--         <> "pusDfh"
+--         .= _pusDfh r
+--         <> "pusPIs"
+--         .= _pusPIs r
+--         <> "pusData"
+--         .= _pusData r
+--         <> "pusEncodeCRC"
+--         .= _pusEncodeCRC r
+--         )
 
 
 

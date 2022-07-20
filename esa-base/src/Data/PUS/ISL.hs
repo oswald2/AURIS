@@ -64,7 +64,7 @@ defaultIslEncPktHdr :: ISLEncPktHdr
 defaultIslEncPktHdr = ISLEncPktHdr { islID = islPktID, islLength = 0 }
 
 islEncPktHdr :: Word16 -> ISLEncPktHdr
-islEncPktHdr length = ISLEncPktHdr { islID = islPktID, islLength = length }
+islEncPktHdr len = ISLEncPktHdr { islID = islPktID, islLength = len }
 
 islPktID :: Word16
 islPktID = 0b111_111_10_0000_0000
