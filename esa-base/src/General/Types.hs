@@ -517,7 +517,7 @@ hexLength (HexBytes x) = B.length x
 
 parseHexLine :: Parser HexBytes
 parseHexLine = do
-    A.skip isSpace
+    _ <- many (A.skip isSpace)
     HexBytes . B.pack <$> many parseByte
 
 parseByte :: Parser Word8

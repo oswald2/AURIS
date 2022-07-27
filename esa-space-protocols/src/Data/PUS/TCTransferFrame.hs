@@ -13,6 +13,8 @@ module Data.PUS.TCTransferFrame
     , checkTCFrame
     , tcFrameParser
     , tcFrameBuilder
+    , tcFrameEncodeSimple
+    , tcFrameEncodeSimpleWoCRC
     ) where
 
 
@@ -111,6 +113,19 @@ checkTCFrame cfg frame =
 {-# INLINABLE tcFrameEncode #-}
 tcFrameEncode :: TCFrameTransport -> Word8 -> EncodedTCFrame
 tcFrameEncode (TCFrameTransport frame rqst) frameCnt =
+    let newFrame = tcFrameEncodeSimple frame frameCnt
+    in  EncodedTCFrame (frame ^. tcFrameSeq) (HexBytes newFrame) rqst
+
+
+{-# INLINABLE tcFrameEncodeSimple #-}
+tcFrameEncodeSimple :: TCTransferFrame -> Word8 -> ByteString
+tcFrameEncodeSimple frame frameCnt =
+    let newFrame = tcFrameEncodeSimpleWoCRC frame frameCnt 
+    in  newFrame <> crcEncodeBS (crcCalc newFrame)
+
+{-# INLINABLE tcFrameEncodeSimpleWoCRC #-}
+tcFrameEncodeSimpleWoCRC :: TCTransferFrame -> Word8 -> ByteString 
+tcFrameEncodeSimpleWoCRC frame frameCnt = 
     let newFrame =
             frame
                 &  tcFrameLength
@@ -123,13 +138,7 @@ tcFrameEncode (TCFrameTransport frame rqst) frameCnt =
         pl       = toBS $ frame ^. tcFrameData
         newPl    = if BS.null pl then BS.singleton 0 else pl
         encFrame = builderBytes $ tcFrameBuilder newFrame
-    in  EncodedTCFrame
-            (frame ^. tcFrameSeq)
-            (HexBytes (encFrame <> crcEncodeBS (crcCalc encFrame)))
-            rqst
-
-
-
+    in  encFrame 
 
 {-# INLINABLE tcFrameBuilder #-}
 tcFrameBuilder :: TCTransferFrame -> Builder
@@ -162,13 +171,16 @@ tcFrameParser = do
 
         let (vers, fl, scid) = unpackFlags flags
             vcid             = mkVCID (fromIntegral (word2 `shiftR` 10))
-            !length1 = word2 .&. 0b0000_0011_1111_1111
-            !length2 = length1 + 1
-            newLen = fromIntegral length2 - tcFrameHdrLen - crcLen
+            !length1         = word2 .&. 0b0000_0011_1111_1111
+            !length2         = length1 + 1
+            newLen           = fromIntegral length2 - tcFrameHdrLen - crcLen
 
-        when (newLen < 0) $ fail $ "Illegal Length in TC Frame Header: " ++ show length1
+        when (newLen < 0)
+            $  fail
+            $  "Illegal Length in TC Frame Header: "
+            ++ show length1
 
-        pl  <- A.take newLen 
+        pl  <- A.take newLen
         crc <- crcParser
 
         pure (TCTransferFrame vers fl scid vcid length1 seqf (HexBytes pl), crc)
