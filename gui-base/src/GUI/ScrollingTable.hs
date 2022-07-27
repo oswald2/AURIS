@@ -266,8 +266,8 @@ createSortedScrollingTableSimple
     -> IO (SeqStore row, TreeModelSort)
 createSortedScrollingTableSimple tv attribs = do
     model     <- seqStoreNew []
-    sortModel <- treeModelSortNewWithModel model
-
+    sortModel <- new TreeModelSort [#model := model] 
+    
     treeViewSetModel tv (Just sortModel)
 
     treeViewSetHeadersVisible tv True
