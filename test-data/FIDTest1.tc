@@ -3,8 +3,8 @@
     [ SendRqst
         TCRequest
           { _tcReqRequestID = RequestID 0
-          , _tcReqName = "TEST-TC"
-          , _tcReqDescription = "No Description"
+          , _tcReqName = "CnC_BIN"
+          , _tcReqDescription = "C&C Binary TC"
           , _tcReqSource = "TC-TAB"
           , _tcReqReleaseTime = Nothing
           , _tcReqVerifications =
@@ -13,10 +13,10 @@
                 , _verGroundReception = StGExpected
                 , _verGroundTransmission = StGExpected
                 , _verGroundOBR = StGDisabled
-                , _verTMAcceptance = StTmExpected
+                , _verTMAcceptance = StTmDisabled
                 , _verTMStart = StTmDisabled
                 , _verTMProgress = []
-                , _verTMComplete = StTmExpected
+                , _verTMComplete = StTmDisabled
                 , _verStatus = VerifStatNominal
                 }
           , _tcReqSCID = SCID 533
@@ -26,21 +26,23 @@
                 { _tcReqMAPID = MAPID 0
                 , _tcReqTransMode = BD
                 , _tcDestination = DestCnc (IfCnc 1)
+                , _tcWrapInISL = Nothing
                 , _tcSSC = SSC 0
                 , _tcReqPacket =
                     TCPacket
                       { _tcpAPID = APID 1696
                       , _tcpType = PUSType 8
                       , _tcpSubType = PUSSubType 1
-                      , _tcpSourceID = SourceID 10
+                      , _tcpSourceID = IsSrcIDA (SourceID 10)
                       , _tcpParams =
-                          List
-                            [ Parameter
-                                { _paramName = "FID" , _paramValue = ValUInt32 BiE 30016 }
-                            , Parameter
-                                { _paramName = "X" , _paramValue = ValUInt32 BiE 1 }
-                            ]
-                            Empty
+                          ExpandedParameterList
+                            (List
+                               [ Parameter
+                                   { _paramName = "FID" , _paramValue = ValUInt24 BiE 30016 }
+                               , Parameter
+                                   { _paramName = "X" , _paramValue = ValUInt32 BiE 5 }
+                               ]
+                               Empty)
                       }
                 }
           }

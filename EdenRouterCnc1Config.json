@@ -5,10 +5,11 @@
     "aurisDbConfig": null,
     "aurisTheme": "ThemeLight",
     "aurisPusConfig": {
+        "cfgMission": "MissionPUSC",
         "cfgNDIU": [],
         "cfgCnC": [
             {
-                "cfgCncCucTime": null,
+                "cfgCncCucTime": "Cuc42",
                 "cfgCncHasCRC": "HasCRC",
                 "cfgCncPortTM": 11971,
                 "cfgCncHost": "localhost",
@@ -17,7 +18,7 @@
                 "cfgCncName": "CCS C&amp;C"
             },
             {
-                "cfgCncCucTime": null,
+                "cfgCncCucTime": "Cuc42",
                 "cfgCncHasCRC": "HasCRC",
                 "cfgCncPortTM": 11973,
                 "cfgCncHost": "localhost",
