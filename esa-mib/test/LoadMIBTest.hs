@@ -289,56 +289,56 @@ main = do
     [mibPath] <- getArgs
 
     T.putStrLn "Loading Tables:\n===============\n"
-    T.putStrLn "CAFs:\n"
-    testCaf mibPath
-    T.putStrLn "\n\n\nCAPs:\n"
-    testCap mibPath
-    T.putStrLn "\n\n\nMCFs:\n"
-    testMcf mibPath
-    T.putStrLn "\n\n\nLGFs:\n"
-    testLgf mibPath
-    T.putStrLn "\n\n\nTXFs:\n"
-    testTxf mibPath
-    T.putStrLn "\n\n\nTXPs:\n"
-    testTxp mibPath
-    T.putStrLn "\n\n\nCURs:\n"
-    testCur mibPath
-    T.putStrLn "\n\n\nPCFs:\n"
-    testPcf mibPath
-    T.putStrLn "\n\n\nPIDs:\n"
-    testPid mibPath
-    T.putStrLn "\n\n\nPLFs:\n"
-    testPlf mibPath
-    T.putStrLn "\n\n\nTPCFs:\n"
-    testTpcf mibPath
-    T.putStrLn "\n\n\nGPCs:\n"
-    testGpc mibPath
-    T.putStrLn "\n\n\nGPFs:\n"
-    testGpf mibPath
-    T.putStrLn "\n\n\nCCFs:\n"
-    testCcf mibPath
-    T.putStrLn "\n\n\nCPCs:\n"
-    testCpc mibPath
-    T.putStrLn "\n\n\nCDFs:\n"
-    testCdf mibPath
-    T.putStrLn "\n\n\nPRFs:\n"
-    testPrf mibPath
-    T.putStrLn "\n\n\nPRVs:\n"
-    testPrv mibPath
-    T.putStrLn "\n\n\nCCAs:\n"
-    testCca mibPath
-    T.putStrLn "\n\n\nCCSs:\n"
-    testCcs mibPath
-    T.putStrLn "\n\n\nPAFs:\n"
-    testPaf mibPath
-    T.putStrLn "\n\n\nPASs:\n"
-    testPas mibPath
-    T.putStrLn "\n\n\nCVSs:\n"
-    testCvs mibPath
-    T.putStrLn "\n\n\nCVEs:\n"
-    testCve mibPath
-    T.putStrLn "\n\n\nCVPs:\n"
-    testCvp mibPath
+    -- T.putStrLn "CAFs:\n"
+    -- testCaf mibPath
+    -- T.putStrLn "\n\n\nCAPs:\n"
+    -- testCap mibPath
+    -- T.putStrLn "\n\n\nMCFs:\n"
+    -- testMcf mibPath
+    -- T.putStrLn "\n\n\nLGFs:\n"
+    -- testLgf mibPath
+    -- T.putStrLn "\n\n\nTXFs:\n"
+    -- testTxf mibPath
+    -- T.putStrLn "\n\n\nTXPs:\n"
+    -- testTxp mibPath
+    -- T.putStrLn "\n\n\nCURs:\n"
+    -- testCur mibPath
+    -- T.putStrLn "\n\n\nPCFs:\n"
+    -- testPcf mibPath
+    -- T.putStrLn "\n\n\nPIDs:\n"
+    -- testPid mibPath
+    -- T.putStrLn "\n\n\nPLFs:\n"
+    -- testPlf mibPath
+    -- T.putStrLn "\n\n\nTPCFs:\n"
+    -- testTpcf mibPath
+    -- T.putStrLn "\n\n\nGPCs:\n"
+    -- testGpc mibPath
+    -- T.putStrLn "\n\n\nGPFs:\n"
+    -- testGpf mibPath
+    -- T.putStrLn "\n\n\nCCFs:\n"
+    -- testCcf mibPath
+    -- T.putStrLn "\n\n\nCPCs:\n"
+    -- testCpc mibPath
+    -- T.putStrLn "\n\n\nCDFs:\n"
+    -- testCdf mibPath
+    -- T.putStrLn "\n\n\nPRFs:\n"
+    -- testPrf mibPath
+    -- T.putStrLn "\n\n\nPRVs:\n"
+    -- testPrv mibPath
+    -- T.putStrLn "\n\n\nCCAs:\n"
+    -- testCca mibPath
+    -- T.putStrLn "\n\n\nCCSs:\n"
+    -- testCcs mibPath
+    -- T.putStrLn "\n\n\nPAFs:\n"
+    -- testPaf mibPath
+    -- T.putStrLn "\n\n\nPASs:\n"
+    -- testPas mibPath
+    -- T.putStrLn "\n\n\nCVSs:\n"
+    -- testCvs mibPath
+    -- T.putStrLn "\n\n\nCVEs:\n"
+    -- testCve mibPath
+    -- T.putStrLn "\n\n\nCVPs:\n"
+    -- testCvp mibPath
 
 
 

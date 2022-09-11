@@ -64,7 +64,6 @@ loadFromFileGen mibPath fileName = do
       content <- B.readFile file
       logInfo $"File " <> display (T.pack fileName) <> " read. Parsing..."
       let !r = decodeWith myOptions NoHeader (BC.filter isAscii content)
-      logInfo "Parsing Done."
       case r of
         Left  err -> do 
           logInfo $ "Got parse error: " <> display (T.pack err)
