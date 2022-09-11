@@ -85,7 +85,7 @@ import           Data.Aeson
 import qualified Data.Attoparsec.Binary        as A
 import           Data.Attoparsec.ByteString     ( Parser )
 import qualified Data.Attoparsec.ByteString    as A
-import           Data.Bits
+import           Data.Bits               hiding ( And )
 
 import           ByteString.StrictBuilder
 
