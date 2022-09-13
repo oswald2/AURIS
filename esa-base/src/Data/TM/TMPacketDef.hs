@@ -348,7 +348,8 @@ instance AE.ToJSON TMVarParamDef where
 tmVarParamDefBuilder :: Word16 -> TMVarParamDef -> TB.Builder 
 tmVarParamDefBuilder indent par = 
   indentBuilder indent <> padFromRight 23 ' ' (text "<b>Name:</b>") <> text (ST.toText (_tmvpName par))
-  <> newLineIndentBuilder indent (text "<b>Description:</b> ") <> text (ST.toText (_tmvpDisDesc par))
+  <> newLineIndentBuilder indent (text "<b>Description:</b> ") <> text (ST.toText (_fpDescription (_tmvpParam par)))
+  <> newLineIndentBuilder indent (text "<b>Descr VPD:</b> ") <> text (ST.toText (_tmvpDisDesc par))
   <> newLineIndentBuilder indent (text "<b>Nature:</b> ") <> varParamModifiedBuilder (_tmvpNat par)
   <> newLineIndentBuilder indent (text "<b>Display:</b> ") <> string (show (_tmvpDisp par))
   <> newLineIndentBuilder indent (text "<b>Justify:</b> ") <> text (textDisplay (_tmvpJustify par))
@@ -356,6 +357,7 @@ tmVarParamDefBuilder indent par =
   <> newLineIndentBuilder indent (text "<b>Columns:</b> ") <> text (textDisplay (_tmvpDispCols par))
   <> newLineIndentBuilder indent (text "<b>Radix:</b> ") <> text (textDisplay (_tmvpRadix par))
   <> newLineIndentBuilder indent (text "<b>Offset:</b> ") <> text (textDisplay (_tmvpOffset par))
+  <> newLineIndentBuilder indent (text "<b>Type:</b> ") <> paramTypeBuilder (_fpType (_tmvpParam par))
 
 
 data VarParams = 
