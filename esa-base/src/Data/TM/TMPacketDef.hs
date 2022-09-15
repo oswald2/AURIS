@@ -94,7 +94,6 @@ where
 
 import           RIO
 import qualified RIO.Vector                    as V
-import qualified Data.Text                      as T 
 
 import           Data.Text.Short               as ST ( ShortText, pack )
 import qualified           Data.Text.Short               as ST 
@@ -112,6 +111,7 @@ import           General.APID
 import           General.Types
 import           General.Time
 import           General.TimeSpan
+import           General.TextTools
 
 import           Data.TM.TMParameterDef
 import           Data.TM.PIVals
@@ -179,7 +179,7 @@ tmParamLocationBuilder indent pl =
   indentBuilder indent <> padFromRight 23 ' ' (text "<b>Parameter Name:</b> ")
   <> text (ST.toText (_tmplName pl)) 
   <> newLineIndentBuilder newIndent "<b>Description:</b>: " 
-  <> text (T.replace "&" "&amp;" (ST.toText (_fpDescription (_tmplParam pl))))
+  <> escapeTextBuilder ((ST.toText (_fpDescription (_tmplParam pl))))
   <> newLineIndentBuilder newIndent (text "<b>Offset:</b> ")
   <> text (textDisplay (_tmplOffset pl))
   <> newLineIndentBuilder newIndent (text "<b>Type:</b> ")
@@ -348,8 +348,8 @@ instance AE.ToJSON TMVarParamDef where
 tmVarParamDefBuilder :: Word16 -> TMVarParamDef -> TB.Builder 
 tmVarParamDefBuilder indent par = 
   indentBuilder indent <> padFromRight 23 ' ' (text "<b>Name:</b>") <> text (ST.toText (_tmvpName par))
-  <> newLineIndentBuilder indent (text "<b>Description:</b> ") <> text (ST.toText (_fpDescription (_tmvpParam par)))
-  <> newLineIndentBuilder indent (text "<b>Descr VPD:</b> ") <> text (ST.toText (_tmvpDisDesc par))
+  <> newLineIndentBuilder indent (text "<b>Description:</b> ") <> escapeTextBuilder (ST.toText (_fpDescription (_tmvpParam par)))
+  <> newLineIndentBuilder indent (text "<b>Descr VPD:</b> ") <> escapeTextBuilder (ST.toText (_tmvpDisDesc par))
   <> newLineIndentBuilder indent (text "<b>Nature:</b> ") <> varParamModifiedBuilder (_tmvpNat par)
   <> newLineIndentBuilder indent (text "<b>Display:</b> ") <> string (show (_tmvpDisp par))
   <> newLineIndentBuilder indent (text "<b>Justify:</b> ") <> text (textDisplay (_tmvpJustify par))
@@ -464,7 +464,7 @@ instance AE.ToJSON TMPacketDef where
 tmPacketDefBuilder :: TMPacketDef -> TB.Builder 
 tmPacketDefBuilder pd = 
   padRight 23 (text "<b>Name:</b> ") <> text (ST.toText (_tmpdName pd))
-  <> char '\n' <> padRight 23 (text "<b>Description:</b> ") <> text (ST.toText (_tmpdDescr pd))
+  <> char '\n' <> padRight 23 (text "<b>Description:</b> ") <> escapeTextBuilder (ST.toText (_tmpdDescr pd))
   <> char '\n' <> padRight 23 (text "<b>SPID:</b> ") <> text (textDisplay (_tmpdSPID pd))
   <> char '\n' <> padRight 23 (text "<b>APID:</b> ") <> text (textDisplay (_tmpdApid pd))
   <> char '\n' <> padRight 23 (text "<b>Type/Subtype:</b> ") 

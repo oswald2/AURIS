@@ -79,6 +79,7 @@ import           Data.TM.Value
 
 import           General.PUSTypes
 import           General.SizeOf
+import           General.TextTools
 import           General.Types
 
 import           Text.Builder                  as TB
@@ -496,7 +497,7 @@ instance Display TMParameterDef where
             $  padRight 23 (text "<b>Parameter Name:</b> ")
             <> text (ST.toText (_fpName p))
             <> padRight 24 (text "\n<b>Description:</b> ")
-            <> text (T.replace "&" "&amp;" (ST.toText (_fpDescription p)))
+            <> escapeTextBuilder (ST.toText (_fpDescription p))
             <> padRight 24 (text "\n<b>Parameter ID:</b> ")
             <> (case _fpPID p of
                    Nothing -> text "--"
@@ -506,7 +507,7 @@ instance Display TMParameterDef where
             <> padRight 24 (text "\n<b>Type:</b> ")
             <> paramTypeBuilder (_fpType p)
             <> padRight 24 (text "\n<b>Unit:</b> ")
-            <> text (ST.toText (_fpUnit p))
+            <> escapeTextBuilder (ST.toText (_fpUnit p))
             <> padRight 24 (text "\n<b>Padding:</b> ")
             <> (case _fpWidth p of
                    Nothing -> "--"
@@ -523,7 +524,7 @@ instance Display TMParameterDef where
             <> padRight 24 (text "\n<b>Default Value:</b>")
             <> text (textDisplay (_fpDefaultVal p))
             <> padRight 24 (text "\n<b>Subsystem:</b>")
-            <> text (ST.toText (_fpSubsys p))
+            <> escapeTextBuilder (ST.toText (_fpSubsys p))
             <> text "\n<b>Calibration:</b>\n"
             <> calibContainerBuilder (_fpCalibs p) 4
             <> padRight 24 (text "\n<b>OBT-ID:</b>")

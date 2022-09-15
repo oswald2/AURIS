@@ -79,6 +79,7 @@ library
     General.GetBitField
     General.TriState
     General.SizeOf
+    General.TextTools
     Data.DataModel
     Data.TM.Value
     Data.TM.Parameter

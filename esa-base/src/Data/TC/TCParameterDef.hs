@@ -46,6 +46,8 @@ import           Data.PUS.Value
 
 import           Data.TC.Calibration
 import           Data.TC.RangeSet
+
+import           General.TextTools
 import           General.Types
 
 import           Data.TM.Value
@@ -121,7 +123,7 @@ instance ToJSON TCParameterDef where
 compareTCParameterDefName :: TCParameterDef -> TCParameterDef -> Ordering
 compareTCParameterDefName p1 p2 = compare (_tcpName p1) (_tcpName p2)
 
-instance Display TCParameterDef where 
+instance Display TCParameterDef where
     textDisplay x = run $ tcParameterDefBuilder 0 x
 
 
@@ -132,7 +134,7 @@ tcParameterDefBuilder indent def =
         <> text (ST.toText (def ^. tcpName))
         <> newLineIndentBuilder indent
                                 (padRight 23 (text "<b>Description:</b> "))
-        <> text (ST.toText (def ^. tcpDescr))
+        <> escapeTextBuilder (ST.toText (def ^. tcpDescr))
         <> newLineIndentBuilder indent (padRight 23 (text "<b>PTC:</b> "))
         <> text (textDisplay (def ^. tcpPTC))
         <> newLineIndentBuilder indent (padRight 23 (text "<b>PFC:</b> "))
@@ -149,7 +151,9 @@ tcParameterDefBuilder indent def =
         <> tcParamTypeBuilder (def ^. tcpProcType)
         <> newLineIndentBuilder indent
                                 (padRight 23 (text "<b>Calibration:</b> "))
-        <> maybe (text "--") (\x -> char '\n' <> tcCalibBuilder (indent + 4) x) (def ^. tcpCalib)
+        <> maybe (text "--")
+                 (\x -> char '\n' <> tcCalibBuilder (indent + 4) x)
+                 (def ^. tcpCalib)
         <> newLineIndentBuilder indent
                                 (padRight 23 (text "<b>Range Set:</b>\n"))
         <> newLineIndentBuilder indent (padRight 23 (text "<b>Correlate:</b> "))
@@ -225,7 +229,7 @@ tcParameterLocDefBuilder indent def =
         <> padRight 23 (text "<b>Name:</b> ")
         <> text (ST.toText (def ^. tcplParam . tcpName))
         <> newLineIndentBuilder newIndent (padRight 23 ("<b>Description</b>: "))
-        <> text (ST.toText (def ^. tcplDescr))
+        <> escapeTextBuilder (ST.toText (def ^. tcplDescr))
         <> newLineIndentBuilder newIndent
                                 (padRight 23 ("<b>Element Type</b>: "))
         <> elemTypeBuilder (def ^. tcplElemType)

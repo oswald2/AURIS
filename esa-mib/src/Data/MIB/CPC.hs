@@ -61,6 +61,7 @@ instance Eq CPCentry where
 
 instance FromRecord CPCentry where
     parseRecord v
+        | V.length v > 15 = genericParse (const True) CPCentry (V.slice 0 15 v)
         | V.length v == 15 = genericParse (const True) CPCentry v
         | V.length v == 13 = genericParse (const True)
                                           CPCentry
