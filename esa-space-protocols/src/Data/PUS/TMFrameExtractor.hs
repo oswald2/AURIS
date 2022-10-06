@@ -48,7 +48,9 @@ import           ByteString.StrictBuilder
 import           Control.Lens
 
 import           Conduit
+import           Conduit.Extras
 import           Conduit.PayloadParser
+
 import           Data.Attoparsec.ByteString     ( Parser )
 import qualified Data.Attoparsec.ByteString    as A
 import           Data.Conduit.TQueue
@@ -263,9 +265,8 @@ checkFrameCountC = go Nothing
             Nothing     -> return ()
             Just frame' -> do
 
-                logDebug
-                    $  display ("checkFrameCountC: " :: Text)
-                    <> fromString (ppShow frame')
+                logDebug $ display ("checkFrameCountC: " :: Text) <> fromString
+                    (ppShow frame')
 
                 let frame      = frame' ^. tmstFrame
                     !vcfc      = frame ^. tmFrameHdr . tmFrameVCFC
@@ -786,7 +787,7 @@ tmFrameExtractionChain
     -> TBQueue ExtractedPacket
     -> ConduitT () Void m ()
 tmFrameExtractionChain queue outQueue =
-    sourceTBQueue queue .| tmFrameExtraction .| sinkTBQueue outQueue
+    queueSource queue .| tmFrameExtraction .| queueSink outQueue
 
 
 -- | A conduit which calculates the frame statistics

@@ -12,15 +12,17 @@ module Application.Chains
     , EdenID(..)
     ) where
 
-import           Conduit
-import           Conduit.SocketConnector        ( runGeneralTCPReconnectClient )
-import           Data.Conduit.Network
-import           Data.Conduit.TQueue            ( sinkTBQueue
-                                                , sourceTBQueue
-                                                )
+
 import           RIO
 import qualified RIO.HashMap                   as HM
 import qualified RIO.Set                       as S 
+
+import           Conduit
+import           Conduit.SocketConnector        ( runGeneralTCPReconnectClient )
+import           Conduit.Extras 
+import           Data.Conduit.Network
+
+
 
 import           Data.PUS.Config
 import           Data.PUS.Events
@@ -268,7 +270,7 @@ runTMCnCChain cfg missionSpecific pktQueue = do
             receiveCnCC missionSpecific cfg (IfCnc (cfgCncID cfg))
                 .| cncToTMPacket (IfCnc (cfgCncID cfg))
                 .| packetStatC
-                .| sinkTBQueue pktQueue
+                .| queueSink pktQueue
 
     runGeneralTCPReconnectClient
         (clientSettings (fromIntegral (cfgCncPortTM cfg))
@@ -430,7 +432,7 @@ runEdenChain cfg missionSpecific pktQueue edenQueue = do
                     .| edenMessageProcessorC missionSpecific
                                              (IfEden (cfgEdenID cfg))
                     .| packetStatC
-                    .| sinkTBQueue pktQueue
+                    .| queueSink pktQueue
         runConduitRes chain
 
     tcChain app = do
@@ -459,7 +461,7 @@ runNdiu cfg _missionSpecific vcMap ndiuQueue ndiuTypeSet = do
     logDebug "runNdiuChain leaving"
     where 
         conversionThread queue = do 
-            runConduitRes $ receiveQueueMsg ndiuQueue .| createNdiuC .| sinkTBQueue queue
+            runConduitRes $ receiveQueueMsg ndiuQueue .| createNdiuC .| queueSink queue
 
 
 
@@ -475,7 +477,7 @@ runTMChain missionSpecific vcMap pktQueue = do
         cncCfg   = cfgCnC cfg
 
     let chain =
-            sourceTBQueue pktQueue
+            queueSource pktQueue
                 .| packetProcessorC
                 .| storeTMPacketC
                 .| raiseTMPacketC
@@ -510,7 +512,7 @@ runTCChain missionSpecific switcherMap = do
             then cltuEncodeRandomizedC
             else cltuEncodeC
         rqstChain =
-            sourceTBQueue rqstQueue
+            queueSource rqstQueue
                 .| concatC
                 .| tcPktEncoderC missionSpecific
                 .| tcPktToEncPUSC initialSSCCounterMap

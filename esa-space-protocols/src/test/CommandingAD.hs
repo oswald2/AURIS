@@ -107,7 +107,7 @@ main = do
 
     --             cop1C = cop1Conduit (channels ^. prChNCTRS) waitQueue outQueue
 
-    --             interfC = sourceTBQueue outQueue
+    --             interfC = queueSource outQueue
     --                 .| tcFrameEncodeC
     --                 .| tcFrameToCltuC
     --                 .| cltuEncodeRandomizedC

@@ -1286,7 +1286,7 @@ makeLenses ''FOPData
 --   -> ConduitT () Void m ()
 -- cop1Conduit chan segBuffer outQueue = do
 --   cfg <- view getConfig
---   sourceTBQueue chan .| proc cfg
+--   queueSource chan .| proc cfg
 --  where
 --   proc :: (MonadIO m) => Config -> ConduitT EncodedSegment Void m ()
 --   proc cfg = do
