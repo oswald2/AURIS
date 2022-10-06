@@ -100,6 +100,7 @@ module General.PUSTypes
     , Destination(..)
     , DirectiveDestination(..)
     , ScoeDestination(..)
+    , pusPrimaryHeaderLen
     ) where
 
 
@@ -132,6 +133,11 @@ import           System.FilePath                ( (</>) )
 import           Protocol.ProtocolInterfaces
 
 import           Data.PUS.SegmentationFlags
+
+
+-- | The fixed size of the primary PUS Packet header as a constant in bytes
+pusPrimaryHeaderLen :: Int
+pusPrimaryHeaderLen = 6
 
 -- | Virtual Channel ID
 newtype VCID = VCID Word8

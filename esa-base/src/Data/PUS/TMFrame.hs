@@ -101,6 +101,7 @@ import           General.Types
 
 import           Refined
 
+import           Text.Show.Pretty
 
 newtype FrameSize = FrameSize (Refined (And (Not (LessThan 128)) (Not (GreaterThan 2040))) Word16)
     deriving (Eq, Ord, Show, Read, ToJSON, FromJSON, NFData, Generic)
@@ -258,12 +259,12 @@ instance GetPayload TMFrame where
 
 instance Display TMFrame where
     display TMFrame {..} =
-        displayShow _tmFrameHdr
+        fromString (ppShow _tmFrameHdr)
             <> display ("\nData:\n" :: Text)
             <> display (hexdumpBS (hexToBS _tmFrameData))
             <> display ("\n" :: Text)
-            <> displayShow _tmFrameOCF
-            <> displayShow _tmFrameFECW
+            <> fromString (ppShow _tmFrameOCF)
+            <> fromString (ppShow _tmFrameFECW)
 
 
 instance NFData TMFrame

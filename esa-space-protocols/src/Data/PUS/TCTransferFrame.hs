@@ -78,6 +78,7 @@ import           General.PUSTypes               ( SCID
 import           General.Types                  ( HexBytes(..)
                                                 , toBS
                                                 )
+import           Text.Show.Pretty
 
 
 -- | The lenght of the TC Transfer Frame Header in Bytes
@@ -197,7 +198,7 @@ tcFrameEncodeC = do
     f <- await
     case f of
         Just frame -> do
-            logDebug $ "Got Frame: " <> displayShow (frame ^. tcfTransFrame)
+            logDebug $ "Got Frame: " <> fromString (ppShow (frame ^. tcfTransFrame))
             case frame ^. tcfTransFrame . tcFrameFlag of
                 FrameAD -> do
                     st  <- view appStateG

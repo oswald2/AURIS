@@ -102,6 +102,7 @@ import           General.PUSTypes               ( PUSPacketType(..)
                                                 , SeqControl(..)
                                                 , getSSC
                                                 , mkSSC
+                                                , pusPrimaryHeaderLen
                                                 )
 import           General.SetBitField            ( setBitFieldR )
 import           General.SizeOf                 ( FixedSize(..)
@@ -174,7 +175,7 @@ instance ToJSON PUSHeader where
     toEncoding = genericToEncoding defaultOptions
 
 instance FixedSize PUSHeader where
-    fixedSizeOf = 6
+    fixedSizeOf = pusPrimaryHeaderLen
 
 
 data PUSPacket = PUSPacket

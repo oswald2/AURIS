@@ -80,9 +80,9 @@ import           Data.Char
 import           Control.PUS.Classes
 
 import           ByteString.StrictBuilder
+import qualified Data.Attoparsec.Binary        as A
 import           Data.Attoparsec.ByteString     ( Parser )
 import qualified Data.Attoparsec.ByteString    as A
-import qualified Data.Attoparsec.Binary        as A
 
 import           Data.Conduit
 import           Data.Conduit.Attoparsec
@@ -94,13 +94,13 @@ import           Data.PUS.Verification
 import           General.SizeOf
 
 import           General.Hexdump
-import           General.Time
-import           General.Padding
-import           General.Types
 import           General.PUSTypes               ( RequestID
                                                 , mkRqstID
                                                 )
-
+import           General.Padding
+import           General.Time
+import           General.Types
+import           Text.Show.Pretty
 
 
 data EdenType =
@@ -235,18 +235,18 @@ data EdenData =
 makeLenses ''EdenData
 
 
-getEdenPacketData :: EdenData -> Maybe HexBytes 
+getEdenPacketData :: EdenData -> Maybe HexBytes
 getEdenPacketData EdenSpaceTC {..} = Just _edenSpaceData
-getEdenPacketData EdenSCOETC {..} = Just _edenScoeData
-getEdenPacketData EdenTM {..} = Just _edenTmData
-getEdenPacketData EdenSCOETM {..} = Just _edenTmScoeData
-getEdenPacketData EdenRawData {} = Nothing 
+getEdenPacketData EdenSCOETC {..}  = Just _edenScoeData
+getEdenPacketData EdenTM {..}      = Just _edenTmData
+getEdenPacketData EdenSCOETM {..}  = Just _edenTmScoeData
+getEdenPacketData EdenRawData{}    = Nothing
 
-getEdenRawData :: EdenData -> HexBytes 
+getEdenRawData :: EdenData -> HexBytes
 getEdenRawData EdenSpaceTC {..} = _edenSpaceData
-getEdenRawData EdenSCOETC {..} = _edenScoeData
-getEdenRawData EdenTM {..} = _edenTmData
-getEdenRawData EdenSCOETM {..} = _edenTmScoeData
+getEdenRawData EdenSCOETC {..}  = _edenScoeData
+getEdenRawData EdenTM {..}      = _edenTmData
+getEdenRawData EdenSCOETM {..}  = _edenTmScoeData
 getEdenRawData EdenRawData {..} = _edenRawData
 
 
@@ -320,7 +320,7 @@ instance Display EdenMessage where
             <> "\n  DataLength: "
             <> displayShow (_edenDataFieldLength x)
             <> "\n  Data      :\n"
-            <> displayShow (_edenDataField x)
+            <> fromString (ppShow (_edenDataField x))
 
 instance Display EdenData where
     display (EdenRawData (HexBytes x)) = "Raw Data: " <> displayBytesUtf8 x
@@ -573,8 +573,7 @@ receiveEdenMessageC = conduitParserEither edenMessageParser .| sink
   where
     sink = awaitForever $ \case
         Left err -> do
-            raiseEvent $ EVAlarms
-                (EVEDENParseError (T.pack (errorMessage err)))
+            raiseEvent $ EVAlarms (EVEDENParseError (T.pack (errorMessage err)))
         Right (_, tc) -> do
             logDebug $ "receiveEdenMessageC: received: " <> display tc
             yield tc
@@ -586,7 +585,7 @@ encodeEdenMessageC
     => ConduitT EdenMessage ByteString m ()
 encodeEdenMessageC = awaitForever $ \du -> do
     let enc = builderBytes (edenMessageBuilder du)
-    logDebug $ "Encoded EDEN: " <> displayShow du <> ":\n" <> display
+    logDebug $ "Encoded EDEN: " <> fromString (ppShow du) <> ":\n" <> display
         (hexdumpBS enc)
     yield enc
 
@@ -597,7 +596,7 @@ encodeEdenMessageC = awaitForever $ \du -> do
             Just rqstID -> do
                 now <- getCurrentTime
                 requestReleased env rqstID now StRSuccess
-            Nothing -> return () 
+            Nothing -> return ()
 
 
 edenMessageParser :: Parser EdenMessage

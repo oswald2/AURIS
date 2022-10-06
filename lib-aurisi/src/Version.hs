@@ -16,8 +16,8 @@ aurisVersion :: Text
 aurisVersion = T.concat ["Version: 0.1.0.0 ", "Branch: ", $(gitBranch), " ", $(gitHash), "\ndirty: ", dirty, "\nCommit Date: ", $(gitCommitDate) ]
 
 dirty :: Text
-dirty | $(gitDirty) = "true"
-      | otherwise = "false"
+dirty = T.pack (show $(gitDirty))
+
 
 aurisVersionString :: String
 aurisVersionString = T.unpack aurisVersion

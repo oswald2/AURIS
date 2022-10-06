@@ -79,6 +79,8 @@ import           Protocol.ProtocolInterfaces
 
 import           General.Hexdump
 
+import           Text.Show.Pretty
+
 
 data RestartVCException = RestartVCException
     deriving Show
@@ -263,7 +265,7 @@ checkFrameCountC = go Nothing
 
                 logDebug
                     $  display ("checkFrameCountC: " :: Text)
-                    <> displayShow frame'
+                    <> fromString (ppShow frame')
 
                 let frame      = frame' ^. tmstFrame
                     !vcfc      = frame ^. tmFrameHdr . tmFrameVCFC

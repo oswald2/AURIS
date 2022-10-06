@@ -17,8 +17,9 @@ module Data.PUS.MissionSpecific.Definitions
     , pmsTMDataFieldHeader
     , pmsTMFrameDataFieldHeader
     , pmsEpoch
-    )
-where
+    , pmsTCDataOffset
+    , pmsTMDataOffset
+    ) where
 
 import           RIO
 
@@ -27,21 +28,31 @@ import           Control.Lens                   ( makeLenses )
 import           Data.PUS.PUSDfh
 import           Data.PUS.TMFrameDfh
 
+import           General.PUSTypes
 import           General.Time
-
 
 -- | A data type to customize for mission specific features. A default
 -- implementation with PUS standard default values is provided
-data PUSMissionSpecific = PUSMissionSpecific {
+data PUSMissionSpecific = PUSMissionSpecific
+    {
     -- | The data field header of a TC. Default is 'PUSTCStdHeader'
-    _pmsTCDataFieldHeader :: DataFieldHeader
+      _pmsTCDataFieldHeader      :: DataFieldHeader
     -- | The data field header for TM packets. Default is 'PUSTMStdHeader'
-    , _pmsTMDataFieldHeader :: DataFieldHeader
+    , _pmsTMDataFieldHeader      :: DataFieldHeader
     -- | Indicates if TM Frames have a standard header and if yes, which one.
     -- Default is Nothing (no DFH for TM Frames)
     , _pmsTMFrameDataFieldHeader :: Maybe TMFrameDataFieldHeader
     -- | The time epoch the mission runs in
-    , _pmsEpoch :: Epoch
-} deriving (Show, Generic)
+    , _pmsEpoch                  :: Epoch
+    }
+    deriving (Show, Generic)
 makeLenses ''PUSMissionSpecific
 
+
+pmsTCDataOffset :: PUSMissionSpecific -> Int
+pmsTCDataOffset pm =
+    pusPrimaryHeaderLen + dfhLength (pm ^. pmsTCDataFieldHeader)
+
+pmsTMDataOffset :: PUSMissionSpecific -> Int
+pmsTMDataOffset pm =
+    pusPrimaryHeaderLen + dfhLength (pm ^. pmsTMDataFieldHeader)

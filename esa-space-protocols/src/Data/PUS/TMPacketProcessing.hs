@@ -99,6 +99,7 @@ packetProcessorC = awaitForever $ \pkt@(ExtractedPacket _oct pusPkt) -> do
     env   <- ask
     model <- getDataModel env
     cfg   <- view getConfig
+    pms   <- view getMissionSpecific
 
     -- first check for verifications 
     when (pusType (pusPkt ^. epDU . pusDfh) == 1) $ do
@@ -123,28 +124,28 @@ packetProcessorC = awaitForever $ \pkt@(ExtractedPacket _oct pusPkt) -> do
             case t of
                 PUSType 1 -> case st of
                     PUSSubType 1 -> do
-                        let def = tmAckPktDef apid (PUSSubType 1)
+                        let def = tmAckPktDef pms apid (PUSSubType 1)
                         createAndYieldPacket key def pkt
                     PUSSubType 2 -> do
-                        let def = tmAckFailPktDef apid (PUSSubType 2)
+                        let def = tmAckFailPktDef pms apid (PUSSubType 2)
                         createAndYieldPacket key def pkt
                     PUSSubType 3 -> do
-                        let def = tmAckPktDef apid (PUSSubType 3)
+                        let def = tmAckPktDef pms apid (PUSSubType 3)
                         createAndYieldPacket key def pkt
                     PUSSubType 4 -> do
-                        let def = tmAckFailPktDef apid (PUSSubType 4)
+                        let def = tmAckFailPktDef pms apid (PUSSubType 4)
                         createAndYieldPacket key def pkt
                     PUSSubType 5 -> do
-                        let def = tmAckPktDef apid (PUSSubType 5)
+                        let def = tmAckPktDef pms apid (PUSSubType 5)
                         createAndYieldPacket key def pkt
                     PUSSubType 6 -> do
-                        let def = tmAckFailPktDef apid (PUSSubType 6)
+                        let def = tmAckFailPktDef pms apid (PUSSubType 6)
                         createAndYieldPacket key def pkt
                     PUSSubType 7 -> do
-                        let def = tmAckPktDef apid (PUSSubType 7)
+                        let def = tmAckPktDef pms apid (PUSSubType 7)
                         createAndYieldPacket key def pkt
                     PUSSubType 8 -> do
-                        let def = tmAckFailPktDef apid (PUSSubType 8)
+                        let def = tmAckFailPktDef pms apid (PUSSubType 8)
                         createAndYieldPacket key def pkt
                     _ -> yieldUnknownPacket cfg pkt
                 _ -> yieldUnknownPacket cfg pkt

@@ -68,7 +68,6 @@ import           Codec.Serialise
 import           Control.Lens                   ( makeLenses )
 
 import           Data.Aeson
-import qualified Data.Text                     as T
 import           Data.Text.Short                ( ShortText )
 import qualified Data.Text.Short               as ST
 

@@ -17,44 +17,44 @@ module Data.PUS.TCPacketEncoder
 
 import           RIO                     hiding ( (.~) )
 
-import           Control.Lens                   ( makeLenses
-                                                , (.~)
+import           Control.Lens                   ( (.~)
+                                                , makeLenses
                                                 )
 
 import           Data.Conduit
 
-import           Data.PUS.TCRequest            
-import           Data.PUS.TCPacket              ( TCPacket
-                                                    ( _tcpAPID
-                                                    , _tcpType
-                                                    , _tcpSubType
-                                                    , _tcpSourceID
-                                                    , _tcpParams
-                                                    )
+import           Data.PUS.MissionSpecific.Definitions
+                                                ( PUSMissionSpecific
+                                                , pmsTCDataFieldHeader
                                                 )
-import           Data.PUS.TCCnc                 ( TCScoe(_tccAPID, _tccParams) )
-import           Data.PUS.PUSPacket             ( PUSPacketType(PUSTC)
-                                                , PUSHeader(PUSHeader)
+import           Data.PUS.PUSDfh                ( DataFieldHeader
+                                                    ( PUSEmptyHeader
+                                                    )
+                                                , dfhAckFlags
+                                                , dfhSourceID
+                                                , dfhTypes
+                                                )
+import           Data.PUS.PUSPacket             ( PUSHeader(PUSHeader)
                                                 , PUSPacket(PUSPacket)
+                                                , PUSPacketType(PUSTC)
+                                                )
+import           Data.PUS.Parameter             ( encodeParameters
+                                                , toSizedParamList
                                                 )
 import           Data.PUS.SegmentationFlags     ( SegmentationFlags
                                                     ( SegmentStandalone
                                                     )
                                                 )
-import           Data.PUS.PUSDfh                ( dfhSourceID
-                                                , dfhTypes
-                                                , dfhAckFlags
-                                                , DataFieldHeader
-                                                    ( PUSEmptyHeader
+import           Data.PUS.TCCnc                 ( TCScoe(_tccAPID, _tccParams) )
+import           Data.PUS.TCPacket              ( TCPacket
+                                                    ( _tcpAPID
+                                                    , _tcpParams
+                                                    , _tcpSourceID
+                                                    , _tcpSubType
+                                                    , _tcpType
                                                     )
                                                 )
-import           Data.PUS.Parameter             ( encodeParameters
-                                                , toSizedParamList
-                                                )
-import           Data.PUS.MissionSpecific.Definitions
-                                                ( pmsTCDataFieldHeader
-                                                , PUSMissionSpecific
-                                                )
+import           Data.PUS.TCRequest
 import           Data.PUS.Verification
 
 import           General.PUSTypes               ( loadRqstID
@@ -63,7 +63,7 @@ import           General.PUSTypes               ( loadRqstID
                                                 )
 import           General.Types                  ( HexBytes(HexBytes) )
 
-
+import           Text.Show.Pretty
 
 data EncodedTCPacket = EncodedTCPacket
     { _encTcPUSContent :: Maybe PUSPacket
@@ -82,10 +82,12 @@ encodeTCPacket pkt verif missionSpecific =
                 .~ (_tcpType pkt, _tcpSubType pkt)
                 &  dfhSourceID
                 .~ _tcpSourceID pkt
-                & dfhAckFlags .~ (isTMAExpected verif
-                                , isTMSExpected verif 
-                                , isTMPExpected verif 
-                                , isTMCExpected verif)
+                &  dfhAckFlags
+                .~ ( isTMAExpected verif
+                   , isTMSExpected verif
+                   , isTMPExpected verif
+                   , isTMCExpected verif
+                   )
         payload = encodeParameters (toSizedParamList (_tcpParams pkt))
     in  PUSPacket hdr dfh Nothing (HexBytes payload) True
 
@@ -121,12 +123,13 @@ tcPktEncoderC missionSpecific = do
                     newRqstID = nextRqstID rqstID
                 case newRqst ^. tcReqPayload of
                     TCCommand {..} -> do
-                        logDebug $ "TC Packet: " <> displayShow _tcReqPacket
-                        let
-                            enc = encodeTCPacket _tcReqPacket
-                                                 (newRqst ^. tcReqVerifications)
-                                                 missionSpecific
-                        logDebug $ "Encoded TC Packet: " <> displayShow enc
+                        logDebug $ "TC Packet: " <> fromString
+                            (ppShow _tcReqPacket)
+                        let enc = encodeTCPacket
+                                _tcReqPacket
+                                (newRqst ^. tcReqVerifications)
+                                missionSpecific
+                        logDebug $ "Encoded TC Packet: " <> fromString (ppShow enc)
                         yield $ EncodedTCPacket (Just enc) newRqst
                     TCDir{} -> yield $ EncodedTCPacket Nothing newRqst
                     TCScoeCommand {..} -> do

@@ -196,7 +196,7 @@ cncTMHeader enc = PUSCnCTMHeader 0 0 0 (nullCUCTime enc)
 -- | Default TC DFH for the PUS C Standard
 defaultPUSCTCHeader :: DataFieldHeader
 defaultPUSCTCHeader =
-    PUSTCStdHeaderC 2 0 (mkSourceIDC 0) False False False False
+    PUSTCStdHeaderC 0 0 (mkSourceIDC 0) False False False False
 
 
 -- | Default TM DFH for the PUS C Standard 
@@ -365,7 +365,7 @@ pusPktTime _                               = Nothing
 dfhLength :: DataFieldHeader -> Int
 dfhLength PUSEmptyHeader                  = 0
 dfhLength PUSTCStdHeader{}                = 4
-dfhLength PUSTCStdHeaderC{}               = 6
+dfhLength PUSTCStdHeaderC{}               = 5
 dfhLength PUSTMStdHeader{}                = 10
 dfhLength PUSTMStdHeaderC{}               = 14
 dfhLength PUSCnCTCHeader{}                = 4
@@ -402,7 +402,7 @@ dfhBuilder PUSTCStdHeaderC {..} =
             <> pusTypeBuilder _stdCType
             <> pusSubTypeBuilder _stdCSubType
             <> sourceIDCBuilder _stdCSrcID
-            <> word8 0
+            -- <> word8 0
 
 
 dfhBuilder x@PUSTMStdHeader{} =
@@ -473,7 +473,7 @@ dfhParser PUSTCStdHeaderC{} = do
     t  <- pusTypeParser
     st <- pusSubTypeParser
     si <- sourceIDCParser
-    void $ A.anyWord8 -- skip the spare byte 
+    -- void $ A.anyWord8 -- skip the spare byte 
 
     let fa  = b1 .&. 0x01 /= 0
         fs  = b1 .&. 0x02 /= 0

@@ -6,6 +6,7 @@
     "aurisTheme": "ThemeLight",
     "aurisPusConfig": {
         "cfgNDIU": [],
+        "cfgMission": "MissionPUSC",
         "cfgCnC": [
         ],
         "cfgUnknownSPID": 5071,

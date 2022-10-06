@@ -219,6 +219,7 @@ library
     , time
     , stm
     , array
+    , pretty-show
 
 
   -- Directories containing source files.

@@ -73,7 +73,7 @@ runFCLTU peerID cltuCfg sii queue sle fcltu = do
         logInfo $ "Initiating FCLTU BIND for " <> display sii
         bindRes <- liftIO $ fcltuBind
             sle
-            fcltu 
+            fcltu
             (cfgSleCltuPeerID cltuCfg)
             (cfgSleCltuPort cltuCfg)
             peerID
@@ -135,7 +135,7 @@ runFCLTU peerID cltuCfg sii queue sle fcltu = do
         pure Bound
 
     processCmd Active FcltuStop = do
-        res <- liftIO $ fcltuStop sle fcltu 
+        res <- liftIO $ fcltuStop sle fcltu
         case res of
             Just err -> do
                 logError $ "SLE FCLTU STOP: " <> display err
@@ -148,35 +148,39 @@ runFCLTU peerID cltuCfg sii queue sle fcltu = do
     processCmd state cmd = do
         logWarn
             $  "SLE: Illegal CMD "
-            <> displayShow cmd
+            <> fromString (ppShow cmd)
             <> " in state "
-            <> displayShow state
+            <> fromString (ppShow state)
         pure state
 
 
 
 
-cltuSendC :: (MonadIO m) => SLE -> FCLTU -> ResumeSignal -> ConduitT EncodedCLTU Void m ()
+cltuSendC
+    :: (MonadIO m)
+    => SLE
+    -> FCLTU
+    -> ResumeSignal
+    -> ConduitT EncodedCLTU Void m ()
 cltuSendC sle fcltu signal = go (CLTUID 0)
   where
     go :: (MonadIO m) => CLTUID -> ConduitT EncodedCLTU Void m ()
     go cltuID = do
         awaitForever $ \(EncodedCLTU cltu _rqst) -> do
-            res <- liftIO
-                $   sendCLTU sle
-                             fcltu 
-                             cltuID
-                             Nothing  -- no earliest prod time 
-                             Nothing  -- no latest prod time 
-                             0        -- no delay 
-                             SleSnProduceNotification
-                             cltu
-            case res of 
+            res <- liftIO $ sendCLTU sle
+                                     fcltu
+                                     cltuID
+                                     Nothing  -- no earliest prod time 
+                                     Nothing  -- no latest prod time 
+                                     0        -- no delay 
+                                     SleSnProduceNotification
+                                     cltu
+            case res of
                 SleOK    -> go (cltuID + 1)
                 SleError -> do
                     void $ liftIO $ cltuPeerAbort
                         sle
-                        fcltu 
+                        fcltu
                         SlePADCommunicationsFailure
                 SleSuspend -> do
                     waitResume signal

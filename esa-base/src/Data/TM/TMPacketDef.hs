@@ -113,6 +113,8 @@ import           General.Time
 import           General.TimeSpan
 import           General.TextTools
 
+import           Data.PUS.MissionSpecific.Definitions
+
 import           Data.TM.TMParameterDef
 import           Data.TM.PIVals
 
@@ -214,6 +216,16 @@ simpleParamLocation name byteOffset param =
   TMParamLocation {
           _tmplName = name
           , _tmplOffset = mkOffset (ByteOffset byteOffset) (BitOffset 0)
+          , _tmplTime = nullTime 
+          , _tmplSuperComm = Nothing
+          , _tmplParam = param
+    }
+
+paramLocation :: ShortText -> Int -> Int -> TMParameterDef -> TMParamLocation 
+paramLocation name byteOffset bitOffset param = 
+  TMParamLocation {
+          _tmplName = name
+          , _tmplOffset = mkOffset (ByteOffset byteOffset) (BitOffset bitOffset)
           , _tmplTime = nullTime 
           , _tmplSuperComm = Nothing
           , _tmplParam = param
@@ -531,8 +543,9 @@ fixedTMPacketDefs = [
 
   ]
 
-tmAckPktDef :: APID -> PUSSubType -> TMPacketDef
-tmAckPktDef apid subType@(PUSSubType st) = 
+tmAckPktDef :: PUSMissionSpecific -> APID -> PUSSubType -> TMPacketDef
+tmAckPktDef pms apid subType@(PUSSubType st) = 
+  let offset = pmsTMDataOffset pms in
   TMPacketDef {
     _tmpdSPID = SPID 5075
     , _tmpdName = "TM_1_" <> ST.pack (show st)
@@ -549,13 +562,39 @@ tmAckPktDef apid subType@(PUSSubType st) =
     , _tmpdCheck = False
     , _tmpdEvent = PIDNo
     , _tmpdParams = TMFixedParams (V.fromList 
-      [ simpleParamLocation "AckPktID" 16 (uintParamDef "AckPktID" "Packet ID of the TC" 16)
-        , simpleParamLocation "AckSSC" 18 (uintParamDef "AckSSC" "SSC of the TC" 16)
-      ])
+      -- [ simpleParamLocation "AckPktID" 16 (uintParamDef "AckPktID" "Packet ID of the TC" 16)
+      --   , simpleParamLocation "AckSSC" 18 (uintParamDef "AckSSC" "SSC of the TC" 16)
+      -- ])
+      [ versionP offset, packeTTypeP offset, dfhFlagP offset, apidP offset, seqFlagsP offset, sscP offset, restP offset] )
     }
 
-tmAckFailPktDef :: APID -> PUSSubType -> TMPacketDef
-tmAckFailPktDef apid subType@(PUSSubType st) = 
+versionP :: Int -> TMParamLocation
+versionP offset = paramLocation "Version" offset 0 (uintParamDef "Version" "Version" 3)
+
+packeTTypeP :: Int -> TMParamLocation
+packeTTypeP offset = paramLocation "Type" offset 3 (uintParamDef "Type" "Type" 1)
+
+dfhFlagP :: Int -> TMParamLocation
+dfhFlagP offset = paramLocation "DFH Flag" offset 4 (uintParamDef "DFH" "DFH" 1)
+
+apidP :: Int -> TMParamLocation
+apidP offset = paramLocation "APID" offset 5 (uintParamDef "APID" "APID" 11)
+
+seqFlagsP :: Int -> TMParamLocation
+seqFlagsP offset = paramLocation "SeqFlags" (offset + 2) 0 (uintParamDef "SeqFlags" "SeqFlags" 2)
+
+sscP :: Int -> TMParamLocation
+sscP offset = paramLocation "SSC" (offset + 2) 2 (uintParamDef "SSC" "SSC" 14)
+
+restP :: Int -> TMParamLocation
+restP offset = simpleParamLocation "Rest" (offset + 4) (octetParamDef "Rest" "Rest")
+
+
+
+
+tmAckFailPktDef :: PUSMissionSpecific -> APID -> PUSSubType -> TMPacketDef
+tmAckFailPktDef pms apid subType@(PUSSubType st) = 
+  let offset = pmsTMDataOffset pms in
   TMPacketDef {
       _tmpdSPID = SPID 5076
       , _tmpdName = "TM_1_" <> ST.pack (show st)
@@ -572,10 +611,12 @@ tmAckFailPktDef apid subType@(PUSSubType st) =
       , _tmpdCheck = False
       , _tmpdEvent = PIDNo
       , _tmpdParams = TMFixedParams (V.fromList 
-        [ simpleParamLocation "AckPktID" 16 (uintParamDef "AckPktID" "Packet ID of the TC" 16)
-          , simpleParamLocation "AckSSC" 18 (uintParamDef "AckSSC" "SSC of the TC" 16)
-          , simpleParamLocation "AckERR" 20 (uintParamDef "AckERR" "Error Code for Acknowledge" 16)
-        ])
+        -- [ simpleParamLocation "AckPktID" 16 (uintParamDef "AckPktID" "Packet ID of the TC" 16)
+        --   , simpleParamLocation "AckSSC" 18 (uintParamDef "AckSSC" "SSC of the TC" 16)
+        --   , simpleParamLocation "AckERR" 20 (uintParamDef "AckERR" "Error Code for Acknowledge" 16)
+        -- ])
+      [ versionP offset, packeTTypeP offset, dfhFlagP offset, apidP offset, 
+        seqFlagsP offset, sscP offset, restP offset] )
     }
 
 

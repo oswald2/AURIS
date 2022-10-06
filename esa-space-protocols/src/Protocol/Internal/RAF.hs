@@ -23,8 +23,8 @@ data RafState =
     | Active
     deriving (Show)
 
-rafToIF :: RAF -> ProtocolInterface 
-rafToIF raf = IfSle (SleRAFIf (rafToWord8 raf)) 
+rafToIF :: RAF -> ProtocolInterface
+rafToIF raf = IfSle (SleRAFIf (rafToWord8 raf))
 
 
 runRAF
@@ -34,17 +34,17 @@ runRAF
     -> SleSII
     -> TBQueue SleCmd
     -> SLE
-    -> RAF 
+    -> RAF
     -> m (Maybe Text)
 runRAF peerID rafCfg sii queue sle raf = do
     raiseEvent (EVSLE (EVSLERafInitialised sii (rafToIF raf)))
 
     loop Init
-    
+
     pure Nothing
 
   where
-    protIF = rafToIF raf 
+    protIF = rafToIF raf
 
     loop state = do
         cmd   <- atomically $ readTBQueue queue
@@ -56,7 +56,7 @@ runRAF peerID rafCfg sii queue sle raf = do
     processCmd state Terminate = do
         case state of
             Active -> do
-                res <- liftIO $ rafStop sle raf 
+                res <- liftIO $ rafStop sle raf
                 forM_ res $ \err -> logError $ "SLE STOP: " <> display err
                 res1 <- liftIO $ rafUnbind sle raf SleUBREnd
                 forM_ res1 $ \err -> logError $ "SLE UNBIND: " <> display err
@@ -66,10 +66,10 @@ runRAF peerID rafCfg sii queue sle raf = do
             _ -> pure ()
         pure Terminated
 
-    processCmd Init RafBind = do 
-        logInfo $ "Initiating BIND for " <> display sii 
+    processCmd Init RafBind = do
+        logInfo $ "Initiating BIND for " <> display sii
         bindRes <- liftIO $ rafBind sle
-                                    raf 
+                                    raf
                                     (cfgSleRafPeerID rafCfg)
                                     (cfgSleRafPort rafCfg)
                                     peerID
@@ -81,15 +81,15 @@ runRAF peerID rafCfg sii queue sle raf = do
                     <> display sii
                     <> ": "
                     <> display err
-            Nothing -> pure () 
-        pure Init 
+            Nothing -> pure ()
+        pure Init
 
 
     processCmd Init (RafBindSuccess sii2) = do
         logInfo $ "BIND SUCCEEDED for" <> display sii2
         raiseEvent (EVSLE (EVSLERafBind sii protIF))
         pure Bound
-    
+
     processCmd Init (RafBindError sii2 diag) = do
         logError
             $  "BIND for "
@@ -100,22 +100,22 @@ runRAF peerID rafCfg sii queue sle raf = do
 
     processCmd _ (PeerAbort sii2 _diag _originator) = do
         raiseEvent (EVSLE (EVSLERafInitialised sii2 protIF))
-        pure Init 
+        pure Init
 
     processCmd Bound RafUnbind = do
         res <- liftIO $ rafUnbind sle raf SleUBROtherReason
-        case res of 
-            Just err -> do 
+        case res of
+            Just err -> do
                 logError $ "SLE UNBIND: " <> display err
-                pure Bound 
-            Nothing -> do 
+                pure Bound
+            Nothing -> do
                 raiseEvent (EVSLE (EVSLERafUnbind sii protIF))
                 pure Init
 
-    processCmd Bound RafStart = do 
+    processCmd Bound RafStart = do
         res <- liftIO $ rafStart sle raf Nothing Nothing SleRafAllFrames
         forM_ res $ \err -> logError $ "SLE START: " <> display err
-        pure Bound 
+        pure Bound
 
     processCmd Bound (RafStartSuccess sii2) = do
         logInfo $ "START SUCCEEDED for" <> display sii2
@@ -131,12 +131,12 @@ runRAF peerID rafCfg sii queue sle raf = do
         pure Bound
 
     processCmd Active RafStop = do
-        res <- liftIO $ rafStop sle raf 
-        case res of 
-            Just err -> do 
+        res <- liftIO $ rafStop sle raf
+        case res of
+            Just err -> do
                 logError $ "SLE STOP: " <> display err
-                pure Active 
-            Nothing -> do 
+                pure Active
+            Nothing -> do
                 raiseEvent (EVSLE (EVSLERafStop sii protIF))
                 pure Bound
 
@@ -144,9 +144,9 @@ runRAF peerID rafCfg sii queue sle raf = do
     processCmd state cmd = do
         logWarn
             $  "SLE: Illegal CMD "
-            <> displayShow cmd
+            <> fromString (ppShow cmd)
             <> " in state "
-            <> displayShow state
+            <> fromString (ppShow state)
         pure state
 
 
