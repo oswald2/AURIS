@@ -63,6 +63,18 @@ instance MongoDbConversion DataFieldHeader Document where
                  , "time" =: timeToMicro _stdCTmOBTime
                  ]
         ]
+    toDB CO2MTMHeader {..} =
+        [ "secHeader"
+              =: [ "hdrType" =: String "CO2M"
+                 , "timeRef" =: _co2mTmTimeRef
+                 , "version" =: _co2mTmVersion
+                 , "type" =: _co2mTmType
+                 , "subtype" =: _co2mTmSubType
+                 , "messageCount" =: _co2mTmMessageCount
+                 , "destinationID" =: _co2mTmDestinationID
+                 , "time" =: timeToMicro _co2mTmOBTime
+                 ]
+        ]
     toDB PUSCnCTCHeader {..} =
         [ "secHeader"
               =: [ "hdrType" =: String "CNC_TC"

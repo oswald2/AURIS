@@ -69,6 +69,7 @@ library
         Data.PUS.MissionSpecific.Default
         Data.PUS.MissionSpecific.MissionSpecific
         Data.PUS.MissionSpecific.PUSC
+        Data.PUS.MissionSpecific.CO2M
         Data.PUS.EventHandler
         Data.PUS.TCGeneration
         Protocol.NCTRS

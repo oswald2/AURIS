@@ -391,7 +391,9 @@ getTimeStamp epu = do
 
     case pusPktTime (epu ^. epDU . pusDfh) of
         Just time -> do
-            let sunTime = cucTimeToSunTime epoch time
+            let sunTime = case time of
+                    CUC cuc -> cucTimeToSunTime epoch cuc
+                    CDS cds -> cdsTimeToSunTime epoch cds
             t <- correlateTMTime sunTime (epu ^. epERT)
             return (t, epoch)
         Nothing -> do

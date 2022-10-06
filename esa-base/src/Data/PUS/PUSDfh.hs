@@ -72,12 +72,20 @@ module Data.PUS.PUSDfh
     , cncTcSubType
     , cncTcSourceID
     , cncTime
+    , co2mTmVersion
+    , co2mTmTimeRef
+    , co2mTmType
+    , co2mTmSubType
+    , co2mTmMessageCount
+    , co2mTmDestinationID
+    , co2mTmOBTime
     , defaultTCHeader
     , defaultCnCTCHeader
     , defaultCncTMHeader
     , cncTMHeader
     , defaultPUSCTCHeader
     , defaultPUSCTMHeader
+    , defaultCO2MTMHeader
     , pusSetTypes
     , pusGetTypes
     , dfhTypes
@@ -150,6 +158,15 @@ data DataFieldHeader =
         , _stdCTmDestinationID :: !SourceIDC
         , _stdCTmOBTime :: !CUCTime
     }
+    | CO2MTMHeader {
+          _co2mTmVersion :: !Word8
+        , _co2mTmTimeRef :: !Word8
+        , _co2mTmType :: !PUSType
+        , _co2mTmSubType :: !PUSSubType
+        , _co2mTmMessageCount :: !Word16
+        , _co2mTmDestinationID :: !SourceIDC
+        , _co2mTmOBTime :: !CDSTime
+    }
     -- | A standard header for the C&C protocol
     | PUSCnCTCHeader {
         _cncTcCrcFlags :: !Word8
@@ -190,7 +207,7 @@ defaultCnCTCHeader =
 defaultCncTMHeader :: DataFieldHeader
 defaultCncTMHeader = PUSCnCTMHeader 0 0 0 (nullCUCTime Cuc43)
 
-cncTMHeader :: CucEncoding -> DataFieldHeader 
+cncTMHeader :: CucEncoding -> DataFieldHeader
 cncTMHeader enc = PUSCnCTMHeader 0 0 0 (nullCUCTime enc)
 
 -- | Default TC DFH for the PUS C Standard
@@ -209,6 +226,11 @@ defaultPUSCTMHeader = PUSTMStdHeaderC 2
                                       (mkSourceIDC 0)
                                       (nullCUCTime Cuc42)
 
+-- | Default TM DFH for the CO2M Mission 
+defaultCO2MTMHeader :: DataFieldHeader
+defaultCO2MTMHeader =
+    CO2MTMHeader 2 0 (PUSType 0) (PUSSubType 0) 0 (mkSourceIDC 0) nullCDSTime
+
 
 -- | returns the type of the header
 pusType :: DataFieldHeader -> PUSType
@@ -219,6 +241,7 @@ pusType PUSTMStdHeader {..}  = _stdTmType
 pusType PUSTMStdHeaderC {..} = _stdCTmType
 pusType PUSCnCTCHeader {..}  = _cncTcType
 pusType PUSCnCTMHeader {..}  = _cncTmType
+pusType CO2MTMHeader {..}    = _co2mTmType
 
 -- | returns the sub type of the header
 pusSubType :: DataFieldHeader -> PUSSubType
@@ -229,6 +252,7 @@ pusSubType PUSTMStdHeader {..}  = _stdTmSubType
 pusSubType PUSTMStdHeaderC {..} = _stdCTmSubType
 pusSubType PUSCnCTCHeader {..}  = _cncTcSubType
 pusSubType PUSCnCTMHeader {..}  = _cncTmSubType
+pusSubType CO2MTMHeader {..}    = _co2mTmSubType
 
 -- | returns the source ID of the header
 pusSrcID :: DataFieldHeader -> SrcID
@@ -239,6 +263,7 @@ pusSrcID PUSTMStdHeader {..}  = IsSrcIDA _stdTmDestinationID
 pusSrcID PUSTMStdHeaderC {..} = IsSrcIDC _stdCTmDestinationID
 pusSrcID PUSCnCTCHeader {..}  = IsSrcIDA _cncTcSourceID
 pusSrcID PUSCnCTMHeader {..}  = IsSrcIDA _cncTmSourceID
+pusSrcID CO2MTMHeader {..}    = IsSrcIDC _co2mTmDestinationID
 
 pusSetSrcID :: DataFieldHeader -> SrcID -> DataFieldHeader
 pusSetSrcID PUSEmptyHeader        _  = PUSEmptyHeader
@@ -250,6 +275,8 @@ pusSetSrcID hdr@PUSTMStdHeaderC{} si =
     hdr & stdCTmDestinationID .~ srcIDtoSourceIDC si
 pusSetSrcID hdr@PUSCnCTCHeader{} si = hdr & cncTcSourceID .~ srcIDtoSourceID si
 pusSetSrcID hdr@PUSCnCTMHeader{} si = hdr & cncTmSourceID .~ srcIDtoSourceID si
+pusSetSrcID hdr@CO2MTMHeader{} si =
+    hdr & co2mTmDestinationID .~ srcIDtoSourceIDC si
 
 -- | Lens into the data field header for the 'SourceID'
 dfhSourceID :: Lens' DataFieldHeader SrcID
@@ -265,6 +292,7 @@ pusDestID PUSTMStdHeader {..}  = IsSrcIDA _stdTmDestinationID
 pusDestID PUSTMStdHeaderC {..} = IsSrcIDC _stdCTmDestinationID
 pusDestID PUSCnCTCHeader {..}  = IsSrcIDA _cncTcSourceID
 pusDestID PUSCnCTMHeader {..}  = IsSrcIDA _cncTmSourceID
+pusDestID CO2MTMHeader {..}    = IsSrcIDC _co2mTmDestinationID
 
 
 -- | Lens into the data field header for the type and subtype
@@ -290,6 +318,8 @@ pusSetTypes hdr@PUSCnCTCHeader{} (t, st) =
     hdr & cncTcType .~ t & cncTcSubType .~ st
 pusSetTypes hdr@PUSCnCTMHeader{} (t, st) =
     hdr & cncTmType .~ t & cncTmSubType .~ st
+pusSetTypes hdr@CO2MTMHeader{} (t, st) =
+    hdr & co2mTmType .~ t & co2mTmSubType .~ st
 
 -- | returns the requested verification stages for the TC
 pusAckFlags :: DataFieldHeader -> (Bool, Bool, Bool, Bool)
@@ -306,10 +336,7 @@ pusAckFlags PUSTCStdHeaderC {..} =
     , _stdCFlagProgressExec
     , _stdCFlagExecComp
     )
-pusAckFlags PUSTMStdHeader{}  = (False, False, False, False)
-pusAckFlags PUSTMStdHeaderC{} = (False, False, False, False)
-pusAckFlags PUSCnCTCHeader{}  = (False, False, False, False)
-pusAckFlags PUSCnCTMHeader{}  = (False, False, False, False)
+pusAckFlags _ = (False, False, False, False)
 
 -- | Set the acknowledgement flags for the stages 
 pusSetAckFlags
@@ -317,6 +344,7 @@ pusSetAckFlags
 pusSetAckFlags PUSEmptyHeader        _ = PUSEmptyHeader
 pusSetAckFlags hdr@PUSTMStdHeader{}  _ = hdr
 pusSetAckFlags hdr@PUSTMStdHeaderC{} _ = hdr
+pusSetAckFlags hdr@CO2MTMHeader{}    _ = hdr
 pusSetAckFlags hdr@PUSTCStdHeader{} (ack, start, prog, exec) =
     hdr
         &  stdFlagAcceptance
@@ -355,10 +383,11 @@ dfhAckFlags :: Lens' DataFieldHeader (Bool, Bool, Bool, Bool)
 dfhAckFlags = lens pusAckFlags pusSetAckFlags
 
 
-pusPktTime :: DataFieldHeader -> Maybe CUCTime
-pusPktTime PUSTMStdHeader { _stdTmOBTime = t } = Just t
-pusPktTime PUSTMStdHeaderC { _stdCTmOBTime = t } = Just t
-pusPktTime PUSCnCTMHeader { _cncTime = t } = Just t
+pusPktTime :: DataFieldHeader -> Maybe Timestamp
+pusPktTime PUSTMStdHeader { _stdTmOBTime = t } = Just (CUC t)
+pusPktTime PUSTMStdHeaderC { _stdCTmOBTime = t } = Just (CUC t)
+pusPktTime PUSCnCTMHeader { _cncTime = t } = Just (CUC t)
+pusPktTime CO2MTMHeader { _co2mTmOBTime = t } = Just (CDS t)
 pusPktTime _                               = Nothing
 
 -- | returns the length of the data field header when encoded in bytes
@@ -370,6 +399,7 @@ dfhLength PUSTMStdHeader{}                = 10
 dfhLength PUSTMStdHeaderC{}               = 14
 dfhLength PUSCnCTCHeader{}                = 4
 dfhLength PUSCnCTMHeader { _cncTime = t } = 4 + sizeof t
+dfhLength CO2MTMHeader{}                  = 15
 
 instance SizeOf DataFieldHeader where
     sizeof = dfhLength
@@ -421,6 +451,15 @@ dfhBuilder PUSTMStdHeaderC {..} =
             <> sourceIDCBuilder _stdCTmDestinationID
             <> cucTimeBuilder _stdCTmOBTime
             <> word8 0
+
+dfhBuilder CO2MTMHeader {..} =
+    let v = 0x20 .|. (_co2mTmTimeRef .&. 0x0F)
+    in  word8 v
+            <> pusTypeBuilder _co2mTmType
+            <> pusSubTypeBuilder _co2mTmSubType
+            <> word16BE _co2mTmMessageCount
+            <> sourceIDCBuilder _co2mTmDestinationID
+            <> cdsTimeBuilder _co2mTmOBTime
 
 dfhBuilder x@PUSCnCTCHeader{} =
     word8 (((_cncTcCrcFlags x .&. 0x07) `shiftL` 4) .|. ackFlags)
@@ -513,6 +552,18 @@ dfhParser PUSTMStdHeaderC { _stdCTmOBTime = t } = do
     return
         $! PUSTMStdHeaderC vers' tref (mkPUSType tp) (mkPUSSubType st) mc si obt
 
+dfhParser CO2MTMHeader{} = do
+    vers <- A.anyWord8
+    tp   <- A.anyWord8
+    st   <- A.anyWord8
+    mc   <- A.anyWord16be
+    si   <- sourceIDCParser
+    obt  <- cdsTimeParser
+    let vers' = (vers .&. 0xF0) `shiftR` 4
+        tref  = (vers .&. 0x0F)
+    return $! CO2MTMHeader vers' tref (mkPUSType tp) (mkPUSSubType st) mc si obt
+
+
 dfhParser PUSCnCTCHeader{} = do
     val <- A.anyWord8
     tp  <- A.anyWord8
@@ -534,7 +585,7 @@ dfhParser PUSCnCTCHeader{} = do
                           si
 
 dfhParser PUSCnCTMHeader { _cncTime = t } = do
-    _ <- A.anyWord8
+    _   <- A.anyWord8
     tp  <- A.anyWord8
     st  <- A.anyWord8
     si  <- sourceIDParser

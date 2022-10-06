@@ -2,6 +2,7 @@ module Data.PUS.EncTime
     ( CUCTime(..)
     , CDSTime(..)
     , CucEncoding(..)
+    , Timestamp(..)
     , mkCUCTime
     , mkCUC
     , mkCUC_1
@@ -44,8 +45,8 @@ module Data.PUS.EncTime
 import           RIO                     hiding ( Builder )
 import qualified RIO.Text                      as T
 
-import           ByteString.StrictBuilder
 --import           Control.Lens                   ( from )
+import           ByteString.StrictBuilder
 
 import           Data.Aeson
 import qualified Data.Attoparsec.Binary        as A
@@ -153,6 +154,23 @@ instance ToJSON CDSTime where
     toEncoding = genericToEncoding defaultOptions
 
 
+data Timestamp =
+    CUC !CUCTime
+    | CDS !CDSTime
+    deriving (Eq, Show, Read, Generic)
+
+instance NFData Timestamp
+instance Binary Timestamp
+instance Serialise Timestamp
+instance FromJSON Timestamp
+instance ToJSON Timestamp where
+    toEncoding = genericToEncoding defaultOptions
+
+instance Display Timestamp where
+    display (CUC cuc) = display cuc
+    display (CDS cds) = display cds
+
+
 instance SizeOf CUCTime where
     sizeof (CUCTime Cuc4    _ _ _) = cucEncodingSize Cuc4
     sizeof (CUCTime Cuc41   _ _ _) = cucEncodingSize Cuc41
@@ -165,8 +183,12 @@ instance SizeOf CDSTime where
     sizeof (CDSTime _ _ Nothing ) = 6
 
 
-instance Display CUCTime where 
-    textDisplay x = T.pack (show x)
+instance Display CUCTime where
+    display x = fromString (show x)
+
+instance Display CDSTime where
+    display x = fromString (show x)
+
 
 -- instance Display CUCTime where
 --     textDisplay t'@(CUCTime _ _ _ False) =
@@ -612,6 +634,19 @@ instance TimeRepConversion CUCTime where
         let (sec, mic) = microToTime' val
         in  CUCTime Cuc42 sec (fromIntegral mic) delta
 
+
+instance TimeRepConversion CDSTime where
+    {-# INLINABLE timeToWord64 #-}
+    timeToWord64 t = cdsTimeToMicro t
+    {-# INLINABLE word64ToTime #-}
+    word64ToTime val _delta = microToCdsTime val
+
+    {-# INLINABLE timeToMicro #-}
+    timeToMicro t = cdsTimeToMicro t
+    {-# INLINABLE microToTime #-}
+    microToTime val _delta = microToCdsTime val
+
+
 microToCUC :: CucEncoding -> Int64 -> Bool -> CUCTime
 microToCUC enc val delta =
     let (sec, mic) = microToTime' val
@@ -664,6 +699,30 @@ cdsTimeToEpochTime ep (CDSTime days milli micro) = EpochTime mic False ep
             + (fromIntegral $ (milli `rem` 1000) * 1000 + fromIntegral
                   (fromMaybe 0 micro)
               )
+
+cdsTimeToMicro :: (Integral a) => CDSTime -> a
+cdsTimeToMicro (CDSTime days milli micro) = fromIntegral mic
+  where
+    sec =
+        (fromIntegral days * secsInDay + fromIntegral (milli `quot` 1000))
+            * microSecInt
+    !mic =
+        sec
+            + (fromIntegral $ (milli `rem` 1000) * 1000 + fromIntegral
+                  (fromMaybe 0 micro)
+              )
+
+microToCdsTime :: (Integral a) => a -> CDSTime
+microToCdsTime mic = CDSTime (fromIntegral days)
+                             (fromIntegral milli)
+                             (Just (fromIntegral micro))
+  where
+    (secs  , micro1 ) = mic `quotRem` 1_000_000
+    (days  , secRest) = secs `quotRem` (fromIntegral secsInDay)
+    (milli1, micro  ) = micro1 `quotRem` 1_000
+    milli             = secRest * 1_000 + milli1
+
+
 
 -- | convert a epoch time to a CDS time
 {-# INLINABLE epochTimeToCDSTime #-}
