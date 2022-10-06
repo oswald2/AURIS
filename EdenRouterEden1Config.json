@@ -1,14 +1,13 @@
 {
     "aurisMIB": null,
     "aurisInstance": 0,
-    "aurisMission": "DEFAULT",
+    "aurisMission": "Eden Router CO2M",
     "aurisDbConfig": null,
     "aurisTheme": "ThemeLight",
     "aurisPusConfig": {
         "cfgNDIU": [],
-        "cfgMission": "MissionPUSC",
-        "cfgCnC": [
-        ],
+        "cfgMission": "MissionCO2M",
+        "cfgCnC": [],
         "cfgUnknownSPID": 5071,
         "cfgEpoch": "UnixTime",
         "cfgInterfacePort": 55555,
@@ -29,8 +28,7 @@
             "fromLeaps": 17
         },
         "cfgSCID": 0,
-        "cfgNCTRS": [
-        ],
+        "cfgNCTRS": [],
         "cfgDataBase": {
             "cfgStoreTMFrames": true,
             "cfgDbDebugLog": true,
