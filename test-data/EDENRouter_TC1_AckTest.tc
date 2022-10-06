@@ -30,9 +30,9 @@
                 , _tcSSC = SSC 0
                 , _tcReqPacket =
                     TCPacket
-                      { _tcpAPID = APID 1540
-                      , _tcpType = PUSType 2
-                      , _tcpSubType = PUSSubType 10
+                      { _tcpAPID = APID 1930
+                      , _tcpType = PUSType 8
+                      , _tcpSubType = PUSSubType 1
                       , _tcpSourceID = IsSrcIDA (SourceID 10)
                       , _tcpParams =
                           ExpandedParameterList
