@@ -233,7 +233,7 @@ library
 
   ghc-options: -O0 -g2 -Wall -Wcompat -Widentities -Wincomplete-record-updates
             -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
-            -funbox-strict-fields -freverse-errors
+            -funbox-strict-fields -freverse-errors -fno-full-laziness
 
   if flag(optimize)
         ghc-options: -O2 

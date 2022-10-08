@@ -150,16 +150,16 @@ library
   if flag(llvm)
         ghc-options: -O2 -Wall -Wcompat -Widentities -Wincomplete-record-updates
                      -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
-                     -funbox-strict-fields -freverse-errors -fllvm -optlo-O3
-  else 
+                     -funbox-strict-fields -freverse-errors -fllvm -optlo-O3 -fno-full-laziness
+  else  
     if flag(optimize) 
         ghc-options: -O2 -Wall -Wcompat -Widentities -Wincomplete-record-updates
                      -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
-                     -funbox-strict-fields -freverse-errors 
+                     -funbox-strict-fields -freverse-errors -fno-full-laziness
     else 
         ghc-options: -O0 -g2 -Wall -Wcompat -Widentities -Wincomplete-record-updates
                      -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
-                     -funbox-strict-fields -freverse-errors
+                     -funbox-strict-fields -freverse-errors -fno-full-laziness
 
 
 -- executable time-picker-test
