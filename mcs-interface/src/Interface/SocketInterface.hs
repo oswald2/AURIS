@@ -73,7 +73,7 @@ hasConnection server = isJust <$> readTVarIO (eventChan server)
 -- Returns an 'Interface' which should be added to the available
 -- interfaces
 initSocketInterface
-    :: (MonadIO m, MonadUnliftIO m, MonadReader env m, HasLogFunc env)
+    :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env)
     => Config
     -> InterfaceType
     -> Interface
@@ -102,7 +102,7 @@ localRaiseEvent server ev = atomically $ do
 
 
 initServer
-    :: (MonadIO m, MonadUnliftIO m, MonadReader env m, HasLogFunc env)
+    :: (MonadUnliftIO m, MonadReader env m, HasLogFunc env)
     => InterfaceType
     -> Word16
     -> Server
@@ -153,7 +153,7 @@ parseAction InterfaceJSON = C.filterE (/= _cr) .| CB.lines .| proc
 
 
 readConduit
-    :: (MonadIO m, MonadUnliftIO m, MonadReader env m, HasLogFunc env)
+    :: (MonadIO m, MonadReader env m, HasLogFunc env)
     => InterfaceType
     -> Interface
     -> ConduitT ByteString Action m ()

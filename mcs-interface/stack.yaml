@@ -11,13 +11,13 @@
 # to be used for project dependencies. For example:
 #
 # resolver: lts-3.5
-# resolver: nightly-2022-09-11
+# resolver: nightly-2022-11-03
 # resolver: ghc-7.10.2
 # resolver: ghcjs-0.1.0_ghc-7.10.2
 # resolver:
 #  name: custom-snapshot
 #  location: "./custom-snapshot.yaml"
-resolver: nightly-2022-09-11
+resolver: nightly-2022-11-03
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.

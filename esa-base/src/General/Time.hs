@@ -680,26 +680,19 @@ daysSegmToSecondsRel sign year days hours minutes seconds =
         , s
         )
 
+
+{-# INLINABLE leapDays #-}
+leapDays :: Int -> Int
+leapDays year =
+    let prevYear = year - 1
+    in  prevYear `div` 4 - prevYear `div` 100 + prevYear `div` 400
+
+
 -- | Copy of SCOS function to convert day segmented time into seconds
 {-# INLINABLE daySegmToSeconds #-}
 daySegmToSeconds :: Int -> Int -> Int -> Int -> Int -> Int64
 daySegmToSeconds year days hours minutes seconds =
-    let {-year_leap = if ((year /= 0) && ((year `rem` 4) == 0) &&
-                        (((year `rem` 100) /= 0) || (year `rem` 1000) == 0))
-                    then 1
-                    else 0-}
-        go j leap_years'
-            | j >= year
-            = leap_years'
-            | otherwise
-            = if (j `rem` 4)
-                  == 0
-                  && (((j `rem` 100) /= 0) || ((j `rem` 1000) == 0))
-              then
-                  go (j + 1) (leap_years' + 1)
-              else
-                  go (j + 1) leap_years'
-        leap_years = go 1970 0
+    let leap_years = leapDays year
         day_sec    = if days /= 0
             then fromIntegral (days + leap_years - 1) * secsInDay
             else 0
