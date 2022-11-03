@@ -22,7 +22,7 @@
             }
         ],
         "cfgUnknownSPID": 5071,
-        "cfgEpoch": "UnixTime",
+        "cfgEpoch": "TAITime",
         "cfgInterfacePort": 55555,
         "cfgRandomizerEnabled": false,
         "cfgRandomizerStartValue": 255,
