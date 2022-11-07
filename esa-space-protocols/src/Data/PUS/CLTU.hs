@@ -51,8 +51,6 @@ import           Data.List                     as L
                                                 ( intersperse )
 
 import Data.PUS.Config
-    ( cltuBlockSizeAsWord8,
-      Config(cfgCltuBlockSize, cfgRandomizerStartValue) )
 import Data.PUS.CLTUTable ( cltuTable )
 import Data.PUS.Randomizer ( initialize, randomize, Randomizer )
 import Data.PUS.TCRequest ( TCRequest )
@@ -127,10 +125,31 @@ cltuHeader :: ByteString
 cltuHeader = BS.pack [0xeb, 0x90]
 
 -- | The CLTU trailer
-{-# INLINABLE cltuTrailer #-}
-cltuTrailer :: Int -> ByteString
-cltuTrailer n = BS.replicate n 0x55
+{-# INLINABLE cltuTrailerLegacy #-}
+cltuTrailerLegacy :: Int -> ByteString
+cltuTrailerLegacy len = BS.replicate len 0x55
 
+{-# INLINABLE cltuTrailerDataLegacy #-}
+cltuTrailerDataLegacy :: Int -> ByteString 
+cltuTrailerDataLegacy len = BS.replicate (len - 1) 0x55
+
+{-# INLINABLE cltuTrailerNew #-}
+cltuTrailerNew :: Int -> ByteString
+cltuTrailerNew len = cltuTrailerDataNew len `BS.snoc` 0x79
+
+{-# INLINABLE cltuTrailerDataNew #-}
+cltuTrailerDataNew :: Int -> ByteString 
+cltuTrailerDataNew len = BS.replicate (len - 1) 0xC5
+
+{-# INLINABLE cltuTrailer #-}
+cltuTrailer :: CLTUTrailer -> Int -> ByteString
+cltuTrailer Trailer0x55 len = cltuTrailerLegacy len 
+cltuTrailer Trailer0xC5 len = cltuTrailerNew len 
+
+{-# INLINABLE cltuTrailerData #-}
+cltuTrailerData :: CLTUTrailer -> Int -> ByteString
+cltuTrailerData Trailer0x55 len = cltuTrailerDataLegacy len 
+cltuTrailerData Trailer0xC5 len = cltuTrailerDataNew len 
 
 
 cltuHeaderParser :: Parser ()
@@ -144,13 +163,13 @@ cltuParser cfg = do
     let cbSize  = cltuBlockSizeAsWord8 (cfgCltuBlockSize cfg)
         dataLen = fromIntegral (cbSize - 1)
 
-    void $ A.manyTill (A.word8 0x55) cltuHeaderParser
+    void $ A.manyTill A.anyWord8 cltuHeaderParser
 
-    codeBlocks <- codeBlockParser dataLen
+    codeBlocks <- codeBlockParser cfg dataLen
 
     let proc _ (Left err) = Left err
         proc (bs, parity) (Right cb) =
-            case checkCodeBlockParity cbSize bs parity of
+            case checkCodeBlockParity cfg cbSize bs parity of
                 Left  err       -> Left err
                 Right dataBlock -> Right (dataBlock : cb)
 
@@ -160,19 +179,21 @@ cltuParser cfg = do
         Left  err   -> fail (T.unpack err)
         Right parts -> do
             let
-                bs = builderBytes . mconcat . map bytes $ parts
+                !bs = builderBytes . mconcat . map bytes $ parts
             pure (CLTU bs)
 
 
 
 
-codeBlockParser :: Int -> Parser [(BS.ByteString, Word8)]
-codeBlockParser dataLen = go []
+codeBlockParser :: Config -> Int -> Parser [(BS.ByteString, Word8)]
+codeBlockParser cfg dataLen = go []
   where
-    go acc = do
+    !trailer = cltuTrailer (cfgCLTUTrailer cfg) (dataLen + 1)
+    
+    go !acc = do
         dat    <- A.take dataLen
         parity <- A.anyWord8
-        if BS.all (== 0x55) dat
+        if dat == trailer
             then pure (reverse acc)
             else go ((dat, parity) : acc)
 
@@ -187,11 +208,11 @@ cltuRandomizedParser cfg = do
 
     void $ A.manyTill (A.word8 0x55) cltuHeaderParser
 
-    codeBlocks <- codeBlockParser dataLen
+    codeBlocks <- codeBlockParser cfg dataLen
 
     let proc []             acc = pure (Right (reverse acc))
         proc (block : rest) acc = do
-            chk <- checkCodeBlockRandomizedParity cbSize block
+            chk <- checkCodeBlockRandomizedParity cfg cbSize block
             case chk of
                 Left  err       -> pure (Left err)
                 Right dataBlock -> proc rest (dataBlock : acc)
@@ -200,7 +221,7 @@ cltuRandomizedParser cfg = do
         Left  err   -> fail (T.unpack err)
         Right parts -> do
             let
-                bs = builderBytes . mconcat . map bytes $ parts 
+                !bs = builderBytes . mconcat . map bytes $ parts 
             pure (CLTU bs)
 
 
@@ -265,7 +286,7 @@ encodeGeneric
 encodeGeneric cfg (CLTU pl) encoder = builderBytes $ mconcat [bytes cltuHeader, encodedFrame, trailer]
   where
     encodedFrame = encoder cfg pl
-    trailer      = bytes $ cltuTrailer
+    trailer      = bytes $ cltuTrailer (cfgCLTUTrailer cfg)
         (fromIntegral (cltuBlockSizeAsWord8 (cfgCltuBlockSize cfg)))
 
 
@@ -283,7 +304,7 @@ encodeCodeBlocks cfg pl =
         padRight bs =
                 let len = BS.length bs
                 in  if len < cbSize
-                        then BS.append bs (cltuTrailer (cbSize - len))
+                        then BS.append bs (cltuTrailer (cfgCLTUTrailer cfg) (cbSize - len))
                         else bs
     in  mconcat $ map (encodeCodeBlock . padRight) blocks
 
@@ -301,7 +322,7 @@ encodeCodeBlocksRandomized cfg pl =
         padRight bs =
             let len = BS.length bs
             in  if len < cbSize
-                    then BS.append bs (cltuTrailer (cbSize - len))
+                    then BS.append bs (cltuTrailer (cfgCLTUTrailer cfg) (cbSize - len))
                     else bs
 
         builderBlocks =
@@ -349,11 +370,12 @@ cltuParity !block =
 -- | Checks a code block. First, it checks the length against the @expectedLen,
 -- then checks the @parity. Returns either an error message or the data block without
 -- the parity byte
-checkCodeBlockParity :: Word8 -> ByteString -> Word8 -> Either Text ByteString
-checkCodeBlockParity expectedLen checkBlock parity =
+checkCodeBlockParity :: Config -> Word8 -> ByteString -> Word8 -> Either Text ByteString
+checkCodeBlockParity cfg expectedLen checkBlock parity =
     let
-        len              = BS.length checkBlock + 1
-        calculatedParity = cltuParity checkBlock
+        !len              = BS.length checkBlock + 1
+        !calculatedParity = cltuParity checkBlock
+        !trailer          = cltuTrailerData (cfgCLTUTrailer cfg) len
     in
         if fromIntegral expectedLen /= len
             then Left $ TS.toText
@@ -366,11 +388,11 @@ checkCodeBlockParity expectedLen checkBlock parity =
             else if calculatedParity == parity
                 then
                     Right
-                        (if BS.all (== 0x55) checkBlock
+                        (if checkBlock == trailer
                             then BS.empty
                             else checkBlock
                         )
-                else if BS.all (== 0x55) checkBlock
+                else if checkBlock == trailer
                     then Right BS.empty
                     else Left $ TS.toText
                         (  TS.fromText
@@ -386,10 +408,11 @@ checkCodeBlockParity expectedLen checkBlock parity =
 -- then checks the @parity. Returns either an error message or the d-randomized data block without
 -- the parity byte.
 checkCodeBlockRandomizedParity
-    :: Word8 -> (ByteString, Word8) -> State Randomizer (Either Text ByteString)
-checkCodeBlockRandomizedParity expectedLen (checkBlock, parity) = do
+    :: Config -> Word8 -> (ByteString, Word8) -> State Randomizer (Either Text ByteString)
+checkCodeBlockRandomizedParity cfg expectedLen (checkBlock, parity) = do
     let len               = BS.length checkBlock + 1
         !calculatedParity = cltuParity checkBlock
+        !trailer          = cltuTrailerData (cfgCLTUTrailer cfg) len
 
     if fromIntegral expectedLen /= len
         then pure . Left $ TS.toText
@@ -402,7 +425,7 @@ checkCodeBlockRandomizedParity expectedLen (checkBlock, parity) = do
             then do
                 res <- randomize False checkBlock
                 pure (Right res)
-            else if BS.all (== 0x55) checkBlock
+            else if checkBlock == trailer
                 then pure (Right BS.empty)
                 else pure . Left $ TS.toText
                     (  TS.fromText

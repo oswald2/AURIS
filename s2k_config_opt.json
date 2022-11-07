@@ -67,6 +67,7 @@
             }
         ],
         "cfgCltuBlockSize": "CltuBS_8",
+        "cfgCLTUTrailer": "Trailer0xC5",
         "cfgEDEN": [
             {
                 "cfgEdenID": 1,

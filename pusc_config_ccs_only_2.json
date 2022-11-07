@@ -59,6 +59,7 @@
         },
         "cfgNCTRS": [],
         "cfgCltuBlockSize": "CltuBS_8",
+        "cfgCLTUTrailer": "Trailer0xC5",
         "cfgEDEN": [],
         "cfgStoreTMFrames": true,
         "cfgStorePUSPackets": true,

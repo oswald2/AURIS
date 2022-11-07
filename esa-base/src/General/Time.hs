@@ -688,11 +688,16 @@ leapDays year =
     in  prevYear `div` 4 - prevYear `div` 100 + prevYear `div` 400
 
 
+{-# INLINABLE leapDays1970 #-}
+leapDays1970 :: Int
+leapDays1970 = leapDays 1970
+
+
 -- | Copy of SCOS function to convert day segmented time into seconds
 {-# INLINABLE daySegmToSeconds #-}
 daySegmToSeconds :: Int -> Int -> Int -> Int -> Int -> Int64
 daySegmToSeconds year days hours minutes seconds =
-    let leap_years = leapDays year
+    let leap_years = leapDays year - leapDays1970
         day_sec    = if days /= 0
             then fromIntegral (days + leap_years - 1) * secsInDay
             else 0
@@ -705,8 +710,7 @@ daySegmToSeconds year days hours minutes seconds =
                 + fromIntegral minutes
                 * 60
                 + fromIntegral seconds
-    in
-        temp_sec'
+    in  temp_sec'
 
 -- | Add two 'SunTime'
 {-# INLINABLE (<+>) #-}
