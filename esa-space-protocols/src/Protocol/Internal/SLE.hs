@@ -31,6 +31,8 @@ import           Protocol.Internal.SLETypes
 import           Protocol.ProtocolInterfaces
 import           Protocol.ProtocolSLE
 
+import           Text.Show.Pretty
+
 
 startSLE
     :: ( MonadUnliftIO m
@@ -58,8 +60,13 @@ startSLE sleCfg vcMap cmdQueue = do
         (SeConfigFile (cfgSleSeConfig sleCfg))
         (ProxyConfigFile (cfgSleProxyConfig sleCfg))
         cbs
-        (\sle -> race_ (processing sleCfg queues' sle) (commandThread queues))
+        (sleUser queues' queues)
   where
+    sleUser queues' queues sle = do 
+        liftIO $ interfaceTraceLevel sle SleTraceFull
+        race_ (processing sleCfg queues' sle) (commandThread queues)
+
+
     createQueue sii = do
         q <- liftIO $ newTBQueueIO 100
         pure (sii, q)

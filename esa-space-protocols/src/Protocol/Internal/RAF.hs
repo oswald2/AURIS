@@ -16,6 +16,8 @@ import           SLE.Types
 import           Protocol.Internal.SLETypes
 import           Protocol.ProtocolInterfaces
 
+import           Text.Show.Pretty
+
 data RafState =
     Terminated
     | Init
