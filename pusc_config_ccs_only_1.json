@@ -12,11 +12,20 @@
         "cfgNDIU": [],
         "cfgCnC": [
             {
-                "cfgCncPortTM": 11001,
+                "cfgCncPortTM": 11000,
                 "cfgCncHost": "localhost",
-                "cfgCncPortTC": 10001,
-                "cfgCncName": "C&amp;C HKTM",
+                "cfgCncPortTC": 10000,
+                "cfgCncName": "RED C&amp;C HKTM",
                 "cfgCncID": 1,
+                "cfgCncCucTime": "Cuc43",
+                "cfgCncHasCRC": "HasCRC"
+            },
+            {
+                "cfgCncPortTM": 11002,
+                "cfgCncHost": "localhost",
+                "cfgCncPortTC": 10002,
+                "cfgCncName": "BLACK C&amp;C HKTM",
+                "cfgCncID": 2,
                 "cfgCncCucTime": "Cuc43",
                 "cfgCncHasCRC": "HasCRC"
             }
