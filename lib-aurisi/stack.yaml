@@ -1,5 +1,5 @@
 flags: {}
-resolver: nightly-2022-11-03
+resolver: lts-20.2
 extra-deps:
 - attoparsec-data-1.0.4.1
 - hw-prim-bits-0.1.0.4
