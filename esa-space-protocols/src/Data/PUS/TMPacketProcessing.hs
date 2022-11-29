@@ -46,6 +46,7 @@ import           Data.PUS.PUSDfh
 import           Data.PUS.PUSPacket
 import           Data.PUS.PUSState
 import           Data.PUS.TMPacket
+import           Data.PUS.Value
 import           Data.PUS.Verification
 
 import           General.GetBitField
@@ -888,7 +889,11 @@ extractParamValue epoch oct offset par =
                 Nothing -> TMValString "UNDEFINED"
     readString off Nothing =
         let val = B.drop (unByteOffset (toByteOffset off)) oct
-        in  case ST.fromByteString val of
+            len = case getAlignedValue val (ByteOffset 0) (ValUInt16 BiE 0) of
+                        Just (ValUInt16 _ strLen) -> strLen
+                        _                         -> 0
+            val2 = B.take (fromIntegral len) . B.drop 2 $ val
+        in  case ST.fromByteString val2 of
                 Just x  -> TMValString x
                 Nothing -> TMValString "UNDEFINED"
 
