@@ -41,6 +41,7 @@ module Data.PUS.PUSDfh
     , stdFlagProgressExec
     , stdFlagExecComp
     , dfhParser
+    , dfhCncParser
     , dfhBuilder
     , pusType
     , pusSubType
@@ -106,6 +107,7 @@ import           Data.Aeson
 import qualified Data.Attoparsec.Binary        as A
 import           Data.Attoparsec.ByteString     ( Parser )
 import qualified Data.Attoparsec.ByteString    as A
+import qualified Data.Attoparsec.Combinator    as A
 import           Data.Bits
 
 import           Codec.Serialise
@@ -591,3 +593,16 @@ dfhParser PUSCnCTMHeader { _cncTime = t } = do
     si  <- sourceIDParser
     obt <- cucTimeParser t
     return $! PUSCnCTMHeader (mkPUSType tp) (mkPUSSubType st) si obt
+
+
+
+dfhCncParser :: PUSPacketType -> DataFieldHeader -> Parser DataFieldHeader
+dfhCncParser pktType dfh = do
+    (_, tp, st) <- A.lookAhead $ do
+        (,,) <$> A.anyWord8 <*> A.anyWord8 <*> A.anyWord8
+    if
+        | tp == 1 && (st == 129 || st == 130) -> do
+            case pktType of
+                PUSTM -> dfhParser defaultCncTMHeader
+                PUSTC -> dfhParser defaultCnCTCHeader
+        | otherwise -> dfhParser dfh

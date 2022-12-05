@@ -226,7 +226,8 @@ islBuilder isl =
             (islData isl)
 
 
-
+-- | Parsed a PUS Packet and returns the parsed packet as well as a boolean
+-- specifying if this was an ISL packet (True) or not (False).
 islPacketParser
     :: PUSMissionSpecific
     -> CucEncoding
