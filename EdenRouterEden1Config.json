@@ -6,8 +6,7 @@
     "aurisTheme": "ThemeLight",
     "aurisPusConfig": {
         "cfgNDIU": [],
-        "cfgCnC": [
-        ],
+        "cfgCnC": [],
         "cfgUnknownSPID": 5071,
         "cfgEpoch": "UnixTime",
         "cfgInterfacePort": 55555,
@@ -28,8 +27,8 @@
             "fromLeaps": 17
         },
         "cfgSCID": 0,
-        "cfgNCTRS": [
-        ],
+        "cfgMission": "MissionCO2M",
+        "cfgNCTRS": [],
         "cfgDataBase": {
             "cfgStoreTMFrames": true,
             "cfgDbDebugLog": true,
@@ -38,6 +37,7 @@
             }
         },
         "cfgMaxTMFrameLen": 1115,
+        "cfgCLTUTrailer": "Trailer0xC5",
         "cfgCltuBlockSize": "CltuBS_8",
         "cfgEDEN": [
             {

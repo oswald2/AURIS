@@ -10,6 +10,7 @@
     "aurisMIB": null,
     "aurisMission": "DEFAULT",
     "aurisPusConfig": {
+        "cfgCLTUTrailer": "Trailer0xC5",
         "cfgCltuBlockSize": "CltuBS_8",
         "cfgCnC": [
             {
