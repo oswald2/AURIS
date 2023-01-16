@@ -53,6 +53,7 @@
             }
         ],
         "cfgCltuBlockSize": "CltuBS_8",
+        "cfgCLTUTrailer": "Trailer0xC5",
         "cfgStorePUSPackets": true,
         "cfgEDEN": [
             {

@@ -31,6 +31,8 @@ import           Protocol.Internal.SLETypes
 import           Protocol.ProtocolInterfaces
 import           Protocol.ProtocolSLE
 
+import           Text.Show.Pretty
+
 
 startSLE
     :: ( MonadUnliftIO m
@@ -45,8 +47,11 @@ startSLE
     -> m ()
 startSLE sleCfg vcMap cmdQueue = do
     state   <- ask
-    queues' <- traverse (createQueue . SleSII . sleInstanceCfgSII . cfgSleInstanceConfig)
-        $ cfgSleInstances sleCfg
+    queues' <-
+        traverse
+                (createQueue . SleSII . sleInstanceCfgSII . cfgSleInstanceConfig
+                )
+            $ cfgSleInstances sleCfg
 
     let cbs    = callbacks state vcMap queues
         queues = HM.fromList queues'
@@ -55,8 +60,13 @@ startSLE sleCfg vcMap cmdQueue = do
         (SeConfigFile (cfgSleSeConfig sleCfg))
         (ProxyConfigFile (cfgSleProxyConfig sleCfg))
         cbs
-        (\sle -> race_ (processing sleCfg queues' sle) (commandThread queues))
+        (sleUser queues' queues)
   where
+    sleUser queues' queues sle = do 
+        liftIO $ interfaceTraceLevel sle SleTraceFull
+        race_ (processing sleCfg queues' sle) (commandThread queues)
+
+
     createQueue sii = do
         q <- liftIO $ newTBQueueIO 100
         pure (sii, q)
@@ -110,56 +120,63 @@ startInstance
     -> SLEInstance
     -> (SleSII, TBQueue SleCmd)
     -> m ()
-startInstance sle peerID (SLEInstance { cfgSleInstanceNr = rafN, cfgSleInstanceConfig = SLEInstRAF rafCfg}) (_sii, queue) = do
-    let version      = convVersion (cfgSleRafVersion rafCfg)
-        sii          = SleSII (cfgSleRafSII rafCfg)
+startInstance sle peerID (SLEInstance { cfgSleInstanceNr = rafN, cfgSleInstanceConfig = SLEInstRAF rafCfg }) (_sii, queue)
+    = do
+        let version = convVersion (cfgSleRafVersion rafCfg)
+            sii     = SleSII (cfgSleRafSII rafCfg)
 
-    raiseEvent
-        (EVSLE
-            (EVSLEInitRaf (IfSle (SleRAFIf rafN)) sii version peerID (cfgSleRafPort rafCfg)
+        raiseEvent
+            (EVSLE
+                (EVSLEInitRaf (IfSle (SleRAFIf rafN))
+                              sii
+                              version
+                              peerID
+                              (cfgSleRafPort rafCfg)
+                )
             )
-        )
 
-    logDebug $ "Starting RAF instance for " <> display (cfgSleRafSII rafCfg)
-    res <- withSleRAFUser sle
-                          (cfgSleRafSII rafCfg)
-                          version
-                          (cfgSleRafPeerID rafCfg)
-                          (cfgSleRafPort rafCfg)
-                          Nothing
-                          Nothing
-                          (runRAF peerID rafCfg sii queue)
-    forM_ res $ \err ->
-        logError
-            $  "SLE Instance "
-            <> display (cfgSleRafSII rafCfg)
-            <> " returned: "
-            <> display err
-    pure ()
+        logDebug $ "Starting RAF instance for " <> display (cfgSleRafSII rafCfg)
+        res <- withSleRAFUser sle
+                              (cfgSleRafSII rafCfg)
+                              version
+                              (cfgSleRafPeerID rafCfg)
+                              (cfgSleRafPort rafCfg)
+                              Nothing
+                              Nothing
+                              (runRAF peerID rafCfg sii queue)
+        forM_ res $ \err ->
+            logError
+                $  "SLE Instance "
+                <> display (cfgSleRafSII rafCfg)
+                <> " returned: "
+                <> display err
+        pure ()
 
-startInstance sle peerID (SLEInstance { cfgSleInstanceNr = _rafN, cfgSleInstanceConfig = SLEInstFCLTU cltuCfg}) (_sii, queue) = do
-    let version = convVersion (cfgSleCltuVersion cltuCfg)
-        sii     = SleSII (cfgSleCltuSII cltuCfg)
+startInstance sle peerID (SLEInstance { cfgSleInstanceNr = _rafN, cfgSleInstanceConfig = SLEInstFCLTU cltuCfg }) (_sii, queue)
+    = do
+        let version = convVersion (cfgSleCltuVersion cltuCfg)
+            sii     = SleSII (cfgSleCltuSII cltuCfg)
 
-    raiseEvent
-        (EVSLE (EVSLEInitFcltu sii version peerID (cfgSleCltuPort cltuCfg)))
+        raiseEvent
+            (EVSLE (EVSLEInitFcltu sii version peerID (cfgSleCltuPort cltuCfg)))
 
-    logDebug $ "Starting FCLTU instance for " <> display (cfgSleCltuSII cltuCfg)
-    res <- withSleFCLTUUser sle
-                            (SleSII (cfgSleCltuSII cltuCfg))
-                            (convVersion (cfgSleCltuVersion cltuCfg))
-                            (cfgSleCltuPeerID cltuCfg)
-                            (cfgSleCltuPort cltuCfg)
-                            Nothing
-                            Nothing
-                            (runFCLTU peerID cltuCfg sii queue)
-    forM_ res $ \err ->
-        logError
-            $  "SLE Instance "
-            <> display (cfgSleCltuSII cltuCfg)
-            <> " returned: "
-            <> display err
-    pure ()
+        logDebug $ "Starting FCLTU instance for " <> display
+            (cfgSleCltuSII cltuCfg)
+        res <- withSleFCLTUUser sle
+                                (SleSII (cfgSleCltuSII cltuCfg))
+                                (convVersion (cfgSleCltuVersion cltuCfg))
+                                (cfgSleCltuPeerID cltuCfg)
+                                (cfgSleCltuPort cltuCfg)
+                                Nothing
+                                Nothing
+                                (runFCLTU peerID cltuCfg sii queue)
+        forM_ res $ \err ->
+            logError
+                $  "SLE Instance "
+                <> display (cfgSleCltuSII cltuCfg)
+                <> " returned: "
+                <> display err
+        pure ()
 
 startInstance _ _ _ _ = pure ()
 
@@ -278,7 +295,7 @@ transferDataCB state vcMap linkType seqCnt ert cont frame = runRIO state $ do
         <> " Cont: "
         <> display cont
         <> " Frame: "
-        <> displayShow frame
+        <> fromString (ppShow frame)
     case decodeFrame (cfgTMFrame (state ^. getConfig)) frame of
         Left err -> do
             logError

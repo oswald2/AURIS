@@ -43,7 +43,6 @@ module GUI.MainWindow
 import           Control.Lens                   ( makeLenses )
 import           RIO
 import           RIO.List                       ( sortBy )
-import qualified RIO.Text                      as T
 --import qualified Data.Text.Encoding            as T
 import qualified RIO.Vector                    as V
 

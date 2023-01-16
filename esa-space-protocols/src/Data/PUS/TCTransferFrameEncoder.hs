@@ -14,12 +14,14 @@ import           RIO
 
 import           Conduit
 
-import           Data.PUS.TCFrameTypes
 import           Data.PUS.CLTU
 import           Data.PUS.Segment
+import           Data.PUS.TCFrameTypes
 import           Data.PUS.TCRequest
 
 import           General.Types
+
+import           Text.Show.Pretty
 
 
 tcFrameToCltuC
@@ -28,7 +30,7 @@ tcFrameToCltuC
 tcFrameToCltuC = awaitForever $ \frame -> do
     let new     = cltuNew (toBS (frame ^. encTcFrameData))
         encCltu = CLTUInput new (frame ^. encTcFrameRequest)
-    logDebug $ "New CLTU: " <> displayShow new
+    logDebug $ "New CLTU: " <> fromString (ppShow new)
     yield encCltu
 
 

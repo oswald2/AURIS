@@ -1,5 +1,7 @@
 module Conduit.Extras
-    ( queueFlusher
+    ( queueSource
+    , queueSink
+    , queueFlusher
     , queuePusher
     , readWithTimeout
     ) where
@@ -7,7 +9,15 @@ module Conduit.Extras
 import           Conduit
 import           RIO
 
-import           Control.Concurrent.STM.TBQueue ( flushTBQueue )
+queueSource :: (MonadIO m) => TBQueue a -> ConduitT () a m ()
+queueSource queue = do
+    val <- atomically $ readTBQueue queue
+    yield val
+    queueSource queue
+
+
+queueSink :: (MonadIO m) => TBQueue a -> ConduitT a Void m ()
+queueSink queue = awaitForever $ \val -> atomically (writeTBQueue queue val)
 
 
 queueFlusher :: (MonadIO m) => TBQueue a -> ConduitT z [a] m ()

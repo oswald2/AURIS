@@ -31,6 +31,7 @@ module Data.PUS.Config
     , NDIULiteConfig(..)
     , NdiuDirection(..)
     , VerificationConfig(..)
+    , CLTUTrailer(..)
     , cltuBlockSizeAsWord8
     , defaultConfig
     , defaultNdiuConfig
@@ -295,6 +296,15 @@ defaultVerifConfig = VerificationConfig { cfgTimeoutGT = 20
                                         }
 
 
+data CLTUTrailer = Trailer0x55 | Trailer0xC5
+    deriving (Eq, Ord, Enum, Show, Read, Generic)
+
+instance FromJSON CLTUTrailer
+instance ToJSON CLTUTrailer where
+    toEncoding = genericToEncoding defaultOptions
+
+
+
 -- | The configuration of the PUS functionality
 data Config = Config
     {
@@ -302,6 +312,8 @@ data Config = Config
       cfgMission              :: !Mission
     -- | The block size that is used to encode/decode the CLTU
     , cfgCltuBlockSize        :: !CltuBlockSize
+    -- | The type of the CLTU trailer sequence. Legacy is 0x55, while newer versions us 0xC5
+    , cfgCLTUTrailer          :: !CLTUTrailer
     -- | If the socket interface is used, specifies Just portnumber, else Nothing
     , cfgInterfacePort        :: Maybe Word16
     -- | If the TC randomization is enabled by default
@@ -444,6 +456,7 @@ defaultNdiuConfig = NDIULiteConfig { cfgNdiuHost              = "localhost"
 defaultConfig :: Config
 defaultConfig = Config { cfgMission              = MissionDefault
                        , cfgCltuBlockSize        = CltuBS_8
+                       , cfgCLTUTrailer          = Trailer0xC5
                        , cfgInterfacePort        = Just 55555
                        , cfgRandomizerEnabled    = False
                        , cfgRandomizerStartValue = 0xFF

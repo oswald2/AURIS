@@ -26,7 +26,7 @@
                 { _tcReqDestination = ScoeDestCnc (IfCnc 1)
                 , _tcSSC = SSC 0
                 , _tcReqCommand =
-                    TCScoe { _tccAPID = APID 1540 , _tccParams = "TRANSFER REMOTE" }
+                    TCScoe { _tccAPID = APID 281, _tccParams = "GETTM ON 1" }
                 }
           }
     ]

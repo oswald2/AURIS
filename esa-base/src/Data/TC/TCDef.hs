@@ -43,6 +43,7 @@ import           Data.Aeson
 
 import           General.APID
 import           General.PUSTypes
+import           General.TextTools
 import           General.Types
 
 import           Data.TC.TCParameterDef
@@ -182,13 +183,13 @@ instance Display TCDef where
 tcDefBuilder :: TCDef -> TB.Builder
 tcDefBuilder def =
     padRight 23 (text "<b>Name:</b> ")
-        <> text (ST.toText (_tcDefName def))
+        <> escapeTextBuilder (ST.toText (_tcDefName def))
         <> char '\n'
         <> padRight 23 (text "<b>Description:</b> ")
-        <> text (ST.toText (_tcDefDescr def))
+        <> escapeTextBuilder (ST.toText (_tcDefDescr def))
         <> char '\n'
         <> padRight 23 (text "<b>Description2:</b> ")
-        <> text (ST.toText (_tcDefDescr2 def))
+        <> escapeTextBuilder (ST.toText (_tcDefDescr2 def))
         <> char '\n'
         <> padRight 23 (text "<b>Type:</b> ")
         <> text (textDisplay (_tcDefCType def))

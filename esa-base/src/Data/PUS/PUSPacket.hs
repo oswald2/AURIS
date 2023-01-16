@@ -102,6 +102,7 @@ import           General.PUSTypes               ( PUSPacketType(..)
                                                 , SeqControl(..)
                                                 , getSSC
                                                 , mkSSC
+                                                , pusPrimaryHeaderLen
                                                 )
 import           General.SetBitField            ( setBitFieldR )
 import           General.SizeOf                 ( FixedSize(..)
@@ -174,7 +175,7 @@ instance ToJSON PUSHeader where
     toEncoding = genericToEncoding defaultOptions
 
 instance FixedSize PUSHeader where
-    fixedSizeOf = 6
+    fixedSizeOf = pusPrimaryHeaderLen
 
 
 data PUSPacket = PUSPacket
@@ -190,7 +191,7 @@ makeLenses ''PUSPacket
 instance Serialise PUSPacket
 instance NFData PUSPacket
 instance FromJSON PUSPacket
-instance ToJSON PUSPacket 
+instance ToJSON PUSPacket
 
 -- instance FromJSON PUSPacket where
 --     parseJSON = withObject "PUSPacket" $ \v ->
@@ -484,7 +485,10 @@ decodePktMissionSpecific pkt missionSpecific timeEncoding crcFlag commIF
             then
                 case
                     A.parse
-                        (pusPktParser missionSpecific timeEncoding crcFlag commIF
+                        (pusPktParser missionSpecific
+                                      timeEncoding
+                                      crcFlag
+                                      commIF
                         )
                         pkt
                 of
@@ -525,10 +529,11 @@ pusPktParserPayload
     -> ProtocolInterface
     -> PUSHeader
     -> Parser (ProtocolPacket PUSPacket)
-pusPktParserPayload missionSpecific timeEncoding crcFlag comm@(IfCnc _) hdr = do
-    case _pusHdrTcVersion hdr of
-        3 -> cncPusPktParserPayload timeEncoding crcFlag comm hdr
-        _ -> pusPktParserPayloadSrc missionSpecific comm hdr
+pusPktParserPayload missionSpecific timeEncoding crcFlag comm@(IfCnc _) hdr =
+    do
+        case _pusHdrTcVersion hdr of
+            3 -> cncPusPktParserPayload timeEncoding crcFlag comm hdr
+            _ -> pusPktParserPayloadSrc missionSpecific comm hdr
 pusPktParserPayload missionSpecific _timeEncoding _crcFlag comm hdr = do
     pusPktParserPayloadSrc missionSpecific comm hdr
 
@@ -566,12 +571,8 @@ pusPktParserPayloadSrc missionSpecific comm hdr = do
             else return (PUSEmptyHeader, True)
         | isCnc comm
         -> if hdr ^. pusHdrDfhFlag
-            then case hdr ^. pusHdrType of
--- FIXME CRC handling maybe needs to be configured via MIB or config
-                PUSTM -> (, False)
-                    <$> dfhParser (missionSpecific ^. pmsTMDataFieldHeader)
-                PUSTC -> (, False)
-                    <$> dfhParser (missionSpecific ^. pmsTCDataFieldHeader)
+            then (, False) <$> dfhCncParser (hdr ^. pusHdrType)
+                (missionSpecific ^. pmsTMDataFieldHeader)
             else if hdr ^. pusHdrTcVersion == 3
                 then return (PUSEmptyHeader, False)
                 else return (PUSEmptyHeader, True)

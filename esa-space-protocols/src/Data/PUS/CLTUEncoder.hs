@@ -35,6 +35,8 @@ import           Data.PUS.Verification
 import           General.PUSTypes
 import           General.Time
 
+import           Text.Show.Pretty
+
 
 
 -- | This is just very basic now, it directly converts the CLTU
@@ -59,7 +61,7 @@ cltuToNcduC = awaitForever $ \(EncodedCLTU cltu rqst) -> do
             0
         dat  = NcduTcDuCltuData cltuhdr cltu
         ncdu = NcduTcDu hdr dat
-    logDebug $ "NCDU: " <> displayShow ncdu
+    logDebug $ "NCDU: " <> fromString (ppShow ncdu)
     now <- liftIO getCurrentTime
     yield ncdu
     -- also set to RELEASED

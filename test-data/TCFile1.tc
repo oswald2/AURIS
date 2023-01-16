@@ -3,8 +3,8 @@
     [ SendRqst
         TCRequest
           { _tcReqRequestID = RequestID 0
-          , _tcReqName = "NCTRS-TC"
-          , _tcReqDescription = "This is a test-TC for NCTRS"
+          , _tcReqName = "CnC_BIN"
+          , _tcReqDescription = "C&C Binary TC"
           , _tcReqSource = "TC-TAB"
           , _tcReqReleaseTime = Nothing
           , _tcReqVerifications =
@@ -25,21 +25,40 @@
               TCCommand
                 { _tcReqMAPID = MAPID 0
                 , _tcReqTransMode = BD
-                , _tcDestination = DestNctrs (IfNctrs 1)
+                , _tcDestination = DestCnc (IfCnc 1)
+                , _tcWrapInISL = Nothing
+                , _tcSSC = SSC 0
                 , _tcReqPacket =
                     TCPacket
-                      { _tcpAPID = APID 17
+                      { _tcpAPID = APID 1540
                       , _tcpType = PUSType 2
                       , _tcpSubType = PUSSubType 10
-                      , _tcpSourceID = SourceID 10
+                      , _tcpSourceID = IsSrcIDA (SourceID 10)
                       , _tcpParams =
-                          List
-                            [ Parameter
-                                { _paramName = "X" , _paramValue = ValUInt32 BiE 5 }
-                            , Parameter
-                                { _paramName = "Y" , _paramValue = ValUInt32 BiE 10 }
-                            ]
-                            Empty
+                          ExpandedParameterList
+                            (List
+                               [ Parameter
+                                   { _paramName = "X" , _paramValue = ValUInt8X (B8 (Refined 3)) 5 }
+                               , Parameter
+                                   { _paramName = "X" , _paramValue = ValUInt8X (B8 (Refined 3)) 5 }
+                               , Parameter
+                                   { _paramName = "X" , _paramValue = ValUInt8X (B8 (Refined 3)) 5 }
+                               , Parameter
+                                   { _paramName = "X" , _paramValue = ValUInt8X (B8 (Refined 3)) 5 }
+                               , Parameter
+                                   { _paramName = "X" , _paramValue = ValUInt8X (B8 (Refined 3)) 5 }
+                               , Parameter
+                                   { _paramName = "X" , _paramValue = ValUInt8X (B8 (Refined 3)) 5 }
+                               , Parameter
+                                   { _paramName = "X" , _paramValue = ValUInt8X (B8 (Refined 3)) 5 }
+                               , Parameter
+                                   { _paramName = "X" , _paramValue = ValUInt8X (B8 (Refined 3)) 5 }
+                               , Parameter
+                                   { _paramName = "X" , _paramValue = ValUInt8X (B8 (Refined 3)) 5 }
+                               , Parameter
+                                   { _paramName = "X" , _paramValue = ValUInt8X (B8 (Refined 3)) 5 }
+                               ]
+                               Empty)
                       }
                 }
           }

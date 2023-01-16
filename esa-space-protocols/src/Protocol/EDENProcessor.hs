@@ -38,6 +38,7 @@ import           General.Types                  ( HasCRC(..)
                                                 , HexBytes(toBS)
                                                 )
 
+import           Text.Show.Pretty
 
 
 edenMessageProcessorC
@@ -123,7 +124,7 @@ handleEdenMessage missionSpecific interf counters eden = do
                                         )
                                     <> display err
                                     <> display (" " :: Text)
-                                    <> displayShow eden
+                                    <> fromString (ppShow eden)
                         logError msg
                         raiseEvent $ EVAlarms $ EVPacketAlarm
                             (utf8BuilderToText msg)
@@ -134,7 +135,7 @@ handleEdenMessage missionSpecific interf counters eden = do
         Nothing -> do
             logDebug
                 $  "Received EDEN packet with no known structure:\n"
-                <> displayShow eden
+                <> fromString (ppShow eden)
                 <> "\n"
                 <> display
                        (hexdumpBS

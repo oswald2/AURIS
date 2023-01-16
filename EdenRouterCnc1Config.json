@@ -1,7 +1,7 @@
 {
     "aurisMIB": null,
     "aurisInstance": 0,
-    "aurisMission": "DEFAULT",
+    "aurisMission": "PUS-C",
     "aurisDbConfig": null,
     "aurisTheme": "ThemeLight",
     "aurisPusConfig": {
@@ -58,6 +58,7 @@
         },
         "cfgMaxTMFrameLen": 1115,
         "cfgCltuBlockSize": "CltuBS_8",
+        "cfgCLTUTrailer": "Trailer0xC5",
         "cfgEDEN": [
             {
                 "cfgEdenID": 1,

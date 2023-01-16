@@ -63,7 +63,7 @@ unsafeFreezeIntArray (IA arr) = IIA <$> A.unsafeFreezeByteArray arr
 
 
 ------------------------------------------------------------------------------
-primWordToElem :: Word# -> Elem
+primWordToElem :: Word16# -> Elem
 primWordToElem = W16#
 
 
@@ -75,7 +75,7 @@ elemToInt e = let !i# = elemToInt# e
 
 ------------------------------------------------------------------------------
 elemToInt# :: Elem -> Int#
-elemToInt# (W16# w#) = word2Int# w#
+elemToInt# (W16# w#) = word2Int# (word16ToWord# w#)
 
 
 ------------------------------------------------------------------------------

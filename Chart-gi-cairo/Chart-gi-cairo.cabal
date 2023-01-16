@@ -9,15 +9,14 @@ Homepage: https://github.com/timbod7/haskell-chart/wiki
 Synopsis: Cairo backend for Charts 
 Description: Cairo backend for Charts (for gi-cairo and gi-cairo-connector and gi-cairo-renderer)
 Category: Graphics
-Cabal-Version: >= 1.6
+Cabal-Version: 2.0
 Build-Type: Simple
 
 library
+  default-language: Haskell2010
+
   Build-depends: base >= 3 && < 5
-               , old-locale
-               , time, mtl, array
-               , gi-cairo 
-               , gi-cairo-connector
+               , mtl
                , gi-cairo-render
                , colour 
                , data-default-class 

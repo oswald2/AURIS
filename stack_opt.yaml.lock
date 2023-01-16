@@ -107,4 +107,8 @@ snapshots:
     size: 586041
     url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/18/12.yaml
     sha256: 80fc6391195ff00c36f2a605ecbb07de909bfaa2eaa9722a27e486a6ecf8ecb0
+<<<<<<< HEAD
   original: nightly-2022-09-11
+=======
+  original: lts-20.2
+>>>>>>> 0457da3b7fd1c3e04f54e255666e6bc6766ccc8e

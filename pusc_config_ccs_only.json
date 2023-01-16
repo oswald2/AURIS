@@ -22,7 +22,7 @@
             }
         ],
         "cfgUnknownSPID": 5071,
-        "cfgEpoch": "UnixTime",
+        "cfgEpoch": "TAITime",
         "cfgInterfacePort": 55555,
         "cfgRandomizerEnabled": false,
         "cfgRandomizerStartValue": 255,
@@ -59,6 +59,7 @@
         },
         "cfgNCTRS": [],
         "cfgCltuBlockSize": "CltuBS_8",
+        "cfgCLTUTrailer": "Trailer0xC5",
         "cfgEDEN": [],
         "cfgStoreTMFrames": true,
         "cfgStorePUSPackets": true,

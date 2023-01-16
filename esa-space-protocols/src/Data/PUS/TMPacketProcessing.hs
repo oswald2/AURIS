@@ -46,6 +46,7 @@ import           Data.PUS.PUSDfh
 import           Data.PUS.PUSPacket
 import           Data.PUS.PUSState
 import           Data.PUS.TMPacket
+import           Data.PUS.Value
 import           Data.PUS.Verification
 
 import           General.GetBitField
@@ -99,6 +100,7 @@ packetProcessorC = awaitForever $ \pkt@(ExtractedPacket _oct pusPkt) -> do
     env   <- ask
     model <- getDataModel env
     cfg   <- view getConfig
+    pms   <- view getMissionSpecific
 
     -- first check for verifications 
     when (pusType (pusPkt ^. epDU . pusDfh) == 1) $ do
@@ -123,28 +125,28 @@ packetProcessorC = awaitForever $ \pkt@(ExtractedPacket _oct pusPkt) -> do
             case t of
                 PUSType 1 -> case st of
                     PUSSubType 1 -> do
-                        let def = tmAckPktDef apid (PUSSubType 1)
+                        let def = tmAckPktDef pms apid (PUSSubType 1)
                         createAndYieldPacket key def pkt
                     PUSSubType 2 -> do
-                        let def = tmAckFailPktDef apid (PUSSubType 2)
+                        let def = tmAckFailPktDef pms apid (PUSSubType 2)
                         createAndYieldPacket key def pkt
                     PUSSubType 3 -> do
-                        let def = tmAckPktDef apid (PUSSubType 3)
+                        let def = tmAckPktDef pms apid (PUSSubType 3)
                         createAndYieldPacket key def pkt
                     PUSSubType 4 -> do
-                        let def = tmAckFailPktDef apid (PUSSubType 4)
+                        let def = tmAckFailPktDef pms apid (PUSSubType 4)
                         createAndYieldPacket key def pkt
                     PUSSubType 5 -> do
-                        let def = tmAckPktDef apid (PUSSubType 5)
+                        let def = tmAckPktDef pms apid (PUSSubType 5)
                         createAndYieldPacket key def pkt
                     PUSSubType 6 -> do
-                        let def = tmAckFailPktDef apid (PUSSubType 6)
+                        let def = tmAckFailPktDef pms apid (PUSSubType 6)
                         createAndYieldPacket key def pkt
                     PUSSubType 7 -> do
-                        let def = tmAckPktDef apid (PUSSubType 7)
+                        let def = tmAckPktDef pms apid (PUSSubType 7)
                         createAndYieldPacket key def pkt
                     PUSSubType 8 -> do
-                        let def = tmAckFailPktDef apid (PUSSubType 8)
+                        let def = tmAckFailPktDef pms apid (PUSSubType 8)
                         createAndYieldPacket key def pkt
                     _ -> yieldUnknownPacket cfg pkt
                 _ -> yieldUnknownPacket cfg pkt
@@ -390,7 +392,9 @@ getTimeStamp epu = do
 
     case pusPktTime (epu ^. epDU . pusDfh) of
         Just time -> do
-            let sunTime = cucTimeToSunTime epoch time
+            let sunTime = case time of
+                    CUC cuc -> cucTimeToSunTime epoch cuc
+                    CDS cds -> cdsTimeToSunTime epoch cds
             t <- correlateTMTime sunTime (epu ^. epERT)
             return (t, epoch)
         Nothing -> do
@@ -885,7 +889,11 @@ extractParamValue epoch oct offset par =
                 Nothing -> TMValString "UNDEFINED"
     readString off Nothing =
         let val = B.drop (unByteOffset (toByteOffset off)) oct
-        in  case ST.fromByteString val of
+            len = case getAlignedValue val (ByteOffset 0) (ValUInt16 BiE 0) of
+                        Just (ValUInt16 _ strLen) -> strLen
+                        _                         -> 0
+            val2 = B.take (fromIntegral len) . B.drop 2 $ val
+        in  case ST.fromByteString val2 of
                 Just x  -> TMValString x
                 Nothing -> TMValString "UNDEFINED"
 

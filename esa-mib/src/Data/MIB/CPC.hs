@@ -20,13 +20,13 @@ module Data.MIB.CPC
     , cpcObtID
     ) where
 
-import           RIO
-import qualified RIO.Vector                    as V
-import qualified RIO.HashMap                   as HM
 import           Control.Lens                   ( makeLenses )
+import           RIO
+import qualified RIO.HashMap                   as HM
+import qualified RIO.Vector                    as V
 
-import           Data.Text.Short                ( ShortText )
 import           Data.Csv
+import           Data.Text.Short                ( ShortText )
 
 import           Data.MIB.Load
 import           Data.MIB.Types
@@ -61,10 +61,11 @@ instance Eq CPCentry where
 
 instance FromRecord CPCentry where
     parseRecord v
+        | V.length v > 15 = genericParse (const True) CPCentry (V.slice 0 15 v)
         | V.length v == 15 = genericParse (const True) CPCentry v
-        | V.length v == 13 =    genericParse (const True) CPCentry
-        $    v
-        V.++ V.fromList ["Y", "0"]
+        | V.length v == 13 = genericParse (const True)
+                                          CPCentry
+                                          (v V.++ V.fromList ["Y", "0"])
         | otherwise = mzero
 
 fileName :: FilePath

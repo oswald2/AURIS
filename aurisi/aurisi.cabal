@@ -10,7 +10,7 @@ build-type: Simple
 maintainer: michael.oswald@onikudaki.net
 homepage:
 category: UI,Graphics
-cabal-version: >=2.0
+cabal-version: 2.0
 
 source-repository head
   type: git

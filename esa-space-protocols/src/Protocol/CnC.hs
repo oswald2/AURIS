@@ -151,11 +151,13 @@ processBinaryAck protPkt = do
             case st of
                 129 -> do
                   -- ACK
-                    logDebug $ "Received C&C ACK: " <> displayShow pusPkt
+                    logDebug $ "Received C&C ACK: " <> fromString
+                        (ppShow pusPkt)
                     parseAndVerify env pusPkt StGSuccess
                 130 -> do
                   -- NAK
-                    logDebug $ "Received C&C NAK: " <> displayShow pusPkt
+                    logDebug $ "Received C&C NAK: " <> fromString
+                        (ppShow pusPkt)
                     parseAndVerify env pusPkt StGFail
                 _ -> return ()
         _ -> return ()
@@ -168,7 +170,7 @@ processBinaryAck protPkt = do
                     $  "Could not parse C&C ACK data from pkt: "
                     <> display (T.pack err)
                     <> " packet: "
-                    <> displayShow pusPkt
+                    <> fromString (ppShow pusPkt)
             Right val -> liftIO $ requestVerifyGTCnC env val status
 
 
@@ -204,19 +206,17 @@ processAsciiAck protPkt = do
 
     env <- ask
     if
-        | dat == ack
-        -> do
+        | dat == ack -> do
             liftIO $ requestVerifyGTCnC env (pktID, seqC) StGSuccess
-        | dat == nak
-        -> do
+        | dat == nak -> do
             liftIO $ requestVerifyGTCnC env (pktID, seqC) StGFail
             logError $ "Received NAK: " <> display
                 (decodeUtf8With (\_ _ -> Just '.')
                                 (toBS (protPkt ^. protContent . pusData))
                 )
-        | otherwise
-        -> logWarn $ "Could not parse C&C ACK data from pkt: " <> displayShow
-            (protPkt ^. protContent)
+        | otherwise -> logWarn
+        $  "Could not parse C&C ACK data from pkt: "
+        <> fromString (ppShow (protPkt ^. protContent))
 
 
 

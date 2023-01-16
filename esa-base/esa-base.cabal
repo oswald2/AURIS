@@ -79,6 +79,7 @@ library
     General.GetBitField
     General.TriState
     General.SizeOf
+    General.TextTools
     Data.DataModel
     Data.TM.Value
     Data.TM.Parameter
@@ -218,6 +219,7 @@ library
     , time
     , stm
     , array
+    , pretty-show
 
 
   -- Directories containing source files.
@@ -231,7 +233,7 @@ library
 
   ghc-options: -O0 -g2 -Wall -Wcompat -Widentities -Wincomplete-record-updates
             -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
-            -funbox-strict-fields -freverse-errors
+            -funbox-strict-fields -freverse-errors -fno-full-laziness
 
   if flag(optimize)
         ghc-options: -O2 

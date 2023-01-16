@@ -771,7 +771,7 @@ hashToElem !h = out
     !nm# = not# m#
 
     !r#  = ((int2Word# 2#) `and#` m#) `or#` (int2Word# lo# `and#` nm#)
-    !out = U.primWordToElem r#
+    !out = U.primWordToElem (wordToWord16# r#)
 
 
 ------------------------------------------------------------------------------

@@ -575,7 +575,7 @@ instance BitSizes Value where
     bitSize ValUInt32{}      = mkBitSize 32
     bitSize ValUInt64{}      = mkBitSize 64
     bitSize ValDouble{}      = mkBitSize 64
-    bitSize (ValString x)    = bytesToBitSize . mkByteSize $ B.length x
+    bitSize (ValString x)    = bytesToBitSize . mkByteSize $ B.length x + 2
     bitSize (ValFixedString width _) =
         bytesToBitSize . mkByteSize $ fromIntegral width
     bitSize (ValOctet x) = bytesToBitSize . mkByteSize $ hexLength x
@@ -1034,7 +1034,10 @@ setAlignedValue vec !off (ValInt16  b x) = setValue vec off b x
 setAlignedValue vec !off (ValInt32  b x) = setValue vec off b x
 setAlignedValue vec !off (ValInt64  b x) = setValue vec off b x
 setAlignedValue vec !off (ValDouble b x) = setValue vec off b x
-setAlignedValue vec !off (ValString x  ) = copyBS vec off x
+setAlignedValue vec !off (ValString x  ) = do
+    let len :: Word16 = fromIntegral (B.length x)
+    setValue vec off BiE len
+    copyBS vec (off + 2) x
 setAlignedValue vec !off (ValFixedString width x) =
     copyBS vec off (rightPaddedC ' ' (fromIntegral width) x)
 setAlignedValue vec !off (ValOctet x) = copyBS vec off (toBS x)
@@ -1055,7 +1058,11 @@ getAlignedValue byts off (ValInt16  b _) = ValInt16 b <$> getValue byts off b
 getAlignedValue byts off (ValInt32  b _) = ValInt32 b <$> getValue byts off b
 getAlignedValue byts off (ValInt64  b _) = ValInt64 b <$> getValue byts off b
 getAlignedValue byts off (ValDouble b _) = ValDouble b <$> getValue byts off b
-getAlignedValue byts off (ValString _  ) = ValString <$> getValueOctet byts off
+getAlignedValue byts off (ValString _) =
+    let len :: Word16 = case getValue byts off BiE of
+            Just strLen -> strLen
+            _           -> 0
+    in  ValString <$> getValueOctetLen byts off (fromIntegral len)
 getAlignedValue byts off (ValFixedString len _) =
     ValFixedString len <$> getValueOctetLen byts off (fromIntegral len)
 getAlignedValue byts off (ValOctet _) =
@@ -1230,7 +1237,7 @@ valueBuilder (ValInt32X w x ) = builderSigned (unB32 w) x
 valueBuilder (ValDouble b x ) = builderReal "DOUBLE" b x
 
 valueBuilder (ValString x) =
-    padFromRight typeColumn ' ' (TB.text "STRING")
+    padFromRight typeColumn '0' (TB.text "STRING")
         <> emptyEndian
         <> TB.asciiByteString x
 

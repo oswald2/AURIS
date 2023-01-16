@@ -8,10 +8,10 @@ module Protocol.NCTRSProcessor
     , nctrsProcessorC
     ) where
 
-import           RIO
-import qualified RIO.Text                      as T
 import           Conduit
 import           Data.Conduit.Attoparsec
+import           RIO
+import qualified RIO.Text                      as T
 
 import           ByteString.StrictBuilder
 
@@ -23,9 +23,10 @@ import           Data.PUS.Verification
 
 import           Protocol.NCTRS
 
-import           General.PUSTypes
 import           General.Hexdump
+import           General.PUSTypes
 
+import           Text.Show.Pretty
 
 -- | Conduit for receiving TC NCDUs. Receives a 'ByteString' which is
 -- parsed and converted into a 'NcduTcDu'
@@ -51,11 +52,11 @@ receiveTmNcduC = conduitParserEither ncduTmParser .| sink
   where
     sink = awaitForever $ \case
         Left err -> do
-            raiseEvent $ EVAlarms
-                (EVNCDUParseError (T.pack (errorMessage err)))
+            raiseEvent $ EVAlarms (EVNCDUParseError (T.pack (errorMessage err)))
             sink
         Right (_, tc') -> do
-            logDebug $ display ("Received TM NCDU: " :: Text) <> displayShow tc'
+            logDebug $ display ("Received TM NCDU: " :: Text) <> fromString
+                (ppShow tc')
             yield tc'
             sink
 
@@ -79,7 +80,7 @@ encodeTcNcduC
     => ConduitT NcduTcDu ByteString m ()
 encodeTcNcduC = awaitForever $ \du -> do
     let enc = builderBytes (ncduTcDuBuilder du)
-    logDebug $ "Encoded NCDU: " <> displayShow du <> ":\n" <> display
+    logDebug $ "Encoded NCDU: " <> fromString (ppShow du) <> ":\n" <> display
         (hexdumpBS enc)
     yield enc
 
@@ -139,4 +140,4 @@ processResp NcduTcCltuResponse { _ncduCltuRespAck = NCDU_CLTU_RESP_REJECT, ..}
         liftIO $ requestVerifyG env (mkRqstID _ncduCltuRespTCID) StGFail
 
 processResp resp = do
-    logWarn $ "Unexpeced NCTRS Response: " <> displayShow resp
+    logWarn $ "Unexpeced NCTRS Response: " <> fromString (ppShow resp)

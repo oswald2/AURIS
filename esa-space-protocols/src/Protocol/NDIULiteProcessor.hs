@@ -40,6 +40,8 @@ import           Protocol.ProtocolSwitcher
 
 import           Data.Time.Clock.System
 
+import           Text.Show.Pretty
+
 
 ndiuSenderChainC
     :: (MonadIO m, MonadReader env m, HasLogFunc env)
@@ -89,13 +91,14 @@ runNdiuChain
 runNdiuChain cfg vcMap queue ndiuTypeSet = do
     var <- newTVarIO Nothing
     runGeneralTCPReconnectClient
-        (clientSettings (fromIntegral (cfgNdiuPort cfg))
-                        (encodeUtf8 (cfgNdiuHost cfg))
-        )
-        500_000 $ \appData -> do 
-            processConnect cfg vcMap queue var ndiuTypeSet appData 
-            onDisconnect cfg var
-            threadDelay 500_000
+            (clientSettings (fromIntegral (cfgNdiuPort cfg))
+                            (encodeUtf8 (cfgNdiuHost cfg))
+            )
+            500_000
+        $ \appData -> do
+              processConnect cfg vcMap queue var ndiuTypeSet appData
+              onDisconnect cfg var
+              threadDelay 500_000
 
 
 processConnect
@@ -253,9 +256,8 @@ ndiuToTMFrameC tmFrameCfg cfg = awaitForever $ \ndiu -> do
             logWarn $ "Could not parse TM Frame: " <> display msg
             logDebug $ "TM Frame:\n" <> display (ndiuData ndiu)
         Right frame -> do
-            logDebug
-                $  display ("Received TM Frame: " :: Text)
-                <> displayShow frame
+            logDebug $ display ("Received TM Frame: " :: Text) <> fromString
+                (ppShow frame)
 
             let ert = fromUTC (systemToUTCTime t)
                 t = MkSystemTime (fromIntegral (ndiuSecs ndiu)) (ndiuNano ndiu)
@@ -281,9 +283,8 @@ ndiuToTCFrameC = awaitForever $ \ndiu -> do
             logWarn $ "Could not parse TC Frame: " <> display msg
             logDebug $ "TC Frame:\n" <> display (ndiuData ndiu)
         Right frame -> do
-            logDebug
-                $  display ("Received TM Frame: " :: Text)
-                <> displayShow frame
+            logDebug $ display ("Received TM Frame: " :: Text) <> fromString
+                (ppShow frame)
 
             let ert = fromUTC (systemToUTCTime t)
                 t = MkSystemTime (fromIntegral (ndiuSecs ndiu)) (ndiuNano ndiu)

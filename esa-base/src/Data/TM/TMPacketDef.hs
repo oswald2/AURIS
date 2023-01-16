@@ -94,7 +94,6 @@ where
 
 import           RIO
 import qualified RIO.Vector                    as V
-import qualified Data.Text                      as T 
 
 import           Data.Text.Short               as ST ( ShortText, pack )
 import qualified           Data.Text.Short               as ST 
@@ -112,6 +111,9 @@ import           General.APID
 import           General.Types
 import           General.Time
 import           General.TimeSpan
+import           General.TextTools
+
+import           Data.PUS.MissionSpecific.Definitions
 
 import           Data.TM.TMParameterDef
 import           Data.TM.PIVals
@@ -179,7 +181,7 @@ tmParamLocationBuilder indent pl =
   indentBuilder indent <> padFromRight 23 ' ' (text "<b>Parameter Name:</b> ")
   <> text (ST.toText (_tmplName pl)) 
   <> newLineIndentBuilder newIndent "<b>Description:</b>: " 
-  <> text (T.replace "&" "&amp;" (ST.toText (_fpDescription (_tmplParam pl))))
+  <> escapeTextBuilder ((ST.toText (_fpDescription (_tmplParam pl))))
   <> newLineIndentBuilder newIndent (text "<b>Offset:</b> ")
   <> text (textDisplay (_tmplOffset pl))
   <> newLineIndentBuilder newIndent (text "<b>Type:</b> ")
@@ -214,6 +216,16 @@ simpleParamLocation name byteOffset param =
   TMParamLocation {
           _tmplName = name
           , _tmplOffset = mkOffset (ByteOffset byteOffset) (BitOffset 0)
+          , _tmplTime = nullTime 
+          , _tmplSuperComm = Nothing
+          , _tmplParam = param
+    }
+
+paramLocation :: ShortText -> Int -> Int -> TMParameterDef -> TMParamLocation 
+paramLocation name byteOffset bitOffset param = 
+  TMParamLocation {
+          _tmplName = name
+          , _tmplOffset = mkOffset (ByteOffset byteOffset) (BitOffset bitOffset)
           , _tmplTime = nullTime 
           , _tmplSuperComm = Nothing
           , _tmplParam = param
@@ -348,7 +360,8 @@ instance AE.ToJSON TMVarParamDef where
 tmVarParamDefBuilder :: Word16 -> TMVarParamDef -> TB.Builder 
 tmVarParamDefBuilder indent par = 
   indentBuilder indent <> padFromRight 23 ' ' (text "<b>Name:</b>") <> text (ST.toText (_tmvpName par))
-  <> newLineIndentBuilder indent (text "<b>Description:</b> ") <> text (ST.toText (_tmvpDisDesc par))
+  <> newLineIndentBuilder indent (text "<b>Description:</b> ") <> escapeTextBuilder (ST.toText (_fpDescription (_tmvpParam par)))
+  <> newLineIndentBuilder indent (text "<b>Descr VPD:</b> ") <> escapeTextBuilder (ST.toText (_tmvpDisDesc par))
   <> newLineIndentBuilder indent (text "<b>Nature:</b> ") <> varParamModifiedBuilder (_tmvpNat par)
   <> newLineIndentBuilder indent (text "<b>Display:</b> ") <> string (show (_tmvpDisp par))
   <> newLineIndentBuilder indent (text "<b>Justify:</b> ") <> text (textDisplay (_tmvpJustify par))
@@ -356,6 +369,7 @@ tmVarParamDefBuilder indent par =
   <> newLineIndentBuilder indent (text "<b>Columns:</b> ") <> text (textDisplay (_tmvpDispCols par))
   <> newLineIndentBuilder indent (text "<b>Radix:</b> ") <> text (textDisplay (_tmvpRadix par))
   <> newLineIndentBuilder indent (text "<b>Offset:</b> ") <> text (textDisplay (_tmvpOffset par))
+  <> newLineIndentBuilder indent (text "<b>Type:</b> ") <> paramTypeBuilder (_fpType (_tmvpParam par))
 
 
 data VarParams = 
@@ -462,7 +476,7 @@ instance AE.ToJSON TMPacketDef where
 tmPacketDefBuilder :: TMPacketDef -> TB.Builder 
 tmPacketDefBuilder pd = 
   padRight 23 (text "<b>Name:</b> ") <> text (ST.toText (_tmpdName pd))
-  <> char '\n' <> padRight 23 (text "<b>Description:</b> ") <> text (ST.toText (_tmpdDescr pd))
+  <> char '\n' <> padRight 23 (text "<b>Description:</b> ") <> escapeTextBuilder (ST.toText (_tmpdDescr pd))
   <> char '\n' <> padRight 23 (text "<b>SPID:</b> ") <> text (textDisplay (_tmpdSPID pd))
   <> char '\n' <> padRight 23 (text "<b>APID:</b> ") <> text (textDisplay (_tmpdApid pd))
   <> char '\n' <> padRight 23 (text "<b>Type/Subtype:</b> ") 
@@ -529,8 +543,9 @@ fixedTMPacketDefs = [
 
   ]
 
-tmAckPktDef :: APID -> PUSSubType -> TMPacketDef
-tmAckPktDef apid subType@(PUSSubType st) = 
+tmAckPktDef :: PUSMissionSpecific -> APID -> PUSSubType -> TMPacketDef
+tmAckPktDef pms apid subType@(PUSSubType st) = 
+  let offset = pmsTMDataOffset pms in
   TMPacketDef {
     _tmpdSPID = SPID 5075
     , _tmpdName = "TM_1_" <> ST.pack (show st)
@@ -547,13 +562,39 @@ tmAckPktDef apid subType@(PUSSubType st) =
     , _tmpdCheck = False
     , _tmpdEvent = PIDNo
     , _tmpdParams = TMFixedParams (V.fromList 
-      [ simpleParamLocation "AckPktID" 16 (uintParamDef "AckPktID" "Packet ID of the TC" 16)
-        , simpleParamLocation "AckSSC" 18 (uintParamDef "AckSSC" "SSC of the TC" 16)
-      ])
+      -- [ simpleParamLocation "AckPktID" 16 (uintParamDef "AckPktID" "Packet ID of the TC" 16)
+      --   , simpleParamLocation "AckSSC" 18 (uintParamDef "AckSSC" "SSC of the TC" 16)
+      -- ])
+      [ versionP offset, packeTTypeP offset, dfhFlagP offset, apidP offset, seqFlagsP offset, sscP offset, restP offset] )
     }
 
-tmAckFailPktDef :: APID -> PUSSubType -> TMPacketDef
-tmAckFailPktDef apid subType@(PUSSubType st) = 
+versionP :: Int -> TMParamLocation
+versionP offset = paramLocation "Version" offset 0 (uintParamDef "Version" "Version" 3)
+
+packeTTypeP :: Int -> TMParamLocation
+packeTTypeP offset = paramLocation "Type" offset 3 (uintParamDef "Type" "Type" 1)
+
+dfhFlagP :: Int -> TMParamLocation
+dfhFlagP offset = paramLocation "DFH Flag" offset 4 (uintParamDef "DFH" "DFH" 1)
+
+apidP :: Int -> TMParamLocation
+apidP offset = paramLocation "APID" offset 5 (uintParamDef "APID" "APID" 11)
+
+seqFlagsP :: Int -> TMParamLocation
+seqFlagsP offset = paramLocation "SeqFlags" (offset + 2) 0 (uintParamDef "SeqFlags" "SeqFlags" 2)
+
+sscP :: Int -> TMParamLocation
+sscP offset = paramLocation "SSC" (offset + 2) 2 (uintParamDef "SSC" "SSC" 14)
+
+restP :: Int -> TMParamLocation
+restP offset = simpleParamLocation "Rest" (offset + 4) (octetParamDef "Rest" "Rest")
+
+
+
+
+tmAckFailPktDef :: PUSMissionSpecific -> APID -> PUSSubType -> TMPacketDef
+tmAckFailPktDef pms apid subType@(PUSSubType st) = 
+  let offset = pmsTMDataOffset pms in
   TMPacketDef {
       _tmpdSPID = SPID 5076
       , _tmpdName = "TM_1_" <> ST.pack (show st)
@@ -570,10 +611,12 @@ tmAckFailPktDef apid subType@(PUSSubType st) =
       , _tmpdCheck = False
       , _tmpdEvent = PIDNo
       , _tmpdParams = TMFixedParams (V.fromList 
-        [ simpleParamLocation "AckPktID" 16 (uintParamDef "AckPktID" "Packet ID of the TC" 16)
-          , simpleParamLocation "AckSSC" 18 (uintParamDef "AckSSC" "SSC of the TC" 16)
-          , simpleParamLocation "AckERR" 20 (uintParamDef "AckERR" "Error Code for Acknowledge" 16)
-        ])
+        -- [ simpleParamLocation "AckPktID" 16 (uintParamDef "AckPktID" "Packet ID of the TC" 16)
+        --   , simpleParamLocation "AckSSC" 18 (uintParamDef "AckSSC" "SSC of the TC" 16)
+        --   , simpleParamLocation "AckERR" 20 (uintParamDef "AckERR" "Error Code for Acknowledge" 16)
+        -- ])
+      [ versionP offset, packeTTypeP offset, dfhFlagP offset, apidP offset, 
+        seqFlagsP offset, sscP offset, restP offset] )
     }
 
 
