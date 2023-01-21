@@ -212,18 +212,21 @@ setupFrameSwitcher outQueue = do
 -- @outQueue is the final 'TBQueue', where extracted PUS Packets are sent
 -- for parameter processing
 tmFrameSwitchVC
-    :: (MonadUnliftIO m, MonadReader env m, HasRaiseEvent env)
+    :: (MonadUnliftIO m, MonadReader env m, HasRaiseEvent env, HasLogFunc env)
     => SwitcherMap
     -> ConduitT TMStoreFrame Void m ()
 tmFrameSwitchVC vcMap = do
     awaitForever $ \frame -> lift $ multiplexFrame vcMap frame
 
 multiplexFrame
-    :: (MonadUnliftIO m, MonadReader env m, HasRaiseEvent env)
+    :: (MonadUnliftIO m, MonadReader env m, HasRaiseEvent env, HasLogFunc env)
     => SwitcherMap
     -> TMStoreFrame
     -> m ()
 multiplexFrame vcMap frame = do
+
+    logDebug $ "multiplexFrame: got Frame: " <> fromString (show frame)
+
     let
         !vcid = fromIntegral
             $ getVCID (frame ^. tmstFrame . tmFrameHdr . tmFrameVcID)

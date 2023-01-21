@@ -101,6 +101,6 @@
         }
     },
     "aurisLogLevel": {
-        "tag": "LogLevelDebug"
+        "tag": "LogLevelInfo"
     }
 }

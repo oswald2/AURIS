@@ -305,9 +305,9 @@ transferDataCB state vcMap linkType seqCnt ert cont frame = runRIO state $ do
                 <> display (HexBytes frame)
         Right tmFrame -> do
             let interf = case linkType of
-                    SleRAF       -> IfSle (SleRAFIf undefined)
-                    SleRCF       -> IfSle (SleRCFIf undefined)
-                    SleCLTU      -> IfSle (SleFCLTUIf undefined)
+                    SleRAF       -> IfSle (SleRAFIf 0)
+                    SleRCF       -> IfSle (SleRCFIf 0)
+                    SleCLTU      -> IfSle (SleFCLTUIf 0)
                     SleUnknown _ -> IfSle SleUnknownIf
 
             case decodeCdsTime ert of

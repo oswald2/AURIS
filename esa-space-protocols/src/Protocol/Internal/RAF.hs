@@ -3,6 +3,7 @@ module Protocol.Internal.RAF
     , runRAF
     ) where
 
+import qualified Data.ByteString.Char8         as BC
 import           RIO
 
 import           Control.PUS.Classes
