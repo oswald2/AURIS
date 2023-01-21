@@ -6,7 +6,6 @@
     "aurisTheme": "ThemeLight",
     "aurisPusConfig": {
         "cfgNDIU": [],
-        "cfgMission": "MissionCO2M",
         "cfgCnC": [],
         "cfgUnknownSPID": 5071,
         "cfgEpoch": "UnixTime",
@@ -28,6 +27,7 @@
             "fromLeaps": 17
         },
         "cfgSCID": 0,
+        "cfgMission": "MissionCO2M",
         "cfgNCTRS": [],
         "cfgDataBase": {
             "cfgStoreTMFrames": true,
@@ -37,6 +37,7 @@
             }
         },
         "cfgMaxTMFrameLen": 1115,
+        "cfgCLTUTrailer": "Trailer0xC5",
         "cfgCltuBlockSize": "CltuBS_8",
         "cfgCLTUTrailer": "Trailer0xC5",
         "cfgEDEN": [
