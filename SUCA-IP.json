@@ -1,0 +1,61 @@
+{
+    "aurisMIB": null,
+    "aurisInstance": 0,
+    "aurisMission": "SUCA-IP",
+    "aurisTheme": "ThemeLight",
+    "aurisDbConfig": {
+        "cfgMongoHost": "localhost",
+        "cfgMongoPort": null
+    },
+    "aurisPusConfig": {
+        "cfgMission": "MissionDefault",
+        "cfgNDIU": [],
+        "cfgCnC": [
+            {
+                "cfgCncCucTime": "Cuc43",
+                "cfgCncHasCRC": "HasCRC",
+                "cfgCncPortTM": 10000,
+                "cfgCncHost": "localhost",
+                "cfgCncPortTC": 11000,
+                "cfgCncName": "SUCA-IP",
+                "cfgCncID": 1
+            }
+        ],
+        "cfgUnknownSPID": 5071,
+        "cfgEpoch": "UnixTime",
+        "cfgInterfacePort": 55555,
+        "cfgRandomizerEnabled": false,
+        "cfgRandomizerStartValue": 255,
+        "cfgVerification": {
+            "cfgTimeoutC": 30,
+            "cfgTimeoutGT": 20,
+            "cfgTimeoutS": 30,
+            "cfgTimeoutA": 30,
+            "cfgTimeoutO": 20
+        },
+        "cfgVCIDs": [
+            0,
+            1,
+            2
+        ],
+        "cfgLeapSeconds": {
+            "fromLeaps": 17
+        },
+        "cfgSCID": 0,
+        "cfgDataBase": null,
+        "cfgNCTRS": [], 
+        "cfgCltuBlockSize": "CltuBS_8",
+        "cfgCLTUTrailer": "Trailer0xC5",
+        "cfgEDEN": [],
+        "cfgStoreTMFrames": true,
+        "cfgStorePUSPackets": true,
+        "cfgTMFrame": {
+            "cfgMaxTMFrameLen": 1115,
+            "cfgTMSegLength": "TMSegment65536",
+            "cfgTMFrameHasCRC": true
+        }
+    },
+    "aurisLogLevel": {
+        "tag": "LogLevelDebug"
+    }
+}
