@@ -43,6 +43,18 @@ import           SLE.Types
 
 
 aurisEventHandler :: TBQueue IfEvent -> IfEvent -> IO ()
+aurisEventHandler queue ev@(EventPUS (EVTelemetry (EVTMPacketDecoded pkt))) = do 
+    atomically $ do 
+        full <- isFullTBQueue queue
+        when (not full) $ writeTBQueue queue ev 
+aurisEventHandler queue ev@(EventPUS (EVTelemetry (EVTMFrameReceived frame))) = do 
+    atomically $ do 
+        full <- isFullTBQueue queue
+        when (not full) $ writeTBQueue queue ev 
+aurisEventHandler queue ev@(EventPUS (EVTelemetry (EVTMParameters params))) = do 
+    atomically $ do 
+        full <- isFullTBQueue queue
+        when (not full) $ writeTBQueue queue ev 
 aurisEventHandler queue event = atomically $ writeTBQueue queue event
 
 

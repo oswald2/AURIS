@@ -30,7 +30,7 @@
                 , _tcSSC = SSC 0
                 , _tcReqPacket =
                     TCPacket
-                      { _tcpAPID = APID 1696
+                      { _tcpAPID = APID 1711
                       , _tcpType = PUSType 8
                       , _tcpSubType = PUSSubType 1
                       , _tcpSourceID = IsSrcIDA (SourceID 10)

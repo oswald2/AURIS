@@ -57,3 +57,4 @@ test-data/GAIA_DetailedScheduleReport.tc
 test-data/GAIA_LoadTT_Test.tc
 test-data/GAIA_LoadTT_Test.tc
 test-data/GAIA_SummaryScheduleReport.tc
+stack_opt.yaml.lock

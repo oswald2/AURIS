@@ -3,10 +3,7 @@
     "aurisInstance": 0,
     "aurisMission": "S2K_TEST",
     "aurisTheme": "ThemeLight",
-    "aurisDbConfig": {
-        "cfgMongoHost": "localhost",
-        "cfgMongoPort": null
-    },
+    "aurisDbConfig": null,
     "aurisPusConfig": {
         "cfgMission": "MissionDefault",
         "cfgNDIU": [],
