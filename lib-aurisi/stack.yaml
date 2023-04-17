@@ -1,5 +1,5 @@
 flags: {}
-resolver: lts-20.6
+resolver: lts-20.17
 
 extra-deps:
 - attoparsec-data-1.0.4.1
