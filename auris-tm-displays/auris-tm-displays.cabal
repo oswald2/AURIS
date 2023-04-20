@@ -68,7 +68,7 @@ library
     colour,
     multiset,
     time,
-    gi-gtk,
+    gi-gtk < 4.0,
     gi-gtk-hs,
     gi-cairo,
     gi-cairo-connector,

@@ -83,7 +83,7 @@ library
     text-short,
     file-embed,
     hashtables-mo,
-    gi-gtk,
+    gi-gtk < 4.0,
     gi-gtk-hs,
     gi-gdk,
     gi-gdkpixbuf,

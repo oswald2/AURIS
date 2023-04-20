@@ -185,9 +185,9 @@ Library
                      Data.HashTable.Internal.Linear.Bucket
 
   Build-depends:     base      >= 4.7 && <5,
-                     hashable  >= 1.1 && <1.2 || >= 1.2.1 && <1.4,
+                     hashable  ,
                      primitive,
-                     vector    >= 0.7 && <0.13
+                     vector    
 
   if flag(portable)
     cpp-options: -DNO_C_SEARCH -DPORTABLE

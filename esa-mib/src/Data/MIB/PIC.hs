@@ -121,7 +121,7 @@ loadFromFile mibPath = do
       logInfo $ "Reading file " <> display (T.pack fileName)
       content <- liftIO $ B.readFile file
       logInfo "File read. Parsing..."
-      let !r = decodeWith myOptions NoHeader (BC.filter isAscii content)
+      let !r = decodeWith myOptions NoHeader (BC.filter Data.Char.isAscii content)
       logInfo "Parsing Done."
       case r of
         Left  err -> return (Left (T.pack err))

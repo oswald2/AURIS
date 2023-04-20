@@ -14,9 +14,9 @@
             {
                 "cfgCncCucTime": "Cuc43",
                 "cfgCncHasCRC": "HasCRC",
-                "cfgCncPortTM": 10000,
+                "cfgCncPortTM": 11000,
                 "cfgCncHost": "localhost",
-                "cfgCncPortTC": 11000,
+                "cfgCncPortTC": 10000,
                 "cfgCncName": "SUCA-IP",
                 "cfgCncID": 1
             }
@@ -43,7 +43,7 @@
         },
         "cfgSCID": 0,
         "cfgDataBase": null,
-        "cfgNCTRS": [], 
+        "cfgNCTRS": [],
         "cfgCltuBlockSize": "CltuBS_8",
         "cfgCLTUTrailer": "Trailer0xC5",
         "cfgEDEN": [],

@@ -89,7 +89,7 @@ library
     , lens
     , text
     , vector
-    , gi-gtk
+    , gi-gtk < 4.0
     , gi-gtk-hs
     , gi-gdk
     , haskell-gi-base
