@@ -2,6 +2,8 @@
 
 with-compiler: ghc-9.4.5
 
+flags: +optimize
+
 packages:
     hashtables-mo/
   , timer-wheel/
