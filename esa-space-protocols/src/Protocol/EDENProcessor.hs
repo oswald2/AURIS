@@ -36,6 +36,7 @@ import           General.Time                   ( edenTimeParser
                                                 )
 import           General.Types                  ( HasCRC(..)
                                                 , HexBytes(toBS)
+                                                , bsToHex
                                                 )
 
 import           Text.Show.Pretty
@@ -174,7 +175,7 @@ handleEdenPacket missionSpecific interf EdenTM {..} counters = do
                             of
                                 Left  _ -> nullTime
                                 Right t -> t
-                    extracted = ExtractedPacket oct epu
+                    extracted = ExtractedPacket (bsToHex oct) epu
                     vcid      = VCID (_edenTmSecHeader ^. edenTmSecChannel)
                     vcfc      = _edenTmSecHeader ^. edenTmSecVCFC
                     newMap    = HM.insert vcid vcfc counters
@@ -208,7 +209,7 @@ handleEdenPacket missionSpecific interf EdenSCOETM {..} counters = do
                             of
                                 Left  _ -> nullTime
                                 Right t -> t
-                    extracted = ExtractedPacket oct epu
+                    extracted = ExtractedPacket (bsToHex oct) epu
                     vcid      = IsSCOE
                     gap       = Nothing
                 in  Right (extracted, counters)
@@ -235,7 +236,7 @@ handleEdenPacket missionSpecific interf EdenSpaceTC {..} counters = do
                             of
                                 Left  _ -> nullTime
                                 Right t -> t
-                    extracted = ExtractedPacket oct epu
+                    extracted = ExtractedPacket (bsToHex oct) epu
                     vcid      = VCID (_edenSpaceSecHeader ^. edenSecChannel)
                 in  Right (extracted, counters)
 
@@ -262,7 +263,7 @@ handleEdenPacket missionSpecific interf EdenSCOETC {..} counters = do
                             of
                                 Left  _ -> nullTime
                                 Right t -> t
-                    extracted = ExtractedPacket oct epu
+                    extracted = ExtractedPacket (bsToHex oct) epu
                     vcid      = IsSCOE
                 in  Right (extracted, counters)
 

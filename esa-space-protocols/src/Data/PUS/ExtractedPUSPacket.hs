@@ -2,17 +2,18 @@
   TemplateHaskell
 #-}
 module Data.PUS.ExtractedPUSPacket
-  ( ExtractedPacket(..)
-  , extrBytes
-  , extrPacket
-  )
-where
+    ( ExtractedPacket(..)
+    , extrBytes
+    , extrPacket
+    ) where
 
-import           RIO
 import           Control.Lens                   ( makeLenses )
+import           RIO
 
-import           Data.PUS.PUSPacket
 import           Data.PUS.ExtractedDU
+import           Data.PUS.PUSPacket
+
+import           General.Types
 
 
 -- | This is a data structure which is used internally in the conduits 
@@ -20,8 +21,9 @@ import           Data.PUS.ExtractedDU
 -- from which the packet has been extracted (this is also needed later in the
 -- chain after the packet has been extracted) and the 'ExtractedDU' for the 
 -- extracted 'PUSPacket'
-data ExtractedPacket = ExtractedPacket {
-  _extrBytes :: !ByteString
-  , _extrPacket :: ExtractedDU PUSPacket
-  } deriving (Show, Generic)
+data ExtractedPacket = ExtractedPacket
+    { _extrBytes  :: !HexBytes
+    , _extrPacket :: ExtractedDU PUSPacket
+    }
+    deriving (Show, Generic)
 makeLenses ''ExtractedPacket

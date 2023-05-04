@@ -394,14 +394,14 @@ pusPktTime _                               = Nothing
 
 -- | returns the length of the data field header when encoded in bytes
 dfhLength :: DataFieldHeader -> Int
-dfhLength PUSEmptyHeader                  = 0
-dfhLength PUSTCStdHeader{}                = 4
-dfhLength PUSTCStdHeaderC{}               = 5
-dfhLength PUSTMStdHeader{}                = 10
-dfhLength PUSTMStdHeaderC{}               = 14
-dfhLength PUSCnCTCHeader{}                = 4
-dfhLength PUSCnCTMHeader { _cncTime = t } = 4 + sizeof t
-dfhLength CO2MTMHeader{}                  = 15
+dfhLength PUSEmptyHeader                        = 0
+dfhLength PUSTCStdHeader{}                      = 4
+dfhLength PUSTCStdHeaderC{}                     = 5
+dfhLength PUSTMStdHeader { _stdTmOBTime = t }   = 4 + sizeof t
+dfhLength PUSTMStdHeaderC { _stdCTmOBTime = t } = 8 + sizeof t
+dfhLength PUSCnCTCHeader{}                      = 4
+dfhLength PUSCnCTMHeader { _cncTime = t }       = 4 + sizeof t
+dfhLength CO2MTMHeader{}                        = 15
 
 instance SizeOf DataFieldHeader where
     sizeof = dfhLength

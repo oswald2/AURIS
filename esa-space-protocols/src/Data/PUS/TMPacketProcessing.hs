@@ -155,9 +155,8 @@ packetProcessorC = awaitForever $ \pkt@(ExtractedPacket _oct pusPkt) -> do
     createAndYieldPacket key def pkt@(ExtractedPacket oct pusPkt) = do
         if def ^. tmpdCheck
             then do
-                logDebug $ "TM Packet Processor: received: " <> display
-                    (hexdumpBS oct)
-                checkCRC pusPkt def key oct
+                logDebug $ "TM Packet Processor: received: " <> display oct
+                checkCRC pusPkt def key (hexToBS oct)
             else yieldM $ processPacket def key pkt
 
     yieldUnknownPacket cfg pkt@(ExtractedPacket _oct pusPkt) = do
@@ -222,7 +221,9 @@ packetProcessorC = awaitForever $ \pkt@(ExtractedPacket _oct pusPkt) -> do
 
     performProcessing pusPkt def key payload = do
         -- process the packet and pass it on 
-        yieldM $ processPacket def key (ExtractedPacket payload pusPkt)
+        yieldM $ processPacket def
+                               key
+                               (ExtractedPacket (bsToHex payload) pusPkt)
 
 
 
@@ -232,7 +233,7 @@ packetProcessorC = awaitForever $ \pkt@(ExtractedPacket _oct pusPkt) -> do
 -- TM PUS Packet.
 getPackeDefinition
     :: DataModel -> ExtractedPacket -> Maybe (TMPacketKey, TMPacketDef)
-getPackeDefinition model (ExtractedPacket bytes pkt) =
+getPackeDefinition model (ExtractedPacket (HexBytes bytes) pkt) =
     let pusPkt     = pkt ^. epDU
         pktType    = hdr ^. pusHdrType
         hdr        = pusPkt ^. pusHdr
@@ -456,11 +457,12 @@ getFixedParams
     -> ExtractedPacket
     -> Vector TMParamLocation
     -> m (Maybe (Vector TMParameter))
-getFixedParams timestamp ert epoch _def (ExtractedPacket oct' _ep) locs = do
-    vs <- V.foldM (go oct') (Just VB.empty) locs
-    case vs of
-        Just v  -> return . Just . VB.build $ v
-        Nothing -> return Nothing
+getFixedParams timestamp ert epoch _def (ExtractedPacket (HexBytes oct') _ep) locs
+    = do
+        vs <- V.foldM (go oct') (Just VB.empty) locs
+        case vs of
+            Just v  -> return . Just . VB.build $ v
+            Nothing -> return Nothing
   where
     -- go :: ByteString -> Maybe (VB.Builder TMParameter) -> TMParamLocation -> m (Maybe (VB.Builder TMParameter))
     go oct bldr loc = do
@@ -553,7 +555,7 @@ getVariableParams
     -> Word8
     -> VarParams
     -> m (Maybe (Vector TMParameter))
-getVariableParams timestamp ert epoch pktDef (ExtractedPacket oct' ep) _tpsd dfhSize varParams
+getVariableParams timestamp ert epoch pktDef (ExtractedPacket (HexBytes oct') ep) _tpsd dfhSize varParams
     = do
         let offset = mkOffset (fromIntegral dfhSize) 0
         a <- go offset varParams
@@ -890,8 +892,8 @@ extractParamValue epoch oct offset par =
     readString off Nothing =
         let val = B.drop (unByteOffset (toByteOffset off)) oct
             len = case getAlignedValue val (ByteOffset 0) (ValUInt16 BiE 0) of
-                        Just (ValUInt16 _ strLen) -> strLen
-                        _                         -> 0
+                Just (ValUInt16 _ strLen) -> strLen
+                _                         -> 0
             val2 = B.take (fromIntegral len) . B.drop 2 $ val
         in  case ST.fromByteString val2 of
                 Just x  -> TMValString x

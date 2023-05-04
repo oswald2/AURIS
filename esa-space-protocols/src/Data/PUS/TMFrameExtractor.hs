@@ -53,7 +53,6 @@ import           Conduit.PayloadParser
 
 import           Data.Attoparsec.ByteString     ( Parser )
 import qualified Data.Attoparsec.ByteString    as A
-import           Data.Conduit.TQueue
 
 import           Control.PUS.Classes
 
@@ -326,7 +325,7 @@ checkFrameCountC = go Nothing
 
 
 extractPktFromTMFramesC
-    :: (MonadIO m, MonadReader env m, HasGlobalState env, HasConfig env)
+    :: (MonadIO m, MonadReader env m, HasGlobalState env)
     => PUSMissionSpecific
     -> ConduitT (ExtractedDU TMFrame) ExtDuTMFrame m ()
 extractPktFromTMFramesC missionSpecific = loop True B.empty
@@ -401,7 +400,7 @@ extractPktFromTMFramesC missionSpecific = loop True B.empty
                                 loop False spill
 
     rejectSpillOver
-        :: (MonadIO m, MonadReader env m, HasGlobalState env, HasConfig env)
+        :: (MonadIO m, MonadReader env m, HasGlobalState env)
         => ByteString
         -> ProtocolInterface
         -> ConduitT (ExtractedDU TMFrame) ExtDuTMFrame m ()
@@ -579,7 +578,7 @@ processFinishedPacket missionSpecific pIf ert hdr hdrBin vcid body = do
                     extrPkt = pusPkt ^. protContent
                 -- only pass on the packet if it is not an Idle Pkt
                 unless (pusPktIsIdle extrPkt)
-                    $ yield (ExtractedPacket (hdrBin <> body) ep)
+                    $ yield (ExtractedPacket (bsToHex (hdrBin <> body)) ep)
 
 processFirstSegment :: PUSHeader -> PacketPart -> PktStore -> PktStore
 processFirstSegment hdr part pktStore =
@@ -814,7 +813,7 @@ packetStatC
 packetStatC = do
     awaitForever $ \meta -> do
         pktStatVar <- getPacketStats <$> ask
-        let pktSize = fromIntegral $ B.length (meta ^. extrBytes)
+        let pktSize = fromIntegral $ B.length (hexToBS (meta ^. extrBytes))
         now <- liftIO $ getPOSIXTime
         atomically $ modifyTVar' pktStatVar (statNewDU now pktSize)
         yield meta

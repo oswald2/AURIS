@@ -258,7 +258,7 @@ convertCncToTMPacket (byts, protPkt) interf = do
                           , _epDU      = pkt
                           }
         pkt    = protPkt ^. protContent
-        newPkt = ExtractedPacket byts epd
+        newPkt = ExtractedPacket (bsToHex byts) epd
 
     return newPkt
 

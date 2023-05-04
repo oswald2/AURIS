@@ -1,14 +1,14 @@
 {
     "aurisMIB": null,
     "aurisInstance": 0,
-    "aurisMission": "Eden Router CO2M",
+    "aurisMission": "Eden Router Pad Test",
     "aurisDbConfig": null,
     "aurisTheme": "ThemeLight",
     "aurisPusConfig": {
         "cfgNDIU": [],
         "cfgCnC": [],
         "cfgUnknownSPID": 5071,
-        "cfgEpoch": "UnixTime",
+        "cfgEpoch": "GPSTime",
         "cfgInterfacePort": 55555,
         "cfgRandomizerEnabled": false,
         "cfgRandomizerStartValue": 255,
@@ -27,7 +27,7 @@
             "fromLeaps": 17
         },
         "cfgSCID": 0,
-        "cfgMission": "MissionCO2M",
+        "cfgMission": "MissionACUC43",
         "cfgNCTRS": [],
         "cfgDataBase": {
             "cfgStoreTMFrames": true,
