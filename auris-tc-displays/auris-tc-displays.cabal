@@ -92,7 +92,7 @@ library
     , esa-space-protocols
     , gui-base
     , mcs-interface
-    , refined
+    , refined > 0.8
     , filepath
     , serialise
 

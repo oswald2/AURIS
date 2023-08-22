@@ -175,7 +175,7 @@ library
     , colour
     , bimap
     , multi-containers
-    , refined
+    , refined > 0.8
     , attoparsec
 
   -- Directories containing source files.

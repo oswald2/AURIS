@@ -249,7 +249,7 @@ test-suite CLTUTest
         mtl -any,
         vector -any,
         rio -any,
-        refined 
+        refined > 0.8
 
 
 
@@ -394,7 +394,7 @@ test-suite TCEncodeTests
         , sorted-list
         , vector
         , bytestring-to-vector
-        , refined
+        , refined > 0.8
 
 test-suite TMExtractionTest
     type: exitcode-stdio-1.0

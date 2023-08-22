@@ -27,7 +27,7 @@
             "fromLeaps": 17
         },
         "cfgSCID": 0,
-        "cfgMission": "MissionACUC43",
+        "cfgMission": "MissionPUSC",
         "cfgNCTRS": [],
         "cfgDataBase": {
             "cfgStoreTMFrames": true,

@@ -213,7 +213,7 @@ library
     , filepath
     , word24
     , bytestring-to-vector
-    , refined
+    , refined > 0.8
     , sorted-list
     , bimap
     , time
