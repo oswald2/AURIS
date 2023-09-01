@@ -61,6 +61,7 @@ extra-deps:
 - git: https://github.com/winterland1989/word24
   commit: 445f791e35ddc8098f05879dbcd07c41b115cb39
 - word-compat-0.0.2
+- gi-gtksource-3.0.28
 
 # Override default flag values for local packages and extra-deps
 flags:
