@@ -17,7 +17,7 @@
 #
 # resolver: ./custom-snapshot.yaml
 # resolver: https://example.com/snapshots/2018-01-01.yaml
-resolver: lts-21.8
+resolver: lts-21.9
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -64,6 +64,40 @@ extra-deps:
 - word-compat-0.0.2
 - gi-gtksource-3.0.28
 
+
+ghc-options: 
+  "$targets": -freverse-errors 
+
+
+# Override default flag values for local packages and extra-deps
+flags:
+  esa-base:
+    optimize: true
+  esa-mib:
+    optimize: true
+  esa-db-mongodb:
+    optimize: true
+  esa-space-protocols:
+    optimize: true
+  auris-tm-displays:
+    optimize: true
+  auris-tc-displays:
+    optimize: true
+  auris-control-displays:
+    optimize: true 
+  lib-aurisi:
+    optimize: true
+  aurisi:
+    optimize: true
+  gui-base:
+    optimize: true
+  mcs-interface:
+    optimize: true
+  hashtables-mo:
+    unsafe-tricks: true
+    sse42: true
+
+
 # Extra package databases containing global packages
 # extra-package-dbs: []
 
@@ -90,5 +124,3 @@ extra-deps:
 # stack build --profile --ghc-options="-fno-prof-auto"
 apply-ghc-options: everything
 rebuild-ghc-options: true
-ghc-options: 
-  "$targets": -freverse-errors -Wunused-packages

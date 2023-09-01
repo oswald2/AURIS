@@ -29,8 +29,22 @@ resolver: lts-21.9
 #   - auto-update
 #   - wai
 packages:
-- .
-- ../esa-base
+- hashtables-mo
+- timer-wheel
+- esa-base
+- esa-mib
+- esa-space-protocols
+#- esa-db
+- esa-db-mongodb
+- esa-tm-model
+- mcs-interface
+- gui-base
+- auris-tm-displays
+- auris-tc-displays
+- auris-control-displays
+- lib-aurisi
+- aurisi
+- Chart-gi-cairo
 
 # Dependency packages to be pulled from upstream that are not in the resolver.
 # These entries can reference officially published versions as well as
@@ -41,10 +55,14 @@ packages:
 # - git: https://github.com/commercialhaskell/stack.git
 #   commit: e7b331f14bcffb8367cd58fbfc8b40ec7642100a
 #
-# extra-deps: []
+allow-newer: true 
 
-# Override default flag values for local packages and extra-deps
-# flags: {}
+extra-deps:
+- timers-updatable-0.2.0.2
+- git: https://github.com/winterland1989/word24
+  commit: 445f791e35ddc8098f05879dbcd07c41b115cb39
+- word-compat-0.0.2
+- gi-gtksource-3.0.28
 
 # Extra package databases containing global packages
 # extra-package-dbs: []
@@ -66,3 +84,11 @@ packages:
 #
 # Allow a newer minor version of GHC than the snapshot specifies
 # compiler-check: newer-minor
+
+# if you want to profile, add SCC cost centres by hand for the functions you 
+# want to profile and then compile with:
+# stack build --profile --ghc-options="-fno-prof-auto"
+apply-ghc-options: everything
+rebuild-ghc-options: true
+ghc-options: 
+  "$targets": -freverse-errors -Wunused-packages

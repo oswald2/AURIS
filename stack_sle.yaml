@@ -17,7 +17,7 @@
 #
 # resolver: ./custom-snapshot.yaml
 # resolver: https://example.com/snapshots/2018-01-01.yaml
-resolver: lts-21.8
+resolver: lts-20.2
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -65,21 +65,40 @@ extra-deps:
 - word-compat-0.0.2
 - gi-gtksource-3.0.28
 
-
 ghc-options: 
   "$targets": -freverse-errors -Wunused-packages
 
 flags: 
   esa-base:
     sle: True
+    optimize: true
+  esa-mib:
+    optimize: true
+  esa-db-mongodb:
+    optimize: true
   esa-space-protocols:
     sle: True
-  lib-aurisi:
-    sle: True
+    optimize: true
+  auris-tm-displays:
+    optimize: true
+  auris-tc-displays:
+    optimize: true
   auris-control-displays:
     sle: True 
+    optimize: true
+  lib-aurisi:
+    sle: True
+    optimize: true
   aurisi:
     sle: True 
+    optimize: true
+  gui-base:
+    optimize: true
+  mcs-interface:
+    optimize: true
+  hashtables-mo:
+    unsafe-tricks: true
+    sse42: true
 
 # Extra package databases containing global packages
 # extra-package-dbs: []
