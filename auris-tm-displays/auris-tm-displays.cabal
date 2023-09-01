@@ -49,7 +49,7 @@ library
     GUI.GraphWidget
     GUI.ANDWidget
     GUI.ParamDisplay
-    GUI.FrameRetrieveDialog
+    GUI.RetrieveDialog
     GUI.NameStore
 
 

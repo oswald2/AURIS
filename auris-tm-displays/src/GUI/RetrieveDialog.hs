@@ -1,9 +1,11 @@
-module GUI.FrameRetrieveDialog
-    ( FrameRetrieveDialog
-    , newFrameRetrieveDialog
-    , frameRetrieveDiag
+module GUI.RetrieveDialog
+    ( RetrieveDialog
+    , newRetrieveDialog
+    , retrieveDiag
     , frameRetrieveDiagGetQuery
+    , packetRetrieveDiagGetQuery
     , frameRetrieveDiagSetQuery
+    , packetRetrieveDiagSetQuery
     ) where
 
 import           RIO
@@ -14,12 +16,12 @@ import           GI.Gtk                        as Gtk
 
 import           GUI.TimePicker
 
-import           Persistence.DBQuery            ( DbGetFrameRange(..) )
+import           Persistence.DBQuery            
 
 
 
 
-data FrameRetrieveDialog = FrameRetrieveDialog
+data RetrieveDialog = RetrieveDialog
     { frParent :: !ApplicationWindow
     , frDialog :: !Dialog
     , frCbFrom :: !CheckButton
@@ -30,12 +32,12 @@ data FrameRetrieveDialog = FrameRetrieveDialog
     }
 
 
-frameRetrieveDiag :: Getting r FrameRetrieveDialog Dialog
-frameRetrieveDiag = to frDialog
+retrieveDiag :: Getting r RetrieveDialog Dialog
+retrieveDiag = to frDialog
 
 
-newFrameRetrieveDialog :: ApplicationWindow -> IO FrameRetrieveDialog
-newFrameRetrieveDialog window = do
+newRetrieveDialog :: ApplicationWindow -> IO RetrieveDialog
+newRetrieveDialog window = do
     diag   <- dialogNew
     grid   <- gridNew
     box    <- dialogGetContentArea diag
@@ -62,7 +64,7 @@ newFrameRetrieveDialog window = do
     gridAttach grid (timePickerGetBox tfrom) 1 0 1 1
     gridAttach grid (timePickerGetBox tto)   1 1 1 1
 
-    let g = FrameRetrieveDialog { frParent = window
+    let g = RetrieveDialog { frParent = window
                                 , frDialog = diag
                                 , frCbFrom = cbFrom
                                 , frCbTo   = cbTo
@@ -82,14 +84,21 @@ getTime cb picker = do
     if v then Just <$> timePickerGetTime picker else return Nothing
 
 
-frameRetrieveDiagGetQuery :: FrameRetrieveDialog -> IO DbGetFrameRange
+frameRetrieveDiagGetQuery :: RetrieveDialog -> IO DbGetFrameRange
 frameRetrieveDiagGetQuery g = do
     ffrom <- getTime (frCbFrom g) (frFrom g)
     fto   <- getTime (frCbTo g) (frTo g)
     return DbGetFrameRange { dbFromTime = ffrom, dbToTime = fto }
 
+packetRetrieveDiagGetQuery :: RetrieveDialog -> IO DbGetPacketRange
+packetRetrieveDiagGetQuery g = do
+    ffrom <- getTime (frCbFrom g) (frFrom g)
+    fto   <- getTime (frCbTo g) (frTo g)
+    return DbGetPacketRange { dbPFromTime = ffrom, dbPToTime = fto }
 
-frameRetrieveDiagSetQuery :: FrameRetrieveDialog -> DbGetFrameRange -> IO ()
+
+
+frameRetrieveDiagSetQuery :: RetrieveDialog -> DbGetFrameRange -> IO ()
 frameRetrieveDiagSetQuery g query = do
     case dbFromTime query of
         Nothing -> toggleButtonSetActive (frCbFrom g) False
@@ -103,3 +112,17 @@ frameRetrieveDiagSetQuery g query = do
             toggleButtonSetActive (frCbTo g) True
             timePickerSetTime (frTo g) f
 
+
+packetRetrieveDiagSetQuery :: RetrieveDialog -> DbGetPacketRange -> IO ()
+packetRetrieveDiagSetQuery g query = do
+    case dbPFromTime query of
+        Nothing -> toggleButtonSetActive (frCbFrom g) False
+        Just f  -> do
+            toggleButtonSetActive (frCbFrom g) True
+            timePickerSetTime (frFrom g) f
+
+    case dbPToTime query of
+        Nothing -> toggleButtonSetActive (frCbTo g) False
+        Just f  -> do
+            toggleButtonSetActive (frCbTo g) True
+            timePickerSetTime (frTo g) f

@@ -4,7 +4,9 @@
 module GUI.TMPacketTab
     ( TMPacketTab(..)
     , tmpTabAddRow
+    , tmpTabAddPackets
     , tmpTabDetailSetValues
+    , tmpTabPacketRetrievalFinished
     , createTMPTab
     , tmpTable
     , GUI.TMPacketTab.setupCallbacks
@@ -30,13 +32,10 @@ import           GUI.TMPParamTable              ( TMPParamTable
                                                 , createTMPParamTable
                                                 , tmpParamTableSetValues
                                                 )
-import           GUI.TMPacketTable              ( TMPacketTable
-                                                , createTMPacketTable
-                                                , tmPacketTableAddRow
-                                                , tmPacketTableSetCallback
-                                                )
+import           GUI.TMPacketTable             
 --import           GUI.Colors
 import           GUI.Utils                      ( getObject )
+import           GUI.RetrieveDialog
 
 import           Data.PUS.ExtractedDU           ( ExtractedDU
                                                 , epDU
@@ -45,7 +44,12 @@ import           Data.PUS.ExtractedDU           ( ExtractedDU
 import           Data.PUS.LiveState
 import           Data.PUS.TMPacket
 
+import           Persistence.DBQuery
+
 import           Interface.Interface
+
+import           Text.Builder
+
 
 
 data TMPacketTab = TMPacketTab
@@ -67,6 +71,8 @@ data TMPacketTab = TMPacketTab
     , _tmpLiveCtrlBox     :: !Box
     , _tmpLiveCtrl        :: !LiveControl
     , _tmpLiveState       :: TVar LiveStateState
+    , _tmpRetrievalCnt    :: !Label
+    , _tmpRetrieveDiag    :: !RetrieveDialog
     }
 makeLenses ''TMPacketTab
 
@@ -74,6 +80,24 @@ makeLenses ''TMPacketTab
 
 tmpTabAddRow :: TMPacketTab -> ExtractedDU TMPacket -> IO ()
 tmpTabAddRow tab = tmPacketTableAddRow (_tmpTable tab)
+
+tmpTabAddPackets :: TMPacketTab -> [ExtractedDU TMPacket] -> IO ()
+tmpTabAddPackets tab packets = do 
+    -- Only in stopped mode 
+    st <- readTVarIO (tab ^. tmpLiveState)
+    case st of
+        Live    -> return ()
+        Stopped -> tmPacketTableAddRows (tab ^. tmpTable) packets
+
+
+tmpTabPacketRetrievalFinished :: TMPacketTab -> IO ()
+tmpTabPacketRetrievalFinished g = do
+    cnt <- tmPacketTableGetSize (g ^. tmpTable)
+    labelSetLabel (g ^. tmpRetrievalCnt)
+        $  run
+        $  text "Retrieved: "
+        <> decimal cnt
+        <> text " entries."
 
 
 
@@ -105,6 +129,8 @@ createTMPTab window builder = do
     boxPackStart liveCtrl (liveControlGetWidget lc) False False 0
     boxPackStart liveCtrl lbl                       False False 10
 
+    retrieveDialog <- newRetrieveDialog window
+
     liveState <- newTVarIO Live
 
     let g = TMPacketTab { _tmpTable           = table
@@ -125,11 +151,15 @@ createTMPTab window builder = do
                         , _tmpLiveCtrlBox     = liveCtrl
                         , _tmpLiveCtrl        = lc
                         , _tmpLiveState       = liveState
+                        , _tmpRetrievalCnt    = lbl
+                        , _tmpRetrieveDiag    = retrieveDialog
                         }
 
     -- set the double click callback for the main table to set the 
     -- detail values in the details view
     tmPacketTableSetCallback table (tmpTabDetailSetValues g)
+
+    switchLive g 
 
     return g
 
@@ -178,18 +208,18 @@ setupCallbacks g interface = do
 
 switchLive :: TMPacketTab -> IO ()
 switchLive g = do
-    -- tmFrameTableSwitchLive (g ^. tmfFrameTable)
-    -- tmFrameTableClearRows (g ^. tmfFrameTable)
+    tmPacketTableSwitchLive (g ^. tmpTable)
+    tmPacketTableClearRows (g ^. tmpTable)
     atomically $ writeTVar (g ^. tmpLiveState) Live
 
 switchStop :: TMPacketTab -> IO ()
 switchStop g = do
-    -- tmFrameTableSwitchOffline (g ^. tmfFrameTable)
+    tmPacketTableSwitchOffline (g ^. tmpTable)
     atomically $ writeTVar (g ^. tmpLiveState) Stopped
 
 tmpTabPlayCB :: TMPacketTab -> Bool -> IO ()
 tmpTabPlayCB g True = do
-    -- labelSetLabel (g ^. tmpRetrievalCnt) ""
+    labelSetLabel (g ^. tmpRetrievalCnt) ""
     switchLive g
 tmpTabPlayCB _ _ = return ()
 
@@ -199,35 +229,35 @@ tmpTabStopCB g True = switchStop g
 tmpTabStopCB _ _    = return ()
 
 tmpTabRetrieveCB :: TMPacketTab -> Interface -> IO ()
-tmpTabRetrieveCB g interface = return ()
-    -- res <- dialogRun (g ^. tmfRetrieveDiag . frameRetrieveDiag)
-    -- widgetHide (g ^. tmfRetrieveDiag . frameRetrieveDiag)
-    -- when (res == fromIntegral (fromEnum ResponseTypeOk)) $ do
-    --     -- when we have an OK, first clear the table 
-    --     tmFrameTableClearRows (g ^. tmfFrameTable)
-    --     -- get the data from the Retrieval Dialog 
-    --     q <- frameRetrieveDiagGetQuery (g ^. tmfRetrieveDiag)
-    --     -- issue the query to the database
-    --     callInterface interface actionQueryDB (FrRange q)
+tmpTabRetrieveCB g interface = do
+    res <- dialogRun (g ^. tmpRetrieveDiag . retrieveDiag)
+    widgetHide (g ^. tmpRetrieveDiag . retrieveDiag)
+    when (res == fromIntegral (fromEnum ResponseTypeOk)) $ do
+        -- when we have an OK, first clear the table 
+        tmPacketTableClearRows (g ^. tmpTable)
+        -- get the data from the Retrieval Dialog 
+        q <- packetRetrieveDiagGetQuery (g ^. tmpRetrieveDiag)
+        -- issue the query to the database
+        callInterface interface actionQueryDB (PktRange q)
 
 
 tmpTabRewindCB :: TMPacketTab -> Interface -> IO ()
-tmpTabRewindCB g interface = return ()
-    -- ert <- tmFrameTableGetEarliestERT (g ^. tmfFrameTable)
+tmpTabRewindCB g interface = do
+    ert <- tmPacketTableGetEarliestTime (g ^. tmpTable)
 
     -- traceM $ "tmfTabRewindCB: earliest ERT: " <> textDisplay ert
 
-    -- tmFrameTableClearRows (g ^. tmfFrameTable)
-    -- callInterface interface
-    --               actionQueryDB
-    --               (FrPrev (DbGetLastNFrames ert (fromIntegral defMaxRowTM)))
+    tmPacketTableClearRows (g ^. tmpTable)
+    callInterface interface
+                  actionQueryDB
+                  (PktPrev (DbGetLastNPackets ert (fromIntegral defMaxRowTM)))
 
 
 tmpTabForwardCB :: TMPacketTab -> Interface -> IO ()
-tmpTabForwardCB g interface = return ()
-    -- ert <- tmFrameTableGetLatestERT (g ^. tmfFrameTable)
-    -- tmFrameTableClearRows (g ^. tmfFrameTable)
-    -- callInterface interface
-    --               actionQueryDB
-    --               (FrNext (DbGetNextNFrames ert (fromIntegral defMaxRowTM)))
+tmpTabForwardCB g interface = do
+    ert <- tmPacketTableGetLatestTime (g ^. tmpTable)
+    tmPacketTableClearRows (g ^. tmpTable)
+    callInterface interface
+                  actionQueryDB
+                  (PktNext (DbGetNextNPackets ert (fromIntegral defMaxRowTM)))
 

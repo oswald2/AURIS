@@ -21,4 +21,12 @@ dbResultFunc (DBResultTMFrames frames)  = do
 dbResultFunc DBResultTMFramesFinished = do 
     logDebug $ "Query for TM Frames finished."
     raiseEvent (EVDB EVDBTMFramesFinished)
+
+dbResultFunc (DBResultTMPackets packets)  = do
+    logDebug $ "Query Result: " <> display (length packets) <> " rows."
+    raiseEvent (EVDB (EVDBTMPackets packets))
+dbResultFunc DBResultTMPacketsFinished = do 
+    logDebug $ "Query for TM Packets finished."
+    raiseEvent (EVDB EVDBTMPacketsFinished)
+
 dbResultFunc _ = return ()

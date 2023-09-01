@@ -13,7 +13,9 @@ module GUI.MainWindow
     , mwAddTMFrame
     , mwSetTMFrames
     , mwAddTMFrames
+    , mwAddTMPackets
     , mwTMFrameRetrievalFinished
+    , mwTMPacketRetrievalFinished
     , mwAddTMParameters
     , mwAddTMParameterDefinitions
     , mwAddVerifRqst
@@ -145,9 +147,16 @@ mwSetTMFrames window = tmfTabSetFrames (window ^. mwFrameTab)
 mwAddTMFrames :: MainWindow -> [ExtractedDU TMFrame] -> IO () 
 mwAddTMFrames window = tmfTabAddFrames (window ^. mwFrameTab)
 
+mwAddTMPackets :: MainWindow -> [ExtractedDU TMPacket] -> IO () 
+mwAddTMPackets window = tmpTabAddPackets (window ^. mwTMPTab)
+
 
 mwTMFrameRetrievalFinished :: MainWindow -> IO () 
 mwTMFrameRetrievalFinished window = tmfTabFrameRetrievalFinished (window ^. mwFrameTab)
+
+mwTMPacketRetrievalFinished :: MainWindow -> IO () 
+mwTMPacketRetrievalFinished window = tmpTabPacketRetrievalFinished (window ^. mwTMPTab)
+
 
 
 mwAddTMParameters :: MainWindow -> Vector TMParameter -> IO ()

@@ -181,6 +181,8 @@ data EventDB =
     EVDBTMFrames [ExtractedDU TMFrame]
     | EVDBTMFramesFinished
     | EVDBEvents
+    | EVDBTMPackets [ExtractedDU TMPacket]
+    | EVDBTMPacketsFinished
     deriving(Show, Generic)
 
 instance Serialise EventDB

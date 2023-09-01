@@ -21,7 +21,7 @@ import qualified RIO.Text                      as T
 import           GUI.TMFrameTable
 
 import           GUI.Definitions
-import           GUI.FrameRetrieveDialog
+import           GUI.RetrieveDialog
 import           GUI.LiveControls
 import           GUI.StatusEntry
 import           GUI.TextView
@@ -75,7 +75,7 @@ data TMFrameTab = TMFrameTab
     , _tmfLiveCtrlBox   :: !Box
     , _tmfLiveCtrl      :: !LiveControl
     , _tmfLiveState     :: TVar LiveStateState
-    , _tmfRetrieveDiag  :: FrameRetrieveDialog
+    , _tmfRetrieveDiag  :: !RetrieveDialog
     , _tmfRetrievalCnt  :: !Label
     }
 makeLenses ''TMFrameTab
@@ -210,7 +210,7 @@ createTMFTab window builder = do
     boxPackStart liveCtrl (liveControlGetWidget lc) False False 0
     boxPackStart liveCtrl lbl                       False False 10
 
-    retrieveDiag <- newFrameRetrieveDialog window
+    retrieveDialog <- newRetrieveDialog window
 
     liveState    <- newTVarIO Live
 
@@ -233,7 +233,7 @@ createTMFTab window builder = do
                        , _tmfLiveCtrlBox   = liveCtrl
                        , _tmfLiveCtrl      = lc
                        , _tmfLiveState     = liveState
-                       , _tmfRetrieveDiag  = retrieveDiag
+                       , _tmfRetrieveDiag  = retrieveDialog
                        , _tmfRetrievalCnt  = lbl
                        }
     tmFrameTableSetCallback (g ^. tmfFrameTable) (tmfTabDetailsSetValues g)
@@ -331,17 +331,6 @@ setupCallbacks g interface = do
         (ForwardCB (tmfTabForwardCB g interface))
 
 
--- setupCallbacks :: TMFrameTab -> Interface -> IO ()
--- setupCallbacks g interface = do
---     liveControlConnect (g ^. tmfLiveCtrl)
---                        (tmfTabPlayReactive g)
---                        (tmfTabStopReactive g)
---                        (tmfTabRetrieveReactive g interface)
---                        (tmfTabForwardReactive g interface)
---                        (tmfTabRewindReactive g interface)
-
-
-
 switchLive :: TMFrameTab -> IO ()
 switchLive g = do
     tmFrameTableSwitchLive (g ^. tmfFrameTable)
@@ -368,8 +357,8 @@ tmfTabStopCB _ _    = return ()
 
 tmfTabRetrieveCB :: TMFrameTab -> Interface -> IO ()
 tmfTabRetrieveCB g interface = do
-    res <- dialogRun (g ^. tmfRetrieveDiag . frameRetrieveDiag)
-    widgetHide (g ^. tmfRetrieveDiag . frameRetrieveDiag)
+    res <- dialogRun (g ^. tmfRetrieveDiag . retrieveDiag)
+    widgetHide (g ^. tmfRetrieveDiag . retrieveDiag)
     when (res == fromIntegral (fromEnum ResponseTypeOk)) $ do
         -- when we have an OK, first clear the table 
         tmFrameTableClearRows (g ^. tmfFrameTable)
@@ -384,7 +373,7 @@ tmfTabRewindCB :: TMFrameTab -> Interface -> IO ()
 tmfTabRewindCB g interface = do
     ert <- tmFrameTableGetEarliestERT (g ^. tmfFrameTable)
 
-    traceM $ "tmfTabRewindCB: earliest ERT: " <> textDisplay ert
+    -- traceM $ "tmfTabRewindCB: earliest ERT: " <> textDisplay ert
 
     tmFrameTableClearRows (g ^. tmfFrameTable)
     callInterface interface
@@ -396,7 +385,7 @@ tmfTabForwardCB :: TMFrameTab -> Interface -> IO ()
 tmfTabForwardCB g interface = do
     ert <- tmFrameTableGetLatestERT (g ^. tmfFrameTable)
 
-    traceM $ "tmfTabRewindCB: earliest ERT: " <> textDisplay ert
+    -- traceM $ "tmfTabRewindCB: earliest ERT: " <> textDisplay ert
 
     tmFrameTableClearRows (g ^. tmfFrameTable)
     callInterface interface

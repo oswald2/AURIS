@@ -61,6 +61,9 @@ dbName = "active_session"
 tmFrameCollName :: Collection
 tmFrameCollName = "tm_frames"
 
+tmPacketCollName :: Collection
+tmPacketCollName = "tm_packets"
+
 instance DbBackendClass DbConfigMongoDB m where
     allTMFrames       = getAllFrames
     dropTMFramesTable = cleanFramesTable
@@ -386,6 +389,22 @@ queryHandler resultF pipe (FrPrev q) = do
 queryHandler resultF pipe (FrNext q) = do 
     logDebug $ "QueryPrev: " <> displayShow q 
     frameFromN resultF pipe (dbnStart q) (dbnN q)
+queryHandler resultF pipe (PktRange q)
+    = do
+        logDebug $ "QueryHandler: query=" <> displayShow q
+        let start1 = dbPFromTime q
+            stop1 = dbPToTime q
+        case (start1, stop1) of 
+            (Nothing, Nothing) -> return () 
+            (Just start, Just stop) -> packetFromTo resultF pipe start stop
+            (Just start, Nothing) -> packetFrom resultF pipe start 
+            (Nothing, Just stop) -> packetTo resultF pipe stop 
+queryHandler resultF pipe (PktPrev q) = do 
+    logDebug $ "QueryPrev: " <> displayShow q 
+    packetToN resultF pipe (dbPStart q) (dbPN q)
+queryHandler resultF pipe (PktNext q) = do 
+    logDebug $ "QueryPrev: " <> displayShow q 
+    packetFromN resultF pipe (dbnPStart q) (dbnPN q)
 
 resultSize :: BatchSize
 resultSize = 1000
@@ -427,12 +446,31 @@ frameFromTo resultF pipe start stop = do
     -- traceM $ utf8BuilderToText $ "Query: " <> displayShow query
     collectQuery resultF pipe query DBResultTMFrames DBResultTMFramesFinished
 
+packetFromTo
+    :: (MonadIO m) => (DBResult -> m ()) -> Pipe -> SunTime -> SunTime -> m ()
+packetFromTo resultF pipe start stop = do
+    let query = (select ["timestamp" =: ["$gte" =: timeToMicro start, "$lte" =: timeToMicro stop]]
+                    tmPacketCollName) { sort = ["timestamp" =: Int32 (-1)], batchSize = resultSize }
+
+    -- traceM $ utf8BuilderToText $ "Query: " <> displayShow query
+    collectQuery resultF pipe query DBResultTMPackets DBResultTMPacketsFinished
+
+
+
 frameFrom
     :: (MonadIO m) => (DBResult -> m ()) -> Pipe -> SunTime -> m ()
 frameFrom resultF pipe start = do
     let query = (select ["ert" =: ["$gte" =: timeToMicro start]] 
                     tmFrameCollName) { sort = ["ert" =: Int32 (-1)], batchSize = resultSize }
     collectQuery resultF pipe query DBResultTMFrames DBResultTMFramesFinished
+
+packetFrom
+    :: (MonadIO m) => (DBResult -> m ()) -> Pipe -> SunTime -> m ()
+packetFrom resultF pipe start = do
+    let query = (select ["timestamp" =: ["$gte" =: timeToMicro start]] 
+                    tmPacketCollName) { sort = ["timestamp" =: Int32 (-1)], batchSize = resultSize }
+    collectQuery resultF pipe query DBResultTMPackets DBResultTMPacketsFinished
+
 
 frameTo
     :: (MonadIO m) => (DBResult -> m ()) -> Pipe -> SunTime -> m ()
@@ -441,6 +479,12 @@ frameTo resultF pipe stop = do
                     tmFrameCollName) { sort = ["ert" =: Int32 (-1)], batchSize = resultSize }
     collectQuery resultF pipe query DBResultTMFrames DBResultTMFramesFinished
 
+packetTo
+    :: (MonadIO m) => (DBResult -> m ()) -> Pipe -> SunTime -> m ()
+packetTo resultF pipe stop = do
+    let query = (select ["timestamp" =: ["$lte" =: timeToMicro stop]]
+                    tmPacketCollName) { sort = ["timestamp" =: Int32 (-1)], batchSize = resultSize }
+    collectQuery resultF pipe query DBResultTMPackets DBResultTMPacketsFinished
 
 
 
@@ -451,12 +495,28 @@ frameToN resultF pipe stop n = do
                     tmFrameCollName) { sort = ["ert" =: Int32 (-1)], limit = n }
     collectQuery resultF pipe query DBResultTMFrames DBResultTMFramesFinished
 
+packetToN
+    :: (MonadIO m) => (DBResult -> m ()) -> Pipe -> SunTime -> Word32 -> m ()
+packetToN resultF pipe stop n = do
+    let query = (select ["timestamp" =: ["$lte" =: timeToMicro stop]]
+                    tmPacketCollName) { sort = ["timestamp" =: Int32 (-1)], limit = n }
+    collectQuery resultF pipe query DBResultTMPackets DBResultTMPacketsFinished
+
+
+
 frameFromN
     :: (MonadIO m) => (DBResult -> m ()) -> Pipe -> SunTime -> Word32 -> m ()
 frameFromN resultF pipe start n = do
     let query = (select ["ert" =: ["$gte" =: timeToMicro start]] 
                     tmFrameCollName) { sort = ["ert" =: Int32 (-1)], limit = n }
     collectQuery resultF pipe query DBResultTMFrames DBResultTMFramesFinished
+
+packetFromN
+    :: (MonadIO m) => (DBResult -> m ()) -> Pipe -> SunTime -> Word32 -> m ()
+packetFromN resultF pipe start n = do
+    let query = (select ["timestamp" =: ["$gte" =: timeToMicro start]] 
+                    tmPacketCollName) { sort = ["timestamp" =: Int32 (-1)], limit = n }
+    collectQuery resultF pipe query DBResultTMPackets DBResultTMPacketsFinished
 
 
 

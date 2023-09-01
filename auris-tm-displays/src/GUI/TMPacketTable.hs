@@ -3,7 +3,14 @@ module GUI.TMPacketTable
     , createTMPacketTable
     , tmPacketTableAddRow
     , tmPacketTableSetValues
+    , tmPacketTableGetSize
     , tmPacketTableSetCallback
+    , tmPacketTableSwitchLive
+    , tmPacketTableSwitchOffline
+    , tmPacketTableAddRows
+    , tmPacketTableClearRows    
+    , tmPacketTableGetEarliestTime
+    , tmPacketTableGetLatestTime
     ) where
 
 import           RIO
@@ -16,6 +23,7 @@ import           Data.GI.Base.Attributes        ( AttrOpTag(AttrSet) )
 
 import           Data.PUS.TMPacket
 import           Data.PUS.ExtractedDU
+import           General.Time
 
 import           GUI.Utils
 import           GUI.ScrollingTable
@@ -28,6 +36,12 @@ data TMPacketTable = TMPacketTable
     --, _tmptSortedModel :: TreeModelSort
     }
 
+tmPacketTableSwitchLive :: TMPacketTable -> IO ()
+tmPacketTableSwitchLive _g = return ()
+
+tmPacketTableSwitchOffline :: TMPacketTable -> IO ()
+tmPacketTableSwitchOffline _g = return ()
+
 -- | Add a single row of a 'TMPacket'. Ensures, that 
 -- only 'defMaxRowTM' rows are present at maximum, removes old values if the
 -- size of the store is greater than this number (see "GUI.Definitions" for 
@@ -37,12 +51,22 @@ tmPacketTableAddRow :: TMPacketTable -> ExtractedDU TMPacket -> IO ()
 tmPacketTableAddRow g = addRowScrollingTable (_tmptTable g) (_tmptModel g)
 
 
+tmPacketTableAddRows :: TMPacketTable -> [ExtractedDU TMPacket] -> IO ()
+tmPacketTableAddRows g = addRowsSeqStoreAppend (_tmptModel g) 
+
+
 -- | Set the internal model to the list of given 'TMPacket' values. In contrast
 -- to 'tmPacketTableAddRow', this function does not limit the length as it is 
 -- intended to be used in retrieval, which depends on the requested data size
 tmPacketTableSetValues :: TMPacketTable -> [ExtractedDU TMPacket] -> IO ()
 tmPacketTableSetValues g = setRowsSeqStore (_tmptModel g)
 
+tmPacketTableClearRows :: TMPacketTable -> IO ()
+tmPacketTableClearRows g = seqStoreClear (_tmptModel g)
+
+
+tmPacketTableGetSize :: TMPacketTable -> IO Int32
+tmPacketTableGetSize g = seqStoreGetSize (_tmptModel g)
 
 -- | Set the callback function to be called, when a row in the table is activated
 -- (which in GTK terms means double clicked). The callback must take the value as 
@@ -184,10 +208,32 @@ displaySSC pkt = case pkt ^. epGap of
         ]
 
 
-compareTimestamp :: ExtractedDU TMPacket -> ExtractedDU TMPacket -> Ordering
-compareTimestamp pkt1 pkt2 =
+_compareTimestamp :: ExtractedDU TMPacket -> ExtractedDU TMPacket -> Ordering
+_compareTimestamp pkt1 pkt2 =
     compare (pkt1 ^. epDU . tmpTimeStamp) (pkt2 ^. epDU . tmpTimeStamp)
 
 
-compareERT :: ExtractedDU TMPacket -> ExtractedDU TMPacket -> Ordering
-compareERT pkt1 pkt2 = compare (pkt1 ^. epERT) (pkt2 ^. epERT)
+_compareERT :: ExtractedDU TMPacket -> ExtractedDU TMPacket -> Ordering
+_compareERT pkt1 pkt2 = compare (pkt1 ^. epERT) (pkt2 ^. epERT)
+
+
+
+
+tmPacketTableGetEarliestTime :: TMPacketTable -> IO SunTime
+tmPacketTableGetEarliestTime g = do
+    now <- getCurrentTime
+    lst <- seqStoreToList (_tmptModel g)
+    let !res = foldr minTime now lst
+    return res
+  where
+    minTime :: ExtractedDU TMPacket -> SunTime -> SunTime
+    minTime du t = let t1 = (du ^. epDU . tmpTimeStamp) in min t1 t
+
+tmPacketTableGetLatestTime :: TMPacketTable -> IO SunTime
+tmPacketTableGetLatestTime g = do
+    lst <- seqStoreToList (_tmptModel g)
+    let !res = foldr maxTime nullTime lst
+    return res
+  where
+    maxTime :: ExtractedDU TMPacket -> SunTime -> SunTime
+    maxTime du t = let t1 = (du ^. epDU . tmpTimeStamp) in max t1 t

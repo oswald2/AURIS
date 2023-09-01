@@ -152,8 +152,14 @@ eventProcessor g (EventPUS (EVTelemetry (EVTMStatistics stats))) = do
 eventProcessor g (EventPUS (EVDB (EVDBTMFrames frames))) = do 
     postGUIASync $ mwAddTMFrames g frames
 
+eventProcessor g (EventPUS (EVDB (EVDBTMPackets packets))) = do 
+    postGUIASync $ mwAddTMPackets g packets
+
 eventProcessor g (EventPUS (EVDB EVDBTMFramesFinished)) = do 
     postGUIASync $ mwTMFrameRetrievalFinished g 
+
+eventProcessor g (EventPUS (EVDB EVDBTMPacketsFinished)) = do 
+    postGUIASync $ mwTMPacketRetrievalFinished g 
 
 #ifdef HAS_SLE 
 eventProcessor g (EventPUS (EVSLE (EVSLERafInitialised (SleSII sii) commIF))) = do 

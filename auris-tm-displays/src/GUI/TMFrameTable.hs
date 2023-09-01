@@ -43,11 +43,11 @@ data TMFrameTable = TMFrameTable
 
 
 tmFrameTableSwitchLive :: TMFrameTable -> IO ()
-tmFrameTableSwitchLive g = return ()
+tmFrameTableSwitchLive _g = return ()
   --treeViewSetModel (_tmfrTable g) (Just (_tmfrModel g))
 
 tmFrameTableSwitchOffline :: TMFrameTable -> IO ()
-tmFrameTableSwitchOffline g = return ()
+tmFrameTableSwitchOffline _g = return ()
   --treeViewSetModel (_tmfrTable g) (Just (_tmfrSortModel g))
 
 
@@ -98,11 +98,11 @@ tmFrameTableGetEarliestERT g = do
 tmFrameTableGetLatestERT :: TMFrameTable -> IO SunTime
 tmFrameTableGetLatestERT g = do
     lst <- seqStoreToList (_tmfrModel g)
-    let !res = foldr minERT nullTime lst
+    let !res = foldr maxERT nullTime lst
     return res
   where
-    minERT :: ExtractedDU TMFrame -> SunTime -> SunTime
-    minERT du t = let t1 = (du ^. epERT) in max t1 t
+    maxERT :: ExtractedDU TMFrame -> SunTime -> SunTime
+    maxERT du t = let t1 = (du ^. epERT) in max t1 t
 
 
 
