@@ -128,7 +128,7 @@ processCommand _timerWheel _queue st (RegisterRequest rqst pktId ssc) = do
         <> " PktID: "
         <> pktIdDisplayPretty pktId
         <> " SSC: "
-        <> display ssc
+        <> seqCtrlDisplay ssc
     raiseEvent (EVCommanding (EVTCVerificationNew rqst verif))
     return newSt
 
@@ -422,6 +422,7 @@ processCncGroundStage st key@(pktID, ssc) status setStage = do
                 <> " SSC: "
                 <> seqCtrlDisplay ssc
                 <> " Status: "
+                <> display status
                 <> " has not been found"
             return st
 
