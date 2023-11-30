@@ -1,0 +1,188 @@
+S2KCP001	HPC Module	2	8	R	H		N					
+S2KCP002	HPC Line ID	3	4	R	O		N				R	
+S2KCP003	HPC Pulse Duration	2	8	R	H		N					
+S2KCP004	RT Address	3	4	R	H		N	6				
+S2KCP005	RT Subaddress	2	8	R	H		N	7				
+S2KCP006	Control Word	3	12	R	H		N					
+S2KCP007	Data Word	3	12	R	H		N					
+S2KCP008	Output Line ID	3	4	R	H		N					
+S2KCP009	Pulse Duration	2	8	R	H		N					
+S2KCP013	Housekeeping SID	2	8	A	D		T	1		104	E	HK_SID_1
+S2KCP014	Diagnostic SID	2	8	A	D		T	2		105	E	DG_SID_1
+S2KCP015	N HK Parameters	3	4	R	D		N				R	1
+S2KCP016	HK Parameter ID	2	32	R	D		N					
+S2KCP017	Data Field Length	3	12	R	D		N					
+S2KCP018	N Diag Parameters	3	4	R	D		N					
+S2KCP019	Diag Parameter ID	2	32	R	D		N					
+S2KCP024	Reset Flag	2	8	A	D		T			106	E	NO_RESET
+S2KCP025	Parameter ID	2	32	R	D		N					
+S2KCP026	Event ID	2	16	A	D		T			103	R	1
+S2KCP027	Memory ID	2	8	A	D		T			101	R	1
+S2KCP029	Base	3	14	R	H		N					
+S2KCP030	Offset	4	12	R			N					
+S2KCP031	Number of Words	3	12	R	H		N					
+S2KCP032	Memory Load Data	7	0	R	H		N					
+S2KCP033	Start Address	3	14	R	H		N					
+S2KCP034	Function ID	2	8	A	D		T			102	R	1
+S2KCP035	Rate	3	4	R	D		N					
+S2KCP036	Destination PID	3	4	R	D		N					
+S2KCP037	Sub-schedule ID	3	12	R	O		N					
+S2KCP038	Time Tag	9	14	T	D		N					
+S2KCP039	TC Packet	7	0	R	H		N					
+S2KCP040	APID	3	12	R	D		N					
+S2KCP042	Sequence Count	3	10	R	D		N					
+S2KCP043	Range	2	16	R	D		N					
+S2KCP044	Time Tag 1	9	14	T	D		N	9999				
+S2KCP045	Time Tag 2	9	14	T	D		N					
+S2KCP046	Time Offset	10	14	D	D		N	9998				
+S2KCP047	Number of Commands	3	12	R	D		N					
+S2KCP048	N	3	4	R	D		N				R	1
+S2KCP049	Monitoring ID	2	16	R	D		N					
+S2KCP050	Parameter ID	2	32	R	D		N					
+S2KCP051	Low Limit	3	14	R	D		N					
+S2KCP052	High Limit	3	14	R	D		N					
+S2KCP053	Low Delta Threshold	3	14	R	D		N					
+S2KCP054	High Delta Threshold	3	14	R	D		N					
+S2KCP055	Expected Value	3	14	R	D		N					
+S2KCP056	Sequence Number	3	12	R	D		N					
+S2KCP057	N	3	4	R	D		N					
+S2KCP058	Service Data Unit Part	7	0	R	D		N					
+S2KCP059	N1	3	4	R	D		N					
+S2KCP060	APID	3	12	R	H		N					
+S2KCP061	N2	3	4	R	D		N					
+S2KCP062	Type	3	4	R	D		N					
+S2KCP063	N3	3	4	R	D		N					
+S2KCP064	Subtype	3	4	R	D		N					
+S2KCP065	N	3	12	R	D		N					
+S2KCP066	PID	3	4	R	D		N					
+S2KCP067	SID	2	8	A	D		T	1		104	E	HK_SID_1
+S2KCP068	Event ID	2	16	R	D		N					
+S2KCP069	Store ID	2	8	R	D		N					
+S2KCP070	Packet Set	2	16	R	D		N					
+S2KCP071	APID 1	3	12	R	H		N					
+S2KCP072	Sequence Count 1	3	12	R	D		N					
+S2KCP073	APID 2	3	12	R	H		N					
+S2KCP074	Sequence Count 2	3	12	R	D		N					
+S2KCP075	Storage Time 1	9	14	T	D		N					
+S2KCP076	Storage Time 2	9	14	T	D		N					
+S2KCP077	Deletion Set	2	16	R	D		N					
+S2KCP078	Source Sequence Count	3	12	R	D		N					
+S2KCP079	End Time	9	14	T	D		N					
+S2KCP080	Procedure ID	8	8	R	D		N					
+S2KCP081	Length	3	12	R	D		N					
+S2KCP082	Code	7	0	R	H		N					
+S2KCP083	N	3	4	R	D		N					
+S2KCP084	Parameter ID	2	32	R	H		N					
+S2KCP085	Value	3	14	R	D		N					
+S2KCP086	APID	3	12	R	D		N					
+S2KCP087	Event ID	2	16	A	D		T			103	R	1
+S2KCP088	TC Packet	7	0	R	H		N					
+S2KCP089	Level	5	2	R	D	Volt	N					
+S2KCP090	Direction	4	4	A	D		T			107		
+S2KCP091	Current	4	4	R	D	mAmp	C	3	1			
+S2KCP092	Extent	3	4	I	H	Ohm	C	4	2			
+S2KCP093	Limit	3	4	U	O		C	5	3			
+S2KCP301	SubScheduleID (Rosetta)	2	8	R	D		N					
+S2KCP302	APID (Rosetta)	2	11	R	D		N					
+S2KCP303	ExecutionTime(Rosetta)	9	9	T			N					
+S2KCP304	TC Packet (Rosetta)	7	0	R	H		N					
+S2KCP305	SequenceCount (Rosetta)	3	10	R	D		N					
+S2KCP306	No.Commands (Rosetta)	3	4	R	D		N					
+S2KCP307	Time Range (Rosetta)	2	2	R	D		N					
+S2KCP308	Time Tag 1 (Rosetta)	9	9	T			N					
+S2KCP309	Time Tag 2 (Rosetta)	9	9	T			N					
+S2KCP310	Time Offset (Rosetta)	10	9	D			N					
+S2KCP501	SetV(R) Octet 3	3	4	U	D		N					
+S2KCP100	Enum Unsiged int 2,1	2	1	U	D		N				R	0
+S2KCP101	Enum Unsiged int 2,2	2	2	U	D		N				R	0
+S2KCP102	Enum Unsiged int 2,3	2	3	U	D		N				R	0
+S2KCP103	Enum Unsiged int 2,4	2	4	U	D		N				R	0
+S2KCP104	Enum Unsiged int 2,5	2	5	U	D		N				R	0
+S2KCP105	Enum Unsiged int 2,6	2	6	U	D		N				R	0
+S2KCP106	Enum Unsiged int 2,7	2	7	U	D		N				R	0
+S2KCP107	REAL, TEXTUAL CALIB	5	1	A	D		T			108	R	1
+S2KCP108	100 byte char	8	100	R	D		N					
+S2KCP502	MAP ID	3	1	U	D		N				R	0
+S2KCP902	Abs CDS time 8 octets	9	2	T			N					
+S2KCP903	Abs CUC time 1 octet	9	3	T			N					
+S2KCP904	Abs CUC time 2 octets	9	4	T			N					
+S2KCP905	Abs CUC time 3 octets	9	5	T			N					
+S2KCP906	Abs CUC time 4 octets	9	6	T			N					
+S2KCP907	Abs CUC time 2 octets	9	7	T			N					
+S2KCP908	Abs CUC time 3 octets	9	8	T			N					
+S2KCP910	Abs CUC time 5 octets	9	10	T			N					
+S2KCP911	Abs CUC time 3 octets	9	11	T			N					
+S2KCP912	Abs CUC time 4 octets	9	12	T			N					
+S2KCP913	Abs CUC time 5 octets	9	13	T			N					
+S2KCP915	Abs CUC time 4 octets	9	15	T			N					
+S2KCP916	Abs CUC time 5 octets	9	16	T			N					
+S2KCP917	Abs CUC time 6 octets	9	17	T			N					
+S2KCP918	Abs CUC time 7 octets	9	18	T			N					
+S2KCP400	Signed Int 4 bits	4	0	I	D		N					
+S2KCP401	Signed Int 5 bits	4	1	I	D		N					
+S2KCP402	Signed Int 6 bits	4	2	I	D		N					
+S2KCP403	Signed Int 7 bits	4	3	I	D		N					
+S2KCP405	Signed Int 9 bits	4	5	I	D		N					
+S2KCP406	Signed Int 10 bits	4	6	I	D		N					
+S2KCP407	Signed Int 11 bits	4	7	I	D		N					
+S2KCP408	Signed Int 12 bits	4	8	I	D		N					
+S2KCP409	Signed Int 13 bits	4	9	I	D		N					
+S2KCP410	Signed Int 14 bits	4	10	I	D		N					
+S2KCP411	Signed Int 15 bits	4	11	I	D		N					
+S2KCP413	Signed Int 24 bits	4	13	I	D		N					
+S2KCP414	Signed Int 32 bits	4	14	I	D		N					
+S2KCP320	Unsigned int 6 bits	3	2	U	D		N					
+S2KCP330	Unsigned int 7 bits	3	3	U	D		N					
+S2KCP350	Unsigned int 9 bits	3	5	U	D		N					
+S2KCP360	Unsigned int 10 bits	3	6	U	D		N					
+S2KCP370	Unsigned int 11 bits	3	7	U	D		N					
+S2KCP380	Unsigned int 12 bits	3	8	U	D		N					
+S2KCP390	Unsigned int 13 bits	3	9	U	D		N					
+S2KCP311	Unsigned int 15 bits	3	11	U	D		N					
+S2KCP313	Unsigned int 24 bits	3	13	U	D		N					
+S2KCP503	simple prec real 32 bit	5	3	R	D		N					
+S2KCP504	real ext. Prec. 48 bits	5	4	R	D		N					
+S2KCP200	Boolean param.	1	0	U	D		N					
+S2KCP209	Unsigned int 9 bits	2	9	A	D		T			9999		
+S2KCP210	Unsigned int 10 bits	2	10	U	D		N					
+S2KCP212	Unsigned int 12 bits	2	12	U	D		N					
+S2KCP213	Unsigned int 13 bits	2	13	U	D		N					
+S2KCP214	Unsigned int 14 bits	2	14	U	D		N					
+S2KCP215	Unsigned int 15 bits	2	15	U	D		N					
+S2KCP217	Unsigned int 17 bits	2	17	U	D		N					
+S2KCP218	Unsigned int 18 bits	2	18	U	D		N					
+S2KCP219	Unsigned int 19 bits	2	19	U	D		N					
+S2KCP220	Unsigned int 20 bits	2	20	U	D		N					
+S2KCP221	Unsigned int 21 bits	2	21	U	D		N					
+S2KCP222	Unsigned int 22 bits	2	22	U	D		N					
+S2KCP223	Unsigned int 23 bits	2	23	U	D		N					
+S2KCP224	Unsigned int 24 bits	2	24	U	D		N					
+S2KCP225	Unsigned int 25 bits	2	25	U	D		N					
+S2KCP226	Unsigned int 26 bits	2	26	U	D		N					
+S2KCP227	Unsigned int 27 bits	2	27	U	D		N					
+S2KCP228	Unsigned int 28 bits	2	28	U	D		N					
+S2KCP229	Unsigned int 29 bits	2	29	U	D		N					
+S2KCP230	Unsigned int 30 bits	2	30	U	D		N					
+S2KCP231	Unsigned int 31 bits	2	31	R	D	Volt	C		9999			
+S2KCP800	Variable length string	8	0	A	D		N					
+S2KCP701	Fix length strng 1 octet	7	1	A	D		N					
+S2KCP900	Command ID Type	7	0	R	D		A				R	S2KTC007
+S2KCP901	Parameter Id Type	3	14	R	D		P				R	S2KTP400
+S2KCP300	Unsigned int 4 bits	3	0	U	D		N					
+S2KCP312	Relative CUC time 1octet	10	3	D			N	9998				
+S2KCP315	Relative CUC time 2octet	10	4	D			N	9998				
+S2KCP316	Relative CUC time 3octet	10	5	D			N	9998				
+S2KCP317	Relative CUC time 4octet	10	6	D			N					
+S2KCP318	Relative CUC time 2octet	10	7	D			N					
+S2KCP319	Relative CUC time 3octet	10	8	D			N					
+S2KCP321	Relative CUC time 5octet	10	10	D			N	9998				
+S2KCP322	Relative CUC time 3octet	10	11	D			N	9998				
+S2KCP323	Relative CUC time 4octet	10	12	D			N					
+S2KCP324	Relative CUC time 5octet	10	13	D			N					
+S2KCP325	Relative CUC time 4octet	10	15	D			N					
+S2KCP326	Relative CUC time 5octet	10	16	D			N					
+S2KCP327	Relative CUC time 6octet	10	17	D			N	9998				
+S2KCP328	Relative CUC time 7octet	10	18	D			N	9998				
+S2KCPTHE	Throw Event Qualif	7	0	R	H		N					
+S2KCPEVI	Throw Event Ident	3	12	A	D		N					
+S2KCPSTR	Throw Event Qualif	8	0	R	D		N					

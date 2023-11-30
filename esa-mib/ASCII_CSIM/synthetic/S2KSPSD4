@@ -1,0 +1,10 @@
+if (S2KUPDC1 == 0 ) then
+S2KUPDC3.raw;
+else
+S2KUPDC3.eng;
+endif;
+
+
+
+
+

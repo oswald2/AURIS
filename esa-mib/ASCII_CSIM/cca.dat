@@ -1,0 +1,4 @@
+1	TC Num Curve 1	R	I	D	mAmp	3
+2	TC Num Curve 2	I	U	H	Ohm	3
+3	TC Num Curve 3	U	U	O		2
+9999	TC cal. Curve 9999	R	U	D	Volt	3

@@ -1,0 +1,17 @@
+GMO-520B	F	Supercommutated	Y	N	0	0	1	1	8	2	4	1	1
+GMON-520	F	Synthetic parameters	Y	N	0	0	1	1	4	1	4	1	1
+GMON-521	S	Synthetic parameters II	N	N	0	0	1	1	4	1	4	1	1
+GMON-522	F	Supercommutated	N	N	0	0	1	1	8	2	4	1	1
+GMON-591	F	Test MON-591 (datastreams)	Y	N	0	0	1	1	4	4	2	2	1
+S2KGRD01	F	Full Green Scrolling	Y	N	0	0	5	1	10	1	1	1	1
+S2KGRD02	H	Half Blue	N	N	0	0	0	2	10	1	1	1	10000
+S2KGRD03	Q	Quarter Cyan	N	N	0	0	5	3	10	1	1	1	10000
+S2KGRD04	S	Sliced Red	N	N	0	0	5	4	10	1	1	1	1
+S2KGRD05	F	Full Yellow H-Copy	N	Y	0	0	5	5	10	1	1	1	10000
+S2KGRD06	F	Full Magenta	N	N	0	0	5	6	10	1	1	1	10000
+S2KGRD07	F	Full White	N	N	0	0	5	7	10	1	1	1	10000
+S2KGRD08	S	8-PARAMETER GRD	N	N	0	23	59	1	10	10	10	10	2
+S2KGRD09	S	5-GRAPHICS DISPLAY	N	N	10	12	30	5	5	5	5	5	2
+S2KGRD10	F	No def interval	Y	N	0	0	5	1	10	10	1	1	
+S2KGRDXY	F	X-Axis Parameter	N	N	0	0	5	3	6	6	4	4	1
+TEST	F	Synthetic parameters	Y	N	0	0	1	1	4	1	4	1	1

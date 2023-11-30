@@ -1,0 +1,75 @@
+{
+    "aurisMIB": null,
+    "aurisInstance": 0,
+    "aurisMission": "S2K_TEST",
+    "aurisTheme": "ThemeLight",
+    "aurisDbConfig": {
+        "cfgMongoHost": "localhost",
+        "cfgMongoPort": null
+    },
+    "aurisPusConfig": {
+        "cfgMission": "MissionPUSC",
+        "cfgNDIU": [],
+        "cfgCnC": [
+            {
+                "cfgCncPortTM": 11000,
+                "cfgCncHost": "localhost",
+                "cfgCncPortTC": 10000,
+                "cfgCncName": "SUCA-IP C&amp;C HKTM",
+                "cfgCncID": 1,
+                "cfgCncCucTime": "Cuc43",
+                "cfgCncHasCRC": "HasCRC"
+            }
+        ],
+        "cfgUnknownSPID": 5071,
+        "cfgEpoch": "UnixTime",
+        "cfgInterfacePort": 55555,
+        "cfgRandomizerEnabled": false,
+        "cfgRandomizerStartValue": 255,
+        "cfgVerification": {
+            "cfgTimeoutC": 30,
+            "cfgTimeoutGT": 20,
+            "cfgTimeoutS": 30,
+            "cfgTimeoutA": 30,
+            "cfgTimeoutO": 20
+        },
+        "cfgVCIDs": [
+            0,
+            1,
+            2
+        ],
+        "cfgLeapSeconds": {
+            "fromLeaps": 17
+        },
+        "cfgSCID": 0,
+        "cfgDataBase": {
+            "cfgStoreTMFrames": true,
+            "cfgDbDebugLog": true,
+            "cfgBackend": {
+                "tag": "PGConfig",
+                "contents": {
+                    "pgDbName": "active_session",
+                    "pgPort": 5432,
+                    "pgHost": "localhost",
+                    "pgPassword": "auris",
+                    "pgNumberConns": 10,
+                    "pgUser": "auris"
+                }
+            }
+        },
+        "cfgNCTRS": [],
+        "cfgCltuBlockSize": "CltuBS_8",
+        "cfgCLTUTrailer": "Trailer0xC5",
+        "cfgEDEN": [],
+        "cfgStoreTMFrames": true,
+        "cfgStorePUSPackets": true,
+        "cfgTMFrame": {
+            "cfgMaxTMFrameLen": 1115,
+            "cfgTMSegLength": "TMSegment65536",
+            "cfgTMFrameHasCRC": true
+        }
+    },
+    "aurisLogLevel": {
+        "tag": "LogLevelDebug"
+    }
+}

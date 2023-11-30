@@ -1,0 +1,8 @@
+ZUKT0001TM	Calibration for the SID	U	4
+ZUKT0002TM	Calibration for the Mode	U	2
+ZUKT0003TM	Connection Status	U	4
+ZUKT0004TM	Link Status	U	4
+ZUKT0005TM	SpaceWire Link Status	U	3
+ZUKT0006TM	Power Status	U	3
+ZUKT0007TM	Relay Acquisition Status	U	2
+ZUKT0008TM	Lock/Unlock Status	U	2

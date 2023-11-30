@@ -1,0 +1,18 @@
+#This script computes the mean of a variable
+# over a number of samples
+# VAR_time forces the value to be re-calculated
+# every time a new packet is received
+VAR_time:=S2KTP406.time;
+if (GVAR_counter <= 100) then
+    GVAR_counter:=GVAR_counter+1;
+    GVAR_sum:=GVAR_sum+S2KTP406;
+else
+    GVAR_counter:=1;
+    GVAR_sum:=S2KTP406;
+endif;
+return(GVAR_sum / GVAR_counter);
+
+
+
+
+

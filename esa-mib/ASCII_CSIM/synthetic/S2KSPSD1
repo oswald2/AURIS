@@ -1,0 +1,5 @@
+if (S2KUPDC1==0) then
+  65535;
+else
+  S2KUPDC1;
+endif;

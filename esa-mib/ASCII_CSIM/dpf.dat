@@ -1,0 +1,25 @@
+ANDPKT51	1	Parameters of packet S2KTM051
+ANDPKT52	1	Parameters of packet S2KTM052
+ANDPTC_1	1	Parameters with PTC=1
+ANDPTC_2	1	Test of PTC=2
+ANDPTC_3	1	Parameters with PTC=3
+ANDPTC_4	1	Parameters with PTC=4
+ANDPTC_5	1	Parameters with PTC 5
+ANDPTC_6	1	Parameters with PTC 6
+ANDPTC_7	1	Parameters with PTC 7
+ANDPTC_8	1	Parameters with PTC 8
+ANDPTC_9	1	Paramters with PTC 9
+ANDPTC_A	1	Parameters with PTC=10
+MON-512	1	Display for MON-512
+MON-520	1	Synthetic parameters
+MON-520B	1	Supercommutated
+MON-540	1	Synthetic parameters
+MON-550	1	Calibrations
+MON-620	1	MON-620
+MON-634	1	commutated packet by packet
+S2KAND01	1	32 Parameter Display
+S2KAND02	3	64 Parameter Display
+S2KAND03	1	Constants Display
+S2KAND20	1	Extended user defined constants
+S2KAND21	1	PARC System Test AND
+S2KAND22	1	MISC Parameter Display
