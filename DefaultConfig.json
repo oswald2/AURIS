@@ -31,7 +31,16 @@
                 "cfgEdenPort": 40300
             }
         ],
-        "cfgEpoch": "UnixTime",
+        "cfgEpoch": {
+            "tag": "Free",
+            "contents": {
+                "epDays": 1,
+                "epHours": 0,
+                "epMinutes": 0,
+                "epSeconds": 0,
+                "epYear": 2000
+            }
+        },
         "cfgInterfacePort": 55555,
         "cfgLeapSeconds": {
             "fromLeaps": 17

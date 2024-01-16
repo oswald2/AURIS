@@ -31,7 +31,9 @@
             "cfgTimeoutA": 30,
             "cfgTimeoutO": 20
         },
-        "cfgEpoch": "UnixTime",
+        "cfgEpoch": {
+            "tag": "UnixTime"
+        },
         "cfgInterfacePort": 55555,
         "cfgRandomizerStartValue": 255,
         "cfgVCIDs": [

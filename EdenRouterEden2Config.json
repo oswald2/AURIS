@@ -9,7 +9,9 @@
         "cfgMission": "MissionCO2M",
         "cfgCnC": [],
         "cfgUnknownSPID": 5071,
-        "cfgEpoch": "UnixTime",
+        "cfgEpoch": {
+            "tag": "UnixTime"
+        },
         "cfgInterfacePort": 55555,
         "cfgRandomizerEnabled": false,
         "cfgRandomizerStartValue": 255,

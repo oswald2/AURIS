@@ -463,7 +463,7 @@ defaultConfig = Config { cfgMission              = MissionDefault
                        , cfgSCID                 = mkSCID 0
                        , cfgVCIDs                = [0, 1]
                        , cfgTMFrame              = defaultTMFrameConfig
-                       , cfgEpoch                = UnixTime
+                       , cfgEpoch                = Free (FreeEpoch 2000 001 00 00 00)
                        , cfgLeapSeconds          = 17
                        , cfgUnknownSPID          = SPID 5071
                        , cfgNCTRS                = [defaultNctrsConfig]

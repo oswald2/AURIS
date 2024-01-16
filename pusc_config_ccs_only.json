@@ -22,7 +22,9 @@
             }
         ],
         "cfgUnknownSPID": 5071,
-        "cfgEpoch": "TAITime",
+        "cfgEpoch": {
+            "tag": "TAITime"
+        },
         "cfgInterfacePort": 55555,
         "cfgRandomizerEnabled": false,
         "cfgRandomizerStartValue": 255,

@@ -8,7 +8,9 @@
         "cfgNDIU": [],
         "cfgCnC": [],
         "cfgUnknownSPID": 5071,
-        "cfgEpoch": "GPSTime",
+        "cfgEpoch": {
+            "tag": "GPSTime"
+        },
         "cfgInterfacePort": 55555,
         "cfgRandomizerEnabled": false,
         "cfgRandomizerStartValue": 255,

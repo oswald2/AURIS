@@ -1,36 +1,28 @@
 {
     "aurisMIB": null,
     "aurisInstance": 0,
-    "aurisMission": "PUS-C",
-    "aurisDbConfig": null,
+    "aurisMission": "S2K_TEST",
     "aurisTheme": "ThemeLight",
+    "aurisDbConfig": {
+        "cfgMongoHost": "localhost",
+        "cfgMongoPort": null
+    },
     "aurisPusConfig": {
-        "cfgMission": "MissionPUSC",
+        "cfgMission": "MissionDefault",
         "cfgNDIU": [],
         "cfgCnC": [
             {
-                "cfgCncCucTime": "Cuc42",
+                "cfgCncCucTime": "Cuc43",
                 "cfgCncHasCRC": "HasCRC",
-                "cfgCncPortTM": 11971,
+                "cfgCncPortTC": 10000,
                 "cfgCncHost": "localhost",
-                "cfgCncPortTC": 11970,
-                "cfgCncID": 1,
-                "cfgCncName": "CCS C&amp;C"
-            },
-            {
-                "cfgCncCucTime": "Cuc42",
-                "cfgCncHasCRC": "HasCRC",
-                "cfgCncPortTM": 11973,
-                "cfgCncHost": "localhost",
-                "cfgCncPortTC": 11972,
-                "cfgCncID": 2,
-                "cfgCncName": "TSC C&amp;C"
+                "cfgCncPortTM": 11000,
+                "cfgCncName": "SUCA-IP",
+                "cfgCncID": 1
             }
         ],
         "cfgUnknownSPID": 5071,
-        "cfgEpoch": {
-            "tag": "UnixTime"
-        },
+        "cfgEpoch": "UnixTime",
         "cfgInterfacePort": 55555,
         "cfgRandomizerEnabled": false,
         "cfgRandomizerStartValue": 255,
@@ -43,31 +35,46 @@
         },
         "cfgVCIDs": [
             0,
-            1
+            1,
+            2
         ],
         "cfgLeapSeconds": {
             "fromLeaps": 17
         },
         "cfgSCID": 0,
-        "cfgNCTRS": [
-        ],
         "cfgDataBase": {
             "cfgStoreTMFrames": true,
             "cfgDbDebugLog": true,
             "cfgBackend": {
-                "tag": "NoDB"
+                "tag": "PGConfig",
+                "contents": {
+                    "pgDbName": "active_session",
+                    "pgPort": 5432,
+                    "pgHost": "localhost",
+                    "pgPassword": "auris",
+                    "pgNumberConns": 10,
+                    "pgUser": "auris"
+                }
             }
         },
-        "cfgMaxTMFrameLen": 1115,
+        "cfgNCTRS": [
+            {
+                "cfgNctrsPortTC": 32111,
+                "cfgNctrsID": 1,
+                "cfgNctrsName": "ParagonTT",
+                "cfgNctrsHost": "localhost",
+                "cfgNctrsPortADM": 32110,
+                "cfgNctrsPortTM": 2502
+            }
+        ],
         "cfgCltuBlockSize": "CltuBS_8",
         "cfgCLTUTrailer": "Trailer0xC5",
         "cfgEDEN": [
             {
                 "cfgEdenID": 1,
-                "cfgEdenName": "Simulator",
+                "cfgEdenName": "ParagonTT",
                 "cfgEdenHost": "localhost",
-                "cfgEdenType": "SCOE",
-                "cfgEdenPort": 11980
+                "cfgEdenPort": 40300
             }
         ],
         "cfgStoreTMFrames": true,
